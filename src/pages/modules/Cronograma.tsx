@@ -5,8 +5,15 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import type { Database } from "@/integrations/supabase/types";
 
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
-const statusLabels: Record<StatusProjeto, string> = { orcamento: "Orçamento", aprovado: "Aprovado", em_andamento: "Em Andamento", concluido: "Concluído", cancelado: "Cancelado" };
-const progressMap: Record<StatusProjeto, number> = { orcamento: 0, aprovado: 15, em_andamento: 50, concluido: 100, cancelado: 0 };
+const statusLabels: Record<StatusProjeto, string> = {
+  lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
+  em_andamento: "Em Andamento", concluido: "Concluído", vendido: "Vendido",
+  pos_venda: "Pós-Venda", cancelado: "Cancelado"
+};
+const progressMap: Record<StatusProjeto, number> = {
+  lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
+  em_andamento: 50, concluido: 100, pos_venda: 100, cancelado: 0
+};
 
 const Cronograma = () => {
   const empresaId = useEmpresa();

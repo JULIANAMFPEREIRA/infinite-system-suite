@@ -1,35 +1,14 @@
 import {
   DollarSign, FolderKanban, Users, Package, TrendingUp,
-  ArrowUpRight, ArrowDownRight, ShoppingCart, Clock
+  ArrowUpRight, ArrowDownRight, ShoppingCart, Clock, AlertTriangle
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
+  ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
-
-const revenueData = [
-  { month: "Jan", receita: 45000, custo: 28000 },
-  { month: "Fev", receita: 52000, custo: 31000 },
-  { month: "Mar", receita: 48000, custo: 29000 },
-  { month: "Abr", receita: 61000, custo: 35000 },
-  { month: "Mai", receita: 55000, custo: 32000 },
-  { month: "Jun", receita: 67000, custo: 38000 },
-];
-
-const projectStatusData = [
-  { name: "Em Andamento", value: 8, color: "hsl(200, 80%, 55%)" },
-  { name: "Aguardando", value: 3, color: "hsl(38, 92%, 50%)" },
-  { name: "Concluídos", value: 12, color: "hsl(152, 69%, 40%)" },
-  { name: "Propostas", value: 5, color: "hsl(220, 10%, 45%)" },
-];
-
-const purchaseData = [
-  { item: "Amplificadores", qtd: 12 },
-  { item: "Caixas Som", qtd: 24 },
-  { item: "Switches", qtd: 8 },
-  { item: "Cabos HDMI", qtd: 45 },
-  { item: "TVs", qtd: 6 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
 
 interface StatCardProps {
   title: string;
@@ -61,6 +40,50 @@ const CYAN = "hsl(200, 80%, 55%)";
 const GRAY = "hsl(220, 10%, 45%)";
 
 const Dashboard = () => {
+  const empresaId = useEmpresa();
+
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard_stats", empresaId],
+    queryFn: async () => {
+      const [receber, pagar, projetos, leads, compras] = await Promise.all([
+        supabase.from("financeiro_receber").select("valor, status").then(r => r.data ?? []),
+        supabase.from("financeiro_pagar").select("valor, status").then(r => r.data ?? []),
+        supabase.from("projetos").select("id, status, nome, venda_total, custo_real, lucro_real").then(r => r.data ?? []),
+        supabase.from("clientes").select("id, status_crm").then(r => r.data ?? []),
+        supabase.from("compras").select("id, valor_total, status").then(r => r.data ?? []),
+      ]);
+
+      const receitaTotal = receber.filter(r => r.status === "pago").reduce((a, r) => a + (r.valor ?? 0), 0);
+      const projetosAtivos = projetos.filter(p => p.status === "em_andamento").length;
+      const leadsCount = leads.filter(l => l.status_crm === "lead").length;
+      const comprasPendentes = compras.filter(c => c.status === "pendente").reduce((a, c) => a + (c.valor_total ?? 0), 0);
+      const comprasPendentesCount = compras.filter(c => c.status === "pendente").length;
+
+      const statusCounts: Record<string, number> = {};
+      projetos.forEach(p => { statusCounts[p.status ?? "orcamento"] = (statusCounts[p.status ?? "orcamento"] || 0) + 1; });
+
+      const contasVencidas = pagar.filter(p => p.status === "vencido").length + receber.filter(r => r.status === "vencido").length;
+
+      return { receitaTotal, projetosAtivos, leadsCount, comprasPendentes, comprasPendentesCount, statusCounts, projetos, contasVencidas };
+    },
+    enabled: !!empresaId,
+  });
+
+  const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
+
+  const projectStatusData = [
+    { name: "Em Andamento", value: stats?.statusCounts?.em_andamento ?? 0, color: "hsl(200, 80%, 55%)" },
+    { name: "Aprovado", value: stats?.statusCounts?.aprovado ?? 0, color: "hsl(152, 69%, 40%)" },
+    { name: "Orçamento", value: stats?.statusCounts?.orcamento ?? 0, color: "hsl(220, 10%, 45%)" },
+    { name: "Proposta", value: stats?.statusCounts?.proposta ?? 0, color: "hsl(38, 92%, 50%)" },
+    { name: "Concluído", value: stats?.statusCounts?.concluido ?? 0, color: "hsl(140, 60%, 40%)" },
+  ].filter(d => d.value > 0);
+
+  const topProjetos = stats?.projetos
+    ?.filter(p => (p.venda_total ?? 0) > 0)
+    .sort((a, b) => (b.venda_total ?? 0) - (a.venda_total ?? 0))
+    .slice(0, 5) ?? [];
+
   return (
     <div className="space-y-5">
       <div>
@@ -68,106 +91,65 @@ const Dashboard = () => {
         <p className="text-xs text-muted-foreground mt-0.5">Visão geral do INFINIT SYSTEM</p>
       </div>
 
+      {stats?.contasVencidas ? (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <AlertTriangle size={16} className="text-destructive" />
+          <span className="text-xs text-destructive font-medium">{stats.contasVencidas} conta(s) vencida(s) — verifique o financeiro!</span>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Receita Mensal" value="R$ 67.000" change="+12.5% vs mês anterior" positive icon={DollarSign} />
-        <StatCard title="Projetos Ativos" value="8" change="+2 novos este mês" positive icon={FolderKanban} />
-        <StatCard title="Leads no Funil" value="23" change="+5 esta semana" positive icon={Users} />
-        <StatCard title="Compras Pendentes" value="R$ 18.500" change="6 pedidos aguardando" positive={false} icon={ShoppingCart} />
+        <StatCard title="Receita Recebida" value={fmt(stats?.receitaTotal ?? 0)} change="Total recebido" positive icon={DollarSign} />
+        <StatCard title="Projetos Ativos" value={String(stats?.projetosAtivos ?? 0)} change="Em andamento" positive icon={FolderKanban} />
+        <StatCard title="Leads no Funil" value={String(stats?.leadsCount ?? 0)} change="Aguardando contato" positive icon={Users} />
+        <StatCard title="Compras Pendentes" value={fmt(stats?.comprasPendentes ?? 0)} change={`${stats?.comprasPendentesCount ?? 0} pedido(s)`} positive={false} icon={ShoppingCart} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-card rounded-lg border border-border p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-foreground mb-3">Receita vs Custo</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CYAN} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={CYAN} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorCusto" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={GRAY} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={GRAY} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 12%, 22%)" />
-              <XAxis dataKey="month" stroke="hsl(220, 10%, 45%)" fontSize={11} />
-              <YAxis stroke="hsl(220, 10%, 45%)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
-              <Tooltip
-                contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }}
-                formatter={(value: number) => [`R$ ${value.toLocaleString()}`, undefined]}
-              />
-              <Area type="monotone" dataKey="receita" stroke={CYAN} fill="url(#colorReceita)" strokeWidth={2} />
-              <Area type="monotone" dataKey="custo" stroke={GRAY} fill="url(#colorCusto)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <h3 className="text-xs font-semibold text-foreground mb-3">Top Projetos por Venda</h3>
+          {topProjetos.length > 0 ? (
+            <div className="space-y-2">
+              {topProjetos.map(p => (
+                <div key={p.id} className="flex items-center justify-between p-2 rounded bg-secondary/30">
+                  <span className="text-xs text-foreground font-medium">{p.nome}</span>
+                  <div className="flex gap-4 text-[11px]">
+                    <span className="text-muted-foreground">Venda: <strong className="text-foreground">{fmt(p.venda_total ?? 0)}</strong></span>
+                    <span className="text-muted-foreground">Lucro: <strong className={(p.lucro_real ?? 0) >= 0 ? "text-success" : "text-destructive"}>{fmt(p.lucro_real ?? 0)}</strong></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum projeto com vendas registradas.</p>}
         </div>
 
         <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
           <h3 className="text-xs font-semibold text-foreground mb-3">Status dos Projetos</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie data={projectStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" stroke="none">
-                {projectStatusData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
+          {projectStatusData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie data={projectStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" stroke="none">
+                    {projectStatusData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-1.5 mt-2">
+                {projectStatusData.map(item => (
+                  <div key={item.name} className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="font-semibold text-foreground">{item.value}</span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-1.5 mt-2">
-            {projectStatusData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between text-[11px]">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-muted-foreground">{item.name}</span>
-                </div>
-                <span className="font-semibold text-foreground">{item.value}</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-foreground mb-3">Itens Mais Comprados</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={purchaseData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 12%, 22%)" />
-              <XAxis type="number" stroke="hsl(220, 10%, 45%)" fontSize={11} />
-              <YAxis type="category" dataKey="item" stroke="hsl(220, 10%, 45%)" fontSize={11} width={90} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }} />
-              <Bar dataKey="qtd" fill={CYAN} radius={[0, 3, 3, 0]} barSize={14} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-foreground mb-3">Atividade Recente</h3>
-          <div className="space-y-2">
-            {[
-              { text: "Novo lead capturado — Instagram", time: "Há 15 min", icon: Users },
-              { text: "Projeto #042 — Etapa concluída", time: "Há 1h", icon: FolderKanban },
-              { text: "Compra aprovada — R$ 4.200", time: "Há 2h", icon: ShoppingCart },
-              { text: "Pagamento recebido — R$ 12.000", time: "Há 3h", icon: DollarSign },
-              { text: "Estoque atualizado — 24 itens", time: "Há 5h", icon: Package },
-              { text: "Contrato assinado — Projeto #039", time: "Há 6h", icon: TrendingUp },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-center gap-2.5 p-2 rounded hover:bg-secondary/50 transition-colors">
-                <div className="p-1.5 rounded bg-primary/10 text-primary">
-                  <activity.icon size={12} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-foreground truncate">{activity.text}</p>
-                </div>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                  <Clock size={10} />
-                  <span>{activity.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+            </>
+          ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum projeto.</p>}
         </div>
       </div>
     </div>
