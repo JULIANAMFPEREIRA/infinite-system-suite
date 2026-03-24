@@ -619,6 +619,81 @@ export type Database = {
           },
         ]
       }
+      necessidades_compra: {
+        Row: {
+          compra_id: string | null
+          created_at: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          produto_id: string | null
+          projeto_id: string
+          projeto_item_id: string | null
+          quantidade: number | null
+          status: string | null
+        }
+        Insert: {
+          compra_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          produto_id?: string | null
+          projeto_id: string
+          projeto_item_id?: string | null
+          quantidade?: number | null
+          status?: string | null
+        }
+        Update: {
+          compra_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          produto_id?: string | null
+          projeto_id?: string
+          projeto_item_id?: string | null
+          quantidade?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "necessidades_compra_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "necessidades_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "necessidades_compra_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "necessidades_compra_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "necessidades_compra_projeto_item_id_fkey"
+            columns: ["projeto_item_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
