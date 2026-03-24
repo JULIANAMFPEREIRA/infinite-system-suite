@@ -4,8 +4,9 @@ import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react"
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque } from "@/hooks/useNecessidadesCompra";
-import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
@@ -17,10 +18,12 @@ const statusLabels: Record<StatusProjeto, string> = {
 const statusColors: Record<StatusProjeto, string> = {
   orcamento: "bg-secondary text-secondary-foreground", aprovado: "bg-success/15 text-success", em_andamento: "bg-primary/15 text-primary", concluido: "bg-info/15 text-info", cancelado: "bg-destructive/15 text-destructive"
 };
+const statusOptions: StatusProjeto[] = ["orcamento", "aprovado", "em_andamento", "concluido", "cancelado"];
 
 const Projetos = () => {
   const navigate = useNavigate();
   const empresaId = useEmpresa();
+  const qc = useQueryClient();
   const { data: projetos, isLoading } = useProjetos();
   const { data: pendenciaCounts } = useNecessidadesPendentesCount();
   const { data: clientes } = useClientes();
@@ -31,22 +34,15 @@ const Projetos = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<StatusProjeto | "todos">("todos");
-
-  // Form state
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [arquitetoId, setArquitetoId] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataPrevisao, setDataPrevisao] = useState("");
-
-  // Items section
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setNome(""); setDescricao(""); setClienteId(""); setArquitetoId(""); setDataInicio(""); setDataPrevisao("");
-    setEditId(null); setShowForm(false); setSelectedProjetoId(null);
-  };
+  const resetForm = () => { setNome(""); setDescricao(""); setClienteId(""); setArquitetoId(""); setDataInicio(""); setDataPrevisao(""); setEditId(null); setShowForm(false); setSelectedProjetoId(null); };
 
   const openEdit = (p: any) => {
     setEditId(p.id); setNome(p.nome); setDescricao(p.descricao ?? ""); setClienteId(p.cliente_id ?? ""); setArquitetoId(p.arquiteto_id ?? "");
@@ -63,11 +59,26 @@ const Projetos = () => {
         const data = await createProjeto.mutateAsync({ nome, descricao: descricao || null, cliente_id: clienteId || null, arquiteto_id: arquitetoId || null, data_inicio: dataInicio || null, data_previsao: dataPrevisao || null, status: "orcamento" });
         setSelectedProjetoId(data.id); setEditId(data.id);
         toast.success("Projeto criado! Adicione itens abaixo.");
-        return; // keep form open for items
+        return;
       }
       resetForm();
     } catch (err: any) { toast.error(err.message); }
   };
+
+  const changeStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: StatusProjeto }) => {
+      const { error } = await supabase.from("projetos").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Status atualizado"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const removeProjeto = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("projetos").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto excluído"); },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   const filtered = projetos?.filter(p => filterStatus === "todos" || p.status === filterStatus) ?? [];
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -84,50 +95,34 @@ const Projetos = () => {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-1.5 flex-wrap">
-        {(["todos", "orcamento", "aprovado", "em_andamento", "concluido", "cancelado"] as const).map(s => (
+        {(["todos", ...statusOptions] as const).map(s => (
           <button key={s} onClick={() => setFilterStatus(s)} className={`px-2.5 py-1 rounded text-[11px] font-medium transition ${filterStatus === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
             {s === "todos" ? "Todos" : statusLabels[s as StatusProjeto]}
           </button>
         ))}
       </div>
 
-      {/* Form */}
       {showForm && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-4">
           <h2 className="text-sm font-semibold text-foreground">{editId ? "Editar Projeto" : "Novo Projeto"}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Nome *</label>
-              <input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Descrição</label>
-              <input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Cliente</label>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cliente</label>
               <select value={clienteId} onChange={e => setClienteId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
                 <option value="">Selecionar...</option>
                 {clientes?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Arquiteto</label>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
               <select value={arquitetoId} onChange={e => setArquitetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
                 <option value="">Selecionar...</option>
                 {arquitetos?.map(a => <option key={a.id} value={a.id}>{a.nome} ({a.rt_percentual ?? 0}%)</option>)}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Data Início</label>
-              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Previsão</label>
-              <input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
-            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
           </div>
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={createProjeto.isPending || updateProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">
@@ -135,13 +130,10 @@ const Projetos = () => {
             </button>
             <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition">Cancelar</button>
           </div>
-
-          {/* Items */}
           {selectedProjetoId && <ProjetoItensSection projetoId={selectedProjetoId} />}
         </div>
       )}
 
-      {/* Table */}
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
       ) : filtered.length === 0 ? (
@@ -155,48 +147,46 @@ const Projetos = () => {
                   <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Nome</th>
                   <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Cliente</th>
                   <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Arquiteto</th>
-                  <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Status</th>
-                  <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo Prev.</th>
+                  <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Status</th>
+                  <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>
-                  <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pendências</th>
+                  <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pend.</th>
                   <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
+                  <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors" onClick={() => openEdit(p)}>
                     <td className="px-2.5 py-1.5 text-foreground font-medium">{p.nome}</td>
                     <td className="px-2.5 py-1.5 text-foreground">{(p.clientes as any)?.nome ?? "—"}</td>
                     <td className="px-2.5 py-1.5 text-foreground">{(p.fornecedores as any)?.nome ?? "—"}</td>
-                    <td className="px-2.5 py-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors[p.status as StatusProjeto]}`}>
-                        {statusLabels[p.status as StatusProjeto]}
-                      </span>
+                    <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                      <select
+                        value={p.status ?? "orcamento"}
+                        onChange={e => changeStatus.mutate({ id: p.id, status: e.target.value as StatusProjeto })}
+                        className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColors[p.status as StatusProjeto]}`}
+                      >
+                        {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+                      </select>
                     </td>
                     <td className="px-2.5 py-1.5 text-right text-foreground">{fmt(p.custo_previsto)}</td>
                     <td className="px-2.5 py-1.5 text-right text-foreground font-medium">{fmt(p.venda_total)}</td>
                     <td className="px-2.5 py-1.5 text-right">
-                      <span className={(p.margem_prevista ?? 0) > 0 ? "text-success" : "text-destructive"}>
-                        {(p.margem_prevista ?? 0).toFixed(1)}%
-                      </span>
+                      <span className={(p.margem_prevista ?? 0) > 0 ? "text-success" : "text-destructive"}>{(p.margem_prevista ?? 0).toFixed(1)}%</span>
                     </td>
-                    <td className="px-2.5 py-1.5 text-center">
+                    <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                       {(pendenciaCounts?.[p.id] ?? 0) > 0 ? (
-                        <button
-                          onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition"
-                        >
+                        <button onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition">
                           <AlertTriangle size={11} /> {pendenciaCounts![p.id]}
                         </button>
-                      ) : (
-                        <span className="text-muted-foreground text-[11px]">—</span>
-                      )}
+                      ) : <span className="text-muted-foreground text-[11px]">—</span>}
                     </td>
-                    <td className="px-2.5 py-1.5 text-center">
-                      <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-primary">
-                        <Pencil size={13} />
-                      </button>
+                    <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
+                        <button onClick={() => { if (window.confirm("Excluir projeto e todos os itens vinculados?")) removeProjeto.mutate(p.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -234,45 +224,30 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
     if (!desc.trim()) { toast.error("Descrição obrigatória"); return; }
     try {
       const newItem = await createItem.mutateAsync({ projeto_id: projetoId, descricao: desc, tipo, quantidade: qtd, preco_custo: custo, preco_venda: venda, rt_percentual: rt });
-      // Update project totals
       const newCusto = totalCusto + qtd * custo;
       const newVenda = totalVenda + qtd * venda;
       const newMargem = newVenda > 0 ? ((newVenda - newCusto) / newVenda) * 100 : 0;
       await updateProjeto.mutateAsync({ id: projetoId, custo_previsto: newCusto, venda_total: newVenda, margem_prevista: newMargem });
 
-      // Auto-check stock for products and generate purchase need
       if (tipo === "produto" && empresaId) {
         const hasStock = await checkEstoque(newItem.produto_id, qtd);
         if (!hasStock) {
-          await createNecessidade.mutateAsync({
-            empresa_id: empresaId,
-            projeto_id: projetoId,
-            projeto_item_id: newItem.id,
-            produto_id: newItem.produto_id ?? undefined,
-            descricao: desc,
-            quantidade: qtd,
-          });
-          toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada automaticamente");
+          await createNecessidade.mutateAsync({ empresa_id: empresaId, projeto_id: projetoId, projeto_item_id: newItem.id, produto_id: newItem.produto_id ?? undefined, descricao: desc, quantidade: qtd });
+          toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada");
         }
       }
-
       setDesc(""); setQtd(1); setCusto(0); setVenda(0); setRt(0);
       toast.success("Item adicionado");
     } catch (err: any) { toast.error(err.message); }
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    try {
-      await deleteItem.mutateAsync({ id: itemId, projetoId });
-      toast.success("Item removido");
-    } catch (err: any) { toast.error(err.message); }
+    try { await deleteItem.mutateAsync({ id: itemId, projetoId }); toast.success("Item removido"); } catch (err: any) { toast.error(err.message); }
   };
 
   return (
     <div className="border-t border-border pt-4 space-y-3">
       <h3 className="text-xs font-semibold text-foreground">Itens do Projeto</h3>
-
-      {/* Summary */}
       <div className="flex gap-4 text-[11px]">
         <span className="text-muted-foreground">Custo: <strong className="text-foreground">R$ {totalCusto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
         <span className="text-muted-foreground">Venda: <strong className="text-foreground">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
@@ -280,7 +255,6 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
         <span className="text-muted-foreground">Lucro: <strong className={totalVenda - totalCusto > 0 ? "text-success" : "text-destructive"}>R$ {(totalVenda - totalCusto).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
       </div>
 
-      {/* Items list */}
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : itens && itens.length > 0 && (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
@@ -314,39 +288,18 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
         </div>
       )}
 
-      {/* Add item */}
       <div className="flex items-end gap-2 flex-wrap">
-        <div className="space-y-1 flex-1 min-w-[120px]">
-          <label className="text-[11px] text-muted-foreground">Descrição</label>
-          <input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
-        </div>
-        <div className="space-y-1 w-24">
-          <label className="text-[11px] text-muted-foreground">Tipo</label>
+        <div className="space-y-1 flex-1 min-w-[120px]"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+        <div className="space-y-1 w-24"><label className="text-[11px] text-muted-foreground">Tipo</label>
           <select value={tipo} onChange={e => setTipo(e.target.value as TipoItem)} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none">
-            <option value="produto">Produto</option>
-            <option value="servico">Serviço</option>
-            <option value="mao_de_obra">Mão de Obra</option>
+            <option value="produto">Produto</option><option value="servico">Serviço</option><option value="mao_de_obra">Mão de Obra</option>
           </select>
         </div>
-        <div className="space-y-1 w-14">
-          <label className="text-[11px] text-muted-foreground">Qtd</label>
-          <input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" />
-        </div>
-        <div className="space-y-1 w-20">
-          <label className="text-[11px] text-muted-foreground">Custo</label>
-          <input type="number" value={custo} onChange={e => setCusto(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" />
-        </div>
-        <div className="space-y-1 w-20">
-          <label className="text-[11px] text-muted-foreground">Venda</label>
-          <input type="number" value={venda} onChange={e => setVenda(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" />
-        </div>
-        <div className="space-y-1 w-14">
-          <label className="text-[11px] text-muted-foreground">RT%</label>
-          <input type="number" value={rt} onChange={e => setRt(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" />
-        </div>
-        <button onClick={handleAddItem} disabled={createItem.isPending} className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">
-          <Plus size={12} />
-        </button>
+        <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">Qtd</label><input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+        <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Custo</label><input type="number" value={custo} onChange={e => setCusto(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+        <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Venda</label><input type="number" value={venda} onChange={e => setVenda(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+        <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">RT%</label><input type="number" value={rt} onChange={e => setRt(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+        <button onClick={handleAddItem} disabled={createItem.isPending} className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50"><Plus size={12} /></button>
       </div>
     </div>
   );
