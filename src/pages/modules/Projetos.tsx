@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { FolderKanban, Plus, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
+import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque } from "@/hooks/useNecessidadesCompra";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
