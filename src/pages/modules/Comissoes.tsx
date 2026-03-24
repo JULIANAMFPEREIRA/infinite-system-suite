@@ -13,7 +13,7 @@ const Comissoes = () => {
   const [editValor, setEditValor] = useState(0);
 
   const updateComissao = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; percentual?: number; valor?: number; status?: string; data_vencimento?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; percentual?: number; valor?: number; status?: "pendente" | "pago"; data_vencimento?: string }) => {
       const { error } = await supabase.from("comissoes").update(updates).eq("id", id);
       if (error) throw error;
     },
