@@ -58,6 +58,38 @@ export type Database = {
           },
         ]
       }
+      categorias: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          tipo: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          tipo?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           cpf_cnpj: string | null
@@ -65,6 +97,7 @@ export type Database = {
           email: string | null
           empresa_id: string
           endereco: string | null
+          endereco_obra: string | null
           id: string
           nome: string
           notas: string | null
@@ -79,6 +112,7 @@ export type Database = {
           email?: string | null
           empresa_id: string
           endereco?: string | null
+          endereco_obra?: string | null
           id?: string
           nome: string
           notas?: string | null
@@ -93,6 +127,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string
           endereco?: string | null
+          endereco_obra?: string | null
           id?: string
           nome?: string
           notas?: string | null
@@ -569,6 +604,38 @@ export type Database = {
           },
         ]
       }
+      formas_pagamento: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formas_pagamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           cidade: string | null
@@ -850,11 +917,15 @@ export type Database = {
           data_previsao: string | null
           descricao: string | null
           empresa_id: string
+          endereco_obra: string | null
           entrada_recebida: boolean | null
+          forma_pagamento: string | null
           id: string
           lucro_real: number | null
           margem_prevista: number | null
           nome: string
+          numero_parcelas: number | null
+          observacoes_pagamento: string | null
           status: Database["public"]["Enums"]["status_projeto"] | null
           updated_at: string
           venda_total: number | null
@@ -869,11 +940,15 @@ export type Database = {
           data_previsao?: string | null
           descricao?: string | null
           empresa_id: string
+          endereco_obra?: string | null
           entrada_recebida?: boolean | null
+          forma_pagamento?: string | null
           id?: string
           lucro_real?: number | null
           margem_prevista?: number | null
           nome: string
+          numero_parcelas?: number | null
+          observacoes_pagamento?: string | null
           status?: Database["public"]["Enums"]["status_projeto"] | null
           updated_at?: string
           venda_total?: number | null
@@ -888,11 +963,15 @@ export type Database = {
           data_previsao?: string | null
           descricao?: string | null
           empresa_id?: string
+          endereco_obra?: string | null
           entrada_recebida?: boolean | null
+          forma_pagamento?: string | null
           id?: string
           lucro_real?: number | null
           margem_prevista?: number | null
           nome?: string
+          numero_parcelas?: number | null
+          observacoes_pagamento?: string | null
           status?: Database["public"]["Enums"]["status_projeto"] | null
           updated_at?: string
           venda_total?: number | null
@@ -953,6 +1032,73 @@ export type Database = {
           },
         ]
       }
+      visitas_tecnicas: {
+        Row: {
+          created_at: string
+          data: string | null
+          data_pagamento: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          produtos_levados: Json | null
+          projeto_id: string
+          servicos_executados: string | null
+          status_pagamento: string | null
+          tecnico_id: string | null
+          valor_pago_tecnico: number | null
+        }
+        Insert: {
+          created_at?: string
+          data?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          produtos_levados?: Json | null
+          projeto_id: string
+          servicos_executados?: string | null
+          status_pagamento?: string | null
+          tecnico_id?: string | null
+          valor_pago_tecnico?: number | null
+        }
+        Update: {
+          created_at?: string
+          data?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          produtos_levados?: Json | null
+          projeto_id?: string
+          servicos_executados?: string | null
+          status_pagamento?: string | null
+          tecnico_id?: string | null
+          valor_pago_tecnico?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_tecnicas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_tecnicas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_tecnicas_tecnico_id_fkey"
+            columns: ["tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -988,6 +1134,10 @@ export type Database = {
         | "em_andamento"
         | "concluido"
         | "cancelado"
+        | "lead"
+        | "proposta"
+        | "vendido"
+        | "pos_venda"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
       tipo_fornecedor: "fornecedor" | "arquiteto"
       tipo_projeto_item: "produto" | "servico" | "mao_de_obra"
@@ -1139,6 +1289,10 @@ export const Constants = {
         "em_andamento",
         "concluido",
         "cancelado",
+        "lead",
+        "proposta",
+        "vendido",
+        "pos_venda",
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
       tipo_fornecedor: ["fornecedor", "arquiteto"],
