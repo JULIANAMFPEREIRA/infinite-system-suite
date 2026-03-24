@@ -46,6 +46,7 @@ const App = () => (
             <Route path="/cronograma" element={<Cronograma />} />
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/compras" element={<Compras />} />
+            <Route path="/fornecedores" element={<Fornecedores />} />
             <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
             <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
             <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
