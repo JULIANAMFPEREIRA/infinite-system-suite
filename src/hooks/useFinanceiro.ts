@@ -77,7 +77,41 @@ export const useUpdateContaReceber = () => {
   });
 };
 
+export const useDeleteContaPagar = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("financeiro_pagar").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }),
+  });
+};
+
+export const useDeleteContaReceber = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_receber"] }),
+  });
+};
+
 export const useComissoes = () => {
+  return useQuery({
+    queryKey: ["comissoes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("comissoes")
+        .select("*, fornecedores(nome), projetos(nome)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+};
   return useQuery({
     queryKey: ["comissoes"],
     queryFn: async () => {
