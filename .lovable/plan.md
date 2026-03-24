@@ -1,122 +1,100 @@
 
 
-# Ativação do Lovable Cloud — Banco de Dados ERP Completo
+# Implementacao Funcional do ERP — Fase 1 (Fundacao)
 
-## Resumo
+## Contexto
 
-Ativar o Lovable Cloud e criar toda a estrutura de banco de dados relacional com o módulo de **Projetos como núcleo central**, incluindo enums, tabelas, RLS, funções de segurança, triggers e logs de auditoria. Estrutura preparada para SaaS multiempresa.
+O sistema possui banco de dados completo (16 tabelas, RLS, triggers) mas os modulos frontend ainda usam dados mock ou sao placeholders. O login nao usa autenticacao real. Esta fase transforma o sistema em funcional.
 
----
-
-## Arquitetura do Banco
-
-```text
-                        ┌──────────┐
-                        │ empresas │  (SaaS multiempresa)
-                        └────┬─────┘
-                             │
-       ┌─────────────────────┼─────────────────────┐
-       │                     │                     │
-  ┌────┴────┐          ┌─────┴─────┐         ┌────┴────┐
-  │ profiles│          │  clientes │         │fornece- │
-  │ + roles │          │           │         │ dores   │
-  └────┬────┘          └─────┬─────┘         └────┬────┘
-       │                     │                     │
-       │              ┌──────┴──────┐              │
-       └──────────────┤  PROJETOS   ├──────────────┘
-                      │  (núcleo)   │
-                      └──────┬──────┘
-           ┌─────────────────┼─────────────────┐
-           │                 │                 │
-    ┌──────┴──────┐   ┌──────┴──────┐   ┌──────┴──────┐
-    │projeto_itens│   │ comissoes   │   │ financeiro  │
-    │(prod+serv)  │   │   (RT)      │   │ pagar/receb │
-    └──────┬──────┘   └─────────────┘   └─────────────┘
-           │
-    ┌──────┴──────┐
-    │  compras    │──→ estoque_itens (por série)
-    └─────────────┘
-                      ┌─────────────┐
-                      │fin_pessoais │ (isolado)
-                      └─────────────┘
-                      ┌─────────────┐
-                      │ audit_logs  │
-                      └─────────────┘
-```
+**Escopo desta fase**: Autenticacao real + Modulo de Projetos completo + Financeiro basico. Os demais modulos (portal cliente/arquiteto, cronograma visual, CRM) ficam para fases seguintes.
 
 ---
 
-## Tabelas e Estrutura
+## 1. Autenticacao Real (`Login.tsx`)
 
-### 1. Infraestrutura SaaS
-- **`empresas`** — id, nome, nome_fantasia, cnpj, segmento, created_at
-- **`profiles`** — id (FK auth.users), empresa_id (FK), full_name, phone, avatar_url
-- **`user_roles`** — user_id (FK), role (enum: admin, administrativo, financeiro, tecnico, arquiteto, cliente), empresa_id
+- Integrar com Lovable Cloud auth (signup + login com email/senha)
+- Apos login, buscar `profiles` e `user_roles` para determinar perfil
+- Criar `AuthProvider` com contexto global (user, empresa_id, roles)
+- Proteger rotas: redirecionar para `/login` se nao autenticado
+- Auto-confirm desabilitado (padrao)
+- Ao criar primeiro usuario, associar a empresa "SMP CONSULTORIA LTDA" e role `admin`
 
-### 2. CRM e Clientes
-- **`clientes`** — id, empresa_id, nome, email, telefone, cpf_cnpj, endereco, origem (enum: whatsapp, instagram, indicacao, outro), status_crm (enum: lead, contato, proposta, projeto), notas, created_at
-- **`crm_interacoes`** — id, cliente_id, usuario_id, tipo, descricao, created_at
+**Arquivos**: `src/contexts/AuthContext.tsx`, `src/pages/Login.tsx`, `src/App.tsx`
 
-### 3. Fornecedores e Parceiros
-- **`fornecedores`** — id, empresa_id, nome, tipo (enum: fornecedor, arquiteto), cnpj_cpf, telefone, email, rt_percentual, cidade, created_at
+## 2. Modulo de Projetos Funcional (`Projetos.tsx`)
 
-### 4. Produtos (Catálogo)
-- **`produtos`** — id, empresa_id, codigo, nome, categoria, marca, unidade, preco_custo, preco_venda, estoque_minimo, created_at
+O nucleo do sistema. Substituir placeholder por modulo completo:
 
-### 5. PROJETOS (Núcleo)
-- **`projetos`** — id, empresa_id, cliente_id (FK), arquiteto_id (FK fornecedores), nome, descricao, status (enum: orcamento, aprovado, em_andamento, concluido, cancelado), custo_previsto, venda_total, margem_prevista, custo_real, lucro_real, entrada_recebida (bool), data_inicio, data_previsao, created_at
-- **`projeto_itens`** — id, projeto_id (FK), produto_id (FK nullable), descricao, tipo (enum: produto, servico, mao_de_obra), quantidade, preco_custo, preco_venda, rt_percentual, created_at
+**Listagem**:
+- Tabela com dados reais do banco (projetos + cliente + arquiteto)
+- Colunas: Nome, Cliente, Arquiteto, Status, Custo Previsto, Venda, Margem, Lucro Previsto
+- Filtros por status
+- Botao "Novo Projeto"
 
-### 6. Compras (vinculadas a projeto)
-- **`compras`** — id, empresa_id, fornecedor_id (FK), projeto_id (FK nullable), projeto_item_id (FK nullable), produto_id (FK nullable), descricao, quantidade, valor_unitario, valor_total, status (enum: pendente, aprovada, entregue, cancelada), data_compra, created_at
+**Formulario de Criacao/Edicao** (Dialog/Sheet):
+- Campos: nome, descricao, cliente (select do banco), arquiteto (select de fornecedores tipo=arquiteto), datas
+- Secao de itens do projeto (produto, servico, mao_de_obra) com tabela inline
+- Cada item: descricao, tipo, quantidade, preco_custo, preco_venda, rt_percentual
+- Calculo automatico em tempo real: custo_previsto, venda_total, margem_prevista
 
-### 7. Estoque Físico (por série, baixa só na instalação)
-- **`estoque_itens`** — id, empresa_id, produto_id (FK), compra_id (FK nullable), numero_serie, localizacao, status (enum: disponivel, reservado, instalado), projeto_id (FK nullable), created_at
+**Automacoes ao salvar**:
+- Gerar comissoes (RT) automaticamente para itens com rt > 0
+- Status inicial: `orcamento`
 
-### 8. Comissões RT
-- **`comissoes`** — id, empresa_id, projeto_id (FK), fornecedor_id (FK, tipo=arquiteto), projeto_item_id (FK nullable), percentual, valor, status (enum: pendente, pago), data_vencimento, created_at
-- Ao criar comissão, auto-gerar registro em `financeiro_pagar`
+**Arquivos**: `src/pages/modules/Projetos.tsx`, `src/components/projetos/ProjetoForm.tsx`, `src/components/projetos/ProjetoItemsTable.tsx`, `src/hooks/useProjetos.ts`
 
-### 9. Financeiro Empresa
-- **`financeiro_pagar`** — id, empresa_id, projeto_id (FK nullable), fornecedor_id (FK nullable), comissao_id (FK nullable), descricao, valor, data_vencimento, data_pagamento, status (enum: pendente, pago, vencido, cancelado)
-- **`financeiro_receber`** — id, empresa_id, projeto_id (FK nullable), cliente_id (FK nullable), descricao, valor, parcela, data_vencimento, data_pagamento, status
+## 3. Financeiro Basico (Pagar + Receber)
 
-### 10. Finanças Pessoais (Isolado)
-- **`financas_pessoais`** — id, empresa_id, usuario_id (FK), descricao, categoria, valor, tipo (enum: retirada, devolucao, despesa, receita), data, created_at
+Substituir placeholders por tabelas reais conectadas ao banco:
 
-### 11. Auditoria
-- **`audit_logs`** — id, empresa_id, usuario_id, tabela, registro_id, acao (enum: criacao, edicao, exclusao), dados_anteriores (jsonb), dados_novos (jsonb), created_at
+**Contas a Pagar** (`FinanceiroPagar.tsx`):
+- Listar de `financeiro_pagar` com joins (fornecedor, projeto)
+- Botao "Nova Conta"
+- Marcar como pago (atualizar data_pagamento + status)
+
+**Contas a Receber** (`FinanceiroReceber.tsx`):
+- Listar de `financeiro_receber` com joins (cliente, projeto)
+- Botao "Nova Parcela"
+- Marcar como recebido
+
+**Arquivos**: `src/pages/modules/FinanceiroPagar.tsx`, `src/pages/modules/FinanceiroReceber.tsx`, `src/hooks/useFinanceiro.ts`
+
+## 4. Conectar Modulos Existentes ao Banco
+
+Substituir dados mock por queries reais nos modulos ja construidos:
+
+- **Fornecedores**: CRUD real na tabela `fornecedores`
+- **Compras**: CRUD real na tabela `compras`
+- **Estoque**: Leitura real de `produtos` e `estoque_itens`
+- **Financas Pessoais**: CRUD real na tabela `financas_pessoais`
+
+Cada modulo usara hooks customizados com `useQuery`/`useMutation` do React Query.
+
+**Arquivos**: Atualizar `Fornecedores.tsx`, `Compras.tsx`, `Estoque.tsx`, `FinancasPessoais.tsx` + criar hooks em `src/hooks/`
+
+## 5. Hook Utilitario de Empresa
+
+Criar `useEmpresa()` que retorna o `empresa_id` do usuario logado, necessario para todas as queries e inserts.
+
+**Arquivo**: `src/hooks/useEmpresa.ts`
 
 ---
 
-## Segurança (RLS)
+## Detalhes Tecnicos
 
-1. **Enum `app_role`**: admin, administrativo, financeiro, tecnico, arquiteto, cliente
-2. **Função `has_role()`**: security definer, sem recursão
-3. **Função `get_empresa_id()`**: retorna empresa_id do usuário logado (security definer)
-4. **Políticas por tabela**:
-   - Todas filtram por `empresa_id = get_empresa_id(auth.uid())`
-   - Admin: acesso total dentro da empresa
-   - Cliente: SELECT em `projetos` e `projeto_itens` onde `cliente_id` é dele, sem colunas financeiras (controlado no frontend)
-   - Arquiteto: SELECT em `projetos` vinculados a ele + `comissoes` próprias
-   - Financeiro: acesso a tabelas financeiras da empresa
+- Todas as queries usam `supabase` client de `@/integrations/supabase/client`
+- React Query para cache e sync (`useQuery`, `useMutation`, `invalidateQueries`)
+- `empresa_id` injetado em todo INSERT (vem do profile do usuario logado)
+- Calculos de margem/lucro: `margem = ((venda - custo) / venda) * 100`
+- Componente `DataTable` existente sera reutilizado para listagens
+- Formularios usam `Dialog` do shadcn para criacao/edicao
+- Toast notifications via `sonner` para feedback
 
----
+## Ordem de Execucao
 
-## Triggers
-
-1. **Auto-criar profile** ao signup (trigger on auth.users)
-2. **Atualizar `custo_real`** do projeto ao inserir compra com status=entregue
-3. **Auto-gerar `financeiro_pagar`** ao criar comissão
-
----
-
-## Ordem de Execução
-
-1. Ativar Lovable Cloud
-2. Criar migração com enums
-3. Criar migração com tabelas (empresas → profiles → clientes → fornecedores → produtos → projetos → projeto_itens → compras → estoque → comissoes → financeiro → fin_pessoais → audit_logs → user_roles)
-4. Criar migração com funções (has_role, get_empresa_id) + RLS policies
-5. Criar migração com triggers
-6. Inserir empresa padrão "SMP CONSULTORIA LTDA" e dados iniciais
+1. `AuthContext` + Login funcional
+2. `useEmpresa` hook
+3. Modulo Projetos completo (listagem + formulario + itens + calculos)
+4. Financeiro Pagar e Receber
+5. Conectar Fornecedores, Compras, Estoque, Financas Pessoais ao banco
 
