@@ -1,60 +1,44 @@
 
 
-# Automacao Projetos-Estoque-Compras
+# Criar Usuario Admin + Seed de Dados Completos para Teste
 
 ## Resumo
-Criar tabela `necessidades_compra` no banco, automacao no `ProjetoItensSection` para gerar necessidades ao adicionar itens tipo "produto", nova tela "Itens a Comprar" com acao de converter em compra real, e alerta visual nos projetos.
 
-## 1. Migracao: tabela `necessidades_compra`
+Criar uma edge function `seed-test-data` que usa o service role key para: criar o usuario admin via Auth API, vincular a empresa, atribuir role admin, e popular todas as tabelas com um cenario de teste completo (cliente, fornecedores, produtos, projeto, itens, compras, estoque, financeiro, comissoes). Executar a function uma vez para popular tudo.
 
-```sql
-CREATE TABLE public.necessidades_compra (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id uuid NOT NULL,
-  projeto_id uuid NOT NULL,
-  projeto_item_id uuid,
-  produto_id uuid,
-  descricao text,
-  quantidade numeric DEFAULT 1,
-  status text DEFAULT 'pendente', -- pendente | comprado
-  compra_id uuid, -- referencia a compra gerada
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.necessidades_compra ENABLE ROW LEVEL SECURITY;
--- RLS: admin manages, empresa users see
-```
+---
 
-## 2. Hook `useNecessidadesCompra` (`src/hooks/useNecessidadesCompra.ts`)
-- `useNecessidadesCompra()`: lista necessidades pendentes com joins (projeto, produto)
-- `useCreateNecessidade()`: insere necessidade
-- `useConverterEmCompra()`: cria registro em `compras`, atualiza `necessidades_compra.status = 'comprado'` e vincula `compra_id`
+## Abordagem
 
-## 3. Automacao em `Projetos.tsx` > `ProjetoItensSection`
-No `handleAddItem`, apos criar o item com `tipo === 'produto'`:
-- Verificar estoque disponivel: `SELECT count(*) FROM estoque_itens WHERE produto_id = X AND status = 'disponivel'`
-- Se estoque insuficiente: chamar `useCreateNecessidade` automaticamente com dados do item
-- Exibir toast: "Necessidade de compra gerada automaticamente"
+Uma edge function e a unica forma de criar usuarios programaticamente (precisa do service role key). A function fara tudo em sequencia:
 
-## 4. Nova tela "Itens a Comprar" (`src/pages/modules/ItensComprar.tsx`)
-- Tabela com colunas: Produto, Qtd Necessaria, Projeto, Status (pendente/comprado), Acoes
-- Botao "Converter em Compra" por linha: cria compra vinculada ao projeto e atualiza status
-- Filtro por status (pendente/comprado)
+1. Criar usuario `admin@infinit.com` / `123456` via `supabase.auth.admin.createUser` (com `email_confirm: true`)
+2. Inserir profile vinculado a empresa `a0000000-0000-0000-0000-000000000001`
+3. Inserir `user_roles` com role `admin`
+4. Inserir cliente, fornecedores (1 padrao + 1 arquiteto com RT)
+5. Inserir 3 produtos com precos
+6. Inserir 1 estoque_item por produto (qty baixa)
+7. Criar projeto "Automacao Residencial Alpha" vinculado ao cliente
+8. Inserir itens no projeto (3 produtos + 1 servico instalacao)
+9. Inserir comissao RT do arquiteto
+10. Inserir 1 compra vinculada ao projeto
+11. Inserir estoque atualizado da compra
+12. Inserir necessidade de compra para itens sem estoque
+13. Gerar financeiro_receber (entrada + 2 parcelas)
+14. Gerar financeiro_pagar (fornecedor + comissao)
+15. Atualizar projeto status para `aprovado` e totais calculados
 
-## 5. Rota e Sidebar
-- `App.tsx`: adicionar rota `/itens-comprar` com `ItensComprar`
-- `AppSidebar.tsx`: adicionar item "Itens a Comprar" com icone `ClipboardList` entre Compras e Fornecedores
+## Arquivo
 
-## 6. Alerta visual em Projetos
-Na tabela de projetos, adicionar coluna "Pendencias":
-- Query count de `necessidades_compra` onde `status = 'pendente'` por projeto
-- Exibir badge vermelho com numero de itens pendentes
-- Clicar no badge navega para `/itens-comprar?projeto=ID`
+`supabase/functions/seed-test-data/index.ts`
 
-## Ordem de Execucao
-1. Migracao da tabela
-2. Hook `useNecessidadesCompra`
-3. Atualizar `ProjetoItensSection` com verificacao automatica
-4. Criar pagina `ItensComprar.tsx`
-5. Adicionar rota e sidebar
-6. Adicionar alertas visuais na listagem de projetos
+## Execucao
+
+Apos deploy, chamar a function via `curl_edge_functions` para executar o seed. A function retorna um resumo do que foi criado.
+
+## Seguranca
+
+- Function usa `SUPABASE_SERVICE_ROLE_KEY` (ja disponivel como secret)
+- Idempotente: verifica se usuario ja existe antes de criar
+- Pode ser deletada apos uso
 
