@@ -6,7 +6,7 @@ import {
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
   ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck
 } from "lucide-react";
-import logoGold from "@/assets/logo-gold.jpeg";
+import logoGold from "@/assets/logo-gold.png";
 
 interface NavItem {
   label: string;
