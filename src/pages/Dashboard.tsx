@@ -17,10 +17,10 @@ const revenueData = [
 ];
 
 const projectStatusData = [
-  { name: "Em Andamento", value: 8, color: "hsl(43, 74%, 49%)" },
+  { name: "Em Andamento", value: 8, color: "hsl(200, 80%, 55%)" },
   { name: "Aguardando", value: 3, color: "hsl(38, 92%, 50%)" },
   { name: "Concluídos", value: 12, color: "hsl(152, 69%, 40%)" },
-  { name: "Propostas", value: 5, color: "hsl(220, 10%, 70%)" },
+  { name: "Propostas", value: 5, color: "hsl(220, 10%, 45%)" },
 ];
 
 const purchaseData = [
@@ -57,8 +57,8 @@ const StatCard = ({ title, value, change, positive, icon: Icon }: StatCardProps)
   </div>
 );
 
-const GOLD = "hsl(43, 74%, 49%)";
-const GRAY = "hsl(220, 10%, 70%)";
+const CYAN = "hsl(200, 80%, 55%)";
+const GRAY = "hsl(220, 10%, 45%)";
 
 const Dashboard = () => {
   return (
@@ -82,22 +82,22 @@ const Dashboard = () => {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={GOLD} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={GOLD} stopOpacity={0} />
+                  <stop offset="5%" stopColor={CYAN} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={CYAN} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorCusto" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={GRAY} stopOpacity={0.2} />
                   <stop offset="95%" stopColor={GRAY} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 10%, 90%)" />
-              <XAxis dataKey="month" stroke="hsl(220, 10%, 55%)" fontSize={11} />
-              <YAxis stroke="hsl(220, 10%, 55%)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 12%, 22%)" />
+              <XAxis dataKey="month" stroke="hsl(220, 10%, 45%)" fontSize={11} />
+              <YAxis stroke="hsl(220, 10%, 45%)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
               <Tooltip
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid hsl(220, 10%, 88%)", borderRadius: "6px", fontSize: "12px" }}
+                contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }}
                 formatter={(value: number) => [`R$ ${value.toLocaleString()}`, undefined]}
               />
-              <Area type="monotone" dataKey="receita" stroke={GOLD} fill="url(#colorReceita)" strokeWidth={2} />
+              <Area type="monotone" dataKey="receita" stroke={CYAN} fill="url(#colorReceita)" strokeWidth={2} />
               <Area type="monotone" dataKey="custo" stroke={GRAY} fill="url(#colorCusto)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
@@ -112,7 +112,7 @@ const Dashboard = () => {
                   <Cell key={index} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid hsl(220, 10%, 88%)", borderRadius: "6px", fontSize: "12px" }} />
+              <Tooltip contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-1.5 mt-2">
@@ -134,11 +134,11 @@ const Dashboard = () => {
           <h3 className="text-xs font-semibold text-foreground mb-3">Itens Mais Comprados</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={purchaseData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 10%, 90%)" />
-              <XAxis type="number" stroke="hsl(220, 10%, 55%)" fontSize={11} />
-              <YAxis type="category" dataKey="item" stroke="hsl(220, 10%, 55%)" fontSize={11} width={90} />
-              <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid hsl(220, 10%, 88%)", borderRadius: "6px", fontSize: "12px" }} />
-              <Bar dataKey="qtd" fill={GOLD} radius={[0, 3, 3, 0]} barSize={14} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 12%, 22%)" />
+              <XAxis type="number" stroke="hsl(220, 10%, 45%)" fontSize={11} />
+              <YAxis type="category" dataKey="item" stroke="hsl(220, 10%, 45%)" fontSize={11} width={90} />
+              <Tooltip contentStyle={{ backgroundColor: "hsl(222, 15%, 16%)", border: "1px solid hsl(222, 12%, 25%)", borderRadius: "6px", fontSize: "12px", color: "hsl(220, 10%, 88%)" }} />
+              <Bar dataKey="qtd" fill={CYAN} radius={[0, 3, 3, 0]} barSize={14} />
             </BarChart>
           </ResponsiveContainer>
         </div>
