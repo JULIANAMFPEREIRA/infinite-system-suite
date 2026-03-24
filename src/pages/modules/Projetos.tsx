@@ -260,7 +260,6 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
       toast.success("Item adicionado");
     } catch (err: any) { toast.error(err.message); }
   };
-  };
 
   const handleDeleteItem = async (itemId: string) => {
     try {
