@@ -12,6 +12,7 @@ import Kits from "./pages/modules/Kits";
 import Cronograma from "./pages/modules/Cronograma";
 import Estoque from "./pages/modules/Estoque";
 import Compras from "./pages/modules/Compras";
+import Fornecedores from "./pages/modules/Fornecedores";
 import FinanceiroReceber from "./pages/modules/FinanceiroReceber";
 import FinanceiroPagar from "./pages/modules/FinanceiroPagar";
 import FluxoCaixa from "./pages/modules/FluxoCaixa";
