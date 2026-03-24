@@ -159,6 +159,7 @@ const Projetos = () => {
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo Prev.</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>
+                  <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pendências</th>
                   <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
                 </tr>
               </thead>
