@@ -1,99 +1,180 @@
 
 
-# Tornar Todos os Modulos Interativos e Editaveis
+# Evolucao INFINIT SYSTEM — Plano Completo em 3 Fases
 
-## Diagnostico
+Este plano cobre todos os 21 pontos solicitados, divididos em fases para garantir estabilidade.
 
-Modulos que ja tem CRUD parcial (criar + listar): Projetos, Fornecedores, Compras, FinanceiroPagar, FinanceiroReceber, FinancasPessoais.
+---
 
-**O que falta em cada modulo:**
+## FASE 1 — Nucleo (esta implementacao)
 
-| Modulo | Editar | Excluir | Status Change | Click Row |
-|--------|--------|---------|---------------|-----------|
-| Projetos | SIM | NAO | NAO | Via botao |
-| CRM/Clientes | NAO | NAO | NAO | NAO |
-| Fornecedores | NAO | NAO | — | NAO |
-| Compras | NAO | NAO | NAO (critico) | NAO |
-| Estoque | NAO | NAO | NAO | NAO |
-| FinanceiroPagar | NAO | NAO | Pagar only | NAO |
-| FinanceiroReceber | NAO | NAO | Receber only | NAO |
-| FinancasPessoais | NAO | NAO | — | NAO |
+### 1.1 Migracao de Banco de Dados
 
-## Alteracoes por Modulo
+Novas tabelas e alteracoes necessarias:
 
-### 1. Compras (`Compras.tsx`) — PRIORIDADE
-- Linhas clicaveis: ao clicar, abrir formulario de edicao inline
-- Adicionar coluna Acoes com botoes Editar + status transitions
-- **Status workflow**: pendente → aprovada → entregue (select dropdown na linha)
-- Ao mudar para "entregue": inserir `estoque_itens` automaticamente (1 item por unidade ou 1 item com dados)
-- Atualizar `custo_real` do projeto vinculado (trigger ja existe no banco)
-- Adicionar selects de Fornecedor e Projeto no formulario de criacao
+**Nova tabela `visitas_tecnicas`:**
+- id, empresa_id, projeto_id, tecnico_id (FK fornecedores), data, descricao, produtos_levados (jsonb), servicos_executados (text), valor_pago_tecnico (numeric), status_pagamento (pendente/pago), data_pagamento, created_at
+- RLS: admin manages, empresa users see
 
-### 2. Fornecedores (`Fornecedores.tsx`)
-- Linhas clicaveis: ao clicar, popular formulario com dados para edicao
-- Adicionar mutation de update (supabase update by id)
-- Adicionar botao excluir com confirmacao
-- Reuso do formulario existente para criar/editar
+**Nova tabela `formas_pagamento`:**
+- id, empresa_id, nome, ativo (boolean), created_at
 
-### 3. CRM/Clientes (`CRM.tsx`)
-- Linhas clicaveis para edicao
-- Adicionar mutation de update (nome, email, telefone, status_crm, origem)
-- Status editavel inline (select na linha ou no formulario)
-- Botao excluir com confirmacao
+**Nova tabela `categorias`:**
+- id, empresa_id, nome, tipo (produto/servico), created_at
 
-### 4. Estoque (`Estoque.tsx`)
-- **Catalogo**: adicionar CRUD completo para produtos (criar, editar, excluir)
-- Formulario de novo produto com todos os campos
-- Linhas clicaveis para edicao
-- **Estoque Fisico**: permitir editar status (disponivel/reservado/instalado) e localizacao
-- Adicionar botao para criar item de estoque manualmente
+**Alterar `projetos`:**
+- Adicionar: endereco_obra (text), forma_pagamento (text), observacoes_pagamento (text), numero_parcelas (int default 1)
 
-### 5. FinanceiroPagar (`FinanceiroPagar.tsx`)
-- Linhas clicaveis para edicao (descricao, valor, vencimento)
-- Adicionar botao excluir
-- Formulario expandido com fornecedor_id e projeto_id (selects)
+**Alterar `clientes`:**
+- Adicionar: endereco_obra (text)
 
-### 6. FinanceiroReceber (`FinanceiroReceber.tsx`)
-- Linhas clicaveis para edicao
-- Adicionar botao excluir
-- Formulario expandido com cliente_id e projeto_id (selects)
+**Alterar `status_projeto` enum:**
+- Adicionar valores: `lead`, `proposta`, `vendido`, `pos_venda`
+- Fluxo final: lead → proposta → orcamento → aprovado → em_andamento → concluido → pos_venda → cancelado
 
-### 7. FinancasPessoais (`FinancasPessoais.tsx`)
-- Linhas clicaveis para edicao
-- Adicionar mutation de update e delete
-- Botao excluir por linha
+**Alterar `comissoes`:**
+- Tornar editavel: permitir UPDATE pelo admin (policy ja existe)
 
-### 8. Projetos (`Projetos.tsx`)
-- Adicionar mudanca de status (select dropdown na coluna status)
-- Adicionar botao excluir projeto (com confirmacao)
+### 1.2 CRM → Projeto Automatico
 
-## Padrao de Implementacao (mesmo para todos)
+No `CRM.tsx`, ao alterar `status_crm` para "projeto":
+- Criar projeto automaticamente via `useCreateProjeto`
+- Vincular cliente_id, copiar endereco e endereco_obra do cliente
+- Toast: "Projeto criado automaticamente a partir do CRM"
+- Status inicial do projeto: `proposta`
 
-Cada modulo seguira o mesmo padrao:
-1. Estado `editId` para controlar edicao
-2. Ao clicar na linha: popular formulario existente com dados e setar `editId`
-3. Botao Salvar: se `editId` → update, senao → insert
-4. Coluna Acoes: icones Pencil (editar) + Trash2 (excluir)
-5. Confirmacao antes de excluir (window.confirm)
-6. Toast de feedback em todas as operacoes
+### 1.3 Projeto Completo
 
-## Automacao Compras → Estoque
-No modulo Compras, ao alterar status para "entregue":
-```
-supabase.from("estoque_itens").insert({
-  empresa_id, produto_id, compra_id, status: "disponivel",
-  localizacao: "Deposito"
-})
-```
-O trigger `atualizar_custo_real_projeto` ja existe no banco e atualizara o projeto automaticamente.
+Expandir formulario em `Projetos.tsx`:
+- Campos novos: endereco_obra, forma_pagamento (select de formas cadastradas), numero_parcelas, observacoes
+- Responsaveis: arquiteto (ja existe), adicionar campos para engenheiro_id, designer_id (selects de fornecedores)
+- Autocomplete de produtos: ao digitar no campo descricao de item tipo "produto", buscar produtos cadastrados e preencher custo/venda automaticamente
+- Comissao por item: campo rt_percentual ja existe em projeto_itens, tornar visivel e editavel
 
-## Arquivos Afetados
-1. `src/pages/modules/Compras.tsx` — CRUD + status workflow + estoque auto
-2. `src/pages/modules/Fornecedores.tsx` — editar + excluir
-3. `src/pages/modules/CRM.tsx` — editar + excluir + status
-4. `src/pages/modules/Estoque.tsx` — CRUD produtos + editar status estoque
-5. `src/pages/modules/FinanceiroPagar.tsx` — editar + excluir
-6. `src/pages/modules/FinanceiroReceber.tsx` — editar + excluir
-7. `src/pages/modules/FinancasPessoais.tsx` — editar + excluir
-8. `src/pages/modules/Projetos.tsx` — status change + excluir
+### 1.4 Automacoes ao Criar/Aprovar Projeto
+
+Ao salvar projeto com itens:
+- Gerar necessidades de compra para itens tipo produto (ja existe parcialmente)
+- Ao mudar status para "aprovado": gerar automaticamente contas a receber (parcelas conforme numero_parcelas) e comissoes RT
+
+Entrada nao obrigatoria — financeiro gerado ao aprovar, nao ao receber entrada.
+
+### 1.5 Visitas Tecnicas
+
+Criar submodulo dentro do projeto (similar a ProjetoItensSection):
+- Listar visitas vinculadas ao projeto
+- Formulario: tecnico (select fornecedores), data, descricao, produtos levados (multi-select do estoque), servicos executados, valor pago ao tecnico, status pagamento
+- Ao registrar visita com produtos: dar baixa no estoque (status → "instalado")
+- Ao registrar valor pago: gerar conta a pagar automaticamente
+
+### 1.6 Estoque — Baixa na Instalacao
+
+Alterar logica: estoque nao baixa na compra (ja correto). Baixa ocorre apenas via visitas tecnicas (item 1.5) ao marcar produtos como instalados.
+
+### 1.7 Comissoes Editaveis
+
+Em `Comissoes.tsx`:
+- Permitir editar percentual e valor
+- Adicionar botao "Dar baixa" (marcar como pago + data_pagamento)
+- Atualizar conta a pagar vinculada automaticamente
+
+### 1.8 Financeiro — Baixa Completa
+
+Expandir `FinanceiroPagar.tsx` e `FinanceiroReceber.tsx`:
+- Ao dar baixa: modal com campos data_pagamento, forma_pagamento (select), observacao
+- Em vez de apenas setar "pago" com data de hoje
+
+### 1.9 Dashboard com Dados Reais
+
+Substituir dados mock no `Dashboard.tsx`:
+- Queries reais: total receita (financeiro_receber pago), projetos ativos (em_andamento), leads (clientes com status lead), compras pendentes
+- Graficos com dados reais dos ultimos 6 meses
+- Atividade recente: ultimos audit_logs
+
+---
+
+## FASE 2 — Gestao e Configuracoes (proxima iteracao)
+
+### 2.1 Configuracoes Avancadas
+- CRUD de categorias, formas de pagamento, servicos
+- Gestao de usuarios: criar usuario (via edge function), atribuir role, vincular a empresa
+- Templates de projeto
+
+### 2.2 Usuarios e Acessos
+- Edge function para criar usuarios com roles especificos (cliente, arquiteto, parceiro, funcionario)
+- Tela em Configuracoes para gerenciar
+- Vincular cada usuario ao seu tipo
+
+### 2.3 Contratos Integrados
+- Vincular contrato ao projeto e cliente
+- Status do contrato (rascunho, enviado, assinado)
+- Exibir no CRM
+
+### 2.4 CRM Completo
+- Visualizacao completa do cliente (projeto vinculado, contrato, endereco obra, responsaveis)
+- Historico de interacoes
+
+### 2.5 Fluxo de Caixa Manual
+- Permitir lancamentos manuais alem dos automaticos
+
+---
+
+## FASE 3 — Portais e Relatorios (iteracao seguinte)
+
+### 3.1 Portal do Cliente
+- Rota separada `/portal/cliente`
+- Ver projeto, cronograma, progresso, fotos
+- Sem valores financeiros
+
+### 3.2 Portal do Arquiteto
+- Ver projetos vinculados, comissoes, status pagamento
+
+### 3.3 Relatorios com PDF
+- Exportacao usando reportlab ou html-to-pdf
+- Estrutura para Excel
+
+### 3.4 Notificacoes
+- Alertas de vencimento, custo excedido, compras pendentes
+- Sistema de notificacoes internas
+
+### 3.5 Alertas Visuais
+- No dashboard: contas vencidas, custo > previsto, compras pendentes
+
+---
+
+## Detalhes Tecnicos (Fase 1)
+
+**Migrations:**
+1. ALTER TABLE projetos ADD COLUMN endereco_obra text, forma_pagamento text, observacoes_pagamento text, numero_parcelas int DEFAULT 1
+2. ALTER TABLE clientes ADD COLUMN endereco_obra text
+3. CREATE TABLE visitas_tecnicas (...)
+4. CREATE TABLE formas_pagamento (...)
+5. CREATE TABLE categorias (...)
+6. Adicionar novos valores ao enum status_projeto (lead, proposta, vendido, pos_venda)
+7. RLS policies para novas tabelas
+
+**Arquivos novos:**
+- `src/hooks/useVisitasTecnicas.ts`
+- `src/hooks/useCategorias.ts`
+
+**Arquivos editados:**
+- `src/pages/modules/Projetos.tsx` — formulario expandido + autocomplete + visitas + automacoes
+- `src/pages/modules/CRM.tsx` — auto-criar projeto ao mudar status
+- `src/pages/modules/Comissoes.tsx` — edicao + baixa
+- `src/pages/modules/FinanceiroPagar.tsx` — modal de baixa completa
+- `src/pages/modules/FinanceiroReceber.tsx` — modal de baixa completa
+- `src/pages/modules/Cronograma.tsx` — usar novos status
+- `src/pages/Dashboard.tsx` — dados reais
+- `src/pages/modules/Configuracoes.tsx` — CRUD categorias e formas de pagamento
+
+**Ordem de execucao:**
+1. Migracao de banco (todas as alteracoes)
+2. Hooks novos (visitas, categorias)
+3. CRM → Projeto automatico
+4. Projeto expandido (formulario + autocomplete + visitas)
+5. Automacoes (financeiro ao aprovar + comissoes)
+6. Comissoes editaveis + baixa
+7. Financeiro com modal de baixa
+8. Dashboard com dados reais
+9. Configuracoes basicas
 
