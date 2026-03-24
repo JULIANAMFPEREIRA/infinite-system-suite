@@ -14,16 +14,908 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          acao: Database["public"]["Enums"]["acao_audit"]
+          created_at: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          empresa_id: string | null
+          id: string
+          registro_id: string | null
+          tabela: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: Database["public"]["Enums"]["acao_audit"]
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          empresa_id?: string | null
+          id?: string
+          registro_id?: string | null
+          tabela: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: Database["public"]["Enums"]["acao_audit"]
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          empresa_id?: string | null
+          id?: string
+          registro_id?: string | null
+          tabela?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes: {
+        Row: {
+          cpf_cnpj: string | null
+          created_at: string
+          email: string | null
+          empresa_id: string
+          endereco: string | null
+          id: string
+          nome: string
+          notas: string | null
+          origem: Database["public"]["Enums"]["origem_lead"] | null
+          status_crm: Database["public"]["Enums"]["status_crm"] | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_id: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          notas?: string | null
+          origem?: Database["public"]["Enums"]["origem_lead"] | null
+          status_crm?: Database["public"]["Enums"]["status_crm"] | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_id?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          notas?: string | null
+          origem?: Database["public"]["Enums"]["origem_lead"] | null
+          status_crm?: Database["public"]["Enums"]["status_crm"] | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes: {
+        Row: {
+          created_at: string
+          data_vencimento: string | null
+          empresa_id: string
+          fornecedor_id: string
+          id: string
+          percentual: number | null
+          projeto_id: string
+          projeto_item_id: string | null
+          status: Database["public"]["Enums"]["status_comissao"] | null
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_vencimento?: string | null
+          empresa_id: string
+          fornecedor_id: string
+          id?: string
+          percentual?: number | null
+          projeto_id: string
+          projeto_item_id?: string | null
+          status?: Database["public"]["Enums"]["status_comissao"] | null
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_vencimento?: string | null
+          empresa_id?: string
+          fornecedor_id?: string
+          id?: string
+          percentual?: number | null
+          projeto_id?: string
+          projeto_item_id?: string | null
+          status?: Database["public"]["Enums"]["status_comissao"] | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_projeto_item_id_fkey"
+            columns: ["projeto_item_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras: {
+        Row: {
+          created_at: string
+          data_compra: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          produto_id: string | null
+          projeto_id: string | null
+          projeto_item_id: string | null
+          quantidade: number | null
+          status: Database["public"]["Enums"]["status_compra"] | null
+          valor_total: number | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_compra?: string | null
+          descricao?: string | null
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          produto_id?: string | null
+          projeto_id?: string | null
+          projeto_item_id?: string | null
+          quantidade?: number | null
+          status?: Database["public"]["Enums"]["status_compra"] | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_compra?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          produto_id?: string | null
+          projeto_id?: string | null
+          projeto_item_id?: string | null
+          quantidade?: number | null
+          status?: Database["public"]["Enums"]["status_compra"] | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_projeto_item_id_fkey"
+            columns: ["projeto_item_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_interacoes: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          tipo: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          tipo?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          tipo?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_interacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          id: string
+          nome: string
+          nome_fantasia: string | null
+          segmento: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          nome_fantasia?: string | null
+          segmento?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          nome_fantasia?: string | null
+          segmento?: string | null
+        }
+        Relationships: []
+      }
+      estoque_itens: {
+        Row: {
+          compra_id: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          localizacao: string | null
+          numero_serie: string | null
+          produto_id: string
+          projeto_id: string | null
+          status: Database["public"]["Enums"]["status_estoque"] | null
+        }
+        Insert: {
+          compra_id?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          localizacao?: string | null
+          numero_serie?: string | null
+          produto_id: string
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_estoque"] | null
+        }
+        Update: {
+          compra_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          localizacao?: string | null
+          numero_serie?: string | null
+          produto_id?: string
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_estoque"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estoque_itens_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_itens_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financas_pessoais: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          data: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          tipo: Database["public"]["Enums"]["tipo_financa_pessoal"] | null
+          usuario_id: string
+          valor: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          data?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_financa_pessoal"] | null
+          usuario_id: string
+          valor?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          data?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_financa_pessoal"] | null
+          usuario_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financas_pessoais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_pagar: {
+        Row: {
+          comissao_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          projeto_id: string | null
+          status: Database["public"]["Enums"]["status_financeiro"] | null
+          valor: number | null
+        }
+        Insert: {
+          comissao_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_financeiro"] | null
+          valor?: number | null
+        }
+        Update: {
+          comissao_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_financeiro"] | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_pagar_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_pagar_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_pagar_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_pagar_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_receber: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          parcela: number | null
+          projeto_id: string | null
+          status: Database["public"]["Enums"]["status_financeiro"] | null
+          valor: number | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          parcela?: number | null
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_financeiro"] | null
+          valor?: number | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          parcela?: number | null
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["status_financeiro"] | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_receber_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receber_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receber_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedores: {
+        Row: {
+          cidade: string | null
+          cnpj_cpf: string | null
+          created_at: string
+          email: string | null
+          empresa_id: string
+          id: string
+          nome: string
+          rt_percentual: number | null
+          telefone: string | null
+          tipo: Database["public"]["Enums"]["tipo_fornecedor"] | null
+          updated_at: string
+        }
+        Insert: {
+          cidade?: string | null
+          cnpj_cpf?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_id: string
+          id?: string
+          nome: string
+          rt_percentual?: number | null
+          telefone?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_fornecedor"] | null
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string | null
+          cnpj_cpf?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+          rt_percentual?: number | null
+          telefone?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_fornecedor"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          categoria: string | null
+          codigo: string | null
+          created_at: string
+          empresa_id: string
+          estoque_minimo: number | null
+          id: string
+          marca: string | null
+          nome: string
+          preco_custo: number | null
+          preco_venda: number | null
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          empresa_id: string
+          estoque_minimo?: number | null
+          id?: string
+          marca?: string | null
+          nome: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          empresa_id?: string
+          estoque_minimo?: number | null
+          id?: string
+          marca?: string | null
+          nome?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          empresa_id: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          empresa_id?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          empresa_id?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projeto_itens: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          preco_custo: number | null
+          preco_venda: number | null
+          produto_id: string | null
+          projeto_id: string
+          quantidade: number | null
+          rt_percentual: number | null
+          tipo: Database["public"]["Enums"]["tipo_projeto_item"] | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          produto_id?: string | null
+          projeto_id: string
+          quantidade?: number | null
+          rt_percentual?: number | null
+          tipo?: Database["public"]["Enums"]["tipo_projeto_item"] | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          produto_id?: string | null
+          projeto_id?: string
+          quantidade?: number | null
+          rt_percentual?: number | null
+          tipo?: Database["public"]["Enums"]["tipo_projeto_item"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_itens_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projetos: {
+        Row: {
+          arquiteto_id: string | null
+          cliente_id: string | null
+          created_at: string
+          custo_previsto: number | null
+          custo_real: number | null
+          data_inicio: string | null
+          data_previsao: string | null
+          descricao: string | null
+          empresa_id: string
+          entrada_recebida: boolean | null
+          id: string
+          lucro_real: number | null
+          margem_prevista: number | null
+          nome: string
+          status: Database["public"]["Enums"]["status_projeto"] | null
+          updated_at: string
+          venda_total: number | null
+        }
+        Insert: {
+          arquiteto_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          custo_previsto?: number | null
+          custo_real?: number | null
+          data_inicio?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          empresa_id: string
+          entrada_recebida?: boolean | null
+          id?: string
+          lucro_real?: number | null
+          margem_prevista?: number | null
+          nome: string
+          status?: Database["public"]["Enums"]["status_projeto"] | null
+          updated_at?: string
+          venda_total?: number | null
+        }
+        Update: {
+          arquiteto_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          custo_previsto?: number | null
+          custo_real?: number | null
+          data_inicio?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          entrada_recebida?: boolean | null
+          id?: string
+          lucro_real?: number | null
+          margem_prevista?: number | null
+          nome?: string
+          status?: Database["public"]["Enums"]["status_projeto"] | null
+          updated_at?: string
+          venda_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projetos_arquiteto_id_fkey"
+            columns: ["arquiteto_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_empresa_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      acao_audit: "criacao" | "edicao" | "exclusao"
+      app_role:
+        | "admin"
+        | "administrativo"
+        | "financeiro"
+        | "tecnico"
+        | "arquiteto"
+        | "cliente"
+      origem_lead: "whatsapp" | "instagram" | "indicacao" | "outro"
+      status_comissao: "pendente" | "pago"
+      status_compra: "pendente" | "aprovada" | "entregue" | "cancelada"
+      status_crm: "lead" | "contato" | "proposta" | "projeto"
+      status_estoque: "disponivel" | "reservado" | "instalado"
+      status_financeiro: "pendente" | "pago" | "vencido" | "cancelado"
+      status_projeto:
+        | "orcamento"
+        | "aprovado"
+        | "em_andamento"
+        | "concluido"
+        | "cancelado"
+      tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
+      tipo_fornecedor: "fornecedor" | "arquiteto"
+      tipo_projeto_item: "produto" | "servico" | "mao_de_obra"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1042,32 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      acao_audit: ["criacao", "edicao", "exclusao"],
+      app_role: [
+        "admin",
+        "administrativo",
+        "financeiro",
+        "tecnico",
+        "arquiteto",
+        "cliente",
+      ],
+      origem_lead: ["whatsapp", "instagram", "indicacao", "outro"],
+      status_comissao: ["pendente", "pago"],
+      status_compra: ["pendente", "aprovada", "entregue", "cancelada"],
+      status_crm: ["lead", "contato", "proposta", "projeto"],
+      status_estoque: ["disponivel", "reservado", "instalado"],
+      status_financeiro: ["pendente", "pago", "vencido", "cancelado"],
+      status_projeto: [
+        "orcamento",
+        "aprovado",
+        "em_andamento",
+        "concluido",
+        "cancelado",
+      ],
+      tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
+      tipo_fornecedor: ["fornecedor", "arquiteto"],
+      tipo_projeto_item: ["produto", "servico", "mao_de_obra"],
+    },
   },
 } as const
