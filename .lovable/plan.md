@@ -1,71 +1,99 @@
 
-Diagnóstico objetivo (já confirmado):
-- Os dados do seed existem e estão corretos na mesma empresa do admin (projeto “Automação Residencial Alpha”, compras, estoque, clientes e fornecedores).
-- Há erro real de permissão no backend: políticas RLS de arquiteto em `projetos` e `comissoes` consultam `auth.users` diretamente, gerando “permission denied for table users” e quebrando leituras.
-- Ainda existem 12 rotas usando `ModulePage` (com texto “Módulo em desenvolvimento”), o que impede visualização funcional em “todos os módulos”.
 
-Plano de correção definitiva (sem recriar dados):
-1) Corrigir RLS (prioridade máxima)
-- Criar migration para remover dependência de `auth.users` nas policies:
-  - `Arquiteto sees own projetos`
-  - `Arquiteto sees own comissoes`
-- Recriar essas policies usando `auth.jwt()->>'email'` + `fornecedores.email` (sem acesso direto a tabela protegida).
-- Padronizar políticas de admin para `TO authenticated` com `USING` + `WITH CHECK` explícitos nas tabelas críticas: `projetos`, `clientes`, `fornecedores`, `compras`, `estoque_itens`, `financeiro_pagar`, `financeiro_receber`, `projeto_itens`, `necessidades_compra`.
+# Tornar Todos os Modulos Interativos e Editaveis
 
-2) Garantir vínculo usuário/empresa em runtime
-- Fortalecer `AuthContext` para tratar erro de carregamento de perfil/roles e evitar estado silencioso com `empresaId` nulo.
-- Expor estado de erro de sessão/empresa (mensagem clara) em vez de tela vazia.
+## Diagnostico
 
-3) Padronizar consultas dos módulos principais com filtro de empresa + estado de erro
-- `Projetos`, `Compras`, `Estoque`, `Fornecedores`, `Financeiro*`, `NecessidadesCompra`:
-  - adicionar `.eq("empresa_id", empresaId)` onde aplicável;
-  - usar `enabled: !!empresaId`;
-  - tratar `isError/error` na UI (não mostrar “nenhum dado” quando na verdade houve erro de permissão).
+Modulos que ja tem CRUD parcial (criar + listar): Projetos, Fornecedores, Compras, FinanceiroPagar, FinanceiroReceber, FinancasPessoais.
 
-4) Projetos (garantia explícita do caso pedido)
-- Validar listagem real com joins e exibição do projeto “Automação Residencial Alpha”.
-- Manter automações já implementadas (pendências de compra, badges, vínculo com itens).
+**O que falta em cada modulo:**
 
-5) Compras e Estoque
-- Garantir listagem real com joins estáveis:
-  - Compras: fornecedor + projeto vinculados.
-  - Estoque: catálogo de produtos + estoque físico atualizado após compras.
-- Exibir fallback funcional apenas quando realmente não houver registros.
+| Modulo | Editar | Excluir | Status Change | Click Row |
+|--------|--------|---------|---------------|-----------|
+| Projetos | SIM | NAO | NAO | Via botao |
+| CRM/Clientes | NAO | NAO | NAO | NAO |
+| Fornecedores | NAO | NAO | — | NAO |
+| Compras | NAO | NAO | NAO (critico) | NAO |
+| Estoque | NAO | NAO | NAO | NAO |
+| FinanceiroPagar | NAO | NAO | Pagar only | NAO |
+| FinanceiroReceber | NAO | NAO | Receber only | NAO |
+| FinancasPessoais | NAO | NAO | — | NAO |
 
-6) Clientes e Fornecedores
-- Fornecedores já funcional: manter e reforçar tratamento de erro.
-- CRM deixará de ser placeholder e passará a listar clientes reais + resumo de interações (`clientes` + `crm_interacoes`).
+## Alteracoes por Modulo
 
-7) Remover placeholder de todos os módulos atualmente em `ModulePage`
-- Substituir cada rota por tela funcional orientada a dados já existentes:
-  - `Cronograma`: timeline por `projetos` (data início/previsão/status/progresso calculado).
-  - `FluxoCaixa`: entradas (`financeiro_receber`) vs saídas (`financeiro_pagar`).
-  - `DRE`: receita, custo, comissão e lucro com base em tabelas reais.
-  - `Relatorios`: rankings de projetos/clientes/produtos.
-  - `Auditoria`: tabela `audit_logs`.
-  - `Configurações`: `empresas`, `profiles`, `user_roles`.
-  - `Kits`, `Automacoes`, `Contratos`, `NotasFiscais`, `Integracoes`: painéis funcionais data-driven (sem texto “em desenvolvimento”), usando dados reais disponíveis e estados operacionais.
-- Remover uso do texto “Módulo em desenvolvimento” do fluxo de navegação.
+### 1. Compras (`Compras.tsx`) — PRIORIDADE
+- Linhas clicaveis: ao clicar, abrir formulario de edicao inline
+- Adicionar coluna Acoes com botoes Editar + status transitions
+- **Status workflow**: pendente → aprovada → entregue (select dropdown na linha)
+- Ao mudar para "entregue": inserir `estoque_itens` automaticamente (1 item por unidade ou 1 item com dados)
+- Atualizar `custo_real` do projeto vinculado (trigger ja existe no banco)
+- Adicionar selects de Fornecedor e Projeto no formulario de criacao
 
-8) Validação final obrigatória
-- Confirmar em UI: todos os módulos carregam telas funcionais.
-- Confirmar que nenhum módulo exibirá “Módulo em desenvolvimento”.
-- Confirmar presença de dados seed nas telas-chave:
-  - Projetos: “Automação Residencial Alpha”
-  - Compras: compra do seed vinculada ao projeto
-  - Estoque: produtos + itens atualizados
-  - Clientes/Fornecedores: registros do seed
-- Confirmar ausência de novos erros RLS nos logs.
+### 2. Fornecedores (`Fornecedores.tsx`)
+- Linhas clicaveis: ao clicar, popular formulario com dados para edicao
+- Adicionar mutation de update (supabase update by id)
+- Adicionar botao excluir com confirmacao
+- Reuso do formulario existente para criar/editar
 
-Detalhes técnicos (objetivos de implementação):
-- Banco: apenas ajuste de policies/funções de acesso (sem recriar tabelas/dados).
-- Frontend: substituição de placeholders por telas reais, com tratamento explícito de loading/error/empty.
-- Segurança: manter isolamento multiempresa por `empresa_id` e acesso total do admin dentro da própria empresa.
+### 3. CRM/Clientes (`CRM.tsx`)
+- Linhas clicaveis para edicao
+- Adicionar mutation de update (nome, email, telefone, status_crm, origem)
+- Status editavel inline (select na linha ou no formulario)
+- Botao excluir com confirmacao
 
-Arquivos principais impactados:
-- Migration nova em `supabase/migrations/*` (RLS fix).
-- `src/contexts/AuthContext.tsx`
-- `src/hooks/useProjetos.ts`, `src/hooks/useFinanceiro.ts`, `src/hooks/useNecessidadesCompra.ts`
-- `src/pages/modules/Projetos.tsx`, `Compras.tsx`, `Estoque.tsx`, `Fornecedores.tsx`, `CRM.tsx`
-- Substituição dos módulos placeholder: `Cronograma.tsx`, `FluxoCaixa.tsx`, `DRE.tsx`, `Relatorios.tsx`, `Auditoria.tsx`, `Configuracoes.tsx`, `Kits.tsx`, `Automacoes.tsx`, `Contratos.tsx`, `NotasFiscais.tsx`, `Integracoes.tsx`
-- `src/pages/modules/ModulePage.tsx` (descontinuar uso no menu principal)
+### 4. Estoque (`Estoque.tsx`)
+- **Catalogo**: adicionar CRUD completo para produtos (criar, editar, excluir)
+- Formulario de novo produto com todos os campos
+- Linhas clicaveis para edicao
+- **Estoque Fisico**: permitir editar status (disponivel/reservado/instalado) e localizacao
+- Adicionar botao para criar item de estoque manualmente
+
+### 5. FinanceiroPagar (`FinanceiroPagar.tsx`)
+- Linhas clicaveis para edicao (descricao, valor, vencimento)
+- Adicionar botao excluir
+- Formulario expandido com fornecedor_id e projeto_id (selects)
+
+### 6. FinanceiroReceber (`FinanceiroReceber.tsx`)
+- Linhas clicaveis para edicao
+- Adicionar botao excluir
+- Formulario expandido com cliente_id e projeto_id (selects)
+
+### 7. FinancasPessoais (`FinancasPessoais.tsx`)
+- Linhas clicaveis para edicao
+- Adicionar mutation de update e delete
+- Botao excluir por linha
+
+### 8. Projetos (`Projetos.tsx`)
+- Adicionar mudanca de status (select dropdown na coluna status)
+- Adicionar botao excluir projeto (com confirmacao)
+
+## Padrao de Implementacao (mesmo para todos)
+
+Cada modulo seguira o mesmo padrao:
+1. Estado `editId` para controlar edicao
+2. Ao clicar na linha: popular formulario existente com dados e setar `editId`
+3. Botao Salvar: se `editId` → update, senao → insert
+4. Coluna Acoes: icones Pencil (editar) + Trash2 (excluir)
+5. Confirmacao antes de excluir (window.confirm)
+6. Toast de feedback em todas as operacoes
+
+## Automacao Compras → Estoque
+No modulo Compras, ao alterar status para "entregue":
+```
+supabase.from("estoque_itens").insert({
+  empresa_id, produto_id, compra_id, status: "disponivel",
+  localizacao: "Deposito"
+})
+```
+O trigger `atualizar_custo_real_projeto` ja existe no banco e atualizara o projeto automaticamente.
+
+## Arquivos Afetados
+1. `src/pages/modules/Compras.tsx` — CRUD + status workflow + estoque auto
+2. `src/pages/modules/Fornecedores.tsx` — editar + excluir
+3. `src/pages/modules/CRM.tsx` — editar + excluir + status
+4. `src/pages/modules/Estoque.tsx` — CRUD produtos + editar status estoque
+5. `src/pages/modules/FinanceiroPagar.tsx` — editar + excluir
+6. `src/pages/modules/FinanceiroReceber.tsx` — editar + excluir
+7. `src/pages/modules/FinancasPessoais.tsx` — editar + excluir
+8. `src/pages/modules/Projetos.tsx` — status change + excluir
+
