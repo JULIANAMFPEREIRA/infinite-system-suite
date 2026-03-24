@@ -211,10 +211,13 @@ const Projetos = () => {
 
 // Subcomponent for project items
 const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
+  const empresaId = useEmpresa();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
   const deleteItem = useDeleteProjetoItem();
   const updateProjeto = useUpdateProjeto();
+  const createNecessidade = useCreateNecessidade();
+  const checkEstoque = useCheckEstoque();
 
   const [desc, setDesc] = useState("");
   const [tipo, setTipo] = useState<TipoItem>("produto");
@@ -230,15 +233,33 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   const handleAddItem = async () => {
     if (!desc.trim()) { toast.error("Descrição obrigatória"); return; }
     try {
-      await createItem.mutateAsync({ projeto_id: projetoId, descricao: desc, tipo, quantidade: qtd, preco_custo: custo, preco_venda: venda, rt_percentual: rt });
+      const newItem = await createItem.mutateAsync({ projeto_id: projetoId, descricao: desc, tipo, quantidade: qtd, preco_custo: custo, preco_venda: venda, rt_percentual: rt });
       // Update project totals
       const newCusto = totalCusto + qtd * custo;
       const newVenda = totalVenda + qtd * venda;
       const newMargem = newVenda > 0 ? ((newVenda - newCusto) / newVenda) * 100 : 0;
       await updateProjeto.mutateAsync({ id: projetoId, custo_previsto: newCusto, venda_total: newVenda, margem_prevista: newMargem });
+
+      // Auto-check stock for products and generate purchase need
+      if (tipo === "produto" && empresaId) {
+        const hasStock = await checkEstoque(newItem.produto_id, qtd);
+        if (!hasStock) {
+          await createNecessidade.mutateAsync({
+            empresa_id: empresaId,
+            projeto_id: projetoId,
+            projeto_item_id: newItem.id,
+            produto_id: newItem.produto_id ?? undefined,
+            descricao: desc,
+            quantidade: qtd,
+          });
+          toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada automaticamente");
+        }
+      }
+
       setDesc(""); setQtd(1); setCusto(0); setVenda(0); setRt(0);
       toast.success("Item adicionado");
     } catch (err: any) { toast.error(err.message); }
+  };
   };
 
   const handleDeleteItem = async (itemId: string) => {

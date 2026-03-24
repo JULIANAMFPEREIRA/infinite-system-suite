@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { label: "Estoque", icon: Package, path: "/estoque" },
   { label: "Compras", icon: ShoppingCart, path: "/compras" },
   { label: "Fornecedores", icon: Truck, path: "/fornecedores" },
+  { label: "Itens a Comprar", icon: ClipboardList, path: "/itens-comprar" },
   {
     label: "Financeiro", icon: DollarSign, children: [
       { label: "Contas a Receber", path: "/financeiro/receber" },
