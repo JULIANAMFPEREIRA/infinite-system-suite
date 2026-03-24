@@ -1,5 +1,5 @@
 import { Bell, Search, User } from "lucide-react";
-import logoGold from "@/assets/logo-gold.jpeg";
+import logoGold from "@/assets/logo-gold.png";
 
 const TopBar = () => {
   return (
