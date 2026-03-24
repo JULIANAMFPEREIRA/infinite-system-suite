@@ -1,69 +1,35 @@
 import { useState } from "react";
 import { Package, BookOpen } from "lucide-react";
-import DataTable from "@/components/ui/data-table";
-
-interface Produto {
-  id: number;
-  codigo: string;
-  nome: string;
-  categoria: string;
-  marca: string;
-  ultimoPreco: number;
-  qtdEstoque: number;
-  estoqueMin: number;
-}
-
-interface EstoqueItem {
-  id: number;
-  produto: string;
-  serie: string;
-  local: string;
-  status: string;
-  projeto: string;
-}
-
-const catalogoData: Produto[] = [
-  { id: 1, codigo: "AMP-001", nome: "Amplificador Sonos Amp", categoria: "Áudio", marca: "Sonos", ultimoPreco: 3200, qtdEstoque: 4, estoqueMin: 2 },
-  { id: 2, codigo: "SW-001", nome: "Switch Ubiquiti USW-24", categoria: "Redes", marca: "Ubiquiti", ultimoPreco: 1890, qtdEstoque: 2, estoqueMin: 1 },
-  { id: 3, codigo: "CAB-001", nome: "Cabo HDMI 2.1 5m", categoria: "Cabos", marca: "CaboMax", ultimoPreco: 85, qtdEstoque: 32, estoqueMin: 10 },
-  { id: 4, codigo: "CTR-001", nome: "Controlador Crestron CP4", categoria: "Automação", marca: "Crestron", ultimoPreco: 8500, qtdEstoque: 1, estoqueMin: 1 },
-  { id: 5, codigo: "CX-001", nome: "Caixa Embutir 6pol", categoria: "Áudio", marca: "B&W", ultimoPreco: 420, qtdEstoque: 12, estoqueMin: 4 },
-];
-
-const estoqueData: EstoqueItem[] = [
-  { id: 1, produto: "Amplificador Sonos Amp", serie: "SN-2026-0041", local: "Estoque Principal", status: "Disponível", projeto: "-" },
-  { id: 2, produto: "Amplificador Sonos Amp", serie: "SN-2026-0042", local: "Estoque Principal", status: "Reservado", projeto: "Proj #042" },
-  { id: 3, produto: "Switch Ubiquiti USW-24", serie: "UBQ-88321", local: "Estoque Principal", status: "Disponível", projeto: "-" },
-  { id: 4, produto: "Controlador Crestron CP4", serie: "CR-99201", local: "Em Obra", status: "Instalado", projeto: "Proj #039" },
-  { id: 5, produto: "Caixa Embutir 6pol", serie: "BW-11201", local: "Estoque Secundário", status: "Disponível", projeto: "-" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
 
 const Estoque = () => {
+  const empresaId = useEmpresa();
   const [tab, setTab] = useState<"catalogo" | "fisico">("catalogo");
-  const [catalogo, setCatalogo] = useState(catalogoData);
-  const [estoque, setEstoque] = useState(estoqueData);
 
-  const catalogoColumns = [
-    { key: "codigo" as const, label: "Código", width: "80px" },
-    { key: "nome" as const, label: "Produto" },
-    { key: "categoria" as const, label: "Categoria", type: "select" as const, options: ["Áudio", "Redes", "Cabos", "Automação", "Vídeo"] },
-    { key: "marca" as const, label: "Marca" },
-    { key: "ultimoPreco" as const, label: "Último Preço", type: "number" as const, render: (v: number) => `R$ ${v.toLocaleString("pt-BR")}` },
-    { key: "qtdEstoque" as const, label: "Estoque", type: "number" as const, width: "70px", render: (v: number, row: Produto) => (
-      <span className={v <= row.estoqueMin ? "text-destructive font-semibold" : ""}>{v}</span>
-    )},
-    { key: "estoqueMin" as const, label: "Mín.", type: "number" as const, width: "60px" },
-  ];
+  const { data: produtos, isLoading: loadingProd } = useQuery({
+    queryKey: ["produtos", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos").select("*").order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
 
-  const estoqueColumns = [
-    { key: "produto" as const, label: "Produto" },
-    { key: "serie" as const, label: "Nº Série" },
-    { key: "local" as const, label: "Local", type: "select" as const, options: ["Estoque Principal", "Estoque Secundário", "Em Obra"] },
-    { key: "status" as const, label: "Status", type: "select" as const, options: ["Disponível", "Reservado", "Instalado"], render: (v: string) => (
-      <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${v === "Disponível" ? "bg-success/15 text-success" : v === "Reservado" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary"}`}>{v}</span>
-    )},
-    { key: "projeto" as const, label: "Projeto" },
-  ];
+  const { data: estoqueItens, isLoading: loadingEst } = useQuery({
+    queryKey: ["estoque_itens", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("estoque_itens").select("*, produtos(nome), projetos(nome)").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  const statusColor = (s: string) => s === "disponivel" ? "bg-success/15 text-success" : s === "reservado" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary";
+  const statusLabel = (s: string) => s === "disponivel" ? "Disponível" : s === "reservado" ? "Reservado" : "Instalado";
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -71,28 +37,77 @@ const Estoque = () => {
         <Package size={18} className="text-primary" />
         <h1 className="text-lg font-bold text-foreground">Estoque</h1>
       </div>
-
       <div className="flex gap-1 border-b border-border">
         <button onClick={() => setTab("catalogo")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === "catalogo" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <BookOpen size={14} />
-          Catálogo de Produtos
+          <BookOpen size={14} /> Catálogo de Produtos
         </button>
         <button onClick={() => setTab("fisico")} className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === "fisico" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <Package size={14} />
-          Estoque Físico
+          <Package size={14} /> Estoque Físico
         </button>
       </div>
 
       {tab === "catalogo" ? (
-        <>
-          <p className="text-xs text-muted-foreground">Catálogo alimentado automaticamente por compras. Clique para editar.</p>
-          <DataTable columns={catalogoColumns} data={catalogo} onDataChange={setCatalogo} keyField="id" />
-        </>
+        loadingProd ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-secondary/60">
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Código</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Produto</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Categoria</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Marca</th>
+                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Preço Custo</th>
+                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Preço Venda</th>
+                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Est. Mín.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {produtos?.map(p => (
+                  <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2.5 py-1.5">{p.codigo ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
+                    <td className="px-2.5 py-1.5">{p.categoria ?? "—"}</td>
+                    <td className="px-2.5 py-1.5">{p.marca ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")}</td>
+                    <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_venda ?? 0).toLocaleString("pt-BR")}</td>
+                    <td className="px-2.5 py-1.5 text-right">{p.estoque_minimo ?? 0}</td>
+                  </tr>
+                ))}
+                {(!produtos || produtos.length === 0) && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum produto cadastrado.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : (
-        <>
-          <p className="text-xs text-muted-foreground">Controle físico por número de série. Baixa apenas na instalação.</p>
-          <DataTable columns={estoqueColumns} data={estoque} onDataChange={setEstoque} keyField="id" />
-        </>
+        loadingEst ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-secondary/60">
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Produto</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nº Série</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Local</th>
+                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estoqueItens?.map(e => (
+                  <tr key={e.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2.5 py-1.5 font-medium">{(e.produtos as any)?.nome ?? "—"}</td>
+                    <td className="px-2.5 py-1.5">{e.numero_serie ?? "—"}</td>
+                    <td className="px-2.5 py-1.5">{e.localizacao ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(e.status ?? "disponivel")}`}>{statusLabel(e.status ?? "disponivel")}</span>
+                    </td>
+                    <td className="px-2.5 py-1.5">{(e.projetos as any)?.nome ?? "—"}</td>
+                  </tr>
+                ))}
+                {(!estoqueItens || estoqueItens.length === 0) && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground">Nenhum item no estoque.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   );
