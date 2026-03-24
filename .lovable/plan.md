@@ -1,59 +1,122 @@
 
 
-# Reativar Tema Dark SaaS — Preservando Estrutura
+# Ativação do Lovable Cloud — Banco de Dados ERP Completo
 
 ## Resumo
-Trocar a paleta de cores de off-white/clean para dark tecnológico (cinza escuro com azul/ciano), reduzir logo no topo, e manter todos os módulos, tabelas e funcionalidades intactos.
 
-## Alterações
+Ativar o Lovable Cloud e criar toda a estrutura de banco de dados relacional com o módulo de **Projetos como núcleo central**, incluindo enums, tabelas, RLS, funções de segurança, triggers e logs de auditoria. Estrutura preparada para SaaS multiempresa.
 
-### 1. Paleta Dark (`src/index.css`)
-Substituir todas as CSS variables no `:root` por tema escuro:
-- `--background`: cinza muito escuro (~222 20% 10%)
-- `--foreground`: cinza claro (~220 10% 90%)
-- `--card`: cinza escuro com leve contraste (~222 15% 14%)
-- `--primary`: azul/ciano tecnológico (~200 80% 55%)
-- `--secondary`: cinza médio escuro
-- `--border`: cinza escuro sutil
-- `--sidebar-background`: cinza escuro (~222 18% 12%)
-- Manter `--success`, `--warning`, `--info` com ajustes de contraste
-- Scrollbar com cores escuras
-- Manter font-size 13px
+---
 
-### 2. TopBar (`src/components/layout/TopBar.tsx`)
-- Remover logo centralizada (remover o bloco `absolute left-1/2`)
-- Logo já aparece na sidebar — topbar fica funcional (busca + notificações + usuário)
+## Arquitetura do Banco
 
-### 3. Sidebar (`src/components/layout/AppSidebar.tsx`)
-- Logo no topo: reduzir de `h-9` para `h-7` (máx 28px)
-- Cores automaticamente atualizadas pelas CSS vars (bg-card, text-sidebar-foreground)
-- Item ativo: usar cor ciano/azul ao invés de dourado
+```text
+                        ┌──────────┐
+                        │ empresas │  (SaaS multiempresa)
+                        └────┬─────┘
+                             │
+       ┌─────────────────────┼─────────────────────┐
+       │                     │                     │
+  ┌────┴────┐          ┌─────┴─────┐         ┌────┴────┐
+  │ profiles│          │  clientes │         │fornece- │
+  │ + roles │          │           │         │ dores   │
+  └────┬────┘          └─────┬─────┘         └────┬────┘
+       │                     │                     │
+       │              ┌──────┴──────┐              │
+       └──────────────┤  PROJETOS   ├──────────────┘
+                      │  (núcleo)   │
+                      └──────┬──────┘
+           ┌─────────────────┼─────────────────┐
+           │                 │                 │
+    ┌──────┴──────┐   ┌──────┴──────┐   ┌──────┴──────┐
+    │projeto_itens│   │ comissoes   │   │ financeiro  │
+    │(prod+serv)  │   │   (RT)      │   │ pagar/receb │
+    └──────┬──────┘   └─────────────┘   └─────────────┘
+           │
+    ┌──────┴──────┐
+    │  compras    │──→ estoque_itens (por série)
+    └─────────────┘
+                      ┌─────────────┐
+                      │fin_pessoais │ (isolado)
+                      └─────────────┘
+                      ┌─────────────┐
+                      │ audit_logs  │
+                      └─────────────┘
+```
 
-### 4. Dashboard (`src/pages/Dashboard.tsx`)
-- Trocar constantes `GOLD` e `GRAY` por azul ciano e cinza
-- Atualizar cores dos gráficos (gradientes, pie chart, bar chart)
-- Tooltip com fundo escuro
-- Grid strokes mais sutis para tema dark
+---
 
-### 5. Login (`src/pages/Login.tsx`)
-- Atualizar import de `logo-gold.jpeg` para `logo-gold.png`
-- Cores automaticamente via CSS vars (bg-background, bg-card ficam dark)
+## Tabelas e Estrutura
 
-### 6. Módulos e Tabelas
-- Nenhuma alteração estrutural — as tabelas, inline editing e módulos (Compras, Estoque, Fornecedores, Finanças Pessoais) permanecem intactos
-- Cores se adaptam automaticamente via CSS vars
+### 1. Infraestrutura SaaS
+- **`empresas`** — id, nome, nome_fantasia, cnpj, segmento, created_at
+- **`profiles`** — id (FK auth.users), empresa_id (FK), full_name, phone, avatar_url
+- **`user_roles`** — user_id (FK), role (enum: admin, administrativo, financeiro, tecnico, arquiteto, cliente), empresa_id
 
-## Arquivos Afetados
-1. `src/index.css` — paleta dark completa
-2. `src/components/layout/TopBar.tsx` — remover logo centralizada
-3. `src/components/layout/AppSidebar.tsx` — reduzir logo
-4. `src/pages/Dashboard.tsx` — cores dos gráficos para azul/ciano
-5. `src/pages/Login.tsx` — fix import .jpeg → .png
+### 2. CRM e Clientes
+- **`clientes`** — id, empresa_id, nome, email, telefone, cpf_cnpj, endereco, origem (enum: whatsapp, instagram, indicacao, outro), status_crm (enum: lead, contato, proposta, projeto), notas, created_at
+- **`crm_interacoes`** — id, cliente_id, usuario_id, tipo, descricao, created_at
 
-## O que NÃO muda
-- Estrutura de rotas e módulos
-- Componente DataTable e inline editing
-- Lógica de permissões
-- Banco de dados
-- Funcionalidades dos módulos
+### 3. Fornecedores e Parceiros
+- **`fornecedores`** — id, empresa_id, nome, tipo (enum: fornecedor, arquiteto), cnpj_cpf, telefone, email, rt_percentual, cidade, created_at
+
+### 4. Produtos (Catálogo)
+- **`produtos`** — id, empresa_id, codigo, nome, categoria, marca, unidade, preco_custo, preco_venda, estoque_minimo, created_at
+
+### 5. PROJETOS (Núcleo)
+- **`projetos`** — id, empresa_id, cliente_id (FK), arquiteto_id (FK fornecedores), nome, descricao, status (enum: orcamento, aprovado, em_andamento, concluido, cancelado), custo_previsto, venda_total, margem_prevista, custo_real, lucro_real, entrada_recebida (bool), data_inicio, data_previsao, created_at
+- **`projeto_itens`** — id, projeto_id (FK), produto_id (FK nullable), descricao, tipo (enum: produto, servico, mao_de_obra), quantidade, preco_custo, preco_venda, rt_percentual, created_at
+
+### 6. Compras (vinculadas a projeto)
+- **`compras`** — id, empresa_id, fornecedor_id (FK), projeto_id (FK nullable), projeto_item_id (FK nullable), produto_id (FK nullable), descricao, quantidade, valor_unitario, valor_total, status (enum: pendente, aprovada, entregue, cancelada), data_compra, created_at
+
+### 7. Estoque Físico (por série, baixa só na instalação)
+- **`estoque_itens`** — id, empresa_id, produto_id (FK), compra_id (FK nullable), numero_serie, localizacao, status (enum: disponivel, reservado, instalado), projeto_id (FK nullable), created_at
+
+### 8. Comissões RT
+- **`comissoes`** — id, empresa_id, projeto_id (FK), fornecedor_id (FK, tipo=arquiteto), projeto_item_id (FK nullable), percentual, valor, status (enum: pendente, pago), data_vencimento, created_at
+- Ao criar comissão, auto-gerar registro em `financeiro_pagar`
+
+### 9. Financeiro Empresa
+- **`financeiro_pagar`** — id, empresa_id, projeto_id (FK nullable), fornecedor_id (FK nullable), comissao_id (FK nullable), descricao, valor, data_vencimento, data_pagamento, status (enum: pendente, pago, vencido, cancelado)
+- **`financeiro_receber`** — id, empresa_id, projeto_id (FK nullable), cliente_id (FK nullable), descricao, valor, parcela, data_vencimento, data_pagamento, status
+
+### 10. Finanças Pessoais (Isolado)
+- **`financas_pessoais`** — id, empresa_id, usuario_id (FK), descricao, categoria, valor, tipo (enum: retirada, devolucao, despesa, receita), data, created_at
+
+### 11. Auditoria
+- **`audit_logs`** — id, empresa_id, usuario_id, tabela, registro_id, acao (enum: criacao, edicao, exclusao), dados_anteriores (jsonb), dados_novos (jsonb), created_at
+
+---
+
+## Segurança (RLS)
+
+1. **Enum `app_role`**: admin, administrativo, financeiro, tecnico, arquiteto, cliente
+2. **Função `has_role()`**: security definer, sem recursão
+3. **Função `get_empresa_id()`**: retorna empresa_id do usuário logado (security definer)
+4. **Políticas por tabela**:
+   - Todas filtram por `empresa_id = get_empresa_id(auth.uid())`
+   - Admin: acesso total dentro da empresa
+   - Cliente: SELECT em `projetos` e `projeto_itens` onde `cliente_id` é dele, sem colunas financeiras (controlado no frontend)
+   - Arquiteto: SELECT em `projetos` vinculados a ele + `comissoes` próprias
+   - Financeiro: acesso a tabelas financeiras da empresa
+
+---
+
+## Triggers
+
+1. **Auto-criar profile** ao signup (trigger on auth.users)
+2. **Atualizar `custo_real`** do projeto ao inserir compra com status=entregue
+3. **Auto-gerar `financeiro_pagar`** ao criar comissão
+
+---
+
+## Ordem de Execução
+
+1. Ativar Lovable Cloud
+2. Criar migração com enums
+3. Criar migração com tabelas (empresas → profiles → clientes → fornecedores → produtos → projetos → projeto_itens → compras → estoque → comissoes → financeiro → fin_pessoais → audit_logs → user_roles)
+4. Criar migração com funções (has_role, get_empresa_id) + RLS policies
+5. Criar migração com triggers
+6. Inserir empresa padrão "SMP CONSULTORIA LTDA" e dados iniciais
 
