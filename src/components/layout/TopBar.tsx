@@ -1,5 +1,4 @@
 import { Bell, Search, User } from "lucide-react";
-import logoGold from "@/assets/logo-gold.png";
 
 const TopBar = () => {
   return (
@@ -11,10 +10,6 @@ const TopBar = () => {
           placeholder="Buscar..."
           className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
         />
-      </div>
-
-      <div className="absolute left-1/2 -translate-x-1/2">
-        <img src={logoGold} alt="INFINIT NETWORK" className="h-9 object-contain" />
       </div>
 
       <div className="flex items-center gap-4">

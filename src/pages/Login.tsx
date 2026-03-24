@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LogIn } from "lucide-react";
-import logoGold from "@/assets/logo-gold.jpeg";
+import logoGold from "@/assets/logo-gold.png";
 
 const Login = () => {
   const navigate = useNavigate();

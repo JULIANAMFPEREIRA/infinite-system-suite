@@ -59,7 +59,7 @@ const AppSidebar = () => {
       {/* Logo */}
       <div className="flex items-center justify-center h-14 border-b border-border px-2">
         {!collapsed ? (
-          <img src={logoGold} alt="INFINIT NETWORK" className="h-9 object-contain" />
+          <img src={logoGold} alt="INFINIT NETWORK" className="h-7 object-contain" />
         ) : (
           <span className="text-primary font-bold text-sm">∞</span>
         )}

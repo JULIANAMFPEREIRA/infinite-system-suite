@@ -6,44 +6,44 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96%;
-    --foreground: 220 15% 20%;
+    --background: 222 20% 10%;
+    --foreground: 220 10% 88%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 20%;
+    --card: 222 15% 14%;
+    --card-foreground: 220 10% 88%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 20%;
+    --popover: 222 15% 14%;
+    --popover-foreground: 220 10% 88%;
 
-    --primary: 43 74% 49%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 200 80% 55%;
+    --primary-foreground: 222 20% 8%;
 
-    --secondary: 220 10% 94%;
-    --secondary-foreground: 220 15% 30%;
+    --secondary: 222 12% 20%;
+    --secondary-foreground: 220 10% 75%;
 
-    --muted: 220 10% 94%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 222 12% 20%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 43 50% 92%;
-    --accent-foreground: 43 74% 35%;
+    --accent: 200 40% 18%;
+    --accent-foreground: 200 80% 70%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 88%;
-    --input: 220 10% 88%;
-    --ring: 43 74% 49%;
+    --border: 222 12% 22%;
+    --input: 222 12% 22%;
+    --ring: 200 80% 55%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 10% 40%;
-    --sidebar-primary: 43 74% 49%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 43 50% 96%;
-    --sidebar-accent-foreground: 220 15% 20%;
-    --sidebar-border: 220 10% 90%;
-    --sidebar-ring: 43 74% 49%;
+    --sidebar-background: 222 18% 12%;
+    --sidebar-foreground: 220 10% 65%;
+    --sidebar-primary: 200 80% 55%;
+    --sidebar-primary-foreground: 222 20% 8%;
+    --sidebar-accent: 200 40% 16%;
+    --sidebar-accent-foreground: 200 80% 75%;
+    --sidebar-border: 222 12% 20%;
+    --sidebar-ring: 200 80% 55%;
 
     --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
@@ -82,12 +82,12 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(0 0% 94%);
+  background: hsl(222, 18%, 12%);
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(220 10% 78%);
+  background: hsl(222, 12%, 28%);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(220 10% 65%);
+  background: hsl(222, 12%, 35%);
 }
