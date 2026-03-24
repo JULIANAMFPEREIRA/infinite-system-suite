@@ -1,4 +1,64 @@
 import { Wrench } from "lucide-react";
-import ModulePage from "./ModulePage";
-const Cronograma = () => <ModulePage title="Cronograma e Obra" description="Etapas personalizáveis, barra de progresso, diário de obra, galeria de imagens e pendências." icon={Wrench} />;
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
+import type { Database } from "@/integrations/supabase/types";
+
+type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
+const statusLabels: Record<StatusProjeto, string> = { orcamento: "Orçamento", aprovado: "Aprovado", em_andamento: "Em Andamento", concluido: "Concluído", cancelado: "Cancelado" };
+const progressMap: Record<StatusProjeto, number> = { orcamento: 0, aprovado: 15, em_andamento: 50, concluido: 100, cancelado: 0 };
+
+const Cronograma = () => {
+  const empresaId = useEmpresa();
+  const { data: projetos, isLoading } = useQuery({
+    queryKey: ["projetos_cronograma", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, data_inicio, data_previsao, clientes(nome)").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center gap-2">
+        <Wrench size={18} className="text-primary" />
+        <h1 className="text-lg font-bold text-foreground">Cronograma de Projetos</h1>
+      </div>
+
+      {isLoading ? (
+        <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p>
+      ) : !projetos?.length ? (
+        <p className="text-center py-8 text-xs text-muted-foreground">Nenhum projeto encontrado.</p>
+      ) : (
+        <div className="space-y-3">
+          {projetos.map(p => {
+            const progress = progressMap[p.status as StatusProjeto] ?? 0;
+            return (
+              <div key={p.id} className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{p.nome}</h3>
+                    <p className="text-[11px] text-muted-foreground">{(p.clientes as any)?.nome ?? "Sem cliente"}</p>
+                  </div>
+                  <span className="text-[11px] font-medium text-muted-foreground">{statusLabels[p.status as StatusProjeto]}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span>Início: {p.data_inicio ?? "—"}</span>
+                  <span>Previsão: {p.data_previsao ?? "—"}</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2.5">
+                  <div className="bg-primary h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                </div>
+                <p className="text-[11px] text-right text-muted-foreground">{progress}% concluído</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default Cronograma;
