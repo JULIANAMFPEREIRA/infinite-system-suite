@@ -12,6 +12,7 @@ import Kits from "./pages/modules/Kits";
 import Cronograma from "./pages/modules/Cronograma";
 import Estoque from "./pages/modules/Estoque";
 import Compras from "./pages/modules/Compras";
+import Fornecedores from "./pages/modules/Fornecedores";
 import FinanceiroReceber from "./pages/modules/FinanceiroReceber";
 import FinanceiroPagar from "./pages/modules/FinanceiroPagar";
 import FluxoCaixa from "./pages/modules/FluxoCaixa";
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/cronograma" element={<Cronograma />} />
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/compras" element={<Compras />} />
+            <Route path="/fornecedores" element={<Fornecedores />} />
             <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
             <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
             <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />

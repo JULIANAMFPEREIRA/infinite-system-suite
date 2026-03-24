@@ -4,9 +4,9 @@ import {
   LayoutDashboard, Users, FolderKanban, Package, ShoppingCart,
   DollarSign, Wallet, BarChart3, FileText, Bell, PenTool,
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
-  ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck
+  ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck
 } from "lucide-react";
-import logoDark from "@/assets/logo-dark.jpeg";
+import logoGold from "@/assets/logo-gold.jpeg";
 
 interface NavItem {
   label: string;
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { label: "Cronograma", icon: Wrench, path: "/cronograma" },
   { label: "Estoque", icon: Package, path: "/estoque" },
   { label: "Compras", icon: ShoppingCart, path: "/compras" },
+  { label: "Fornecedores", icon: Truck, path: "/fornecedores" },
   {
     label: "Financeiro", icon: DollarSign, children: [
       { label: "Contas a Receber", path: "/financeiro/receber" },
@@ -54,18 +55,18 @@ const AppSidebar = () => {
   };
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen z-50 flex flex-col border-r border-border bg-sidebar transition-all duration-300 ${collapsed ? "w-16" : "w-64"}`}>
+    <aside className={`fixed left-0 top-0 h-screen z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? "w-14" : "w-56"}`}>
       {/* Logo */}
-      <div className="flex items-center justify-center h-16 border-b border-border px-3">
+      <div className="flex items-center justify-center h-14 border-b border-border px-2">
         {!collapsed ? (
-          <img src={logoDark} alt="INFINIT NETWORK" className="h-10 object-contain" />
+          <img src={logoGold} alt="INFINIT NETWORK" className="h-9 object-contain" />
         ) : (
-          <span className="text-primary font-bold text-lg">∞</span>
+          <span className="text-primary font-bold text-sm">∞</span>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isOpen = openMenus.includes(item.label);
@@ -76,24 +77,24 @@ const AppSidebar = () => {
               <div key={item.label}>
                 <button
                   onClick={() => toggleMenu(item.label)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${isActive ? "bg-primary/10 text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-xs transition-colors ${isActive ? "bg-accent text-accent-foreground font-medium border-l-2 border-primary" : "text-sidebar-foreground hover:bg-secondary"}`}
                 >
-                  <Icon size={18} />
+                  <Icon size={15} />
                   {!collapsed && (
                     <>
                       <span className="flex-1 text-left">{item.label}</span>
-                      <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown size={12} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     </>
                   )}
                 </button>
                 {isOpen && !collapsed && (
-                  <div className="ml-7 mt-0.5 space-y-0.5">
+                  <div className="ml-6 mt-0.5 space-y-0.5">
                     {item.children.map(child => (
                       <NavLink
                         key={child.path}
                         to={child.path}
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-md text-sm transition-colors ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
+                          `block px-2.5 py-1.5 rounded text-xs transition-colors ${isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:bg-secondary"}`
                         }
                       >
                         {child.label}
@@ -110,22 +111,22 @@ const AppSidebar = () => {
               key={item.path}
               to={item.path!}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${isActive ? "bg-primary/10 text-primary glow-border" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
+                `flex items-center gap-2.5 px-2.5 py-2 rounded text-xs transition-colors ${isActive ? "bg-accent text-accent-foreground font-medium border-l-2 border-primary" : "text-sidebar-foreground hover:bg-secondary"}`
               }
             >
-              <Icon size={18} />
+              <Icon size={15} />
               {!collapsed && <span>{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Collapse button */}
+      {/* Collapse */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-border text-muted-foreground hover:text-primary transition-colors"
+        className="flex items-center justify-center h-10 border-t border-border text-muted-foreground hover:text-primary transition-colors"
       >
-        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
     </aside>
   );
