@@ -19,8 +19,10 @@ const statusColors: Record<StatusProjeto, string> = {
 };
 
 const Projetos = () => {
+  const navigate = useNavigate();
   const empresaId = useEmpresa();
   const { data: projetos, isLoading } = useProjetos();
+  const { data: pendenciaCounts } = useNecessidadesPendentesCount();
   const { data: clientes } = useClientes();
   const { data: arquitetos } = useArquitetos();
   const createProjeto = useCreateProjeto();
