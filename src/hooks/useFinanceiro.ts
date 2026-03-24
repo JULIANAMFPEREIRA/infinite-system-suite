@@ -112,15 +112,3 @@ export const useComissoes = () => {
     },
   });
 };
-  return useQuery({
-    queryKey: ["comissoes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("comissoes")
-        .select("*, fornecedores(nome), projetos(nome)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-};
