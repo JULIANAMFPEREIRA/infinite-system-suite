@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { FolderKanban, Plus, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
+import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque } from "@/hooks/useNecessidadesCompra";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -17,8 +19,10 @@ const statusColors: Record<StatusProjeto, string> = {
 };
 
 const Projetos = () => {
+  const navigate = useNavigate();
   const empresaId = useEmpresa();
   const { data: projetos, isLoading } = useProjetos();
+  const { data: pendenciaCounts } = useNecessidadesPendentesCount();
   const { data: clientes } = useClientes();
   const { data: arquitetos } = useArquitetos();
   const createProjeto = useCreateProjeto();
@@ -155,6 +159,7 @@ const Projetos = () => {
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo Prev.</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>
+                  <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pendências</th>
                   <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
                 </tr>
               </thead>
@@ -177,6 +182,18 @@ const Projetos = () => {
                       </span>
                     </td>
                     <td className="px-2.5 py-1.5 text-center">
+                      {(pendenciaCounts?.[p.id] ?? 0) > 0 ? (
+                        <button
+                          onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition"
+                        >
+                          <AlertTriangle size={11} /> {pendenciaCounts![p.id]}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-center">
                       <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-primary">
                         <Pencil size={13} />
                       </button>
@@ -194,10 +211,13 @@ const Projetos = () => {
 
 // Subcomponent for project items
 const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
+  const empresaId = useEmpresa();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
   const deleteItem = useDeleteProjetoItem();
   const updateProjeto = useUpdateProjeto();
+  const createNecessidade = useCreateNecessidade();
+  const checkEstoque = useCheckEstoque();
 
   const [desc, setDesc] = useState("");
   const [tipo, setTipo] = useState<TipoItem>("produto");
@@ -213,15 +233,33 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   const handleAddItem = async () => {
     if (!desc.trim()) { toast.error("Descrição obrigatória"); return; }
     try {
-      await createItem.mutateAsync({ projeto_id: projetoId, descricao: desc, tipo, quantidade: qtd, preco_custo: custo, preco_venda: venda, rt_percentual: rt });
+      const newItem = await createItem.mutateAsync({ projeto_id: projetoId, descricao: desc, tipo, quantidade: qtd, preco_custo: custo, preco_venda: venda, rt_percentual: rt });
       // Update project totals
       const newCusto = totalCusto + qtd * custo;
       const newVenda = totalVenda + qtd * venda;
       const newMargem = newVenda > 0 ? ((newVenda - newCusto) / newVenda) * 100 : 0;
       await updateProjeto.mutateAsync({ id: projetoId, custo_previsto: newCusto, venda_total: newVenda, margem_prevista: newMargem });
+
+      // Auto-check stock for products and generate purchase need
+      if (tipo === "produto" && empresaId) {
+        const hasStock = await checkEstoque(newItem.produto_id, qtd);
+        if (!hasStock) {
+          await createNecessidade.mutateAsync({
+            empresa_id: empresaId,
+            projeto_id: projetoId,
+            projeto_item_id: newItem.id,
+            produto_id: newItem.produto_id ?? undefined,
+            descricao: desc,
+            quantidade: qtd,
+          });
+          toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada automaticamente");
+        }
+      }
+
       setDesc(""); setQtd(1); setCusto(0); setVenda(0); setRt(0);
       toast.success("Item adicionado");
     } catch (err: any) { toast.error(err.message); }
+  };
   };
 
   const handleDeleteItem = async (itemId: string) => {

@@ -27,6 +27,7 @@ import NotasFiscais from "./pages/modules/NotasFiscais";
 import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
+import ItensComprar from "./pages/modules/ItensComprar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/compras" element={<Compras />} />
               <Route path="/fornecedores" element={<Fornecedores />} />
+              <Route path="/itens-comprar" element={<ItensComprar />} />
               <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
               <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
               <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
