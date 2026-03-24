@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -30,41 +31,50 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/crm" element={<CRM />} />
-            <Route path="/projetos" element={<Projetos />} />
-            <Route path="/kits" element={<Kits />} />
-            <Route path="/cronograma" element={<Cronograma />} />
-            <Route path="/estoque" element={<Estoque />} />
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/fornecedores" element={<Fornecedores />} />
-            <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
-            <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
-            <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
-            <Route path="/financas-pessoais" element={<FinancasPessoais />} />
-            <Route path="/comissoes" element={<Comissoes />} />
-            <Route path="/dre" element={<DRE />} />
-            <Route path="/relatorios" element={<Relatorios />} />
-            <Route path="/automacoes" element={<Automacoes />} />
-            <Route path="/contratos" element={<Contratos />} />
-            <Route path="/notas-fiscais" element={<NotasFiscais />} />
-            <Route path="/integracoes" element={<Integracoes />} />
-            <Route path="/auditoria" element={<Auditoria />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/crm" element={<CRM />} />
+              <Route path="/projetos" element={<Projetos />} />
+              <Route path="/kits" element={<Kits />} />
+              <Route path="/cronograma" element={<Cronograma />} />
+              <Route path="/estoque" element={<Estoque />} />
+              <Route path="/compras" element={<Compras />} />
+              <Route path="/fornecedores" element={<Fornecedores />} />
+              <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
+              <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
+              <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
+              <Route path="/financas-pessoais" element={<FinancasPessoais />} />
+              <Route path="/comissoes" element={<Comissoes />} />
+              <Route path="/dre" element={<DRE />} />
+              <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/automacoes" element={<Automacoes />} />
+              <Route path="/contratos" element={<Contratos />} />
+              <Route path="/notas-fiscais" element={<NotasFiscais />} />
+              <Route path="/integracoes" element={<Integracoes />} />
+              <Route path="/auditoria" element={<Auditoria />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

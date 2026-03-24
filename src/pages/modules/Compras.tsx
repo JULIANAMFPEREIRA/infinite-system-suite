@@ -1,44 +1,38 @@
 import { useState } from "react";
 import { ShoppingCart, Plus } from "lucide-react";
-import DataTable from "@/components/ui/data-table";
-
-interface Compra {
-  id: number;
-  data: string;
-  fornecedor: string;
-  tipo: string;
-  projeto: string;
-  item: string;
-  qtd: number;
-  valorUnit: number;
-  total: number;
-  status: string;
-}
-
-const initialData: Compra[] = [
-  { id: 1, data: "2026-03-20", fornecedor: "AudioTech", tipo: "Fornecedor", projeto: "Proj #042", item: "Amplificador Sonos", qtd: 2, valorUnit: 3200, total: 6400, status: "Aprovada" },
-  { id: 2, data: "2026-03-18", fornecedor: "NetSupply", tipo: "Fornecedor", projeto: "Proj #041", item: "Switch Ubiquiti 24P", qtd: 1, valorUnit: 1890, total: 1890, status: "Pendente" },
-  { id: 3, data: "2026-03-15", fornecedor: "CaboMax", tipo: "Fornecedor", projeto: "Proj #042", item: "Cabo HDMI 2.1 5m", qtd: 10, valorUnit: 85, total: 850, status: "Entregue" },
-  { id: 4, data: "2026-03-12", fornecedor: "SmartHome BR", tipo: "Fornecedor", projeto: "Proj #039", item: "Controlador Crestron", qtd: 1, valorUnit: 8500, total: 8500, status: "Aprovada" },
-  { id: 5, data: "2026-03-10", fornecedor: "AudioTech", tipo: "Fornecedor", projeto: "Proj #040", item: "Caixa Embutir 6pol", qtd: 8, valorUnit: 420, total: 3360, status: "Pendente" },
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
+import { toast } from "sonner";
 
 const Compras = () => {
-  const [data, setData] = useState(initialData);
+  const empresaId = useEmpresa();
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [desc, setDesc] = useState("");
+  const [qtd, setQtd] = useState(1);
+  const [valorUnit, setValorUnit] = useState(0);
 
-  const columns = [
-    { key: "data" as const, label: "Data", width: "90px" },
-    { key: "fornecedor" as const, label: "Fornecedor" },
-    { key: "tipo" as const, label: "Tipo", type: "select" as const, options: ["Fornecedor", "Arquiteto"] },
-    { key: "projeto" as const, label: "Projeto" },
-    { key: "item" as const, label: "Item" },
-    { key: "qtd" as const, label: "Qtd", type: "number" as const, width: "60px" },
-    { key: "valorUnit" as const, label: "Valor Unit.", type: "number" as const, width: "90px", render: (v: number) => `R$ ${v.toLocaleString("pt-BR")}` },
-    { key: "total" as const, label: "Total", width: "90px", editable: false, render: (v: number) => <span className="font-semibold">R$ {v.toLocaleString("pt-BR")}</span> },
-    { key: "status" as const, label: "Status", type: "select" as const, options: ["Pendente", "Aprovada", "Entregue", "Cancelada"], render: (v: string) => (
-      <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${v === "Aprovada" ? "bg-success/15 text-success" : v === "Pendente" ? "bg-warning/15 text-warning" : v === "Entregue" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"}`}>{v}</span>
-    )},
-  ];
+  const { data: compras, isLoading } = useQuery({
+    queryKey: ["compras", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("compras").select("*, fornecedores(nome), projetos(nome)").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("compras").insert({ empresa_id: empresaId!, descricao: desc, quantidade: qtd, valor_unitario: valorUnit, valor_total: qtd * valorUnit, status: "pendente" });
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); toast.success("Compra registrada"); setShowForm(false); setDesc(""); setQtd(1); setValorUnit(0); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const statusColor = (s: string) => s === "aprovada" ? "bg-success/15 text-success" : s === "pendente" ? "bg-warning/15 text-warning" : s === "entregue" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive";
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -47,13 +41,64 @@ const Compras = () => {
           <ShoppingCart size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">Compras</h1>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
-          <Plus size={14} />
-          Nova Compra
+        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+          <Plus size={14} /> Nova Compra
         </button>
       </div>
-      <p className="text-xs text-muted-foreground">Compras manuais e automáticas baseadas na necessidade do projeto. Clique em qualquer célula para editar.</p>
-      <DataTable columns={columns} data={data} onDataChange={setData} keyField="id" />
+
+      {showForm && (
+        <div className="bg-card border border-border rounded p-3 flex items-end gap-3 flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[150px]">
+            <label className="text-[11px] text-muted-foreground">Descrição</label>
+            <input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+          <div className="space-y-1 w-16">
+            <label className="text-[11px] text-muted-foreground">Qtd</label>
+            <input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
+          </div>
+          <div className="space-y-1 w-24">
+            <label className="text-[11px] text-muted-foreground">Valor Unit.</label>
+            <input type="number" value={valorUnit} onChange={e => setValorUnit(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
+          </div>
+          <button onClick={() => create.mutate()} disabled={create.isPending || !desc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50">Salvar</button>
+        </div>
+      )}
+
+      {isLoading ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
+        <div className="border border-border rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-secondary/60">
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Data</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Fornecedor</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
+                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Qtd</th>
+                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">V. Unit.</th>
+                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Total</th>
+                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compras?.map(c => (
+                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                  <td className="px-2.5 py-1.5">{c.data_compra ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{c.descricao ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
+                  <td className="px-2.5 py-1.5 text-right">{c.quantidade}</td>
+                  <td className="px-2.5 py-1.5 text-right">R$ {(c.valor_unitario ?? 0).toLocaleString("pt-BR")}</td>
+                  <td className="px-2.5 py-1.5 text-right font-medium">R$ {(c.valor_total ?? 0).toLocaleString("pt-BR")}</td>
+                  <td className="px-2.5 py-1.5 text-center">
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium capitalize ${statusColor(c.status ?? "pendente")}`}>{c.status}</span>
+                  </td>
+                </tr>
+              ))}
+              {(!compras || compras.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhuma compra registrada.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
