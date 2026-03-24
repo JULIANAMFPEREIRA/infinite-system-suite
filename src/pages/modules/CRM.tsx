@@ -3,6 +3,7 @@ import { Users, Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
+import { useCreateProjeto } from "@/hooks/useProjetos";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -16,11 +17,14 @@ const origemLabels: Record<OrigemLead, string> = { whatsapp: "WhatsApp", instagr
 const CRM = () => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
+  const createProjeto = useCreateProjeto();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [enderecoObra, setEnderecoObra] = useState("");
   const [origem, setOrigem] = useState<OrigemLead>("outro");
   const [statusCrm, setStatusCrm] = useState<StatusCRM>("lead");
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
@@ -35,24 +39,38 @@ const CRM = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setOrigem("outro"); setStatusCrm("lead"); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setStatusCrm("lead"); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setNome(c.nome); setEmail(c.email ?? ""); setTelefone(c.telefone ?? ""); setOrigem(c.origem ?? "outro"); setStatusCrm(c.status_crm ?? "lead"); setShowForm(true);
+    setEditId(c.id); setNome(c.nome); setEmail(c.email ?? ""); setTelefone(c.telefone ?? "");
+    setEndereco(c.endereco ?? ""); setEnderecoObra(c.endereco_obra ?? "");
+    setOrigem(c.origem ?? "outro"); setStatusCrm(c.status_crm ?? "lead"); setShowForm(true);
   };
 
   const save = useMutation({
     mutationFn: async () => {
-      const payload = { nome, email: email || null, telefone: telefone || null, origem, status_crm: statusCrm };
+      const payload = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm };
       if (editId) {
+        // Check if status changed to "projeto" to auto-create project
+        const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
         if (error) throw error;
+        if (statusCrm === "projeto" && oldCliente?.status_crm !== "projeto" && empresaId) {
+          await createProjeto.mutateAsync({
+            nome: `Projeto — ${nome}`,
+            descricao: `Projeto criado automaticamente a partir do CRM`,
+            cliente_id: editId,
+            endereco_obra: enderecoObra || endereco || null,
+            status: "proposta",
+          });
+          toast.success("Projeto criado automaticamente a partir do CRM!");
+        }
       } else {
         const { error } = await supabase.from("clientes").insert({ ...payload, empresa_id: empresaId! });
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); toast.success(editId ? "Cliente atualizado!" : "Cliente cadastrado!"); resetForm(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success(editId ? "Cliente atualizado!" : "Cliente cadastrado!"); resetForm(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -88,34 +106,19 @@ const CRM = () => {
         <div className="bg-card border border-border rounded p-3 space-y-3">
           <h2 className="text-xs font-semibold text-foreground">{editId ? "Editar" : "Novo"} Cliente</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1 col-span-2">
-              <label className="text-[11px] text-muted-foreground">Nome *</label>
-              <input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">E-mail</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Telefone</label>
-              <input value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Origem</label>
+            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">E-mail</label><input value={email} onChange={e => setEmail(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Telefone</label><input value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço</label><input value={endereco} onChange={e => setEndereco(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Origem</label>
               <select value={origem} onChange={e => setOrigem(e.target.value as OrigemLead)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="whatsapp">WhatsApp</option>
-                <option value="instagram">Instagram</option>
-                <option value="indicacao">Indicação</option>
-                <option value="outro">Outro</option>
+                <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="indicacao">Indicação</option><option value="outro">Outro</option>
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Status</label>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
               <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="lead">Lead</option>
-                <option value="contato">Contato</option>
-                <option value="proposta">Proposta</option>
-                <option value="projeto">Projeto</option>
+                <option value="lead">Lead</option><option value="contato">Contato</option><option value="proposta">Proposta</option><option value="projeto">Projeto</option>
               </select>
             </div>
           </div>
@@ -138,6 +141,7 @@ const CRM = () => {
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Endereço</th>
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
                 <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
                 <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
@@ -149,6 +153,7 @@ const CRM = () => {
                   <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
                   <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
                   <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{c.endereco ?? "—"}</td>
                   <td className="px-2.5 py-1.5">{origemLabels[c.origem as OrigemLead] ?? "—"}</td>
                   <td className="px-2.5 py-1.5 text-center">
                     <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors[c.status_crm as StatusCRM]}`}>{statusLabels[c.status_crm as StatusCRM]}</span>
@@ -161,7 +166,7 @@ const CRM = () => {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
             </tbody>
           </table>
         </div>
