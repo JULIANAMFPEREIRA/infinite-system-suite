@@ -1,44 +1,35 @@
 
 
-# Criar Usuario Admin + Seed de Dados Completos para Teste
+# Corrigir Dados Nao Aparecendo — Substituir Placeholders por Modulos Funcionais
 
-## Resumo
+## Diagnostico
 
-Criar uma edge function `seed-test-data` que usa o service role key para: criar o usuario admin via Auth API, vincular a empresa, atribuir role admin, e popular todas as tabelas com um cenario de teste completo (cliente, fornecedores, produtos, projeto, itens, compras, estoque, financeiro, comissoes). Executar a function uma vez para popular tudo.
+- **Dados existem no banco** e estao vinculados corretamente a empresa `a0000000-...0001`
+- **Admin esta vinculado** corretamente (empresa_id + role admin confirmados)
+- **RLS esta OK** — as policies usam `get_empresa_id(auth.uid())` e o admin tem acesso via `has_role`
+- **Modulos funcionais** (Projetos, Compras, Estoque, Fornecedores, FinanceiroPagar, FinancasPessoais) ja consultam dados reais
+- **Problema real**: 2 modulos com dados no banco ainda sao placeholders: **FinanceiroReceber** e **Comissoes**
 
----
+## Alteracoes
 
-## Abordagem
+### 1. FinanceiroReceber — Substituir placeholder (`src/pages/modules/FinanceiroReceber.tsx`)
+Criar tela funcional similar a FinanceiroPagar:
+- Usar `useFinanceiroReceber` e `useCreateContaReceber` (hooks ja existem)
+- Tabela: Descricao, Cliente, Projeto, Parcela, Valor, Vencimento, Status, Acoes
+- Botao "Marcar como Recebido" usando `useUpdateContaReceber`
+- Botao "Nova Parcela" com form inline
 
-Uma edge function e a unica forma de criar usuarios programaticamente (precisa do service role key). A function fara tudo em sequencia:
+### 2. Comissoes — Substituir placeholder (`src/pages/modules/Comissoes.tsx`)
+Criar tela funcional:
+- Query `comissoes` com joins em `fornecedores(nome)` e `projetos(nome)`
+- Tabela: Arquiteto, Projeto, Percentual, Valor, Vencimento, Status
+- Somente leitura (comissoes sao geradas automaticamente)
 
-1. Criar usuario `admin@infinit.com` / `123456` via `supabase.auth.admin.createUser` (com `email_confirm: true`)
-2. Inserir profile vinculado a empresa `a0000000-0000-0000-0000-000000000001`
-3. Inserir `user_roles` com role `admin`
-4. Inserir cliente, fornecedores (1 padrao + 1 arquiteto com RT)
-5. Inserir 3 produtos com precos
-6. Inserir 1 estoque_item por produto (qty baixa)
-7. Criar projeto "Automacao Residencial Alpha" vinculado ao cliente
-8. Inserir itens no projeto (3 produtos + 1 servico instalacao)
-9. Inserir comissao RT do arquiteto
-10. Inserir 1 compra vinculada ao projeto
-11. Inserir estoque atualizado da compra
-12. Inserir necessidade de compra para itens sem estoque
-13. Gerar financeiro_receber (entrada + 2 parcelas)
-14. Gerar financeiro_pagar (fornecedor + comissao)
-15. Atualizar projeto status para `aprovado` e totais calculados
+### 3. Hooks adicionais (`src/hooks/useFinanceiro.ts`)
+- Adicionar `useComissoes()` hook
 
-## Arquivo
-
-`supabase/functions/seed-test-data/index.ts`
-
-## Execucao
-
-Apos deploy, chamar a function via `curl_edge_functions` para executar o seed. A function retorna um resumo do que foi criado.
-
-## Seguranca
-
-- Function usa `SUPABASE_SERVICE_ROLE_KEY` (ja disponivel como secret)
-- Idempotente: verifica se usuario ja existe antes de criar
-- Pode ser deletada apos uso
+## Arquivos
+1. `src/pages/modules/FinanceiroReceber.tsx` — reescrever
+2. `src/pages/modules/Comissoes.tsx` — reescrever
+3. `src/hooks/useFinanceiro.ts` — adicionar hook de comissoes
 
