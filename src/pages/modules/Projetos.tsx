@@ -182,6 +182,18 @@ const Projetos = () => {
                       </span>
                     </td>
                     <td className="px-2.5 py-1.5 text-center">
+                      {(pendenciaCounts?.[p.id] ?? 0) > 0 ? (
+                        <button
+                          onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition"
+                        >
+                          <AlertTriangle size={11} /> {pendenciaCounts![p.id]}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-center">
                       <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-primary">
                         <Pencil size={13} />
                       </button>
