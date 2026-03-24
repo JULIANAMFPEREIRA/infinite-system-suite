@@ -27,6 +27,7 @@ import NotasFiscais from "./pages/modules/NotasFiscais";
 import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
+import ItensComprar from "./pages/modules/ItensComprar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
