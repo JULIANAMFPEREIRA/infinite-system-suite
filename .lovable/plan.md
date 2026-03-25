@@ -1,180 +1,101 @@
 
 
-# Evolucao INFINIT SYSTEM — Plano Completo em 3 Fases
+# Fase 2 + Fase 3 — Gestao, Portais e Relatorios
 
-Este plano cobre todos os 21 pontos solicitados, divididos em fases para garantir estabilidade.
+## FASE 2 — Gestao e Configuracoes
 
----
+### 2.1 Gestao de Usuarios (Edge Function + Configuracoes)
+- Criar edge function `create-user` que usa service role key para criar usuario via `auth.admin.createUser`, inserir profile com empresa_id, e atribuir role em `user_roles`
+- Expandir `Configuracoes.tsx` com secao "Criar Usuario": formulario com nome, email, senha, role (select: admin/administrativo/financeiro/tecnico/arquiteto/cliente)
+- Exibir lista de usuarios com suas roles (ja existe parcialmente)
+- Adicionar botao para remover role
 
-## FASE 1 — Nucleo (esta implementacao)
-
-### 1.1 Migracao de Banco de Dados
-
-Novas tabelas e alteracoes necessarias:
-
-**Nova tabela `visitas_tecnicas`:**
-- id, empresa_id, projeto_id, tecnico_id (FK fornecedores), data, descricao, produtos_levados (jsonb), servicos_executados (text), valor_pago_tecnico (numeric), status_pagamento (pendente/pago), data_pagamento, created_at
+### 2.2 Contratos Integrados
+- Criar tabela `contratos` via migration: id, empresa_id, projeto_id, cliente_id, status (rascunho/enviado/assinado/cancelado), descricao, valor, data_envio, data_assinatura, created_at
 - RLS: admin manages, empresa users see
+- Reescrever `Contratos.tsx` com CRUD real: criar contrato vinculado a projeto/cliente, alterar status, exibir na listagem
+- No CRM, exibir contratos vinculados ao cliente
 
-**Nova tabela `formas_pagamento`:**
-- id, empresa_id, nome, ativo (boolean), created_at
+### 2.3 CRM Completo
+- Expandir `CRM.tsx` com secao de detalhes ao clicar no cliente: exibir projeto vinculado, contrato vinculado, historico de interacoes
+- Adicionar formulario para registrar interacoes (crm_interacoes): tipo, descricao
+- Exibir responsaveis do projeto vinculado
 
-**Nova tabela `categorias`:**
-- id, empresa_id, nome, tipo (produto/servico), created_at
+### 2.4 Fluxo de Caixa Manual
+- Expandir `FluxoCaixa.tsx` com botao "Novo Lancamento Manual"
+- Inserir como financeiro_receber (receita) ou financeiro_pagar (despesa) com flag ou descricao "lancamento manual"
 
-**Alterar `projetos`:**
-- Adicionar: endereco_obra (text), forma_pagamento (text), observacoes_pagamento (text), numero_parcelas (int default 1)
-
-**Alterar `clientes`:**
-- Adicionar: endereco_obra (text)
-
-**Alterar `status_projeto` enum:**
-- Adicionar valores: `lead`, `proposta`, `vendido`, `pos_venda`
-- Fluxo final: lead → proposta → orcamento → aprovado → em_andamento → concluido → pos_venda → cancelado
-
-**Alterar `comissoes`:**
-- Tornar editavel: permitir UPDATE pelo admin (policy ja existe)
-
-### 1.2 CRM → Projeto Automatico
-
-No `CRM.tsx`, ao alterar `status_crm` para "projeto":
-- Criar projeto automaticamente via `useCreateProjeto`
-- Vincular cliente_id, copiar endereco e endereco_obra do cliente
-- Toast: "Projeto criado automaticamente a partir do CRM"
-- Status inicial do projeto: `proposta`
-
-### 1.3 Projeto Completo
-
-Expandir formulario em `Projetos.tsx`:
-- Campos novos: endereco_obra, forma_pagamento (select de formas cadastradas), numero_parcelas, observacoes
-- Responsaveis: arquiteto (ja existe), adicionar campos para engenheiro_id, designer_id (selects de fornecedores)
-- Autocomplete de produtos: ao digitar no campo descricao de item tipo "produto", buscar produtos cadastrados e preencher custo/venda automaticamente
-- Comissao por item: campo rt_percentual ja existe em projeto_itens, tornar visivel e editavel
-
-### 1.4 Automacoes ao Criar/Aprovar Projeto
-
-Ao salvar projeto com itens:
-- Gerar necessidades de compra para itens tipo produto (ja existe parcialmente)
-- Ao mudar status para "aprovado": gerar automaticamente contas a receber (parcelas conforme numero_parcelas) e comissoes RT
-
-Entrada nao obrigatoria — financeiro gerado ao aprovar, nao ao receber entrada.
-
-### 1.5 Visitas Tecnicas
-
-Criar submodulo dentro do projeto (similar a ProjetoItensSection):
-- Listar visitas vinculadas ao projeto
-- Formulario: tecnico (select fornecedores), data, descricao, produtos levados (multi-select do estoque), servicos executados, valor pago ao tecnico, status pagamento
-- Ao registrar visita com produtos: dar baixa no estoque (status → "instalado")
-- Ao registrar valor pago: gerar conta a pagar automaticamente
-
-### 1.6 Estoque — Baixa na Instalacao
-
-Alterar logica: estoque nao baixa na compra (ja correto). Baixa ocorre apenas via visitas tecnicas (item 1.5) ao marcar produtos como instalados.
-
-### 1.7 Comissoes Editaveis
-
-Em `Comissoes.tsx`:
-- Permitir editar percentual e valor
-- Adicionar botao "Dar baixa" (marcar como pago + data_pagamento)
-- Atualizar conta a pagar vinculada automaticamente
-
-### 1.8 Financeiro — Baixa Completa
-
-Expandir `FinanceiroPagar.tsx` e `FinanceiroReceber.tsx`:
-- Ao dar baixa: modal com campos data_pagamento, forma_pagamento (select), observacao
-- Em vez de apenas setar "pago" com data de hoje
-
-### 1.9 Dashboard com Dados Reais
-
-Substituir dados mock no `Dashboard.tsx`:
-- Queries reais: total receita (financeiro_receber pago), projetos ativos (em_andamento), leads (clientes com status lead), compras pendentes
-- Graficos com dados reais dos ultimos 6 meses
-- Atividade recente: ultimos audit_logs
-
----
-
-## FASE 2 — Gestao e Configuracoes (proxima iteracao)
-
-### 2.1 Configuracoes Avancadas
-- CRUD de categorias, formas de pagamento, servicos
-- Gestao de usuarios: criar usuario (via edge function), atribuir role, vincular a empresa
-- Templates de projeto
-
-### 2.2 Usuarios e Acessos
-- Edge function para criar usuarios com roles especificos (cliente, arquiteto, parceiro, funcionario)
-- Tela em Configuracoes para gerenciar
-- Vincular cada usuario ao seu tipo
-
-### 2.3 Contratos Integrados
-- Vincular contrato ao projeto e cliente
-- Status do contrato (rascunho, enviado, assinado)
-- Exibir no CRM
-
-### 2.4 CRM Completo
-- Visualizacao completa do cliente (projeto vinculado, contrato, endereco obra, responsaveis)
-- Historico de interacoes
-
-### 2.5 Fluxo de Caixa Manual
-- Permitir lancamentos manuais alem dos automaticos
-
----
-
-## FASE 3 — Portais e Relatorios (iteracao seguinte)
+## FASE 3 — Portais e Relatorios
 
 ### 3.1 Portal do Cliente
-- Rota separada `/portal/cliente`
-- Ver projeto, cronograma, progresso, fotos
-- Sem valores financeiros
+- Nova rota `/portal/cliente` (protegida por role `cliente`)
+- Pagina que mostra projetos vinculados ao cliente (via email do JWT → clientes.email → projetos.cliente_id)
+- Exibir: nome do projeto, status, cronograma/progresso, etapas
+- **Sem valores financeiros** — ocultar custo, venda, margem
 
 ### 3.2 Portal do Arquiteto
-- Ver projetos vinculados, comissoes, status pagamento
+- Nova rota `/portal/arquiteto` (protegida por role `arquiteto`)
+- Exibir projetos onde o arquiteto esta vinculado (fornecedores.email = JWT email)
+- Listar comissoes (RT) do arquiteto com status de pagamento
+- Sem acesso a outros modulos
 
 ### 3.3 Relatorios com PDF
-- Exportacao usando reportlab ou html-to-pdf
-- Estrutura para Excel
+- Adicionar botao "Exportar PDF" em `Relatorios.tsx`
+- Usar `jspdf` + `jspdf-autotable` para gerar PDF com ranking de projetos, receita vs despesa
+- Adicionar botao "Exportar CSV" para estrutura Excel
 
-### 3.4 Notificacoes
-- Alertas de vencimento, custo excedido, compras pendentes
-- Sistema de notificacoes internas
+### 3.4 Alertas e Notificacoes
+- Expandir `Automacoes.tsx` com alertas reais baseados em queries:
+  - Contas vencidas (data_vencimento < hoje e status pendente)
+  - Custo real > custo previsto em projetos
+  - Compras pendentes ha mais de 7 dias
+- Adicionar badge de notificacao no TopBar com contagem de alertas
+- Criar dropdown de notificacoes no TopBar
 
-### 3.5 Alertas Visuais
-- No dashboard: contas vencidas, custo > previsto, compras pendentes
+### 3.5 Dashboard Alertas Visuais
+- Adicionar secao "Alertas" no Dashboard com cards vermelhos para:
+  - Contas vencidas
+  - Projetos com custo excedido
+  - Compras pendentes
 
----
+## Detalhes Tecnicos
 
-## Detalhes Tecnicos (Fase 1)
+**Migration:**
+- CREATE TABLE contratos (id, empresa_id, projeto_id, cliente_id, status, descricao, valor, data_envio, data_assinatura, created_at)
+- RLS policies para contratos
 
-**Migrations:**
-1. ALTER TABLE projetos ADD COLUMN endereco_obra text, forma_pagamento text, observacoes_pagamento text, numero_parcelas int DEFAULT 1
-2. ALTER TABLE clientes ADD COLUMN endereco_obra text
-3. CREATE TABLE visitas_tecnicas (...)
-4. CREATE TABLE formas_pagamento (...)
-5. CREATE TABLE categorias (...)
-6. Adicionar novos valores ao enum status_projeto (lead, proposta, vendido, pos_venda)
-7. RLS policies para novas tabelas
+**Edge Function:**
+- `supabase/functions/create-user/index.ts` — cria usuario, profile, e role
+
+**Pacotes:**
+- Instalar `jspdf` e `jspdf-autotable` para exportacao PDF
 
 **Arquivos novos:**
-- `src/hooks/useVisitasTecnicas.ts`
-- `src/hooks/useCategorias.ts`
+- `supabase/functions/create-user/index.ts`
+- `src/pages/portal/PortalCliente.tsx`
+- `src/pages/portal/PortalArquiteto.tsx`
+- `src/hooks/useContratos.ts`
 
 **Arquivos editados:**
-- `src/pages/modules/Projetos.tsx` — formulario expandido + autocomplete + visitas + automacoes
-- `src/pages/modules/CRM.tsx` — auto-criar projeto ao mudar status
-- `src/pages/modules/Comissoes.tsx` — edicao + baixa
-- `src/pages/modules/FinanceiroPagar.tsx` — modal de baixa completa
-- `src/pages/modules/FinanceiroReceber.tsx` — modal de baixa completa
-- `src/pages/modules/Cronograma.tsx` — usar novos status
-- `src/pages/Dashboard.tsx` — dados reais
-- `src/pages/modules/Configuracoes.tsx` — CRUD categorias e formas de pagamento
+- `src/App.tsx` — novas rotas portal + role-based redirect
+- `src/pages/modules/Configuracoes.tsx` — secao criar usuario
+- `src/pages/modules/Contratos.tsx` — CRUD real
+- `src/pages/modules/CRM.tsx` — detalhes cliente + interacoes + contrato
+- `src/pages/modules/FluxoCaixa.tsx` — lancamentos manuais
+- `src/pages/modules/Relatorios.tsx` — exportacao PDF/CSV
+- `src/pages/modules/Automacoes.tsx` — alertas reais
+- `src/pages/Dashboard.tsx` — secao alertas visuais
+- `src/components/layout/TopBar.tsx` — dropdown notificacoes com badge
 
 **Ordem de execucao:**
-1. Migracao de banco (todas as alteracoes)
-2. Hooks novos (visitas, categorias)
-3. CRM → Projeto automatico
-4. Projeto expandido (formulario + autocomplete + visitas)
-5. Automacoes (financeiro ao aprovar + comissoes)
-6. Comissoes editaveis + baixa
-7. Financeiro com modal de baixa
-8. Dashboard com dados reais
-9. Configuracoes basicas
+1. Migration (tabela contratos)
+2. Edge function create-user
+3. Configuracoes — gestao de usuarios
+4. Contratos CRUD
+5. CRM completo (detalhes + interacoes)
+6. Fluxo de Caixa manual
+7. Portal do Cliente
+8. Portal do Arquiteto
+9. Relatorios PDF/CSV
+10. Alertas e notificacoes (Automacoes + TopBar + Dashboard)
 
