@@ -298,6 +298,67 @@ export type Database = {
           },
         ]
       }
+      contratos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_assinatura: string | null
+          data_envio: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          projeto_id: string | null
+          status: string
+          valor: number | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_assinatura?: string | null
+          data_envio?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          projeto_id?: string | null
+          status?: string
+          valor?: number | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_assinatura?: string | null
+          data_envio?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          projeto_id?: string | null
+          status?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_interacoes: {
         Row: {
           cliente_id: string
