@@ -28,6 +28,8 @@ import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
 import ItensComprar from "./pages/modules/ItensComprar";
+import PortalCliente from "./pages/portal/PortalCliente";
+import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
+const RoleRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
+  const { user, roles, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!roles.some(r => allowedRoles.includes(r))) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -48,6 +58,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Portal routes - no AppLayout */}
+            <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
+            <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<CRM />} />
