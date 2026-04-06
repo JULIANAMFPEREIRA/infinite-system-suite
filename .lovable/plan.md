@@ -1,101 +1,83 @@
 
 
-# Fase 2 + Fase 3 — Gestao, Portais e Relatorios
+# Ajustes UX, Fluxo e Edição — Plano de Implementação
 
-## FASE 2 — Gestao e Configuracoes
+## Resumo
 
-### 2.1 Gestao de Usuarios (Edge Function + Configuracoes)
-- Criar edge function `create-user` que usa service role key para criar usuario via `auth.admin.createUser`, inserir profile com empresa_id, e atribuir role em `user_roles`
-- Expandir `Configuracoes.tsx` com secao "Criar Usuario": formulario com nome, email, senha, role (select: admin/administrativo/financeiro/tecnico/arquiteto/cliente)
-- Exibir lista de usuarios com suas roles (ja existe parcialmente)
-- Adicionar botao para remover role
+Ajustes cirúrgicos em módulos existentes para melhorar UX e completar funcionalidades parciais. Nenhum módulo será recriado, apenas complementado.
 
-### 2.2 Contratos Integrados
-- Criar tabela `contratos` via migration: id, empresa_id, projeto_id, cliente_id, status (rascunho/enviado/assinado/cancelado), descricao, valor, data_envio, data_assinatura, created_at
-- RLS: admin manages, empresa users see
-- Reescrever `Contratos.tsx` com CRUD real: criar contrato vinculado a projeto/cliente, alterar status, exibir na listagem
-- No CRM, exibir contratos vinculados ao cliente
+## 1. Projeto — Tela Exclusiva com Abas
 
-### 2.3 CRM Completo
-- Expandir `CRM.tsx` com secao de detalhes ao clicar no cliente: exibir projeto vinculado, contrato vinculado, historico de interacoes
-- Adicionar formulario para registrar interacoes (crm_interacoes): tipo, descricao
-- Exibir responsaveis do projeto vinculado
+**Arquivo:** `src/pages/modules/Projetos.tsx`
 
-### 2.4 Fluxo de Caixa Manual
-- Expandir `FluxoCaixa.tsx` com botao "Novo Lancamento Manual"
-- Inserir como financeiro_receber (receita) ou financeiro_pagar (despesa) com flag ou descricao "lancamento manual"
+Atualmente, clicar num projeto abre o formulário inline com a lista ainda visível abaixo. Ajuste:
 
-## FASE 3 — Portais e Relatorios
+- Adicionar estado `viewMode: "list" | "detail"` 
+- Quando `viewMode === "detail"`: ocultar lista e filtros, exibir botão "← Voltar para lista"
+- Organizar conteúdo do projeto em abas usando `Tabs` (já existe em `src/components/ui/tabs.tsx`):
+  - **Resumo** — formulário de edição do projeto (campos atuais)
+  - **Itens** — `ProjetoItensSection` (já existe)
+  - **Visitas Técnicas** — `VisitasTecnicasSection` (mover da posição atual para aba própria)
+  - **Financeiro** — listar contas a receber/pagar vinculadas ao projeto (query inline)
+  - **Compras** — listar compras vinculadas ao projeto
+  - **Cronograma** — etapas do projeto (placeholder funcional)
+  - **Contratos** — contratos vinculados
 
-### 3.1 Portal do Cliente
-- Nova rota `/portal/cliente` (protegida por role `cliente`)
-- Pagina que mostra projetos vinculados ao cliente (via email do JWT → clientes.email → projetos.cliente_id)
-- Exibir: nome do projeto, status, cronograma/progresso, etapas
-- **Sem valores financeiros** — ocultar custo, venda, margem
+## 2. Visitas Técnicas — Aba Própria com CRUD Completo
 
-### 3.2 Portal do Arquiteto
-- Nova rota `/portal/arquiteto` (protegida por role `arquiteto`)
-- Exibir projetos onde o arquiteto esta vinculado (fornecedores.email = JWT email)
-- Listar comissoes (RT) do arquiteto com status de pagamento
-- Sem acesso a outros modulos
+**Arquivo:** `src/pages/modules/Projetos.tsx` (componente `VisitasTecnicasSection`)
 
-### 3.3 Relatorios com PDF
-- Adicionar botao "Exportar PDF" em `Relatorios.tsx`
-- Usar `jspdf` + `jspdf-autotable` para gerar PDF com ranking de projetos, receita vs despesa
-- Adicionar botao "Exportar CSV" para estrutura Excel
+Já existe parcialmente. Complementar:
+- Adicionar edição de visita existente (click na linha → popular form, `editId`)
+- Adicionar botão excluir visita
+- Adicionar campos faltantes no formulário: produtos levados (input texto/json), data_pagamento
+- Hook `useUpdateVisita` já existe, apenas conectar ao form de edição
 
-### 3.4 Alertas e Notificacoes
-- Expandir `Automacoes.tsx` com alertas reais baseados em queries:
-  - Contas vencidas (data_vencimento < hoje e status pendente)
-  - Custo real > custo previsto em projetos
-  - Compras pendentes ha mais de 7 dias
-- Adicionar badge de notificacao no TopBar com contagem de alertas
-- Criar dropdown de notificacoes no TopBar
+## 3. Financeiro Receber — Modal de Baixa
 
-### 3.5 Dashboard Alertas Visuais
-- Adicionar secao "Alertas" no Dashboard com cards vermelhos para:
-  - Contas vencidas
-  - Projetos com custo excedido
-  - Compras pendentes
+**Arquivo:** `src/pages/modules/FinanceiroReceber.tsx`
 
-## Detalhes Tecnicos
+`FinanceiroPagar` já tem modal de baixa com data/forma/obs. `FinanceiroReceber` ainda faz baixa direta. Ajuste:
+- Adicionar `Dialog` de baixa igual ao `FinanceiroPagar` (data, forma de pagamento, observação)
+- Importar `useFormasPagamento` para o select de formas
 
-**Migration:**
-- CREATE TABLE contratos (id, empresa_id, projeto_id, cliente_id, status, descricao, valor, data_envio, data_assinatura, created_at)
-- RLS policies para contratos
+## 4. Comissões — Baixa com Modal + Criar Manual
 
-**Edge Function:**
-- `supabase/functions/create-user/index.ts` — cria usuario, profile, e role
+**Arquivo:** `src/pages/modules/Comissoes.tsx`
 
-**Pacotes:**
-- Instalar `jspdf` e `jspdf-autotable` para exportacao PDF
+- Adicionar modal de baixa (igual ao financeiro) em vez de baixa direta
+- Adicionar botão "Nova Comissão" com formulário manual (projeto, fornecedor, percentual, valor, vencimento)
+- Adicionar campos data_pagamento e forma_pagamento na baixa
 
-**Arquivos novos:**
-- `supabase/functions/create-user/index.ts`
-- `src/pages/portal/PortalCliente.tsx`
-- `src/pages/portal/PortalArquiteto.tsx`
-- `src/hooks/useContratos.ts`
+## 5. Parcelamento Manual no Projeto
 
-**Arquivos editados:**
-- `src/App.tsx` — novas rotas portal + role-based redirect
-- `src/pages/modules/Configuracoes.tsx` — secao criar usuario
-- `src/pages/modules/Contratos.tsx` — CRUD real
-- `src/pages/modules/CRM.tsx` — detalhes cliente + interacoes + contrato
-- `src/pages/modules/FluxoCaixa.tsx` — lancamentos manuais
-- `src/pages/modules/Relatorios.tsx` — exportacao PDF/CSV
-- `src/pages/modules/Automacoes.tsx` — alertas reais
-- `src/pages/Dashboard.tsx` — secao alertas visuais
-- `src/components/layout/TopBar.tsx` — dropdown notificacoes com badge
+**Arquivo:** `src/pages/modules/Projetos.tsx` (aba Financeiro)
 
-**Ordem de execucao:**
-1. Migration (tabela contratos)
-2. Edge function create-user
-3. Configuracoes — gestao de usuarios
-4. Contratos CRUD
-5. CRM completo (detalhes + interacoes)
-6. Fluxo de Caixa manual
-7. Portal do Cliente
-8. Portal do Arquiteto
-9. Relatorios PDF/CSV
-10. Alertas e notificacoes (Automacoes + TopBar + Dashboard)
+Na aba Financeiro do projeto:
+- Listar parcelas existentes de `financeiro_receber` filtradas por `projeto_id`
+- Botão "Nova Parcela" com formulário: valor, vencimento, forma de pagamento
+- Cada parcela editável individualmente
+- Inserir diretamente em `financeiro_receber`
+
+## 6. Itens do Projeto — Autocomplete Já Funciona
+
+O autocomplete de produtos já está implementado e funcional (linhas 395-414 do Projetos.tsx). Também permite digitação manual quando tipo é "serviço" ou "mão de obra". **Nenhuma alteração necessária.**
+
+## 7. CRM → Projeto — Já Funciona
+
+A automação CRM → Projeto já está implementada (linhas 89-92 do CRM.tsx). **Nenhuma alteração necessária.** Apenas garantir que o projeto criado aparece no cronograma (já funciona via query de projetos).
+
+## 8. Configurações — Usuários Já Funciona
+
+Criação de usuários com roles (cliente, arquiteto, técnico) já está implementada. **Nenhuma alteração necessária.**
+
+## Arquivos Editados
+
+1. `src/pages/modules/Projetos.tsx` — tela exclusiva com abas, visitas CRUD completo, aba financeiro com parcelas
+2. `src/pages/modules/FinanceiroReceber.tsx` — modal de baixa completo
+3. `src/pages/modules/Comissoes.tsx` — modal de baixa + criar comissão manual
+
+## Arquivos NÃO Alterados
+
+- CRM.tsx, Configuracoes.tsx, Compras.tsx, hooks — já funcionais, sem mudanças
 
