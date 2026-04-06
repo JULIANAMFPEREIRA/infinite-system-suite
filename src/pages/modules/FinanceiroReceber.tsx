@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
 import { useFinanceiroReceber, useCreateContaReceber, useUpdateContaReceber } from "@/hooks/useFinanceiro";
+import { useFormasPagamento } from "@/hooks/useCategorias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const FinanceiroReceber = () => {
   const empresaId = useEmpresa();
@@ -12,6 +14,7 @@ const FinanceiroReceber = () => {
   const { data: contas, isLoading } = useFinanceiroReceber();
   const createConta = useCreateContaReceber();
   const updateConta = useUpdateContaReceber();
+  const { data: formasPgto } = useFormasPagamento();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
@@ -20,6 +23,13 @@ const FinanceiroReceber = () => {
   const [parcela, setParcela] = useState(1);
   const [clienteId, setClienteId] = useState("");
   const [projetoId, setProjetoId] = useState("");
+
+  // Modal baixa
+  const [showBaixa, setShowBaixa] = useState(false);
+  const [baixaId, setBaixaId] = useState<string | null>(null);
+  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaForma, setBaixaForma] = useState("");
+  const [baixaObs, setBaixaObs] = useState("");
 
   const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
@@ -52,10 +62,16 @@ const FinanceiroReceber = () => {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleReceber = async (id: string) => {
+  const openBaixa = (id: string) => {
+    setBaixaId(id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
+  };
+
+  const handleBaixa = async () => {
+    if (!baixaId) return;
     try {
-      await updateConta.mutateAsync({ id, status: "pago", data_pagamento: new Date().toISOString().split("T")[0] });
+      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
       toast.success("Recebido!");
+      setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -136,7 +152,7 @@ const FinanceiroReceber = () => {
                   </td>
                   <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
-                      {c.status === "pendente" && <button onClick={() => handleReceber(c.id)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={13} /></button>}
+                      {c.status === "pendente" && <button onClick={() => openBaixa(c.id)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={13} /></button>}
                       <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
                       <button onClick={() => { if (window.confirm("Excluir parcela?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
                     </div>
@@ -148,6 +164,27 @@ const FinanceiroReceber = () => {
           </table>
         </div>
       )}
+
+      <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Recebimento</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Recebimento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Recebimento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
