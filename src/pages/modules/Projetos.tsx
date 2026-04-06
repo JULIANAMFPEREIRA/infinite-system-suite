@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search } from "lucide-react";
+import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check } from "lucide-react";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque } from "@/hooks/useNecessidadesCompra";
@@ -9,6 +9,8 @@ import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/us
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
@@ -40,6 +42,7 @@ const Projetos = () => {
   const createProjeto = useCreateProjeto();
   const updateProjeto = useUpdateProjeto();
 
+  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<StatusProjeto | "todos">("todos");
@@ -60,6 +63,7 @@ const Projetos = () => {
     setDataInicio(""); setDataPrevisao(""); setEnderecoObra(""); setFormaPagamento("");
     setNumeroParcelas(1); setObservacoesPagamento("");
     setEditId(null); setShowForm(false); setSelectedProjetoId(null);
+    setViewMode("list");
   };
 
   const openEdit = (p: any) => {
@@ -69,6 +73,7 @@ const Projetos = () => {
     setEnderecoObra(p.endereco_obra ?? ""); setFormaPagamento(p.forma_pagamento ?? "");
     setNumeroParcelas(p.numero_parcelas ?? 1); setObservacoesPagamento(p.observacoes_pagamento ?? "");
     setShowForm(true); setSelectedProjetoId(p.id);
+    setViewMode("detail");
   };
 
   const handleSave = async () => {
@@ -87,17 +92,16 @@ const Projetos = () => {
       } else {
         const data = await createProjeto.mutateAsync({ ...payload, status: "orcamento" });
         setSelectedProjetoId(data.id); setEditId(data.id);
+        setViewMode("detail");
         toast.success("Projeto criado! Adicione itens abaixo.");
         return;
       }
-      resetForm();
     } catch (err: any) { toast.error(err.message); }
   };
 
   const handleApprove = async (projetoId: string, projeto: any) => {
     try {
       await supabase.from("projetos").update({ status: "aprovado" }).eq("id", projetoId);
-      // Auto-generate financeiro_receber parcelas
       const venda = projeto.venda_total ?? 0;
       const parcelas = projeto.numero_parcelas ?? 1;
       if (venda > 0 && empresaId) {
@@ -114,7 +118,6 @@ const Projetos = () => {
         });
         await supabase.from("financeiro_receber").insert(inserts);
       }
-      // Auto-generate comissoes RT
       const { data: itens } = await supabase.from("projeto_itens").select("*").eq("projeto_id", projetoId);
       if (itens && projeto.arquiteto_id && empresaId) {
         const comissoes = itens.filter(i => (i.rt_percentual ?? 0) > 0).map(i => ({
@@ -132,10 +135,7 @@ const Projetos = () => {
 
   const changeStatus = useMutation({
     mutationFn: async ({ id, status, projeto }: { id: string; status: StatusProjeto; projeto?: any }) => {
-      if (status === "aprovado" && projeto) {
-        await handleApprove(id, projeto);
-        return;
-      }
+      if (status === "aprovado" && projeto) { await handleApprove(id, projeto); return; }
       const { error } = await supabase.from("projetos").update({ status }).eq("id", id);
       if (error) throw error;
     },
@@ -145,13 +145,130 @@ const Projetos = () => {
 
   const removeProjeto = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("projetos").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto excluído"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto excluído"); resetForm(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const filtered = projetos?.filter(p => filterStatus === "todos" || p.status === filterStatus) ?? [];
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
+  // DETAIL VIEW
+  if (viewMode === "detail" && selectedProjetoId) {
+    const currentProjeto = projetos?.find(p => p.id === selectedProjetoId);
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex items-center gap-3">
+          <button onClick={resetForm} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition">
+            <ArrowLeft size={14} /> Voltar para lista
+          </button>
+          <span className="text-muted-foreground">|</span>
+          <h1 className="text-lg font-bold text-foreground">{nome || "Projeto"}</h1>
+          {currentProjeto && (
+            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[currentProjeto.status as StatusProjeto]}`}>
+              {statusLabels[currentProjeto.status as StatusProjeto]}
+            </span>
+          )}
+        </div>
+
+        <Tabs defaultValue="resumo" className="w-full">
+          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
+            <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
+            <TabsTrigger value="itens" className="text-xs">Itens</TabsTrigger>
+            <TabsTrigger value="visitas" className="text-xs">Visitas Técnicas</TabsTrigger>
+            <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
+            <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>
+            <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
+            <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="resumo">
+            <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-foreground">Dados do Projeto</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cliente</label>
+                  <select value={clienteId} onChange={e => setClienteId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                    <option value="">Selecionar...</option>
+                    {clientes?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+                  <select value={arquitetoId} onChange={e => setArquitetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                    <option value="">Selecionar...</option>
+                    {arquitetos?.map(a => <option key={a.id} value={a.id}>{a.nome} ({a.rt_percentual ?? 0}%)</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma Pagamento</label>
+                  <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                    <option value="">Selecionar...</option>
+                    {formasPagamento?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                    <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Transferência">Transferência</option>
+                  </select>
+                </div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nº Parcelas</label><input type="number" min={1} value={numeroParcelas} onChange={e => setNumeroParcelas(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Observações Pagamento</label><input value={observacoesPagamento} onChange={e => setObservacoesPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleSave} disabled={updateProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">Salvar Alterações</button>
+                {currentProjeto && currentProjeto.status !== "aprovado" && (
+                  <button onClick={() => changeStatus.mutate({ id: selectedProjetoId, status: "aprovado", projeto: currentProjeto })} className="px-4 py-1.5 rounded bg-success text-white text-xs font-medium hover:brightness-105 transition">Aprovar Projeto</button>
+                )}
+                <button onClick={() => { if (window.confirm("Excluir projeto?")) removeProjeto.mutate(selectedProjetoId); }} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="itens">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoItensSection projetoId={selectedProjetoId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="visitas">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <VisitasTecnicasSection projetoId={selectedProjetoId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="financeiro">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoFinanceiroSection projetoId={selectedProjetoId} projetoNome={nome} clienteId={clienteId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="compras">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoComprasSection projetoId={selectedProjetoId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="cronograma">
+            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Cronograma</h3>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div><span className="text-muted-foreground">Início:</span> <strong>{dataInicio || "Não definido"}</strong></div>
+                <div><span className="text-muted-foreground">Previsão:</span> <strong>{dataPrevisao || "Não definido"}</strong></div>
+                <div><span className="text-muted-foreground">Status:</span> <strong>{statusLabels[currentProjeto?.status as StatusProjeto] ?? "—"}</strong></div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">Funcionalidade de etapas detalhadas em desenvolvimento.</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="contratos">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoContratosSection projetoId={selectedProjetoId} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // LIST VIEW
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -172,9 +289,9 @@ const Projetos = () => {
         ))}
       </div>
 
-      {showForm && (
+      {showForm && viewMode === "list" && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">{editId ? "Editar Projeto" : "Novo Projeto"}</h2>
+          <h2 className="text-sm font-semibold text-foreground">Novo Projeto</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
@@ -191,30 +308,11 @@ const Projetos = () => {
               </select>
             </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma Pagamento</label>
-              <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="">Selecionar...</option>
-                {formasPagamento?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
-                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Transferência">Transferência</option>
-              </select>
-            </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nº Parcelas</label><input type="number" min={1} value={numeroParcelas} onChange={e => setNumeroParcelas(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Observações Pagamento</label><input value={observacoesPagamento} onChange={e => setObservacoesPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleSave} disabled={createProjeto.isPending || updateProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">
-              {editId ? "Salvar" : "Criar Projeto"}
-            </button>
+            <button onClick={handleSave} disabled={createProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">Criar Projeto</button>
             <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition">Cancelar</button>
           </div>
-          {selectedProjetoId && (
-            <>
-              <ProjetoItensSection projetoId={selectedProjetoId} />
-              <VisitasTecnicasSection projetoId={selectedProjetoId} />
-            </>
-          )}
         </div>
       )}
 
@@ -283,7 +381,7 @@ const Projetos = () => {
   );
 };
 
-// Subcomponent for project items with product autocomplete
+// ======== ITENS DO PROJETO ========
 const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   const empresaId = useEmpresa();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
@@ -349,8 +447,8 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   };
 
   return (
-    <div className="border-t border-border pt-4 space-y-3">
-      <h3 className="text-xs font-semibold text-foreground">Itens do Projeto</h3>
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">Itens do Projeto</h3>
       <div className="flex gap-4 text-[11px]">
         <span className="text-muted-foreground">Custo: <strong className="text-foreground">R$ {totalCusto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
         <span className="text-muted-foreground">Venda: <strong className="text-foreground">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
@@ -428,9 +526,10 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   );
 };
 
-// Visitas Técnicas subcomponent
+// ======== VISITAS TÉCNICAS ========
 const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const empresaId = useEmpresa();
+  const qc = useQueryClient();
   const { data: visitas, isLoading } = useVisitasTecnicas(projetoId);
   const createVisita = useCreateVisita();
   const updateVisita = useUpdateVisita();
@@ -446,30 +545,62 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   });
 
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [tecnicoId, setTecnicoId] = useState("");
   const [data, setData] = useState("");
   const [descricao, setDescricao] = useState("");
   const [servicos, setServicos] = useState("");
+  const [produtosLevados, setProdutosLevados] = useState("");
   const [valor, setValor] = useState(0);
+  const [dataPagamento, setDataPagamento] = useState("");
 
-  const handleAdd = async () => {
+  const resetVisitaForm = () => {
+    setEditId(null); setTecnicoId(""); setData(""); setDescricao("");
+    setServicos(""); setProdutosLevados(""); setValor(0); setDataPagamento("");
+    setShowForm(false);
+  };
+
+  const openEditVisita = (v: any) => {
+    setEditId(v.id); setTecnicoId(v.tecnico_id ?? ""); setData(v.data ?? "");
+    setDescricao(v.descricao ?? ""); setServicos(v.servicos_executados ?? "");
+    setProdutosLevados(v.produtos_levados ? JSON.stringify(v.produtos_levados) : "");
+    setValor(v.valor_pago_tecnico ?? 0); setDataPagamento(v.data_pagamento ?? "");
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
     try {
-      const v = await createVisita.mutateAsync({
-        projeto_id: projetoId, tecnico_id: tecnicoId || null,
-        data: data || null, descricao: descricao || null,
+      const payload: any = {
+        tecnico_id: tecnicoId || null, data: data || null, descricao: descricao || null,
         servicos_executados: servicos || null, valor_pago_tecnico: valor,
-      });
-      // Auto-generate conta a pagar for technician payment
-      if (valor > 0 && empresaId) {
-        await supabase.from("financeiro_pagar").insert({
-          empresa_id: empresaId, projeto_id: projetoId,
-          fornecedor_id: tecnicoId || null,
-          descricao: `Visita técnica — ${descricao || "Sem descrição"}`,
-          valor, data_vencimento: data || null, status: "pendente",
-        });
+        produtos_levados: produtosLevados ? JSON.parse(produtosLevados) : [],
+        data_pagamento: dataPagamento || null,
+      };
+      if (editId) {
+        await updateVisita.mutateAsync({ id: editId, projeto_id: projetoId, ...payload });
+        toast.success("Visita atualizada");
+      } else {
+        await createVisita.mutateAsync({ projeto_id: projetoId, ...payload });
+        if (valor > 0 && empresaId) {
+          await supabase.from("financeiro_pagar").insert({
+            empresa_id: empresaId, projeto_id: projetoId,
+            fornecedor_id: tecnicoId || null,
+            descricao: `Visita técnica — ${descricao || "Sem descrição"}`,
+            valor, data_vencimento: data || null, status: "pendente",
+          });
+        }
+        toast.success("Visita registrada");
       }
-      setTecnicoId(""); setData(""); setDescricao(""); setServicos(""); setValor(0); setShowForm(false);
-      toast.success("Visita registrada");
+      resetVisitaForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from("visitas_tecnicas").delete().eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["visitas_tecnicas", projetoId] });
+      toast.success("Visita excluída");
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -481,16 +612,17 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   };
 
   return (
-    <div className="border-t border-border pt-4 space-y-3">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-foreground">Visitas Técnicas</h3>
-        <button onClick={() => setShowForm(!showForm)} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+        <h3 className="text-sm font-semibold text-foreground">Visitas Técnicas</h3>
+        <button onClick={() => { resetVisitaForm(); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
           <Plus size={12} className="inline mr-1" />Nova Visita
         </button>
       </div>
 
       {showForm && (
         <div className="bg-secondary/30 rounded p-3 space-y-2">
+          <h4 className="text-xs font-semibold">{editId ? "Editar Visita" : "Nova Visita"}</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Técnico</label>
               <select value={tecnicoId} onChange={e => setTecnicoId(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
@@ -500,17 +632,19 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
             </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data</label><input type="date" value={data} onChange={e => setData(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor Técnico</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={dataPagamento} onChange={e => setDataPagamento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Serviços Executados</label><input value={servicos} onChange={e => setServicos(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Produtos Levados (JSON)</label><input value={produtosLevados} onChange={e => setProdutosLevados(e.target.value)} placeholder='["item1","item2"]' className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAdd} disabled={createVisita.isPending} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground disabled:opacity-50">Salvar</button>
-            <button onClick={() => setShowForm(false)} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleSave} disabled={createVisita.isPending} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground disabled:opacity-50">Salvar</button>
+            <button onClick={resetVisitaForm} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
           </div>
         </div>
       )}
 
-      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : visitas && visitas.length > 0 && (
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : visitas && visitas.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -519,10 +653,11 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
               <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pgto</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
             </tr></thead>
             <tbody>
               {visitas.map(v => (
-                <tr key={v.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                <tr key={v.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEditVisita(v)}>
                   <td className="px-2 py-1.5">{(v.fornecedores as any)?.nome ?? "—"}</td>
                   <td className="px-2 py-1.5">{v.data ?? "—"}</td>
                   <td className="px-2 py-1.5">{v.descricao ?? "—"}</td>
@@ -531,15 +666,314 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
                     {v.status_pagamento === "pago" ? (
                       <span className="px-1.5 py-0.5 rounded text-[11px] bg-success/15 text-success">Pago</span>
                     ) : (
-                      <button onClick={() => markPago(v)} className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning hover:bg-warning/25">Pendente</button>
+                      <button onClick={e => { e.stopPropagation(); markPago(v); }} className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning hover:bg-warning/25">Pendente</button>
                     )}
+                  </td>
+                  <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openEditVisita(v)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                      <button onClick={() => { if (window.confirm("Excluir visita?")) handleDelete(v.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      ) : <p className="text-xs text-muted-foreground">Nenhuma visita registrada.</p>}
+    </div>
+  );
+};
+
+// ======== FINANCEIRO DO PROJETO (PARCELAS) ========
+const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { projetoId: string; projetoNome: string; clienteId: string }) => {
+  const empresaId = useEmpresa();
+  const qc = useQueryClient();
+  const { data: formasPgto } = useFormasPagamento();
+
+  const { data: parcelas, isLoading } = useQuery({
+    queryKey: ["financeiro_receber_projeto", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("financeiro_receber").select("*").eq("projeto_id", projetoId).order("parcela");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projetoId,
+  });
+
+  const { data: contasPagar } = useQuery({
+    queryKey: ["financeiro_pagar_projeto", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("data_vencimento");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projetoId,
+  });
+
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [valor, setValor] = useState(0);
+  const [vencimento, setVencimento] = useState("");
+  const [forma, setForma] = useState("");
+  const [parcNum, setParcNum] = useState(1);
+
+  const resetForm = () => { setEditId(null); setValor(0); setVencimento(""); setForma(""); setParcNum((parcelas?.length ?? 0) + 1); setShowForm(false); };
+
+  const openEditParcela = (p: any) => {
+    setEditId(p.id); setValor(p.valor ?? 0); setVencimento(p.data_vencimento ?? ""); setForma(""); setParcNum(p.parcela ?? 1); setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      if (editId) {
+        const { error } = await supabase.from("financeiro_receber").update({ valor, data_vencimento: vencimento || null, parcela: parcNum }).eq("id", editId);
+        if (error) throw error;
+        toast.success("Parcela atualizada");
+      } else {
+        const { error } = await supabase.from("financeiro_receber").insert({
+          empresa_id: empresaId!, projeto_id: projetoId, cliente_id: clienteId || null,
+          descricao: `Parcela ${parcNum} — ${projetoNome}`, valor, parcela: parcNum,
+          data_vencimento: vencimento || null, status: "pendente",
+        });
+        if (error) throw error;
+        toast.success("Parcela criada");
+      }
+      qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
+      resetForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  // Baixa modal
+  const [showBaixa, setShowBaixa] = useState(false);
+  const [baixaId, setBaixaId] = useState<string | null>(null);
+  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaForma, setBaixaForma] = useState("");
+  const [baixaObs, setBaixaObs] = useState("");
+
+  const handleBaixa = async () => {
+    if (!baixaId) return;
+    try {
+      const { error } = await supabase.from("financeiro_receber").update({ status: "pago", data_pagamento: baixaData }).eq("id", baixaId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
+      toast.success("Recebido!"); setShowBaixa(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const totalReceber = parcelas?.reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
+  const totalRecebido = parcelas?.filter(p => p.status === "pago").reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
+  const totalPagar = contasPagar?.reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
+  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : s === "vencido" ? "bg-destructive/15 text-destructive" : "bg-warning/15 text-warning";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Financeiro do Projeto</h3>
+        <button onClick={() => { resetForm(); setParcNum((parcelas?.length ?? 0) + 1); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+          <Plus size={12} className="inline mr-1" />Nova Parcela
+        </button>
+      </div>
+
+      <div className="flex gap-4 text-[11px]">
+        <span className="text-muted-foreground">A Receber: <strong className="text-foreground">R$ {totalReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+        <span className="text-muted-foreground">Recebido: <strong className="text-success">R$ {totalRecebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+        <span className="text-muted-foreground">A Pagar: <strong className="text-destructive">R$ {totalPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+      </div>
+
+      {showForm && (
+        <div className="bg-secondary/30 rounded p-3 space-y-2">
+          <h4 className="text-xs font-semibold">{editId ? "Editar Parcela" : "Nova Parcela"}</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nº Parcela</label><input type="number" value={parcNum} onChange={e => setParcNum(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma Pagamento</label>
+              <select value={forma} onChange={e => setForma(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground">Salvar</button>
+            <button onClick={resetForm} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+          </div>
+        </div>
       )}
+
+      <div>
+        <h4 className="text-xs font-semibold text-foreground mb-2">Contas a Receber</h4>
+        {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : parcelas && parcelas.length > 0 ? (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-secondary/60">
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border w-12">#</th>
+                <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
+              </tr></thead>
+              <tbody>
+                {parcelas.map(p => (
+                  <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEditParcela(p)}>
+                    <td className="px-2 py-1.5 text-center">{p.parcela}</td>
+                    <td className="px-2 py-1.5 text-right font-medium">R$ {(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-2 py-1.5 text-center">{p.data_vencimento ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(p.status ?? "pendente")}`}>{p.status}</span></td>
+                    <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        {p.status === "pendente" && <button onClick={() => { setBaixaId(p.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true); }} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={12} /></button>}
+                        <button onClick={() => openEditParcela(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Nenhuma parcela encontrada.</p>}
+      </div>
+
+      {contasPagar && contasPagar.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-foreground mb-2">Contas a Pagar</h4>
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-secondary/60">
+                <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
+                <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Fornecedor</th>
+                <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              </tr></thead>
+              <tbody>
+                {contasPagar.map(c => (
+                  <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2 py-1.5">{c.descricao}</td>
+                    <td className="px-2 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-2 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Recebimento</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Recebimento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ======== COMPRAS DO PROJETO ========
+const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
+  const { data: compras, isLoading } = useQuery({
+    queryKey: ["compras_projeto", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("compras").select("*, fornecedores(nome), produtos(nome)").eq("projeto_id", projetoId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projetoId,
+  });
+
+  const statusColor = (s: string) => s === "entregue" ? "bg-success/15 text-success" : s === "cancelada" ? "bg-destructive/15 text-destructive" : s === "aprovada" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning";
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">Compras do Projeto</h3>
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : compras && compras.length > 0 ? (
+        <div className="border border-border rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-secondary/60">
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Produto</th>
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Fornecedor</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Qtd</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Total</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+            </tr></thead>
+            <tbody>
+              {compras.map(c => (
+                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                  <td className="px-2 py-1.5">{(c.produtos as any)?.nome ?? c.descricao ?? "—"}</td>
+                  <td className="px-2 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-right">{c.quantidade}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="text-xs text-muted-foreground">Nenhuma compra vinculada.</p>}
+    </div>
+  );
+};
+
+// ======== CONTRATOS DO PROJETO ========
+const ProjetoContratosSection = ({ projetoId }: { projetoId: string }) => {
+  const { data: contratos, isLoading } = useQuery({
+    queryKey: ["contratos_projeto", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("contratos").select("*").eq("projeto_id", projetoId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projetoId,
+  });
+
+  const statusColor = (s: string) => s === "assinado" ? "bg-success/15 text-success" : s === "cancelado" ? "bg-destructive/15 text-destructive" : s === "enviado" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning";
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">Contratos do Projeto</h3>
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : contratos && contratos.length > 0 ? (
+        <div className="border border-border rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-secondary/60">
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Enviado</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Assinado</th>
+            </tr></thead>
+            <tbody>
+              {contratos.map(c => (
+                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                  <td className="px-2 py-1.5">{c.descricao ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status)}`}>{c.status}</span></td>
+                  <td className="px-2 py-1.5 text-center">{c.data_envio ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center">{c.data_assinatura ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="text-xs text-muted-foreground">Nenhum contrato vinculado.</p>}
     </div>
   );
 };
