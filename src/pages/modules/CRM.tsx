@@ -249,7 +249,7 @@ const CRM = () => {
       const { error } = await supabase.from("clientes").update({ status_crm: newStatus }).eq("id", id);
       if (error) throw error;
       if (newStatus === "projeto" && old.status_crm !== "projeto") {
-        await autoCreateProject(id, old.nome, old.endereco_obra, old.endereco, old.arquiteto_id);
+        await autoCreateProject(id, old.nome, old.endereco_obra, old.endereco, old.arquiteto_id, old.notas);
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Status atualizado!"); },
