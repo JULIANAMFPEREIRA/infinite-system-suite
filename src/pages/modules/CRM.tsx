@@ -1,5 +1,6 @@
-import { useState, useMemo, useRef } from "react";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X } from "lucide-react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -70,6 +71,16 @@ const CRM = () => {
   const [simIntervalo, setSimIntervalo] = useState(30);
   const [simJuros, setSimJuros] = useState(0);
   const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(null);
+
+  // Lightbox & preview state
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [previewDoc, setPreviewDoc] = useState<{ url: string; nome: string } | null>(null);
+
+  const isPreviewable = (filename: string) => {
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    return ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext);
+  };
 
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
@@ -732,12 +743,13 @@ const CRM = () => {
               </div>
               {imagens.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {imagens.map(img => (
-                    <div key={img.id} className="relative group border border-border rounded overflow-hidden bg-card">
+                  {imagens.map((img, idx) => (
+                    <div key={img.id} className="relative group border border-border rounded overflow-hidden bg-card cursor-pointer" onClick={() => { setLightboxIndex(idx); setLightboxZoom(1); }}>
                       <img src={(img as any).url} alt={(img as any).nome_arquivo} className="w-full h-32 object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                        <a href={(img as any).url} target="_blank" download className="p-1.5 rounded bg-white/90 text-foreground hover:bg-white"><Download size={14} /></a>
-                        <button onClick={() => { if (window.confirm("Excluir?")) deleteArquivo.mutate(img.id); }} className="p-1.5 rounded bg-destructive/90 text-white hover:bg-destructive"><Trash2 size={14} /></button>
+                        <button onClick={e => { e.stopPropagation(); setLightboxIndex(idx); setLightboxZoom(1); }} className="p-1.5 rounded bg-white/90 text-foreground hover:bg-white"><Eye size={14} /></button>
+                        <a href={(img as any).url} target="_blank" download className="p-1.5 rounded bg-white/90 text-foreground hover:bg-white" onClick={e => e.stopPropagation()}><Download size={14} /></a>
+                        <button onClick={e => { e.stopPropagation(); if (window.confirm("Excluir?")) deleteArquivo.mutate(img.id); }} className="p-1.5 rounded bg-destructive/90 text-white hover:bg-destructive"><Trash2 size={14} /></button>
                       </div>
                       <p className="text-[10px] text-muted-foreground p-1 truncate">{(img as any).nome_arquivo}</p>
                     </div>
@@ -767,7 +779,10 @@ const CRM = () => {
                         {(doc as any).tamanho && <span className="text-muted-foreground">({((doc as any).tamanho / 1024).toFixed(0)} KB)</span>}
                       </div>
                       <div className="flex items-center gap-1">
-                        <a href={(doc as any).url} target="_blank" download className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Download size={13} /></a>
+                        {isPreviewable((doc as any).nome_arquivo) && (
+                          <button onClick={() => setPreviewDoc({ url: (doc as any).url, nome: (doc as any).nome_arquivo })} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Visualizar"><Eye size={13} /></button>
+                        )}
+                        <a href={(doc as any).url} target="_blank" download className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Download"><Download size={13} /></a>
                         <button onClick={() => { if (window.confirm("Excluir?")) deleteArquivo.mutate(doc.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
                       </div>
                     </div>
@@ -810,6 +825,64 @@ const CRM = () => {
             </TabsContent>
           )}
         </Tabs>
+
+        {/* ─── LIGHTBOX IMAGENS ─── */}
+        <Dialog open={lightboxIndex !== null} onOpenChange={() => setLightboxIndex(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex flex-col items-center justify-center">
+            {lightboxIndex !== null && imagens[lightboxIndex] && (
+              <>
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                  <button onClick={() => setLightboxZoom(z => Math.max(0.5, z - 0.25))} className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ZoomOut size={16} /></button>
+                  <span className="text-white/70 text-xs min-w-[40px] text-center">{Math.round(lightboxZoom * 100)}%</span>
+                  <button onClick={() => setLightboxZoom(z => Math.min(3, z + 0.25))} className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ZoomIn size={16} /></button>
+                  <a href={(imagens[lightboxIndex] as any).url} target="_blank" download className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><Download size={16} /></a>
+                </div>
+                {imagens.length > 1 && (
+                  <>
+                    <button onClick={() => { setLightboxIndex(i => (i! - 1 + imagens.length) % imagens.length); setLightboxZoom(1); }} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ChevronLeft size={20} /></button>
+                    <button onClick={() => { setLightboxIndex(i => (i! + 1) % imagens.length); setLightboxZoom(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ChevronRight size={20} /></button>
+                  </>
+                )}
+                <div className="flex-1 flex items-center justify-center overflow-auto w-full p-8">
+                  <img
+                    src={(imagens[lightboxIndex] as any).url}
+                    alt={(imagens[lightboxIndex] as any).nome_arquivo}
+                    className="max-w-full max-h-[80vh] object-contain transition-transform duration-200"
+                    style={{ transform: `scale(${lightboxZoom})` }}
+                  />
+                </div>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+                  <span className="text-white/80 text-xs bg-black/60 px-3 py-1 rounded-full">{(imagens[lightboxIndex] as any).nome_arquivo} — {lightboxIndex + 1}/{imagens.length}</span>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── PREVIEW DOCUMENTO ─── */}
+        <Dialog open={previewDoc !== null} onOpenChange={() => setPreviewDoc(null)}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+            {previewDoc && (
+              <>
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+                  <span className="text-sm font-medium truncate">{previewDoc.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <a href={previewDoc.url} target="_blank" download className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><Download size={13} /> Download</a>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-muted/30">
+                  {previewDoc.nome.toLowerCase().endsWith(".pdf") ? (
+                    <iframe src={previewDoc.url} className="w-full h-[80vh] border-none" title={previewDoc.nome} />
+                  ) : (
+                    <div className="flex items-center justify-center p-8">
+                      <img src={previewDoc.url} alt={previewDoc.nome} className="max-w-full max-h-[75vh] object-contain" />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
