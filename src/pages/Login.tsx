@@ -49,9 +49,7 @@ const Login = () => {
 
       <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center max-h-screen">
         {/* Logo above card */}
-        <div className="overflow-hidden mb-2 flex-shrink-0" style={{ height: "120px" }}>
-          <img src={logoGold} alt="INFINIT NETWORK" className="object-contain" style={{ height: "400px", marginTop: "-140px" }} />
-        </div>
+        <img src={logoGold} alt="INFINIT NETWORK" className="object-contain mb-2 flex-shrink-0 h-20" />
 
         {/* Glass card */}
         <div
