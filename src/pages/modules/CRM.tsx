@@ -236,20 +236,24 @@ const CRM = () => {
   // Payment simulation
   const simulacao = useMemo(() => {
     const total = totalCrmVenda;
+    if (simCondicao === "avista") {
+      return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] };
+    }
     const entrada = Math.min(simEntrada, total);
     const restante = total - entrada;
-    const valorParcela = simParcelas > 0 ? restante / simParcelas : 0;
+    const jurosFator = simJuros > 0 ? Math.pow(1 + simJuros / 100, simParcelas) : 1;
+    const totalComJuros = restante * jurosFator;
+    const valorParcela = simParcelas > 0 ? totalComJuros / simParcelas : 0;
+    const totalFinal = entrada + totalComJuros;
     const hoje = new Date();
     const parcelas: { numero: number; valor: number; data: string }[] = [];
     for (let i = 0; i < simParcelas; i++) {
       const d = new Date(hoje);
-      if (simIntervalo === "mensal") d.setMonth(d.getMonth() + i + (entrada > 0 ? 1 : 1));
-      else if (simIntervalo === "quinzenal") d.setDate(d.getDate() + (i + 1) * 15);
-      else d.setDate(d.getDate() + (i + 1) * 7);
+      d.setDate(d.getDate() + (i + 1) * simIntervalo);
       parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
     }
-    return { total, entrada, restante, valorParcela, parcelas };
-  }, [totalCrmVenda, simEntrada, simParcelas, simIntervalo]);
+    return { total, totalFinal, entrada, restante, valorParcela, parcelas };
+  }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
   // Status counts
   const statusCounts = {
