@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,19 +63,13 @@ const CRM = () => {
   const [itemRt, setItemRt] = useState(0);
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
-  // Payment simulation state
-  const [simCondicao, setSimCondicao] = useState<"avista" | "parcelado">("avista");
-  const [simFormaPgto, setSimFormaPgto] = useState("boleto");
-  const [simParcelas, setSimParcelas] = useState(1);
-  const [simEntrada, setSimEntrada] = useState(0);
-  const [simIntervalo, setSimIntervalo] = useState(30);
-  const [simJuros, setSimJuros] = useState(0);
-  const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(null);
-
   // Lightbox & preview state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [previewDoc, setPreviewDoc] = useState<{ url: string; nome: string } | null>(null);
+
+  // Active orcamento
+  const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
 
   const isPreviewable = (filename: string) => {
     const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -111,10 +105,27 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
-  const { data: crmItens, refetch: refetchCrmItens } = useQuery({
-    queryKey: ["crm_itens", detailClient?.id],
+  // Orcamentos query
+  const { data: orcamentos, refetch: refetchOrcamentos } = useQuery({
+    queryKey: ["crm_orcamentos", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_itens").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true });
+      const { data, error } = await supabase.from("crm_orcamentos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!detailClient?.id,
+  });
+
+  const { data: crmItens, refetch: refetchCrmItens } = useQuery({
+    queryKey: ["crm_itens", detailClient?.id, activeOrcamentoId],
+    queryFn: async () => {
+      let q = supabase.from("crm_itens").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true });
+      if (activeOrcamentoId) {
+        q = q.eq("orcamento_id", activeOrcamentoId);
+      } else {
+        q = q.is("orcamento_id", null);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -152,15 +163,116 @@ const CRM = () => {
     setStatusCrm(c.status_crm ?? "lead"); setShowForm(true);
   };
 
-  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); };
-  const backToList = () => { setViewMode("list"); setDetailClient(null); };
+  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); };
+  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); };
+
+  // ─── Orcamento management ───
+  const createOrcamento = useMutation({
+    mutationFn: async () => {
+      if (!detailClient?.id || !empresaId) return;
+      const count = (orcamentos?.length ?? 0) + 1;
+      const { data, error } = await supabase.from("crm_orcamentos").insert({
+        cliente_id: detailClient.id, empresa_id: empresaId, nome: `Orçamento ${count}`,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      refetchOrcamentos();
+      if (data) setActiveOrcamentoId(data.id);
+      toast.success("Orçamento criado!");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const duplicateOrcamento = useMutation({
+    mutationFn: async (srcOrcamentoId: string) => {
+      if (!detailClient?.id || !empresaId) return;
+      const count = (orcamentos?.length ?? 0) + 1;
+      const { data: newOrc, error } = await supabase.from("crm_orcamentos").insert({
+        cliente_id: detailClient.id, empresa_id: empresaId, nome: `Orçamento ${count}`,
+      }).select().single();
+      if (error) throw error;
+      // Copy items from source
+      const { data: srcItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", srcOrcamentoId);
+      if (srcItems && srcItems.length > 0 && newOrc) {
+        const copies = srcItems.map(i => ({
+          cliente_id: detailClient.id, empresa_id: empresaId,
+          descricao: i.descricao, quantidade: i.quantidade,
+          preco_custo: i.preco_custo, preco_venda: i.preco_venda,
+          rt_comissao: (i as any).rt_comissao ?? 0,
+          produto_id: i.produto_id, orcamento_id: newOrc.id,
+        }));
+        await supabase.from("crm_itens").insert(copies as any);
+      }
+      return newOrc;
+    },
+    onSuccess: (data) => {
+      refetchOrcamentos(); refetchCrmItens();
+      if (data) setActiveOrcamentoId(data.id);
+      toast.success("Orçamento duplicado!");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const approveOrcamento = useMutation({
+    mutationFn: async (orcId: string) => {
+      if (!detailClient?.id) return;
+      // Unapprove all others
+      await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("cliente_id", detailClient.id);
+      // Approve this one
+      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchOrcamentos(); toast.success("Orçamento aprovado!"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteOrcamento = useMutation({
+    mutationFn: async (orcId: string) => {
+      const { error } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchOrcamentos(); refetchCrmItens();
+      setActiveOrcamentoId(null);
+      toast.success("Orçamento excluído");
+    },
+  });
+
+  // Save orcamento simulation
+  const saveOrcamentoSimulacao = async (simData: any) => {
+    if (!activeOrcamentoId) return;
+    await supabase.from("crm_orcamentos").update({ simulacao_pagamento: simData }).eq("id", activeOrcamentoId);
+    refetchOrcamentos();
+  };
 
   /* ─── Auto-create project logic ─── */
   const autoCreateProject = async (clienteId: string, clienteNome: string, endObra: string | null, endCli: string | null, arqId: string | null, notas?: string | null) => {
     if (!empresaId) return;
-    const items = crmItens ?? [];
-    const totalVenda = items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-    const totalCusto = items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
+
+    // Find approved orcamento
+    const approvedOrc = orcamentos?.find(o => o.aprovado);
+    
+    // Get items from approved orcamento or fallback to unlinked items
+    let items: any[] = [];
+    if (approvedOrc) {
+      const { data } = await supabase.from("crm_itens").select("*").eq("orcamento_id", approvedOrc.id);
+      items = data ?? [];
+    } else {
+      // Check if there are any orcamentos at all
+      const { data: allOrcs } = await supabase.from("crm_orcamentos").select("id").eq("cliente_id", clienteId);
+      if (allOrcs && allOrcs.length > 0) {
+        toast.error("Nenhum orçamento aprovado! Aprove um orçamento antes de converter para projeto.");
+        return;
+      }
+      // Fallback: use items without orcamento (legacy)
+      const { data } = await supabase.from("crm_itens").select("*").eq("cliente_id", clienteId).is("orcamento_id", null);
+      items = data ?? [];
+    }
+
+    const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+    const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number(i.rt_comissao) || 0), 0);
     const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
     const cliente = clientes?.find(c => c.id === clienteId);
     const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
@@ -168,7 +280,16 @@ const CRM = () => {
     if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
     if (notas || cliente?.notas) descParts.push(`Obs: ${notas || cliente?.notas}`);
 
-    const simParcCount = editingParcelas?.length ?? simulacao.parcelas.length;
+    // Get simulation from approved orcamento
+    let simParcelas: any[] = [];
+    let simFormaPgto = "";
+    if (approvedOrc?.simulacao_pagamento) {
+      const sim = approvedOrc.simulacao_pagamento as any;
+      simParcelas = sim.parcelas ?? [];
+      simFormaPgto = sim.formaPagamento ?? "";
+    }
+
+    const simParcCount = simParcelas.length;
     const newProjeto = await createProjeto.mutateAsync({
       nome: `Projeto — ${clienteNome}`,
       descricao: descParts.join(" | "),
@@ -180,18 +301,17 @@ const CRM = () => {
       observacoes_pagamento: notas || cliente?.notas || null,
     });
     for (const item of items) {
-      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
+      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number(item.rt_comissao) || 0 });
     }
     // Generate financial parcels from simulation
-    const parcToUse = editingParcelas ?? simulacao.parcelas;
-    if (parcToUse.length > 0 && totalVenda > 0) {
+    if (simParcelas.length > 0 && totalVenda > 0) {
       const parseDate = (d: string) => {
         if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; }
         return d;
       };
-      const inserts = parcToUse.map((p, i) => ({
+      const inserts = simParcelas.map((p: any, i: number) => ({
         empresa_id: empresaId, projeto_id: newProjeto.id, cliente_id: clienteId,
-        descricao: `Parcela ${i + 1}/${parcToUse.length} — Projeto — ${clienteNome}`,
+        descricao: `Parcela ${i + 1}/${simParcelas.length} — Projeto — ${clienteNome}`,
         valor: p.valor, parcela: i + 1,
         data_vencimento: parseDate(p.data), status: "pendente" as const,
       }));
@@ -286,7 +406,7 @@ const CRM = () => {
         const { error } = await supabase.from("crm_itens").update({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any);
+        const { error } = await supabase.from("crm_itens").insert({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId } as any);
         if (error) throw error;
       }
     },
@@ -338,7 +458,29 @@ const CRM = () => {
   const totalCrmRt = (crmItens ?? []).reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0);
   const totalCrmQtd = (crmItens ?? []).reduce((s, i) => s + (Number(i.quantidade) || 0), 0);
 
-  // Payment simulation
+  // Payment simulation state - now per orcamento
+  const activeOrc = orcamentos?.find(o => o.id === activeOrcamentoId);
+  const savedSim = (activeOrc?.simulacao_pagamento as any) ?? {};
+  const [simCondicao, setSimCondicao] = useState<"avista" | "parcelado">(savedSim.condicao ?? "avista");
+  const [simFormaPgto, setSimFormaPgto] = useState(savedSim.formaPagamento ?? "boleto");
+  const [simParcelas, setSimParcelas] = useState(savedSim.numParcelas ?? 1);
+  const [simEntrada, setSimEntrada] = useState(savedSim.entrada ?? 0);
+  const [simIntervalo, setSimIntervalo] = useState(savedSim.intervalo ?? 30);
+  const [simJuros, setSimJuros] = useState(savedSim.juros ?? 0);
+  const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(savedSim.parcelas ?? null);
+
+  // Reset simulation when orcamento changes
+  const loadSimFromOrc = useCallback((orc: any) => {
+    const sim = (orc?.simulacao_pagamento as any) ?? {};
+    setSimCondicao(sim.condicao ?? "avista");
+    setSimFormaPgto(sim.formaPagamento ?? "boleto");
+    setSimParcelas(sim.numParcelas ?? 1);
+    setSimEntrada(sim.entrada ?? 0);
+    setSimIntervalo(sim.intervalo ?? 30);
+    setSimJuros(sim.juros ?? 0);
+    setEditingParcelas(sim.parcelas ?? null);
+  }, []);
+
   const simulacao = useMemo(() => {
     const total = totalCrmVenda;
     if (simCondicao === "avista") {
@@ -360,7 +502,6 @@ const CRM = () => {
     return { total, totalFinal, entrada, restante, valorParcela, parcelas };
   }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
-  // When simulation generates parcelas, reset editing state
   const parcelasParaExibir = editingParcelas ?? simulacao.parcelas;
 
   const handleEditParcela = (idx: number, field: "valor" | "data", value: string) => {
@@ -368,6 +509,17 @@ const CRM = () => {
     if (field === "valor") current[idx] = { ...current[idx], valor: Number(value) || 0 };
     else current[idx] = { ...current[idx], data: value };
     setEditingParcelas(current);
+  };
+
+  const handleSaveSimulacao = () => {
+    const simData = {
+      condicao: simCondicao, formaPagamento: simFormaPgto,
+      numParcelas: simParcelas, entrada: simEntrada,
+      intervalo: simIntervalo, juros: simJuros,
+      parcelas: parcelasParaExibir,
+    };
+    saveOrcamentoSimulacao(simData);
+    toast.success("Simulação salva!");
   };
 
   // Status counts
@@ -397,8 +549,6 @@ const CRM = () => {
         <Tabs defaultValue="dados" className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
-            <TabsTrigger value="itens" className="text-xs" disabled>Itens (Pré-Projeto)</TabsTrigger>
-            <TabsTrigger value="anotacoes" className="text-xs" disabled>Anotações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados">
@@ -428,7 +578,6 @@ const CRM = () => {
                     <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
                   </select>
                 </div>
-                {/* 📌 1. Campo Observação na criação */}
                 <div className="space-y-1 col-span-2 md:col-span-4">
                   <label className="text-[11px] text-muted-foreground">Observação</label>
                   <textarea value={novoClienteObs} onChange={e => setNovoClienteObs(e.target.value)} placeholder="Observações sobre o cliente..." className="w-full min-h-[60px] px-2 py-1.5 text-xs bg-background border border-border rounded resize-y focus:outline-none focus:ring-1 focus:ring-primary" />
@@ -461,7 +610,6 @@ const CRM = () => {
           <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
-            <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
@@ -524,7 +672,6 @@ const CRM = () => {
                   <select value={intTipo} onChange={e => setIntTipo(e.target.value)} className="h-8 px-2 text-xs bg-background border border-border rounded">
                     <option value="ligacao">Ligação</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="reuniao">Reunião</option><option value="visita">Visita</option><option value="outro">Outro</option>
                   </select>
-                  {/* 📌 5. Data da anotação */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className={cn("h-8 px-2 text-xs bg-background border border-border rounded flex items-center gap-1 min-w-[120px]", !intData && "text-muted-foreground")}>
@@ -540,7 +687,6 @@ const CRM = () => {
                   <button onClick={() => addInteracao.mutate()} disabled={!intDesc.trim()} className="h-8 px-4 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editIntId ? "Salvar" : "Adicionar"}</button>
                   {editIntId && <button onClick={resetIntForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
                 </div>
-                {/* 📌 6. Campos adicionais para Visita */}
                 {intTipo === "visita" && (
                   <div className="flex gap-2 items-end flex-wrap mt-1">
                     <div className="space-y-0.5">
@@ -572,12 +718,49 @@ const CRM = () => {
             </div>
           </TabsContent>
 
-          {/* ─── ITENS PRÉ-PROJETO ─── */}
+          {/* ─── ITENS PRÉ-PROJETO (com múltiplos orçamentos) ─── */}
           <TabsContent value="itens">
             <div className="space-y-3">
-              {/* 📌 4. Visual melhorado - fundo diferente */}
+              {/* Orcamento selector */}
+              <div className="bg-card border border-border rounded p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold">Orçamentos</h4>
+                  <button onClick={() => createOrcamento.mutate()} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
+                    <Plus size={11} /> Novo Orçamento
+                  </button>
+                </div>
+                {orcamentos && orcamentos.length > 0 ? (
+                  <div className="flex gap-2 flex-wrap">
+                    {orcamentos.map(orc => (
+                      <div key={orc.id} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs cursor-pointer transition ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 text-primary font-medium" : "border-border bg-card text-foreground hover:bg-secondary/30"} ${orc.aprovado ? "ring-1 ring-success" : ""}`}>
+                        <button onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }} className="flex items-center gap-1">
+                          {orc.aprovado && <Check size={11} className="text-success" />}
+                          <span>{orc.nome}</span>
+                        </button>
+                        <div className="flex items-center gap-0.5 ml-1 border-l border-border pl-1">
+                          {!orc.aprovado && (
+                            <button onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-success/15 text-muted-foreground hover:text-success" title="Aprovar">
+                              <Check size={10} />
+                            </button>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Duplicar">
+                            <Copy size={10} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive" title="Excluir">
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Crie um orçamento para organizar os itens do pré-projeto.</p>
+                )}
+              </div>
+
+              {/* Item form */}
               <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-3 space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><Package size={12} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
+                <h4 className="text-xs font-semibold flex items-center gap-1"><Package size={12} /> {editItemId ? "Editar Item" : "Novo Item"} {activeOrcamentoId && activeOrc ? `— ${activeOrc.nome}` : ""}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                   <div className="col-span-2 md:col-span-1 space-y-0.5">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
@@ -595,7 +778,6 @@ const CRM = () => {
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
                     <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                   </div>
-                  {/* 📌 3. Coluna RT/Comissão */}
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
                     <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
@@ -640,7 +822,6 @@ const CRM = () => {
                       </tbody>
                     </table>
                   </div>
-                  {/* 📌 3. Totais com quantidade e RT */}
                   <div className="flex gap-4 text-xs p-2.5 bg-primary/5 border border-primary/15 rounded-lg flex-wrap">
                     <span>Qtd Total: <strong className="text-foreground">{totalCrmQtd}</strong></span>
                     <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
@@ -648,66 +829,56 @@ const CRM = () => {
                     <span>Total RT: <strong className="text-warning">R$ {totalCrmRt.toFixed(2)}</strong></span>
                     <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
                   </div>
-
                 </>
               )}
-              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado.</p>}
-            </div>
-          </TabsContent>
+              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
 
-          {/* ─── FINANCEIRO (SIMULAÇÃO) ─── */}
-          <TabsContent value="financeiro">
-            <div className="space-y-3">
-              <div className="flex gap-4 text-xs p-2.5 bg-primary/5 border border-primary/15 rounded-lg flex-wrap">
-                <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
-                <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
-                <span>Total RT: <strong className="text-warning">R$ {totalCrmRt.toFixed(2)}</strong></span>
-                <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
-              </div>
-
-              <div className="bg-card border border-border rounded p-3 space-y-3">
-                <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento</h4>
-                <p className="text-[10px] text-muted-foreground">Ao converter para Projeto, as parcelas serão geradas automaticamente no financeiro.</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
-                    <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
-                  <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
-                    <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
-                  {simCondicao === "parcelado" && (<>
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                  </>)}
-                </div>
-                <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
-                  <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p><p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
-                  {simCondicao === "parcelado" && (<>
-                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p><p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
-                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p><p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
-                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p><p className="text-sm font-bold text-foreground">{simParcelas}x</p></div>
-                    <div className="bg-primary/10 rounded p-2 text-center border border-primary/20"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p><p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
-                  </>)}
-                </div>
-                {parcelasParaExibir.length > 0 && (
-                  <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead><tr className="bg-secondary/60"><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th><th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th></tr></thead>
-                      <tbody>
-                        {simulacao.entrada > 0 && (<tr className="border-b border-border bg-primary/5"><td className="px-2.5 py-1 text-center font-medium">Entrada</td><td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
-                        {parcelasParaExibir.map((p, idx) => (
-                          <tr key={p.numero} className="border-b border-border last:border-b-0">
-                            <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
-                            <td className="px-2.5 py-1 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" /></td>
-                            <td className="px-2.5 py-1 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {/* Simulação de Pagamento (dentro da aba Itens) */}
+              {activeOrcamentoId && (
+                <div className="bg-card border border-border rounded p-3 space-y-3">
+                  <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento — {activeOrc?.nome}</h4>
+                  <p className="text-[10px] text-muted-foreground">Ao converter para Projeto, as parcelas do orçamento aprovado serão geradas automaticamente no financeiro.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                      <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
+                      <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
+                    {simCondicao === "parcelado" && (<>
+                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                    </>)}
                   </div>
-                )}
-              </div>
-              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Adicione itens no pré-projeto para simular o pagamento.</p>}
+                  <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
+                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p><p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
+                    {simCondicao === "parcelado" && (<>
+                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p><p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
+                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p><p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
+                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p><p className="text-sm font-bold text-foreground">{simParcelas}x</p></div>
+                      <div className="bg-primary/10 rounded p-2 text-center border border-primary/20"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p><p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
+                    </>)}
+                  </div>
+                  {parcelasParaExibir.length > 0 && (
+                    <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead><tr className="bg-secondary/60"><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th><th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th></tr></thead>
+                        <tbody>
+                          {simulacao.entrada > 0 && (<tr className="border-b border-border bg-primary/5"><td className="px-2.5 py-1 text-center font-medium">Entrada</td><td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
+                          {parcelasParaExibir.map((p, idx) => (
+                            <tr key={p.numero} className="border-b border-border last:border-b-0">
+                              <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
+                              <td className="px-2.5 py-1 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" /></td>
+                              <td className="px-2.5 py-1 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <button onClick={handleSaveSimulacao} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105">Salvar Simulação</button>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -880,7 +1051,7 @@ const CRM = () => {
         </button>
       </div>
 
-      {/* Status counters - same pattern as Projetos */}
+      {/* Status counters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         {([
           { key: "todos" as const, label: "Todos", count: (clientes ?? []).length, color: "bg-secondary text-secondary-foreground" },
@@ -939,7 +1110,6 @@ const CRM = () => {
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
-              {/* 📌 2. Coluna Arquiteto na listagem */}
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
