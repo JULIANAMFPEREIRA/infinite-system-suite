@@ -4,6 +4,7 @@ import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import logoGold from "@/assets/logo-gold.png";
+import loginBg from "@/assets/login-bg.jpg";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -34,56 +35,140 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm animate-fade-in">
-        <div className="bg-card rounded-lg border border-border shadow-sm p-8 space-y-6">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${loginBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/30" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-in">
+        {/* Glass card */}
+        <div
+          className="rounded-2xl p-10 space-y-7"
+          style={{
+            background: "rgba(15, 20, 40, 0.65)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(100, 140, 200, 0.15)",
+            boxShadow: "0 8px 48px rgba(0, 0, 0, 0.5), 0 0 80px rgba(56, 140, 220, 0.08)",
+          }}
+        >
+          {/* Logo + Title */}
           <div className="text-center space-y-3">
-            <img src={logoGold} alt="INFINIT NETWORK" className="h-16 mx-auto object-contain" />
+            <img src={logoGold} alt="INFINIT NETWORK" className="h-14 mx-auto object-contain" />
             <div>
-              <h1 className="text-base font-bold text-foreground">INFINIT SYSTEM</h1>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Home & Automação</p>
+              <h1 className="text-2xl font-bold tracking-wide text-white">INFINIT SYSTEM</h1>
+              <p className="text-sm text-blue-300/70 mt-1">ERP - Home & Automação</p>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             {isSignUp && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Nome Completo</label>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" required
-                  className="w-full h-9 px-3 rounded border border-border bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all" />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">Nome Completo</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Seu nome"
+                  required
+                  className="w-full h-12 px-4 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  style={{
+                    background: "rgba(20, 28, 50, 0.7)",
+                    border: "1px solid rgba(100, 140, 200, 0.2)",
+                  }}
+                />
               </div>
             )}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">E-mail</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required
-                className="w-full h-9 px-3 rounded border border-border bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all" />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-200">E-mail</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                required
+                className="w-full h-12 px-4 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                style={{
+                  background: "rgba(20, 28, 50, 0.7)",
+                  border: "1px solid rgba(100, 140, 200, 0.2)",
+                }}
+              />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Senha</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-200">Senha</label>
               <div className="relative">
-                <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required
-                  className="w-full h-9 px-3 pr-9 rounded border border-border bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full h-12 px-4 pr-12 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  style={{
+                    background: "rgba(20, 28, 50, 0.7)",
+                    border: "1px solid rgba(100, 140, 200, 0.2)",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading}
-              className="w-full h-9 rounded bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-105 transition-all disabled:opacity-50">
-              {isSignUp ? <UserPlus size={14} /> : <LogIn size={14} />}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 text-white"
+              style={{
+                background: "linear-gradient(135deg, hsl(200, 80%, 50%), hsl(210, 85%, 60%))",
+                boxShadow: "0 4px 20px rgba(56, 160, 220, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, hsl(200, 80%, 58%), hsl(210, 85%, 68%))";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, hsl(200, 80%, 50%), hsl(210, 85%, 60%))";
+              }}
+            >
+              {isSignUp ? <UserPlus size={18} /> : <LogIn size={18} />}
               {loading ? "Aguarde..." : isSignUp ? "Criar Conta" : "Entrar"}
             </button>
           </form>
 
-          <button onClick={() => setIsSignUp(!isSignUp)} className="w-full text-center text-xs text-primary hover:underline">
+          {/* Toggle link */}
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="w-full text-center text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+          >
             {isSignUp ? "Já tenho conta — Entrar" : "Criar uma conta"}
           </button>
 
-          <p className="text-center text-[11px] text-muted-foreground italic">
-            "O Senhor é o meu pastor, nada me faltará." — Salmos 23
+          {/* Quote */}
+          <p className="text-center text-xs text-gray-400 italic leading-relaxed">
+            "O Senhor é o meu pastor, nada me faltará."
+            <br />
+            — Salmos 23
           </p>
         </div>
-        <p className="text-center text-[11px] text-muted-foreground mt-4">© 2026 INFINIT NETWORK — SMP Consultoria LTDA</p>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-gray-500 mt-5">
+          © 2026 INFINIT NETWORK — SMP Consultoria LTDA
+        </p>
       </div>
     </div>
   );
