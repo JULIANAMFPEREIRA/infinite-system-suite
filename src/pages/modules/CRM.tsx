@@ -711,8 +711,7 @@ const CRM = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
-            {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
-            {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
+            <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
           </TabsList>
 
           {/* ─── DADOS DO CLIENTE ─── */}
