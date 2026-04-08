@@ -337,8 +337,8 @@ const CRM = () => {
         <Tabs defaultValue="dados" className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
-            <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
+            <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
             {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
           </TabsList>
