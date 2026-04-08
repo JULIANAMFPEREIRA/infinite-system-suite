@@ -503,7 +503,7 @@ const CRM = () => {
                     const { error } = await supabase.from("clientes").update(payload).eq("id", detailClient.id);
                     if (error) { toast.error(error.message); return; }
                     if (payload.status_crm === "projeto" && oldStatus !== "projeto") {
-                      await autoCreateProject(detailClient.id, payload.nome, payload.endereco_obra, payload.endereco, payload.arquiteto_id);
+                      await autoCreateProject(detailClient.id, payload.nome, payload.endereco_obra, payload.endereco, payload.arquiteto_id, payload.notas || detailClient.notas);
                     }
                     qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] });
                     setDetailClient({ ...detailClient, ...payload });
