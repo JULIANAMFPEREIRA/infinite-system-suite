@@ -156,20 +156,48 @@ const CRM = () => {
   const backToList = () => { setViewMode("list"); setDetailClient(null); };
 
   /* ─── Auto-create project logic ─── */
-  const autoCreateProject = async (clienteId: string, clienteNome: string, endObra: string | null, endCli: string | null, arqId: string | null) => {
+  const autoCreateProject = async (clienteId: string, clienteNome: string, endObra: string | null, endCli: string | null, arqId: string | null, notas?: string | null) => {
     if (!empresaId) return;
     const items = crmItens ?? [];
     const totalVenda = items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
     const totalCusto = items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
+    const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
+    const cliente = clientes?.find(c => c.id === clienteId);
+    const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
+    const descParts = [`Projeto criado automaticamente a partir do CRM`];
+    if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
+    if (notas || cliente?.notas) descParts.push(`Obs: ${notas || cliente?.notas}`);
+
+    const simParcCount = editingParcelas?.length ?? simulacao.parcelas.length;
     const newProjeto = await createProjeto.mutateAsync({
-      nome: `Projeto — ${clienteNome}`, descricao: `Projeto criado automaticamente a partir do CRM`,
+      nome: `Projeto — ${clienteNome}`,
+      descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
-      arquiteto_id: arqId || null, status: "proposta", venda_total: totalVenda, custo_previsto: totalCusto,
+      arquiteto_id: arqId || null, status: "proposta",
+      venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
+      numero_parcelas: simParcCount > 0 ? simParcCount : 1,
+      forma_pagamento: simFormaPgto || null,
+      observacoes_pagamento: notas || cliente?.notas || null,
     });
     for (const item of items) {
       await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
     }
-    toast.success("Projeto criado automaticamente com itens do CRM!");
+    // Generate financial parcels from simulation
+    const parcToUse = editingParcelas ?? simulacao.parcelas;
+    if (parcToUse.length > 0 && totalVenda > 0) {
+      const parseDate = (d: string) => {
+        if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; }
+        return d;
+      };
+      const inserts = parcToUse.map((p, i) => ({
+        empresa_id: empresaId, projeto_id: newProjeto.id, cliente_id: clienteId,
+        descricao: `Parcela ${i + 1}/${parcToUse.length} — Projeto — ${clienteNome}`,
+        valor: p.valor, parcela: i + 1,
+        data_vencimento: parseDate(p.data), status: "pendente" as const,
+      }));
+      await supabase.from("financeiro_receber").insert(inserts);
+    }
+    toast.success("Projeto criado automaticamente com itens e parcelas do CRM!");
   };
 
   /* ─── Save new client and open detail ─── */
