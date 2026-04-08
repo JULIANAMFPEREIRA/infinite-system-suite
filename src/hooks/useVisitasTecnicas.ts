@@ -51,8 +51,8 @@ export const useUpdateVisita = () => {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, projeto_id, ...updates }: { id: string; projeto_id: string; [key: string]: any }) => {
-      const { error } = await supabase.from("visitas_tecnicas").update(updates).eq("id", id);
+    mutationFn: async ({ id, projeto_id, ...updates }: { id: string; projeto_id: string } & Record<string, any>) => {
+      const { error } = await supabase.from("visitas_tecnicas").update(updates as any).eq("id", id);
       if (error) throw error;
       return projeto_id;
     },

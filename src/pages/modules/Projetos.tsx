@@ -1102,7 +1102,7 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
                   <td className="px-2 py-1.5 text-right">{c.quantidade}</td>
                   <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-2 py-1.5 text-center">
-                    <select value={c.status ?? "pendente"} onChange={e => changeCompraStatus.mutate({ id: c.id, status: e.target.value })} onClick={e => e.stopPropagation()} className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}>
+                    <select value={c.status ?? "pendente"} onChange={e => changeCompraStatus.mutate({ id: c.id, status: e.target.value as any })} onClick={e => e.stopPropagation()} className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}>
                       <option value="pendente">Pendente</option>
                       <option value="aprovada">Aprovada</option>
                       <option value="entregue">Entregue</option>
@@ -1110,7 +1110,7 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
                     </select>
                   </td>
                   <td className="px-2 py-1.5 text-center">
-                    <button onClick={() => openEditCompra(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                    <span className="text-[10px] text-muted-foreground">—</span>
                   </td>
                 </tr>
               ))}
