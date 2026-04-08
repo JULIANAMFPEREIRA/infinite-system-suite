@@ -47,9 +47,9 @@ const Login = () => {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/30" />
 
-      <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center max-h-screen">
+      <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center max-h-screen py-4">
         {/* Logo above card */}
-        <img src={logoGold} alt="INFINIT NETWORK" className="object-contain mb-2 flex-shrink-0 h-20" />
+        <img src={logoGold} alt="INFINIT NETWORK" className="object-contain mb-3 flex-shrink-0 flex-1 max-h-[35vh] min-h-[80px]" />
 
         {/* Glass card */}
         <div
