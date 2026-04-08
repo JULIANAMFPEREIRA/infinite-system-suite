@@ -423,7 +423,7 @@ const Projetos = () => {
 
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
-          ) : (projetos ?? []).length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Nenhum projeto encontrado.</div>
           ) : (
             <div className="border border-border rounded overflow-hidden">
@@ -443,7 +443,7 @@ const Projetos = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(projetos ?? []).map(p => (
+                    {filtered.map(p => (
                       <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors" onClick={() => openEdit(p)}>
                         <td className="px-2.5 py-1.5 text-foreground font-medium">{p.nome}</td>
                         <td className="px-2.5 py-1.5 text-foreground">{(p.clientes as any)?.nome ?? "—"}</td>
