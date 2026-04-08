@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { ClipboardList, ShoppingCart, Check } from "lucide-react";
+import { ClipboardList, ShoppingCart, Check, DollarSign } from "lucide-react";
 import { useNecessidadesCompra, useConverterEmCompra } from "@/hooks/useNecessidadesCompra";
+import { useEmpresa } from "@/hooks/useEmpresa";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const ItensComprar = () => {
+  const empresaId = useEmpresa();
+  const qc = useQueryClient();
   const { data: necessidades, isLoading } = useNecessidadesCompra();
   const converter = useConverterEmCompra();
   const [filterStatus, setFilterStatus] = useState<"todos" | "pendente" | "comprado">("pendente");
@@ -12,8 +17,20 @@ const ItensComprar = () => {
 
   const handleConverter = async (nec: any) => {
     try {
-      await converter.mutateAsync(nec);
-      toast.success("Compra gerada com sucesso!");
+      const compra = await converter.mutateAsync(nec);
+      // Generate conta a pagar for this purchase
+      if (empresaId && compra) {
+        await supabase.from("financeiro_pagar").insert({
+          empresa_id: empresaId,
+          projeto_id: nec.projeto_id,
+          descricao: `Compra — ${nec.descricao ?? "Sem descrição"}`,
+          valor: (compra.valor_total ?? 0),
+          data_vencimento: compra.data_compra || null,
+          status: "pendente",
+        });
+        qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+      }
+      toast.success("Compra gerada e conta a pagar criada!");
     } catch (err: any) {
       toast.error(err.message);
     }
