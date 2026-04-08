@@ -47,10 +47,13 @@ const Login = () => {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/30" />
 
-      <div className="w-full max-w-md relative z-10 animate-fade-in">
+      <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center">
+        {/* Logo above card */}
+        <img src={logoGold} alt="INFINIT NETWORK" className="object-contain mb-4" style={{ height: "980px" }} />
+
         {/* Glass card */}
         <div
-          className="rounded-2xl p-10 space-y-7"
+          className="rounded-2xl p-10 space-y-7 w-full"
           style={{
             background: "rgba(15, 20, 40, 0.65)",
             backdropFilter: "blur(24px)",
@@ -59,13 +62,10 @@ const Login = () => {
             boxShadow: "0 8px 48px rgba(0, 0, 0, 0.5), 0 0 80px rgba(56, 140, 220, 0.08)",
           }}
         >
-          {/* Logo + Title */}
-          <div className="text-center space-y-3">
-            <img src={logoGold} alt="INFINIT NETWORK" className="mx-auto object-contain" style={{ height: "196px" }} />
-            <div>
+          {/* Title */}
+          <div className="text-center">
               <h1 className="text-2xl font-bold tracking-wide text-white">INFINIT SYSTEM</h1>
               <p className="text-sm text-blue-300/70 mt-1">ERP - Home & Automação</p>
-            </div>
           </div>
 
           {/* Form */}
