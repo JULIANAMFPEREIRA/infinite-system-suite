@@ -255,7 +255,7 @@ const CRM = () => {
       }).eq("id", projId);
     } else {
       const newProjeto = await createProjeto.mutateAsync({
-        nome: `Projeto — ${detailClient.nome} — ${orcData.nome ?? ""}`,
+        nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
         descricao: descParts.join(" | "),
         cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
         arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
@@ -362,13 +362,24 @@ const CRM = () => {
 
   const deleteOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
-      const { error } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      // Soft delete: cancel linked project if exists
+      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+      if (linkedProjects && linkedProjects.length > 0) {
+        for (const proj of linkedProjects) {
+          await supabase.from("projetos").update({ status: "cancelado" }).eq("id", proj.id);
+        }
+      }
+      // Mark orcamento as not approved (soft cancel)
+      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
       if (error) throw error;
+      // Actually delete (keeping data in project)
+      const { error: delErr } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      if (delErr) throw delErr;
     },
     onSuccess: () => {
       refetchOrcamentos(); refetchCrmItens();
       setActiveOrcamentoId(null);
-      toast.success("Orçamento excluído");
+      toast.success("Orçamento excluído. Projeto vinculado foi cancelado.");
     },
   });
 
@@ -423,7 +434,7 @@ const CRM = () => {
 
     const simParcCount = simParcelas.length;
     const newProjeto = await createProjeto.mutateAsync({
-      nome: `Projeto — ${clienteNome}`,
+      nome: `${clienteNome} — ${approvedOrc?.nome ?? ""}`.trim(),
       descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
       arquiteto_id: arqId || null, status: "aprovado",
