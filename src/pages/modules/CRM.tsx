@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCreateProjeto, useCreateProjetoItem, useArquitetos } from "@/hooks/useProjetos";
-import { useContratos } from "@/hooks/useContratos";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +28,6 @@ const CRM = () => {
   const qc = useQueryClient();
   const createProjeto = useCreateProjeto();
   const createProjetoItem = useCreateProjetoItem();
-  const { data: contratos } = useContratos();
   const { data: arquitetos } = useArquitetos();
 
   const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
@@ -99,7 +97,7 @@ const CRM = () => {
   const { data: clienteProjetos } = useQuery({
     queryKey: ["cliente_projetos", detailClient?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("projetos").select("id, nome, status").eq("cliente_id", detailClient!.id);
+      const { data } = await supabase.from("projetos").select("id, nome, status, venda_total, orcamento_id").eq("cliente_id", detailClient!.id);
       return data ?? [];
     },
     enabled: !!detailClient?.id,
@@ -218,54 +216,51 @@ const CRM = () => {
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
       if (!detailClient?.id || !empresaId) return;
-      // Unapprove all others
-      await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("cliente_id", detailClient.id);
-      // Approve this one
+      // Approve this orcamento (allow multiple approvals)
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
       if (error) throw error;
 
-      // Auto-sync: create or update project with approved orcamento data
+      // Get orcamento data
+      const { data: orcData } = await supabase.from("crm_orcamentos").select("*, simulacao_pagamento").eq("id", orcId).single();
       const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
       const items = approvedItems ?? [];
       const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
       const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
       const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
 
-      // Get simulation from this orcamento
-      const { data: orcData } = await supabase.from("crm_orcamentos").select("simulacao_pagamento").eq("id", orcId).single();
       const sim = (orcData?.simulacao_pagamento as any) ?? {};
       const simParcelas = sim.parcelas ?? [];
       const simFormaPgto = sim.formaPagamento ?? "";
 
       const cliente = clientes?.find(c => c.id === detailClient.id);
       const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
-      const descParts = [`Projeto criado automaticamente a partir do CRM`];
+      const descParts = [`Projeto criado a partir do CRM — ${orcData?.nome ?? "Orçamento"}`];
       if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
       if (cliente?.notas) descParts.push(`Obs: ${cliente.notas}`);
 
-      // Check if project already exists for this client
-      const { data: existingProjects } = await supabase.from("projetos").select("id").eq("cliente_id", detailClient.id).eq("empresa_id", empresaId);
-      
+      // Check if a project already exists for THIS orcamento
+      const { data: existingProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+
+      const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
+
       if (existingProjects && existingProjects.length > 0) {
-        // Update existing project
+        // Update existing project linked to this orcamento
         const projId = existingProjects[0].id;
         await supabase.from("projetos").update({
           venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
           numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
           forma_pagamento: simFormaPgto || null,
           descricao: descParts.join(" | "),
+          status: "aprovado",
         }).eq("id", projId);
 
-        // Replace project items
         await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
         for (const item of items) {
           await createProjetoItem.mutateAsync({ projeto_id: projId, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
         }
 
-        // Replace financial parcels
         await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
         if (simParcelas.length > 0) {
-          const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
           const inserts = simParcelas.map((p: any, i: number) => ({
             empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
             descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
@@ -273,18 +268,59 @@ const CRM = () => {
           }));
           await supabase.from("financeiro_receber").insert(inserts);
         }
-        toast.success("Projeto atualizado com dados do orçamento aprovado!");
+        toast.success("Projeto atualizado com dados do orçamento!");
       } else {
-        // Only auto-create if client status is "projeto"
-        if (detailClient.status_crm === "projeto") {
-          await autoCreateProject(detailClient.id, detailClient.nome, detailClient.endereco_obra, detailClient.endereco, detailClient.arquiteto_id, cliente?.notas);
-        } else {
-          toast.success("Orçamento aprovado! Ao converter o status para 'Projeto', os dados serão sincronizados automaticamente.");
-          return;
+        // Create new project for this orcamento
+        const newProjeto = await createProjeto.mutateAsync({
+          nome: `Projeto — ${detailClient.nome} — ${orcData?.nome ?? ""}`,
+          descricao: descParts.join(" | "),
+          cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
+          arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
+          venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
+          numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
+          forma_pagamento: simFormaPgto || null,
+          observacoes_pagamento: cliente?.notas || null,
+          orcamento_id: orcId,
+        } as any);
+
+        for (const item of items) {
+          await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
         }
+
+        if (simParcelas.length > 0) {
+          const inserts = simParcelas.map((p: any, i: number) => ({
+            empresa_id: empresaId, projeto_id: newProjeto.id, cliente_id: detailClient.id,
+            descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
+            valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
+          }));
+          await supabase.from("financeiro_receber").insert(inserts);
+        }
+        toast.success("Projeto criado a partir do orçamento aprovado!");
       }
     },
     onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Unapprove orcamento (cancel linked project)
+  const unapproveOrcamento = useMutation({
+    mutationFn: async (orcId: string) => {
+      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
+      if (error) throw error;
+      // Cancel linked project (don't delete — preserve data)
+      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+      if (linkedProjects && linkedProjects.length > 0) {
+        for (const proj of linkedProjects) {
+          await supabase.from("projetos").update({ status: "cancelado" }).eq("id", proj.id);
+        }
+      }
+    },
+    onSuccess: () => {
+      refetchOrcamentos();
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+      qc.invalidateQueries({ queryKey: ["cliente_projetos"] });
+      toast.success("Orçamento desaprovado. Projeto vinculado foi cancelado.");
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -510,7 +546,6 @@ const CRM = () => {
     onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
   });
 
-  const clienteContratos = contratos?.filter(c => c.cliente_id === detailClient?.id) ?? [];
   const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
 
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
@@ -673,8 +708,7 @@ const CRM = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
-            {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
-            {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
+            <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
           </TabsList>
 
           {/* ─── DADOS DO CLIENTE ─── */}
@@ -803,12 +837,19 @@ const CRM = () => {
                           {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
                         </div>
                         <div className="flex items-center gap-2">
-                          {!orc.aprovado && (
+                          {!orc.aprovado ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
                               className="flex items-center gap-1 h-8 px-3 rounded bg-success/15 text-success hover:bg-success/25 text-xs font-medium border border-success/30 transition"
                             >
                               <Check size={14} /> Aprovar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
+                            >
+                              <X size={14} /> Desaprovar
                             </button>
                           )}
                           <button
@@ -817,12 +858,14 @@ const CRM = () => {
                           >
                             <Copy size={14} /> Duplicar
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
-                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
-                          >
-                            <Trash2 size={14} /> Excluir
-                          </button>
+                          {!orc.aprovado && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1017,38 +1060,21 @@ const CRM = () => {
             </div>
           </TabsContent>
 
-          {/* ─── PROJETOS (condicional) ─── */}
-          {isProjeto && (
-            <TabsContent value="projetos">
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Projetos Vinculados</h4>
-                {clienteProjetos && clienteProjetos.length > 0 ? clienteProjetos.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 rounded bg-card border border-border cursor-pointer hover:bg-secondary/30 transition" onClick={() => window.location.href = `/projetos?open=${p.id}`}>
+          {/* ─── PROJETOS ─── */}
+          <TabsContent value="projetos">
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Projetos Vinculados</h4>
+              {clienteProjetos && clienteProjetos.length > 0 ? clienteProjetos.map((p: any) => (
+                <div key={p.id} className="flex items-center justify-between p-3 rounded bg-card border border-border cursor-pointer hover:bg-secondary/30 transition" onClick={() => window.location.href = `/projetos?open=${p.id}`}>
+                  <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium">{p.nome}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/15 text-primary">{p.status}</span>
+                    {p.venda_total != null && <span className="text-[10px] text-muted-foreground">R$ {Number(p.venda_total).toFixed(2)}</span>}
                   </div>
-                )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum projeto vinculado.</p>}
-              </div>
-            </TabsContent>
-          )}
-
-          {/* ─── CONTRATOS (condicional) ─── */}
-          {isProjeto && (
-            <TabsContent value="contratos">
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Contratos</h4>
-                {clienteContratos.length > 0 ? clienteContratos.map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded bg-card border border-border">
-                    <span className="text-xs">{c.descricao ?? "Contrato"}</span>
-                    <div className="flex items-center gap-2">
-                      {c.valor && <span className="text-xs font-medium">R$ {Number(c.valor).toFixed(2)}</span>}
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-warning/15 text-warning">{c.status}</span>
-                    </div>
-                  </div>
-                )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum contrato vinculado.</p>}
-              </div>
-            </TabsContent>
-          )}
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${p.status === "cancelado" ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>{p.status}</span>
+                </div>
+              )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum projeto vinculado. Aprove um orçamento para criar um projeto.</p>}
+            </div>
+          </TabsContent>
         </Tabs>
 
         {/* ─── LIGHTBOX IMAGENS ─── */}
