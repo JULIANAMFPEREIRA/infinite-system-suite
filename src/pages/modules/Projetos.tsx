@@ -553,8 +553,6 @@ const PendenciasSection = ({ projetos, pendenciaCounts, navigate }: { projetos: 
     </div>
   );
 };
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cliente</label>
               <select value={clienteId} onChange={e => setClienteId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
                 <option value="">Selecionar...</option>
                 {clientes?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
