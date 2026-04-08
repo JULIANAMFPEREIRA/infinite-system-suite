@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -9,6 +9,11 @@ import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 type StatusCRM = Database["public"]["Enums"]["status_crm"];
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
@@ -38,6 +43,7 @@ const CRM = () => {
   const [arquitetoIdOrigem, setArquitetoIdOrigem] = useState("");
   const [statusCrm, setStatusCrm] = useState<StatusCRM>("lead");
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
+  const [novoClienteObs, setNovoClienteObs] = useState("");
 
   const [detailClient, setDetailClient] = useState<any>(null);
 
@@ -45,12 +51,15 @@ const CRM = () => {
   const [intTipo, setIntTipo] = useState("ligacao");
   const [intDesc, setIntDesc] = useState("");
   const [editIntId, setEditIntId] = useState<string | null>(null);
+  const [intData, setIntData] = useState<Date | undefined>(undefined);
+  const [intMembroEquipe, setIntMembroEquipe] = useState("");
 
   // CRM Items form
   const [itemDesc, setItemDesc] = useState("");
   const [itemQtd, setItemQtd] = useState(1);
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
+  const [itemRt, setItemRt] = useState(0);
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
   // Payment simulation state
@@ -60,11 +69,12 @@ const CRM = () => {
   const [simEntrada, setSimEntrada] = useState(0);
   const [simIntervalo, setSimIntervalo] = useState(30);
   const [simJuros, setSimJuros] = useState(0);
+  const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(null);
 
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -100,9 +110,29 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
-  const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); };
-  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setEditItemId(null); };
-  const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); };
+  const { data: equipeMembers } = useQuery({
+    queryKey: ["equipe", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  const { data: crmArquivos, refetch: refetchArquivos } = useQuery({
+    queryKey: ["crm_arquivos", detailClient?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_arquivos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!detailClient?.id,
+  });
+
+  const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
+  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setEditItemId(null); };
+  const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
 
   const openEdit = (c: any) => {
     setEditId(c.id); setNome(c.nome); setEmail(c.email ?? ""); setTelefone(c.telefone ?? "");
@@ -119,14 +149,14 @@ const CRM = () => {
     if (!empresaId) return;
     const items = crmItens ?? [];
     const totalVenda = items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-    const totalCusto = items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+    const totalCusto = items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
     const newProjeto = await createProjeto.mutateAsync({
       nome: `Projeto — ${clienteNome}`, descricao: `Projeto criado automaticamente a partir do CRM`,
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
       arquiteto_id: arqId || null, status: "proposta", venda_total: totalVenda, custo_previsto: totalCusto,
     });
     for (const item of items) {
-      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null });
+      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
     }
     toast.success("Projeto criado automaticamente com itens do CRM!");
   };
@@ -134,7 +164,7 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
-      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId! };
+      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
@@ -190,11 +220,14 @@ const CRM = () => {
   const addInteracao = useMutation({
     mutationFn: async () => {
       if (!intDesc.trim() || !detailClient?.id) return;
+      const descFull = intTipo === "visita" && intMembroEquipe
+        ? `[Equipe: ${equipeMembers?.find(m => m.id === intMembroEquipe)?.nome ?? intMembroEquipe}] ${intDesc}`
+        : intDesc;
       if (editIntId) {
-        const { error } = await supabase.from("crm_interacoes").update({ tipo: intTipo, descricao: intDesc }).eq("id", editIntId);
+        const { error } = await supabase.from("crm_interacoes").update({ tipo: intTipo, descricao: descFull }).eq("id", editIntId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_interacoes").insert({ cliente_id: detailClient.id, tipo: intTipo, descricao: intDesc, usuario_id: user?.id ?? null });
+        const { error } = await supabase.from("crm_interacoes").insert({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null });
         if (error) throw error;
       }
     },
@@ -211,10 +244,10 @@ const CRM = () => {
     mutationFn: async () => {
       if (!itemDesc.trim() || !detailClient?.id) return;
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda } as any).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda } as any);
+        const { error } = await supabase.from("crm_itens").insert({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any);
         if (error) throw error;
       }
     },
@@ -227,17 +260,50 @@ const CRM = () => {
     onSuccess: () => { refetchCrmItens(); toast.success("Item excluído"); },
   });
 
+  // File upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTipo, setUploadTipo] = useState<"imagem" | "documento">("imagem");
+
+  const uploadFile = useMutation({
+    mutationFn: async (file: File) => {
+      if (!detailClient?.id || !empresaId) return;
+      const ext = file.name.split(".").pop();
+      const path = `${empresaId}/${detailClient.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { error } = await supabase.from("crm_arquivos").insert({
+        cliente_id: detailClient.id, empresa_id: empresaId,
+        tipo: uploadTipo, nome_arquivo: file.name,
+        url: urlData.publicUrl, tamanho: file.size,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchArquivos(); toast.success("Arquivo enviado!"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteArquivo = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("crm_arquivos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
+  });
+
   const clienteContratos = contratos?.filter(c => c.cliente_id === detailClient?.id) ?? [];
   const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
 
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
   const totalCrmVenda = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+  const totalCrmRt = (crmItens ?? []).reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0);
+  const totalCrmQtd = (crmItens ?? []).reduce((s, i) => s + (Number(i.quantidade) || 0), 0);
 
   // Payment simulation
   const simulacao = useMemo(() => {
     const total = totalCrmVenda;
     if (simCondicao === "avista") {
-      return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] };
+      return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] as { numero: number; valor: number; data: string }[] };
     }
     const entrada = Math.min(simEntrada, total);
     const restante = total - entrada;
@@ -255,6 +321,16 @@ const CRM = () => {
     return { total, totalFinal, entrada, restante, valorParcela, parcelas };
   }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
+  // When simulation generates parcelas, reset editing state
+  const parcelasParaExibir = editingParcelas ?? simulacao.parcelas;
+
+  const handleEditParcela = (idx: number, field: "valor" | "data", value: string) => {
+    const current = [...(editingParcelas ?? simulacao.parcelas)];
+    if (field === "valor") current[idx] = { ...current[idx], valor: Number(value) || 0 };
+    else current[idx] = { ...current[idx], data: value };
+    setEditingParcelas(current);
+  };
+
   // Status counts
   const statusCounts = {
     lead: clientes?.filter(c => c.status_crm === "lead").length ?? 0,
@@ -264,6 +340,9 @@ const CRM = () => {
   };
 
   const isProjeto = detailClient?.status_crm === "projeto";
+
+  const imagens = (crmArquivos ?? []).filter(a => (a as any).tipo === "imagem");
+  const documentos = (crmArquivos ?? []).filter(a => (a as any).tipo === "documento");
 
   /* ─── NEW CLIENT VIEW ─── */
   if (viewMode === "new") {
@@ -310,6 +389,11 @@ const CRM = () => {
                     <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
                   </select>
                 </div>
+                {/* 📌 1. Campo Observação na criação */}
+                <div className="space-y-1 col-span-2 md:col-span-4">
+                  <label className="text-[11px] text-muted-foreground">Observação</label>
+                  <textarea value={novoClienteObs} onChange={e => setNovoClienteObs(e.target.value)} placeholder="Observações sobre o cliente..." className="w-full min-h-[60px] px-2 py-1.5 text-xs bg-background border border-border rounded resize-y focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => saveNewClient.mutate()} disabled={saveNewClient.isPending || !nome.trim()} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50">Salvar e Continuar</button>
@@ -339,6 +423,8 @@ const CRM = () => {
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
+            <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
+            <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
             {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
             {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
           </TabsList>
@@ -346,7 +432,6 @@ const CRM = () => {
           {/* ─── DADOS DO CLIENTE ─── */}
           <TabsContent value="dados">
             <div className="space-y-3">
-              {/* Quick info cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="bg-card border border-border rounded p-3 space-y-1">
                   <div className="flex items-center gap-1.5 text-muted-foreground"><User size={12} /><span className="text-[10px] uppercase tracking-wider font-semibold">Cliente</span></div>
@@ -366,7 +451,6 @@ const CRM = () => {
                 </div>
               </div>
 
-              {/* Edit form */}
               <div className="bg-card border border-border rounded p-3 space-y-3">
                 <h2 className="text-xs font-semibold text-foreground">Editar Cliente</h2>
                 <ClienteForm
@@ -400,10 +484,34 @@ const CRM = () => {
                   <select value={intTipo} onChange={e => setIntTipo(e.target.value)} className="h-8 px-2 text-xs bg-background border border-border rounded">
                     <option value="ligacao">Ligação</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="reuniao">Reunião</option><option value="visita">Visita</option><option value="outro">Outro</option>
                   </select>
+                  {/* 📌 5. Data da anotação */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className={cn("h-8 px-2 text-xs bg-background border border-border rounded flex items-center gap-1 min-w-[120px]", !intData && "text-muted-foreground")}>
+                        <CalendarIcon size={12} />
+                        {intData ? format(intData, "dd/MM/yyyy") : "Data"}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={intData} onSelect={setIntData} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                    </PopoverContent>
+                  </Popover>
                   <input value={intDesc} onChange={e => setIntDesc(e.target.value)} placeholder="Descrição..." className="flex-1 min-w-[200px] h-8 px-2 text-xs bg-background border border-border rounded" />
                   <button onClick={() => addInteracao.mutate()} disabled={!intDesc.trim()} className="h-8 px-4 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editIntId ? "Salvar" : "Adicionar"}</button>
                   {editIntId && <button onClick={resetIntForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
                 </div>
+                {/* 📌 6. Campos adicionais para Visita */}
+                {intTipo === "visita" && (
+                  <div className="flex gap-2 items-end flex-wrap mt-1">
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro da Equipe</label>
+                      <select value={intMembroEquipe} onChange={e => setIntMembroEquipe(e.target.value)} className="h-8 px-2 text-xs bg-background border border-border rounded min-w-[180px]">
+                        <option value="">Selecione...</option>
+                        {(equipeMembers ?? []).map(m => <option key={m.id} value={m.id}>{m.nome} {m.funcao ? `(${m.funcao})` : ""}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
                 {interacoes?.map(i => (
@@ -427,9 +535,10 @@ const CRM = () => {
           {/* ─── ITENS PRÉ-PROJETO ─── */}
           <TabsContent value="itens">
             <div className="space-y-3">
-              <div className="bg-card border border-border rounded p-3 space-y-2">
+              {/* 📌 4. Visual melhorado - fundo diferente */}
+              <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-3 space-y-2">
                 <h4 className="text-xs font-semibold flex items-center gap-1"><Package size={12} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                   <div className="col-span-2 md:col-span-1 space-y-0.5">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
                     <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
@@ -446,6 +555,11 @@ const CRM = () => {
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
                     <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                   </div>
+                  {/* 📌 3. Coluna RT/Comissão */}
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
+                    <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                  </div>
                   <div className="flex gap-1 items-end">
                     <button onClick={() => saveCrmItem.mutate()} disabled={!itemDesc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editItemId ? "Salvar" : "Adicionar"}</button>
                     {editItemId && <button onClick={resetItemForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
@@ -455,15 +569,16 @@ const CRM = () => {
 
               {(crmItens && crmItens.length > 0) && (
                 <>
-                  <div className="border border-border rounded overflow-hidden">
+                  <div className="border-2 border-primary/15 rounded-lg overflow-hidden bg-card">
                     <table className="w-full text-xs">
-                      <thead><tr className="bg-secondary/60">
-                        <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                        <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Qtd</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Custo</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Venda</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Subtotal</th>
-                        <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+                      <thead><tr className="bg-primary/10">
+                        <th className="text-left px-2.5 py-2 font-semibold border-b border-primary/15">Descrição</th>
+                        <th className="text-center px-2.5 py-2 font-semibold border-b border-primary/15">Qtd</th>
+                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Custo</th>
+                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Venda</th>
+                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">RT/Comissão</th>
+                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Subtotal</th>
+                        <th className="text-center px-2.5 py-2 font-semibold border-b border-primary/15">Ações</th>
                       </tr></thead>
                       <tbody>
                         {crmItens.map(item => (
@@ -472,10 +587,11 @@ const CRM = () => {
                             <td className="px-2.5 py-1.5 text-center">{item.quantidade}</td>
                             <td className="px-2.5 py-1.5 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
                             <td className="px-2.5 py-1.5 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
+                            <td className="px-2.5 py-1.5 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
                             <td className="px-2.5 py-1.5 text-right font-medium">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                             <td className="px-2.5 py-1.5 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
                                 <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                               </div>
                             </td>
@@ -484,10 +600,13 @@ const CRM = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex gap-4 text-xs p-2 bg-secondary/30 rounded flex-wrap">
+                  {/* 📌 3. Totais com quantidade e RT */}
+                  <div className="flex gap-4 text-xs p-2.5 bg-primary/5 border border-primary/15 rounded-lg flex-wrap">
+                    <span>Qtd Total: <strong className="text-foreground">{totalCrmQtd}</strong></span>
                     <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
                     <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
-                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
+                    <span>Total RT: <strong className="text-warning">R$ {totalCrmRt.toFixed(2)}</strong></span>
+                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
                   </div>
 
                   {/* ─── SIMULAÇÃO DE PAGAMENTO ─── */}
@@ -497,7 +616,7 @@ const CRM = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <div className="space-y-0.5">
                         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
-                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                           <option value="avista">À Vista</option>
                           <option value="parcelado">Parcelado</option>
                         </select>
@@ -516,19 +635,19 @@ const CRM = () => {
                         <>
                           <div className="space-y-0.5">
                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
-                            <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                            <input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
                           </div>
                           <div className="space-y-0.5">
                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
-                            <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                            <input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
                           </div>
                           <div className="space-y-0.5">
                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label>
-                            <input type="number" value={simIntervalo} onChange={e => setSimIntervalo(Math.max(1, Number(e.target.value)))} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                            <input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
                           </div>
                           <div className="space-y-0.5">
                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label>
-                            <input type="number" value={simJuros} onChange={e => setSimJuros(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                            <input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
                           </div>
                         </>
                       )}
@@ -562,7 +681,8 @@ const CRM = () => {
                       )}
                     </div>
 
-                    {simulacao.parcelas.length > 0 && (
+                    {/* 📌 8. Parcelas editáveis */}
+                    {parcelasParaExibir.length > 0 && (
                       <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
                         <table className="w-full text-xs">
                           <thead><tr className="bg-secondary/60">
@@ -578,11 +698,15 @@ const CRM = () => {
                                 <td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td>
                               </tr>
                             )}
-                            {simulacao.parcelas.map(p => (
+                            {parcelasParaExibir.map((p, idx) => (
                               <tr key={p.numero} className="border-b border-border last:border-b-0">
                                 <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
-                                <td className="px-2.5 py-1 text-right">R$ {p.valor.toFixed(2)}</td>
-                                <td className="px-2.5 py-1 text-center">{p.data}</td>
+                                <td className="px-2.5 py-1 text-right">
+                                  <input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" />
+                                </td>
+                                <td className="px-2.5 py-1 text-center">
+                                  <input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" />
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -593,6 +717,63 @@ const CRM = () => {
                 </>
               )}
               {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado.</p>}
+            </div>
+          </TabsContent>
+
+          {/* ─── IMAGENS ─── */}
+          <TabsContent value="imagens">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold flex items-center gap-1"><Image size={12} /> Imagens</h4>
+                <div>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) { setUploadTipo("imagem"); Array.from(e.target.files).forEach(f => uploadFile.mutate(f)); } }} />
+                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium"><Upload size={12} /> Enviar Imagem</button>
+                </div>
+              </div>
+              {imagens.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {imagens.map(img => (
+                    <div key={img.id} className="relative group border border-border rounded overflow-hidden bg-card">
+                      <img src={(img as any).url} alt={(img as any).nome_arquivo} className="w-full h-32 object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                        <a href={(img as any).url} target="_blank" download className="p-1.5 rounded bg-white/90 text-foreground hover:bg-white"><Download size={14} /></a>
+                        <button onClick={() => { if (window.confirm("Excluir?")) deleteArquivo.mutate(img.id); }} className="p-1.5 rounded bg-destructive/90 text-white hover:bg-destructive"><Trash2 size={14} /></button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground p-1 truncate">{(img as any).nome_arquivo}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-muted-foreground text-xs text-center py-4">Nenhuma imagem adicionada.</p>}
+            </div>
+          </TabsContent>
+
+          {/* ─── DOCUMENTOS ─── */}
+          <TabsContent value="documentos">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Documentos</h4>
+                <div>
+                  <input id="doc-upload" type="file" multiple className="hidden" onChange={e => { if (e.target.files) { setUploadTipo("documento"); Array.from(e.target.files).forEach(f => uploadFile.mutate(f)); } }} />
+                  <button onClick={() => document.getElementById("doc-upload")?.click()} className="flex items-center gap-1 h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium"><Upload size={12} /> Enviar Documento</button>
+                </div>
+              </div>
+              {documentos.length > 0 ? (
+                <div className="space-y-1.5">
+                  {documentos.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between p-2.5 rounded bg-card border border-border text-xs">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-muted-foreground" />
+                        <span className="font-medium">{(doc as any).nome_arquivo}</span>
+                        {(doc as any).tamanho && <span className="text-muted-foreground">({((doc as any).tamanho / 1024).toFixed(0)} KB)</span>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <a href={(doc as any).url} target="_blank" download className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Download size={13} /></a>
+                        <button onClick={() => { if (window.confirm("Excluir?")) deleteArquivo.mutate(doc.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum documento adicionado.</p>}
             </div>
           </TabsContent>
 
@@ -707,6 +888,8 @@ const CRM = () => {
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
+              {/* 📌 2. Coluna Arquiteto na listagem */}
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
             </tr></thead>
@@ -717,6 +900,7 @@ const CRM = () => {
                   <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
                   <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
                   <td className="px-2.5 py-1.5">{origemLabels[c.origem as OrigemLead] ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{(c as any).fornecedores?.nome ?? "—"}</td>
                   <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                     <select
                       value={c.status_crm ?? "lead"}
@@ -739,7 +923,7 @@ const CRM = () => {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
             </tbody>
           </table>
         </div>
