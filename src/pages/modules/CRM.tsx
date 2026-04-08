@@ -82,6 +82,7 @@ const CRM = () => {
     return ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext);
   };
 
+  const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").order("created_at", { ascending: false });
