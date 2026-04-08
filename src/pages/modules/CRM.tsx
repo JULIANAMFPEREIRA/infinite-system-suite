@@ -185,6 +185,29 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const renameOrcamento = useMutation({
+    mutationFn: async ({ id, nome }: { id: string; nome: string }) => {
+      const { error } = await supabase.from("crm_orcamentos").update({ nome }).eq("id", id);
+      if (error) throw error;
+      // Also update linked project name if exists
+      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", id);
+      if (linkedProjects && linkedProjects.length > 0) {
+        const clienteNome = detailClient?.nome ?? "";
+        for (const proj of linkedProjects) {
+          await supabase.from("projetos").update({ nome: `${clienteNome} — ${nome}`.trim() }).eq("id", proj.id);
+        }
+      }
+    },
+    onSuccess: () => {
+      refetchOrcamentos();
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+      qc.invalidateQueries({ queryKey: ["cliente_projetos"] });
+      setEditingOrcNome(null);
+      toast.success("Nome atualizado!");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const duplicateOrcamento = useMutation({
     mutationFn: async (srcOrcamentoId: string) => {
       if (!detailClient?.id || !empresaId) return;
