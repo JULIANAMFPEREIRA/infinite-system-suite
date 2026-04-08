@@ -68,6 +68,8 @@ const CRM = () => {
 
   // Active orcamento
   const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
+  const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
+  const [orcNomeInput, setOrcNomeInput] = useState("");
 
   const isPreviewable = (filename: string) => {
     const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -183,6 +185,29 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const renameOrcamento = useMutation({
+    mutationFn: async ({ id, nome }: { id: string; nome: string }) => {
+      const { error } = await supabase.from("crm_orcamentos").update({ nome }).eq("id", id);
+      if (error) throw error;
+      // Also update linked project name if exists
+      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", id);
+      if (linkedProjects && linkedProjects.length > 0) {
+        const clienteNome = detailClient?.nome ?? "";
+        for (const proj of linkedProjects) {
+          await supabase.from("projetos").update({ nome: `${clienteNome} — ${nome}`.trim() }).eq("id", proj.id);
+        }
+      }
+    },
+    onSuccess: () => {
+      refetchOrcamentos();
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+      qc.invalidateQueries({ queryKey: ["cliente_projetos"] });
+      setEditingOrcNome(null);
+      toast.success("Nome atualizado!");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const duplicateOrcamento = useMutation({
     mutationFn: async (srcOrcamentoId: string) => {
       if (!detailClient?.id || !empresaId) return;
@@ -255,7 +280,7 @@ const CRM = () => {
       }).eq("id", projId);
     } else {
       const newProjeto = await createProjeto.mutateAsync({
-        nome: `Projeto — ${detailClient.nome} — ${orcData.nome ?? ""}`,
+        nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
         descricao: descParts.join(" | "),
         cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
         arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
@@ -362,13 +387,24 @@ const CRM = () => {
 
   const deleteOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
-      const { error } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      // Soft delete: cancel linked project if exists
+      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+      if (linkedProjects && linkedProjects.length > 0) {
+        for (const proj of linkedProjects) {
+          await supabase.from("projetos").update({ status: "cancelado" }).eq("id", proj.id);
+        }
+      }
+      // Mark orcamento as not approved (soft cancel)
+      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
       if (error) throw error;
+      // Actually delete (keeping data in project)
+      const { error: delErr } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      if (delErr) throw delErr;
     },
     onSuccess: () => {
       refetchOrcamentos(); refetchCrmItens();
       setActiveOrcamentoId(null);
-      toast.success("Orçamento excluído");
+      toast.success("Orçamento excluído. Projeto vinculado foi cancelado.");
     },
   });
 
@@ -423,7 +459,7 @@ const CRM = () => {
 
     const simParcCount = simParcelas.length;
     const newProjeto = await createProjeto.mutateAsync({
-      nome: `Projeto — ${clienteNome}`,
+      nome: `${clienteNome} — ${approvedOrc?.nome ?? ""}`.trim(),
       descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
       arquiteto_id: arqId || null, status: "aprovado",
@@ -891,8 +927,17 @@ const CRM = () => {
                       >
                         <div className="flex items-center gap-2">
                           {orc.aprovado && <Check size={16} className="text-success" />}
-                          <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`}>{orc.nome}</span>
+                          {editingOrcNome === orc.id ? (
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <input value={orcNomeInput} onChange={e => setOrcNomeInput(e.target.value)} className="h-6 px-1.5 text-xs bg-background border border-primary rounded w-32" autoFocus onKeyDown={e => { if (e.key === "Enter") renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput }); if (e.key === "Escape") setEditingOrcNome(null); }} />
+                              <button onClick={() => renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput })} className="text-primary"><Check size={12} /></button>
+                              <button onClick={() => setEditingOrcNome(null)} className="text-muted-foreground"><X size={12} /></button>
+                            </div>
+                          ) : (
+                            <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`} onDoubleClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }}>{orc.nome}</span>
+                          )}
                           {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
+                          {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>}
                         </div>
                         <div className="flex items-center gap-2">
                           {!orc.aprovado ? (

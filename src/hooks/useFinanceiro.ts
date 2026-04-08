@@ -105,7 +105,7 @@ export const useComissoes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("comissoes")
-        .select("*, fornecedores(nome), projetos(nome)")
+        .select("*, fornecedores(nome), projetos(nome, cliente_id, clientes(nome), orcamento_id)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

@@ -7,12 +7,15 @@ import type { Database } from "@/integrations/supabase/types";
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
 const statusLabels: Record<StatusProjeto, string> = {
   lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
-  em_andamento: "Em Andamento", concluido: "Concluído", vendido: "Vendido",
+  vendido: "Vendido", em_andamento: "Em Andamento", infraestrutura: "Infraestrutura",
+  instalacao: "Instalação", cabeamento: "Cabeamento", programacao: "Programação",
+  personalizacao: "Personalização", concluido: "Concluído",
   pos_venda: "Pós-Venda", cancelado: "Cancelado"
 };
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
-  em_andamento: 50, concluido: 100, pos_venda: 100, cancelado: 0
+  em_andamento: 35, infraestrutura: 45, instalacao: 55, cabeamento: 65,
+  programacao: 75, personalizacao: 85, concluido: 100, pos_venda: 100, cancelado: 0
 };
 
 const Cronograma = () => {
