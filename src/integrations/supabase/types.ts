@@ -1319,11 +1319,13 @@ export type Database = {
           data_pagamento: string | null
           descricao: string | null
           empresa_id: string
+          hora: string | null
           id: string
           produtos_levados: Json | null
           projeto_id: string
           servicos_executados: string | null
           status_pagamento: string | null
+          status_visita: string
           tecnico_id: string | null
           valor_pago_tecnico: number | null
         }
@@ -1333,11 +1335,13 @@ export type Database = {
           data_pagamento?: string | null
           descricao?: string | null
           empresa_id: string
+          hora?: string | null
           id?: string
           produtos_levados?: Json | null
           projeto_id: string
           servicos_executados?: string | null
           status_pagamento?: string | null
+          status_visita?: string
           tecnico_id?: string | null
           valor_pago_tecnico?: number | null
         }
@@ -1347,11 +1351,13 @@ export type Database = {
           data_pagamento?: string | null
           descricao?: string | null
           empresa_id?: string
+          hora?: string | null
           id?: string
           produtos_levados?: Json | null
           projeto_id?: string
           servicos_executados?: string | null
           status_pagamento?: string | null
+          status_visita?: string
           tecnico_id?: string | null
           valor_pago_tecnico?: number | null
         }
@@ -1423,6 +1429,11 @@ export type Database = {
         | "proposta"
         | "vendido"
         | "pos_venda"
+        | "infraestrutura"
+        | "instalacao"
+        | "cabeamento"
+        | "programacao"
+        | "personalizacao"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
       tipo_fornecedor: "fornecedor" | "arquiteto"
       tipo_projeto_item: "produto" | "servico" | "mao_de_obra"
@@ -1578,6 +1589,11 @@ export const Constants = {
         "proposta",
         "vendido",
         "pos_venda",
+        "infraestrutura",
+        "instalacao",
+        "cabeamento",
+        "programacao",
+        "personalizacao",
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
       tipo_fornecedor: ["fornecedor", "arquiteto"],
