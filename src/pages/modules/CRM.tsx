@@ -99,7 +99,7 @@ const CRM = () => {
   const { data: clienteProjetos } = useQuery({
     queryKey: ["cliente_projetos", detailClient?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("projetos").select("id, nome, status").eq("cliente_id", detailClient!.id);
+      const { data } = await supabase.from("projetos").select("id, nome, status, venda_total, orcamento_id").eq("cliente_id", detailClient!.id);
       return data ?? [];
     },
     enabled: !!detailClient?.id,
