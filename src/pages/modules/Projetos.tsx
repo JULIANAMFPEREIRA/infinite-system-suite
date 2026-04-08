@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter } from "lucide-react";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -29,12 +29,34 @@ const statusColors: Record<StatusProjeto, string> = {
   cancelado: "bg-destructive/15 text-destructive"
 };
 const statusOptions: StatusProjeto[] = ["lead", "proposta", "orcamento", "aprovado", "vendido", "em_andamento", "concluido", "pos_venda", "cancelado"];
+const projetoIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const ProjetoState = ({
+  title,
+  description,
+  onBack,
+}: {
+  title: string;
+  description: string;
+  onBack: () => void;
+}) => (
+  <div className="space-y-4 animate-fade-in">
+    <button onClick={onBack} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition">
+      <ArrowLeft size={14} /> Voltar para lista
+    </button>
+    <div className="bg-card border border-border rounded-lg p-6 text-center space-y-2">
+      <h1 className="text-lg font-bold text-foreground">{title}</h1>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  </div>
+);
 
 const Projetos = () => {
   const navigate = useNavigate();
+  const { id: routeProjetoId } = useParams<{ id?: string }>();
   const empresaId = useEmpresa();
   const qc = useQueryClient();
-  const { data: projetos, isLoading } = useProjetos();
+  const { data: projetos, isLoading, error: projetosError } = useProjetos();
   const { data: pendenciaCounts } = useNecessidadesPendentesCount();
   const { data: clientes } = useClientes();
   const { data: arquitetos } = useArquitetos();
@@ -57,6 +79,45 @@ const Projetos = () => {
   const [numeroParcelas, setNumeroParcelas] = useState(1);
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
+  const [mainTab, setMainTab] = useState("todos");
+
+  const statusCounts = useMemo(() => {
+    const all = projetos ?? [];
+    return {
+      todos: all.length,
+      em_andamento: all.filter(p => p.status === "em_andamento").length,
+      concluido: all.filter(p => p.status === "concluido").length,
+      pos_venda: all.filter(p => p.status === "pos_venda").length,
+      cancelado: all.filter(p => p.status === "cancelado").length,
+      orcamento: all.filter(p => p.status === "orcamento").length,
+      aprovado: all.filter(p => p.status === "aprovado").length,
+      proposta: all.filter(p => p.status === "proposta").length,
+      vendido: all.filter(p => p.status === "vendido").length,
+    };
+  }, [projetos]);
+
+  const pendenciasCount = Object.values(pendenciaCounts ?? {}).reduce((a: number, b: number) => a + b, 0);
+  const detailProjetoId = routeProjetoId ?? selectedProjetoId;
+  const shouldShowDetail = viewMode === "detail" || !!routeProjetoId;
+  const isValidProjetoId = !routeProjetoId || projetoIdPattern.test(routeProjetoId);
+  const currentProjeto = useMemo(
+    () => (detailProjetoId ? projetos?.find(p => p.id === detailProjetoId) ?? null : null),
+    [detailProjetoId, projetos]
+  );
+
+  const fillProjetoForm = (p: any) => {
+    setEditId(p.id); setNome(p.nome); setDescricao(p.descricao ?? "");
+    setClienteId(p.cliente_id ?? ""); setArquitetoId(p.arquiteto_id ?? "");
+    setDataInicio(p.data_inicio ?? ""); setDataPrevisao(p.data_previsao ?? "");
+    setEnderecoObra(p.endereco_obra ?? ""); setFormaPagamento(p.forma_pagamento ?? "");
+    setNumeroParcelas(p.numero_parcelas ?? 1); setObservacoesPagamento(p.observacoes_pagamento ?? "");
+    setShowForm(true); setSelectedProjetoId(p.id); setViewMode("detail");
+  };
+
+  useEffect(() => {
+    if (!routeProjetoId || !currentProjeto || selectedProjetoId === routeProjetoId) return;
+    fillProjetoForm(currentProjeto);
+  }, [routeProjetoId, currentProjeto, selectedProjetoId]);
 
   const resetForm = () => {
     setNome(""); setDescricao(""); setClienteId(""); setArquitetoId("");
@@ -64,16 +125,12 @@ const Projetos = () => {
     setNumeroParcelas(1); setObservacoesPagamento("");
     setEditId(null); setShowForm(false); setSelectedProjetoId(null);
     setViewMode("list");
+    navigate("/projetos");
   };
 
   const openEdit = (p: any) => {
-    setEditId(p.id); setNome(p.nome); setDescricao(p.descricao ?? "");
-    setClienteId(p.cliente_id ?? ""); setArquitetoId(p.arquiteto_id ?? "");
-    setDataInicio(p.data_inicio ?? ""); setDataPrevisao(p.data_previsao ?? "");
-    setEnderecoObra(p.endereco_obra ?? ""); setFormaPagamento(p.forma_pagamento ?? "");
-    setNumeroParcelas(p.numero_parcelas ?? 1); setObservacoesPagamento(p.observacoes_pagamento ?? "");
-    setShowForm(true); setSelectedProjetoId(p.id);
-    setViewMode("detail");
+    fillProjetoForm(p);
+    navigate(`/projetos/${p.id}`);
   };
 
   const handleSave = async () => {
@@ -93,6 +150,7 @@ const Projetos = () => {
         const data = await createProjeto.mutateAsync({ ...payload, status: "orcamento" });
         setSelectedProjetoId(data.id); setEditId(data.id);
         setViewMode("detail");
+        navigate(`/projetos/${data.id}`);
         toast.success("Projeto criado! Adicione itens abaixo.");
         return;
       }
@@ -153,8 +211,23 @@ const Projetos = () => {
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   // DETAIL VIEW
-  if (viewMode === "detail" && selectedProjetoId) {
-    const currentProjeto = projetos?.find(p => p.id === selectedProjetoId);
+  if (shouldShowDetail) {
+    if (!isValidProjetoId) {
+      return <ProjetoState title="Projeto não encontrado" description="O ID informado é inválido." onBack={resetForm} />;
+    }
+
+    if (projetosError) {
+      return <ProjetoState title="Erro ao carregar projeto" description="Não foi possível carregar os dados do projeto." onBack={resetForm} />;
+    }
+
+    if (isLoading || (routeProjetoId && selectedProjetoId !== routeProjetoId)) {
+      return <ProjetoState title="Carregando projeto..." description="Aguarde enquanto buscamos os dados do projeto." onBack={resetForm} />;
+    }
+
+    if (!currentProjeto || !detailProjetoId) {
+      return <ProjetoState title="Projeto não encontrado" description="Verifique se o projeto ainda existe antes de tentar abrir novamente." onBack={resetForm} />;
+    }
+
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center gap-3">
@@ -162,12 +235,10 @@ const Projetos = () => {
             <ArrowLeft size={14} /> Voltar para lista
           </button>
           <span className="text-muted-foreground">|</span>
-          <h1 className="text-lg font-bold text-foreground">{nome || "Projeto"}</h1>
-          {currentProjeto && (
-            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[currentProjeto.status as StatusProjeto]}`}>
-              {statusLabels[currentProjeto.status as StatusProjeto]}
-            </span>
-          )}
+          <h1 className="text-lg font-bold text-foreground">{nome || currentProjeto.nome || "Projeto"}</h1>
+          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[currentProjeto.status as StatusProjeto]}`}>
+            {statusLabels[currentProjeto.status as StatusProjeto]}
+          </span>
         </div>
 
         <Tabs defaultValue="resumo" className="w-full">
@@ -215,41 +286,41 @@ const Projetos = () => {
               </div>
               <div className="flex gap-2">
                 <button onClick={handleSave} disabled={updateProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">Salvar Alterações</button>
-                {currentProjeto && currentProjeto.status !== "aprovado" && (
-                  <button onClick={() => changeStatus.mutate({ id: selectedProjetoId, status: "aprovado", projeto: currentProjeto })} className="px-4 py-1.5 rounded bg-success text-white text-xs font-medium hover:brightness-105 transition">Aprovar Projeto</button>
+                {currentProjeto.status !== "aprovado" && (
+                  <button onClick={() => changeStatus.mutate({ id: detailProjetoId, status: "aprovado", projeto: currentProjeto })} className="px-4 py-1.5 rounded bg-success text-white text-xs font-medium hover:brightness-105 transition">Aprovar Projeto</button>
                 )}
-                <button onClick={() => { if (window.confirm("Excluir projeto?")) removeProjeto.mutate(selectedProjetoId); }} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
+                <button onClick={() => { if (window.confirm("Excluir projeto?")) removeProjeto.mutate(detailProjetoId); }} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="itens">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoItensSection projetoId={selectedProjetoId} projetoNome={nome} clienteId={clienteId} empresaId={empresaId} numeroParcelas={numeroParcelas} />
+              <ProjetoItensSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} empresaId={empresaId} numeroParcelas={numeroParcelas} />
             </div>
           </TabsContent>
 
           <TabsContent value="visitas">
             <div className="bg-card border border-border rounded-lg p-4">
-              <VisitasTecnicasSection projetoId={selectedProjetoId} />
+              <VisitasTecnicasSection projetoId={detailProjetoId} />
             </div>
           </TabsContent>
 
           <TabsContent value="financeiro">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoFinanceiroSection projetoId={selectedProjetoId} projetoNome={nome} clienteId={clienteId} />
+              <ProjetoFinanceiroSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} />
             </div>
           </TabsContent>
 
           <TabsContent value="compras">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoComprasSection projetoId={selectedProjetoId} />
+              <ProjetoComprasSection projetoId={detailProjetoId} />
             </div>
           </TabsContent>
 
           <TabsContent value="comissoes">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoComissoesSection projetoId={selectedProjetoId} arquitetoId={arquitetoId} />
+              <ProjetoComissoesSection projetoId={detailProjetoId} arquitetoId={arquitetoId || currentProjeto.arquiteto_id || ""} />
             </div>
           </TabsContent>
 
@@ -261,33 +332,13 @@ const Projetos = () => {
 
           <TabsContent value="contratos">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoContratosSection projetoId={selectedProjetoId} />
+              <ProjetoContratosSection projetoId={detailProjetoId} />
             </div>
           </TabsContent>
         </Tabs>
       </div>
     );
   }
-
-  // Status counts
-  const statusCounts = useMemo(() => {
-    const all = projetos ?? [];
-    return {
-      todos: all.length,
-      em_andamento: all.filter(p => p.status === "em_andamento").length,
-      concluido: all.filter(p => p.status === "concluido").length,
-      pos_venda: all.filter(p => p.status === "pos_venda").length,
-      cancelado: all.filter(p => p.status === "cancelado").length,
-      orcamento: all.filter(p => p.status === "orcamento").length,
-      aprovado: all.filter(p => p.status === "aprovado").length,
-      proposta: all.filter(p => p.status === "proposta").length,
-      vendido: all.filter(p => p.status === "vendido").length,
-    };
-  }, [projetos]);
-
-  const pendenciasCount = Object.values(pendenciaCounts ?? {}).reduce((a: number, b: number) => a + b, 0);
-
-  const [mainTab, setMainTab] = useState("todos");
 
   // LIST VIEW
   return (
