@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Settings, Plus, Trash2, UserPlus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Settings, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -8,6 +8,7 @@ import { useCategorias, useCreateCategoria, useDeleteCategoria, useFormasPagamen
 import { toast } from "sonner";
 
 const Configuracoes = () => {
+  const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
 
@@ -46,6 +47,39 @@ const Configuracoes = () => {
   const createForma = useCreateFormaPagamento();
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
+
+  // Equipe
+  const { data: equipe, refetch: refetchEquipe } = useQuery({
+    queryKey: ["equipe", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+  const [eqNome, setEqNome] = useState("");
+  const [eqFuncao, setEqFuncao] = useState("");
+  const [eqContato, setEqContato] = useState("");
+
+  const addEquipeMember = useMutation({
+    mutationFn: async () => {
+      if (!eqNome.trim() || !empresaId) return;
+      const { error } = await supabase.from("equipe").insert({ empresa_id: empresaId, nome: eqNome, funcao: eqFuncao || null, contato: eqContato || null } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchEquipe(); setEqNome(""); setEqFuncao(""); setEqContato(""); toast.success("Membro adicionado"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteEquipeMember = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("equipe").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchEquipe(); toast.success("Membro removido"); },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   // Create user
   const [showNewUser, setShowNewUser] = useState(false);
@@ -213,6 +247,44 @@ const Configuracoes = () => {
         ) : (
           <p className="text-xs text-muted-foreground">Nenhum usuário encontrado.</p>
         )}
+      </div>
+
+      {/* 📌 7. Cadastro de Equipe */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Users size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Equipe / Funcionários</h2>
+        </div>
+        <div className="flex gap-2 items-end flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={eqNome} onChange={e => setEqNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Função</label><input value={eqFuncao} onChange={e => setEqFuncao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Contato</label><input value={eqContato} onChange={e => setEqContato(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <button onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"><Plus size={14} /></button>
+        </div>
+        {equipe && equipe.length > 0 ? (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-secondary/60">
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Função</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Contato</th>
+                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+              </tr></thead>
+              <tbody>
+                {equipe.map((m: any) => (
+                  <tr key={m.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2.5 py-1.5 font-medium">{m.nome}</td>
+                    <td className="px-2.5 py-1.5">{m.funcao ?? "—"}</td>
+                    <td className="px-2.5 py-1.5">{m.contato ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <button onClick={() => { if (window.confirm("Remover membro?")) deleteEquipeMember.mutate(m.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Nenhum membro cadastrado.</p>}
       </div>
     </div>
   );
