@@ -54,10 +54,12 @@ const CRM = () => {
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
   // Payment simulation state
+  const [simCondicao, setSimCondicao] = useState<"avista" | "parcelado">("avista");
   const [simFormaPgto, setSimFormaPgto] = useState("boleto");
   const [simParcelas, setSimParcelas] = useState(1);
   const [simEntrada, setSimEntrada] = useState(0);
-  const [simIntervalo, setSimIntervalo] = useState<"mensal" | "quinzenal" | "semanal">("mensal");
+  const [simIntervalo, setSimIntervalo] = useState(30);
+  const [simJuros, setSimJuros] = useState(0);
 
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
@@ -234,20 +236,24 @@ const CRM = () => {
   // Payment simulation
   const simulacao = useMemo(() => {
     const total = totalCrmVenda;
+    if (simCondicao === "avista") {
+      return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] };
+    }
     const entrada = Math.min(simEntrada, total);
     const restante = total - entrada;
-    const valorParcela = simParcelas > 0 ? restante / simParcelas : 0;
+    const jurosFator = simJuros > 0 ? Math.pow(1 + simJuros / 100, simParcelas) : 1;
+    const totalComJuros = restante * jurosFator;
+    const valorParcela = simParcelas > 0 ? totalComJuros / simParcelas : 0;
+    const totalFinal = entrada + totalComJuros;
     const hoje = new Date();
     const parcelas: { numero: number; valor: number; data: string }[] = [];
     for (let i = 0; i < simParcelas; i++) {
       const d = new Date(hoje);
-      if (simIntervalo === "mensal") d.setMonth(d.getMonth() + i + (entrada > 0 ? 1 : 1));
-      else if (simIntervalo === "quinzenal") d.setDate(d.getDate() + (i + 1) * 15);
-      else d.setDate(d.getDate() + (i + 1) * 7);
+      d.setDate(d.getDate() + (i + 1) * simIntervalo);
       parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
     }
-    return { total, entrada, restante, valorParcela, parcelas };
-  }, [totalCrmVenda, simEntrada, simParcelas, simIntervalo]);
+    return { total, totalFinal, entrada, restante, valorParcela, parcelas };
+  }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
   // Status counts
   const statusCounts = {
@@ -331,8 +337,8 @@ const CRM = () => {
         <Tabs defaultValue="dados" className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
-            <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
+            <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
             {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
           </TabsList>
@@ -478,10 +484,10 @@ const CRM = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex gap-4 text-xs p-2 bg-secondary/30 rounded">
+                  <div className="flex gap-4 text-xs p-2 bg-secondary/30 rounded flex-wrap">
                     <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
                     <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
-                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong></span>
+                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
                   </div>
 
                   {/* ─── SIMULAÇÃO DE PAGAMENTO ─── */}
@@ -489,6 +495,13 @@ const CRM = () => {
                     <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento</h4>
                     <p className="text-[10px] text-muted-foreground">Apenas visualização — nenhum registro financeiro será criado.</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="avista">À Vista</option>
+                          <option value="parcelado">Parcelado</option>
+                        </select>
+                      </div>
                       <div className="space-y-0.5">
                         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
                         <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
@@ -499,42 +512,54 @@ const CRM = () => {
                           <option value="cheque">Cheque</option>
                         </select>
                       </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
-                        <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
-                        <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo</label>
-                        <select value={simIntervalo} onChange={e => setSimIntervalo(e.target.value as any)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                          <option value="mensal">Mensal</option>
-                          <option value="quinzenal">Quinzenal</option>
-                          <option value="semanal">Semanal</option>
-                        </select>
-                      </div>
+                      {simCondicao === "parcelado" && (
+                        <>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
+                            <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
+                            <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label>
+                            <input type="number" value={simIntervalo} onChange={e => setSimIntervalo(Math.max(1, Number(e.target.value)))} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label>
+                            <input type="number" value={simJuros} onChange={e => setSimJuros(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Simulation result */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
                       <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p>
                         <p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p>
                       </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
-                        <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
-                        <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
-                        <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
-                      </div>
+                      {simCondicao === "parcelado" && (
+                        <>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
+                            <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
+                            <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
+                            <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
+                          </div>
+                          <div className="bg-primary/10 rounded p-2 text-center border border-primary/20">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p>
+                            <p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {simulacao.parcelas.length > 0 && (
