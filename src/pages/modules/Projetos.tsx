@@ -344,9 +344,100 @@ const Projetos = () => {
 
         {["todos", "em_andamento", "concluido", "pos_venda", "cancelado", "orcamento", "aprovado", "proposta", "vendido"].map(tabKey => (
           <TabsContent key={tabKey} value={tabKey}>
-      {showForm && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-4 mb-4">
-          <h2 className="text-sm font-semibold text-foreground">Novo Projeto</h2>
+            {showForm && (
+              <div className="bg-card border border-border rounded-lg p-4 space-y-4 mb-4">
+                <h2 className="text-sm font-semibold text-foreground">Novo Projeto</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cliente</label>
+                    <select value={clienteId} onChange={e => setClienteId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                      <option value="">Selecionar...</option>
+                      {clientes?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+                    <select value={arquitetoId} onChange={e => setArquitetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                      <option value="">Selecionar...</option>
+                      {arquitetos?.map(a => <option key={a.id} value={a.id}>{a.nome} ({a.rt_percentual ?? 0}%)</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleSave} disabled={createProjeto.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50">Criar Projeto</button>
+                  <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition">Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-xs">Nenhum projeto encontrado.</div>
+            ) : (
+              <div className="border border-border rounded overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-secondary/60">
+                        <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Nome</th>
+                        <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Cliente</th>
+                        <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Arquiteto</th>
+                        <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Status</th>
+                        <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo</th>
+                        <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>
+                        <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>
+                        <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pend.</th>
+                        <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map(p => (
+                        <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors" onClick={() => openEdit(p)}>
+                          <td className="px-2.5 py-1.5 text-foreground font-medium">{p.nome}</td>
+                          <td className="px-2.5 py-1.5 text-foreground">{(p.clientes as any)?.nome ?? "—"}</td>
+                          <td className="px-2.5 py-1.5 text-foreground">{(p.fornecedores as any)?.nome ?? "—"}</td>
+                          <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                            <select
+                              value={p.status ?? "orcamento"}
+                              onChange={e => changeStatus.mutate({ id: p.id, status: e.target.value as StatusProjeto, projeto: p })}
+                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColors[p.status as StatusProjeto]}`}
+                            >
+                              {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2.5 py-1.5 text-right text-foreground">{fmt(p.custo_previsto)}</td>
+                          <td className="px-2.5 py-1.5 text-right text-foreground font-medium">{fmt(p.venda_total)}</td>
+                          <td className="px-2.5 py-1.5 text-right">
+                            <span className={(p.margem_prevista ?? 0) > 0 ? "text-success" : "text-destructive"}>{(p.margem_prevista ?? 0).toFixed(1)}%</span>
+                          </td>
+                          <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                            {(pendenciaCounts?.[p.id] ?? 0) > 0 ? (
+                              <button onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition">
+                                <AlertTriangle size={11} /> {pendenciaCounts![p.id]}
+                              </button>
+                            ) : <span className="text-muted-foreground text-[11px]">—</span>}
+                          </td>
+                          <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
+                              <button onClick={() => { if (window.confirm("Excluir projeto e todos os itens vinculados?")) removeProjeto.mutate(p.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+};
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
