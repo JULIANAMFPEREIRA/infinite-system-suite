@@ -655,15 +655,24 @@ const CRM = () => {
     setEditingParcelas(current);
   };
 
-  const handleSaveSimulacao = () => {
+  const handleSaveSimulacao = async () => {
     const simData = {
       condicao: simCondicao, formaPagamento: simFormaPgto,
       numParcelas: simParcelas, entrada: simEntrada,
       intervalo: simIntervalo, juros: simJuros,
       parcelas: parcelasParaExibir,
     };
-    saveOrcamentoSimulacao(simData);
+    await saveOrcamentoSimulacao(simData);
     toast.success("Simulação salva!");
+    // Auto-sync if approved
+    if (activeOrcamentoId) {
+      const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+      if (orc?.aprovado) {
+        await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+        qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+        toast.success("Financeiro do projeto atualizado!");
+      }
+    }
   };
 
   // Status counts
