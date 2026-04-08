@@ -18,17 +18,22 @@ type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
 const statusLabels: Record<StatusProjeto, string> = {
   lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
-  vendido: "Vendido", em_andamento: "Em Andamento", concluido: "Concluído",
+  vendido: "Vendido", em_andamento: "Em Andamento", infraestrutura: "Infraestrutura",
+  instalacao: "Instalação", cabeamento: "Cabeamento", programacao: "Programação",
+  personalizacao: "Personalização", concluido: "Concluído",
   pos_venda: "Pós-Venda", cancelado: "Cancelado"
 };
 const statusColors: Record<StatusProjeto, string> = {
   lead: "bg-secondary text-secondary-foreground", proposta: "bg-warning/15 text-warning",
   orcamento: "bg-secondary text-secondary-foreground", aprovado: "bg-success/15 text-success",
   vendido: "bg-primary/15 text-primary", em_andamento: "bg-primary/15 text-primary",
+  infraestrutura: "bg-amber-500/15 text-amber-600", instalacao: "bg-blue-500/15 text-blue-600",
+  cabeamento: "bg-violet-500/15 text-violet-600", programacao: "bg-cyan-500/15 text-cyan-600",
+  personalizacao: "bg-pink-500/15 text-pink-600",
   concluido: "bg-info/15 text-info", pos_venda: "bg-accent text-accent-foreground",
   cancelado: "bg-destructive/15 text-destructive"
 };
-const statusOptions: StatusProjeto[] = ["lead", "proposta", "orcamento", "aprovado", "vendido", "em_andamento", "concluido", "pos_venda", "cancelado"];
+const statusOptions: StatusProjeto[] = ["em_andamento", "infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "cancelado", "lead", "proposta", "orcamento", "aprovado", "vendido", "pos_venda"];
 const projetoIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ProjetoState = ({
@@ -207,7 +212,12 @@ const Projetos = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const filtered = projetos?.filter(p => filterStatus === "todos" || p.status === filterStatus) ?? [];
+  const filtered = (projetos ?? [])
+    .filter(p => {
+      if (filterStatus === "todos") return p.status !== "cancelado";
+      return p.status === filterStatus;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   // DETAIL VIEW
@@ -358,12 +368,16 @@ const Projetos = () => {
       </div>
 
       {/* Status counters - same pattern as CRM */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-2">
         {([
-          { key: "todos" as const, label: "Todos", count: statusCounts.todos, color: "bg-secondary text-secondary-foreground" },
+          { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
           { key: "em_andamento" as const, label: "Em Andamento", count: statusCounts.em_andamento, color: "bg-primary/15 text-primary" },
+          { key: "infraestrutura" as const, label: "Infraestrutura", count: (projetos ?? []).filter(p => p.status === "infraestrutura").length, color: "bg-amber-500/15 text-amber-600" },
+          { key: "instalacao" as const, label: "Instalação", count: (projetos ?? []).filter(p => p.status === "instalacao").length, color: "bg-blue-500/15 text-blue-600" },
+          { key: "cabeamento" as const, label: "Cabeamento", count: (projetos ?? []).filter(p => p.status === "cabeamento").length, color: "bg-violet-500/15 text-violet-600" },
+          { key: "programacao" as const, label: "Programação", count: (projetos ?? []).filter(p => p.status === "programacao").length, color: "bg-cyan-500/15 text-cyan-600" },
+          { key: "personalizacao" as const, label: "Personalização", count: (projetos ?? []).filter(p => p.status === "personalizacao").length, color: "bg-pink-500/15 text-pink-600" },
           { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
-          { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
           { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
         ] as const).map(s => (
           <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded p-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
@@ -823,6 +837,8 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const [editId, setEditId] = useState<string | null>(null);
   const [tecnicoId, setTecnicoId] = useState("");
   const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
+  const [statusVisita, setStatusVisita] = useState("agendada");
   const [descricao, setDescricao] = useState("");
   const [servicos, setServicos] = useState("");
   const [produtosLevados, setProdutosLevados] = useState("");
@@ -836,13 +852,14 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const [baixaForma, setBaixaForma] = useState("");
 
   const resetVisitaForm = () => {
-    setEditId(null); setTecnicoId(""); setData(""); setDescricao("");
+    setEditId(null); setTecnicoId(""); setData(""); setHora(""); setStatusVisita("agendada"); setDescricao("");
     setServicos(""); setProdutosLevados(""); setValor(0); setDataPagamento("");
     setShowForm(false);
   };
 
   const openEditVisita = (v: any) => {
     setEditId(v.id); setTecnicoId(v.tecnico_id ?? ""); setData(v.data ?? "");
+    setHora(v.hora ?? ""); setStatusVisita(v.status_visita ?? "agendada");
     setDescricao(v.descricao ?? ""); setServicos(v.servicos_executados ?? "");
     setProdutosLevados(v.produtos_levados ? JSON.stringify(v.produtos_levados) : "");
     setValor(v.valor_pago_tecnico ?? 0); setDataPagamento(v.data_pagamento ?? "");
@@ -852,7 +869,8 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const handleSave = async () => {
     try {
       const payload: any = {
-        tecnico_id: tecnicoId || null, data: data || null, descricao: descricao || null,
+        tecnico_id: tecnicoId || null, data: data || null, hora: hora || null,
+        status_visita: statusVisita, descricao: descricao || null,
         servicos_executados: servicos || null, valor_pago_tecnico: valor,
         produtos_levados: produtosLevados ? JSON.parse(produtosLevados) : [],
         data_pagamento: dataPagamento || null,
@@ -919,6 +937,12 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
               </select>
             </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data</label><input type="date" value={data} onChange={e => setData(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Hora</label><input type="time" value={hora} onChange={e => setHora(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
+              <select value={statusVisita} onChange={e => setStatusVisita(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                <option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option>
+              </select>
+            </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor Técnico</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={dataPagamento} onChange={e => setDataPagamento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
@@ -938,6 +962,8 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
             <thead><tr className="bg-secondary/60">
               <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Técnico</th>
               <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Data</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Hora</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
               <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pgto</th>
@@ -948,6 +974,12 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
                 <tr key={v.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEditVisita(v)}>
                   <td className="px-2 py-1.5">{(v.fornecedores as any)?.nome ?? "—"}</td>
                   <td className="px-2 py-1.5">{v.data ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center">{(v as any).hora ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center">
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${(v as any).status_visita === "realizada" ? "bg-success/15 text-success" : (v as any).status_visita === "cancelada" ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>
+                      {(v as any).status_visita === "realizada" ? "Realizada" : (v as any).status_visita === "cancelada" ? "Cancelada" : "Agendada"}
+                    </span>
+                  </td>
                   <td className="px-2 py-1.5">{v.descricao ?? "—"}</td>
                   <td className="px-2 py-1.5 text-right">R$ {(v.valor_pago_tecnico ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
