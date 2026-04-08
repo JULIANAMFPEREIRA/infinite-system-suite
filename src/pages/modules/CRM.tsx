@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCreateProjeto, useCreateProjetoItem, useArquitetos } from "@/hooks/useProjetos";
-import { useContratos } from "@/hooks/useContratos";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
