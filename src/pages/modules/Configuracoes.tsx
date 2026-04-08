@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Settings, Plus, Trash2, UserPlus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Settings, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
