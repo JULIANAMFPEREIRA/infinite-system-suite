@@ -1045,7 +1045,7 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
 
   const changeCompraStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("compras").update({ status }).eq("id", id);
+      const { error } = await supabase.from("compras").update({ status: status as any }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras_projeto", projetoId] }); toast.success("Status atualizado"); },
