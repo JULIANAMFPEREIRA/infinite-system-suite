@@ -36,7 +36,7 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      className="h-screen w-screen flex items-center justify-center overflow-hidden fixed inset-0"
       style={{
         backgroundImage: `url(${loginBg})`,
         backgroundSize: "cover",
@@ -47,15 +47,15 @@ const Login = () => {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/30" />
 
-      <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center">
+      <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center max-h-screen">
         {/* Logo above card */}
-        <div className="overflow-hidden mb-4" style={{ height: "300px" }}>
-          <img src={logoGold} alt="INFINIT NETWORK" className="object-contain" style={{ height: "980px", marginTop: "-340px" }} />
+        <div className="overflow-hidden mb-2 flex-shrink-0" style={{ height: "120px" }}>
+          <img src={logoGold} alt="INFINIT NETWORK" className="object-contain" style={{ height: "400px", marginTop: "-140px" }} />
         </div>
 
         {/* Glass card */}
         <div
-          className="rounded-2xl p-10 space-y-7 w-full"
+          className="rounded-2xl p-8 space-y-5 w-full flex-shrink-0"
           style={{
             background: "rgba(15, 20, 40, 0.65)",
             backdropFilter: "blur(24px)",
@@ -71,7 +71,7 @@ const Login = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-200">Nome Completo</label>
@@ -168,7 +168,7 @@ const Login = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-gray-500 mt-5">
+        <p className="text-center text-xs text-gray-500 mt-3">
           © 2026 INFINIT NETWORK — SMP Consultoria LTDA
         </p>
       </div>
