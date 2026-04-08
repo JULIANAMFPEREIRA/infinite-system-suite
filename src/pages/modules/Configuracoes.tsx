@@ -48,6 +48,39 @@ const Configuracoes = () => {
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
 
+  // Equipe
+  const { data: equipe, refetch: refetchEquipe } = useQuery({
+    queryKey: ["equipe", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+  const [eqNome, setEqNome] = useState("");
+  const [eqFuncao, setEqFuncao] = useState("");
+  const [eqContato, setEqContato] = useState("");
+
+  const addEquipeMember = useMutation({
+    mutationFn: async () => {
+      if (!eqNome.trim() || !empresaId) return;
+      const { error } = await supabase.from("equipe").insert({ empresa_id: empresaId, nome: eqNome, funcao: eqFuncao || null, contato: eqContato || null } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchEquipe(); setEqNome(""); setEqFuncao(""); setEqContato(""); toast.success("Membro adicionado"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteEquipeMember = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("equipe").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { refetchEquipe(); toast.success("Membro removido"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   // Create user
   const [showNewUser, setShowNewUser] = useState(false);
   const [nuNome, setNuNome] = useState("");
