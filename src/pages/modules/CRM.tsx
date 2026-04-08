@@ -217,14 +217,74 @@ const CRM = () => {
 
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
-      if (!detailClient?.id) return;
+      if (!detailClient?.id || !empresaId) return;
       // Unapprove all others
       await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("cliente_id", detailClient.id);
       // Approve this one
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
       if (error) throw error;
+
+      // Auto-sync: create or update project with approved orcamento data
+      const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
+      const items = approvedItems ?? [];
+      const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+      const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
+      const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
+
+      // Get simulation from this orcamento
+      const { data: orcData } = await supabase.from("crm_orcamentos").select("simulacao_pagamento").eq("id", orcId).single();
+      const sim = (orcData?.simulacao_pagamento as any) ?? {};
+      const simParcelas = sim.parcelas ?? [];
+      const simFormaPgto = sim.formaPagamento ?? "";
+
+      const cliente = clientes?.find(c => c.id === detailClient.id);
+      const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
+      const descParts = [`Projeto criado automaticamente a partir do CRM`];
+      if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
+      if (cliente?.notas) descParts.push(`Obs: ${cliente.notas}`);
+
+      // Check if project already exists for this client
+      const { data: existingProjects } = await supabase.from("projetos").select("id").eq("cliente_id", detailClient.id).eq("empresa_id", empresaId);
+      
+      if (existingProjects && existingProjects.length > 0) {
+        // Update existing project
+        const projId = existingProjects[0].id;
+        await supabase.from("projetos").update({
+          venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
+          numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
+          forma_pagamento: simFormaPgto || null,
+          descricao: descParts.join(" | "),
+        }).eq("id", projId);
+
+        // Replace project items
+        await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
+        for (const item of items) {
+          await createProjetoItem.mutateAsync({ projeto_id: projId, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
+        }
+
+        // Replace financial parcels
+        await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
+        if (simParcelas.length > 0) {
+          const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
+          const inserts = simParcelas.map((p: any, i: number) => ({
+            empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
+            descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
+            valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
+          }));
+          await supabase.from("financeiro_receber").insert(inserts);
+        }
+        toast.success("Projeto atualizado com dados do orçamento aprovado!");
+      } else {
+        // Only auto-create if client status is "projeto"
+        if (detailClient.status_crm === "projeto") {
+          await autoCreateProject(detailClient.id, detailClient.nome, detailClient.endereco_obra, detailClient.endereco, detailClient.arquiteto_id, cliente?.notas);
+        } else {
+          toast.success("Orçamento aprovado! Ao converter o status para 'Projeto', os dados serão sincronizados automaticamente.");
+          return;
+        }
+      }
     },
-    onSuccess: () => { refetchOrcamentos(); toast.success("Orçamento aprovado!"); },
+    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -730,24 +790,38 @@ const CRM = () => {
                   </button>
                 </div>
                 {orcamentos && orcamentos.length > 0 ? (
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-3 flex-wrap">
                     {orcamentos.map(orc => (
-                      <div key={orc.id} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs cursor-pointer transition ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 text-primary font-medium" : "border-border bg-card text-foreground hover:bg-secondary/30"} ${orc.aprovado ? "ring-1 ring-success" : ""}`}>
-                        <button onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }} className="flex items-center gap-1">
-                          {orc.aprovado && <Check size={11} className="text-success" />}
-                          <span>{orc.nome}</span>
-                        </button>
-                        <div className="flex items-center gap-0.5 ml-1 border-l border-border pl-1">
+                      <div
+                        key={orc.id}
+                        onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }}
+                        className={`flex flex-col gap-2 px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 shadow-md" : "border-border bg-card hover:bg-secondary/30 hover:border-primary/40"} ${orc.aprovado ? "ring-2 ring-success ring-offset-1" : ""}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {orc.aprovado && <Check size={16} className="text-success" />}
+                          <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`}>{orc.nome}</span>
+                          {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
                           {!orc.aprovado && (
-                            <button onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-success/15 text-muted-foreground hover:text-success" title="Aprovar">
-                              <Check size={10} />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-success/15 text-success hover:bg-success/25 text-xs font-medium border border-success/30 transition"
+                            >
+                              <Check size={14} /> Aprovar
                             </button>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Duplicar">
-                            <Copy size={10} />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
+                            className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition"
+                          >
+                            <Copy size={14} /> Duplicar
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive" title="Excluir">
-                            <Trash2 size={10} />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
+                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
+                          >
+                            <Trash2 size={14} /> Excluir
                           </button>
                         </div>
                       </div>
