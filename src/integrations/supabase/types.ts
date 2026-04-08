@@ -1196,6 +1196,7 @@ export type Database = {
           nome: string
           numero_parcelas: number | null
           observacoes_pagamento: string | null
+          orcamento_id: string | null
           status: Database["public"]["Enums"]["status_projeto"] | null
           updated_at: string
           venda_total: number | null
@@ -1219,6 +1220,7 @@ export type Database = {
           nome: string
           numero_parcelas?: number | null
           observacoes_pagamento?: string | null
+          orcamento_id?: string | null
           status?: Database["public"]["Enums"]["status_projeto"] | null
           updated_at?: string
           venda_total?: number | null
@@ -1242,6 +1244,7 @@ export type Database = {
           nome?: string
           numero_parcelas?: number | null
           observacoes_pagamento?: string | null
+          orcamento_id?: string | null
           status?: Database["public"]["Enums"]["status_projeto"] | null
           updated_at?: string
           venda_total?: number | null
@@ -1266,6 +1269,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orcamentos"
             referencedColumns: ["id"]
           },
         ]
