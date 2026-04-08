@@ -354,19 +354,33 @@ const Projetos = () => {
         </button>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
+      {/* Status counters - same pattern as CRM */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+        {([
+          { key: "todos" as const, label: "Todos", count: statusCounts.todos, color: "bg-secondary text-secondary-foreground" },
+          { key: "em_andamento" as const, label: "Em Andamento", count: statusCounts.em_andamento, color: "bg-primary/15 text-primary" },
+          { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
+          { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
+        ] as const).map(s => (
+          <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded p-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+            <div className="text-lg font-bold">{s.count}</div>
+            <div className="text-[10px] font-medium truncate">{s.label}</div>
+          </button>
+        ))}
         <button
           onClick={() => setMainTab(mainTab === "pendencias" ? "lista" : "pendencias")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition ${mainTab === "pendencias" ? "bg-warning text-warning-foreground ring-2 ring-warning" : "bg-warning/15 text-warning hover:bg-warning/25"}`}
+          className={`rounded p-2 text-center transition ${mainTab === "pendencias" ? "ring-2 ring-warning" : "hover:opacity-80"} bg-warning/15 text-warning`}
         >
-          <AlertTriangle size={14} /> Pendências {pendenciasCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">{pendenciasCount}</span>}
+          <div className="text-lg font-bold">{pendenciasCount}</div>
+          <div className="text-[10px] font-medium truncate">Pendências</div>
         </button>
         <button
           onClick={() => setMainTab(mainTab === "financeiro_global" ? "lista" : "financeiro_global")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition ${mainTab === "financeiro_global" ? "bg-primary text-primary-foreground ring-2 ring-primary" : "bg-primary/15 text-primary hover:bg-primary/25"}`}
+          className={`rounded p-2 text-center transition ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
         >
-          <DollarSign size={14} /> Financeiro
+          <div className="text-lg font-bold"><DollarSign size={18} className="mx-auto" /></div>
+          <div className="text-[10px] font-medium truncate">Financeiro</div>
         </button>
       </div>
 
@@ -409,7 +423,7 @@ const Projetos = () => {
 
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
-          ) : (projetos ?? []).length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Nenhum projeto encontrado.</div>
           ) : (
             <div className="border border-border rounded overflow-hidden">
@@ -429,7 +443,7 @@ const Projetos = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(projetos ?? []).map(p => (
+                    {filtered.map(p => (
                       <tr key={p.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors" onClick={() => openEdit(p)}>
                         <td className="px-2.5 py-1.5 text-foreground font-medium">{p.nome}</td>
                         <td className="px-2.5 py-1.5 text-foreground">{(p.clientes as any)?.nome ?? "—"}</td>
