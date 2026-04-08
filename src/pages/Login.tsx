@@ -61,7 +61,7 @@ const Login = () => {
         >
           {/* Logo + Title */}
           <div className="text-center space-y-3">
-            <img src={logoGold} alt="INFINIT NETWORK" className="h-28 mx-auto object-contain" />
+            <img src={logoGold} alt="INFINIT NETWORK" className="mx-auto object-contain" style={{ height: "196px" }} />
             <div>
               <h1 className="text-2xl font-bold tracking-wide text-white">INFINIT SYSTEM</h1>
               <p className="text-sm text-blue-300/70 mt-1">ERP - Home & Automação</p>
