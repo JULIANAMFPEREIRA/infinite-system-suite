@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserCheck, Pencil, Check, Plus } from "lucide-react";
 import { useComissoes } from "@/hooks/useFinanceiro";
+import { supabase as sbClient } from "@/integrations/supabase/client";
 import { useFormasPagamento } from "@/hooks/useCategorias";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,6 +144,7 @@ const Comissoes = () => {
               <tr className="bg-secondary/60">
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
                 <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Cliente</th>
                 <th className="text-right px-2.5 py-2 font-semibold border-b border-border">%</th>
                 <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
                 <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
