@@ -349,7 +349,7 @@ const Projetos = () => {
           <h1 className="text-lg font-bold text-foreground">Projetos</h1>
           <span className="text-xs text-muted-foreground">({statusCounts.todos})</span>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); setMainTab("todos"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+        <button onClick={() => { resetForm(); setShowForm(true); setMainTab("lista"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
           <Plus size={14} /> Novo Projeto
         </button>
       </div>
