@@ -649,114 +649,65 @@ const CRM = () => {
                     <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
                   </div>
 
-                  {/* ─── SIMULAÇÃO DE PAGAMENTO ─── */}
-                  <div className="bg-card border border-border rounded p-3 space-y-3">
-                    <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento</h4>
-                    <p className="text-[10px] text-muted-foreground">Apenas visualização — nenhum registro financeiro será criado.</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
-                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                          <option value="avista">À Vista</option>
-                          <option value="parcelado">Parcelado</option>
-                        </select>
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
-                        <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                          <option value="boleto">Boleto</option>
-                          <option value="pix">PIX</option>
-                          <option value="cartao">Cartão</option>
-                          <option value="transferencia">Transferência</option>
-                          <option value="cheque">Cheque</option>
-                        </select>
-                      </div>
-                      {simCondicao === "parcelado" && (
-                        <>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
-                            <input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
-                            <input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label>
-                            <input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label>
-                            <input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Simulation result */}
-                    <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p>
-                        <p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p>
-                      </div>
-                      {simCondicao === "parcelado" && (
-                        <>
-                          <div className="bg-secondary/30 rounded p-2 text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
-                            <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
-                          </div>
-                          <div className="bg-secondary/30 rounded p-2 text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
-                            <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
-                          </div>
-                          <div className="bg-secondary/30 rounded p-2 text-center">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
-                            <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
-                          </div>
-                          <div className="bg-primary/10 rounded p-2 text-center border border-primary/20">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p>
-                            <p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* 📌 8. Parcelas editáveis */}
-                    {parcelasParaExibir.length > 0 && (
-                      <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
-                        <table className="w-full text-xs">
-                          <thead><tr className="bg-secondary/60">
-                            <th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th>
-                            <th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th>
-                            <th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th>
-                          </tr></thead>
-                          <tbody>
-                            {simulacao.entrada > 0 && (
-                              <tr className="border-b border-border bg-primary/5">
-                                <td className="px-2.5 py-1 text-center font-medium">Entrada</td>
-                                <td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td>
-                                <td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td>
-                              </tr>
-                            )}
-                            {parcelasParaExibir.map((p, idx) => (
-                              <tr key={p.numero} className="border-b border-border last:border-b-0">
-                                <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
-                                <td className="px-2.5 py-1 text-right">
-                                  <input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" />
-                                </td>
-                                <td className="px-2.5 py-1 text-center">
-                                  <input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" />
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
               {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado.</p>}
+            </div>
+          </TabsContent>
+
+          {/* ─── FINANCEIRO (SIMULAÇÃO) ─── */}
+          <TabsContent value="financeiro">
+            <div className="space-y-3">
+              <div className="flex gap-4 text-xs p-2.5 bg-primary/5 border border-primary/15 rounded-lg flex-wrap">
+                <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
+                <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
+                <span>Total RT: <strong className="text-warning">R$ {totalCrmRt.toFixed(2)}</strong></span>
+                <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
+              </div>
+
+              <div className="bg-card border border-border rounded p-3 space-y-3">
+                <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento</h4>
+                <p className="text-[10px] text-muted-foreground">Ao converter para Projeto, as parcelas serão geradas automaticamente no financeiro.</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                    <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
+                  <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
+                    <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
+                  {simCondicao === "parcelado" && (<>
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+                  </>)}
+                </div>
+                <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
+                  <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p><p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
+                  {simCondicao === "parcelado" && (<>
+                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p><p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
+                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p><p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
+                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p><p className="text-sm font-bold text-foreground">{simParcelas}x</p></div>
+                    <div className="bg-primary/10 rounded p-2 text-center border border-primary/20"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p><p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
+                  </>)}
+                </div>
+                {parcelasParaExibir.length > 0 && (
+                  <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-secondary/60"><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th><th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th></tr></thead>
+                      <tbody>
+                        {simulacao.entrada > 0 && (<tr className="border-b border-border bg-primary/5"><td className="px-2.5 py-1 text-center font-medium">Entrada</td><td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
+                        {parcelasParaExibir.map((p, idx) => (
+                          <tr key={p.numero} className="border-b border-border last:border-b-0">
+                            <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
+                            <td className="px-2.5 py-1 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" /></td>
+                            <td className="px-2.5 py-1 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Adicione itens no pré-projeto para simular o pagamento.</p>}
             </div>
           </TabsContent>
 
