@@ -157,6 +157,7 @@ const Comissoes = () => {
                 <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
                   <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
                   <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.clientes?.nome ?? "—"}</td>
                   <td className="px-2.5 py-1.5 text-right">
                     {editId === c.id ? <input type="number" value={editPercentual} onChange={e => setEditPercentual(Number(e.target.value))} className="w-14 h-6 px-1 text-xs bg-background border border-border rounded" /> : `${c.percentual ?? 0}%`}
                   </td>
@@ -181,7 +182,7 @@ const Comissoes = () => {
                   </td>
                 </tr>
               ))}
-              {(!comissoes || comissoes.length === 0) && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhuma comissão encontrada.</td></tr>}
+              {(!comissoes || comissoes.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhuma comissão encontrada.</td></tr>}
             </tbody>
           </table>
         </div>
