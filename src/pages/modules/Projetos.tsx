@@ -79,7 +79,7 @@ const Projetos = () => {
   const [numeroParcelas, setNumeroParcelas] = useState(1);
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState("todos");
+  const [mainTab, setMainTab] = useState("lista");
 
   const statusCounts = useMemo(() => {
     const all = projetos ?? [];
