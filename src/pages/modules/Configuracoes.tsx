@@ -8,6 +8,7 @@ import { useCategorias, useCreateCategoria, useDeleteCategoria, useFormasPagamen
 import { toast } from "sonner";
 
 const Configuracoes = () => {
+  const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
 
