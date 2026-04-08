@@ -269,6 +269,26 @@ const Projetos = () => {
     );
   }
 
+  // Status counts
+  const statusCounts = useMemo(() => {
+    const all = projetos ?? [];
+    return {
+      todos: all.length,
+      em_andamento: all.filter(p => p.status === "em_andamento").length,
+      concluido: all.filter(p => p.status === "concluido").length,
+      pos_venda: all.filter(p => p.status === "pos_venda").length,
+      cancelado: all.filter(p => p.status === "cancelado").length,
+      orcamento: all.filter(p => p.status === "orcamento").length,
+      aprovado: all.filter(p => p.status === "aprovado").length,
+      proposta: all.filter(p => p.status === "proposta").length,
+      vendido: all.filter(p => p.status === "vendido").length,
+    };
+  }, [projetos]);
+
+  const pendenciasCount = Object.values(pendenciaCounts ?? {}).reduce((a: number, b: number) => a + b, 0);
+
+  const [mainTab, setMainTab] = useState("todos");
+
   // LIST VIEW
   return (
     <div className="space-y-4 animate-fade-in">
@@ -276,22 +296,56 @@ const Projetos = () => {
         <div className="flex items-center gap-2">
           <FolderKanban size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">Projetos</h1>
+          <span className="text-xs text-muted-foreground">({statusCounts.todos})</span>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+        <button onClick={() => { resetForm(); setShowForm(true); setMainTab("todos"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
           <Plus size={14} /> Novo Projeto
         </button>
       </div>
 
-      <div className="flex gap-1.5 flex-wrap">
-        {(["todos", ...statusOptions] as const).map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)} className={`px-2.5 py-1 rounded text-[11px] font-medium transition ${filterStatus === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-            {s === "todos" ? "Todos" : statusLabels[s as StatusProjeto]}
+      {/* Status counters */}
+      <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
+        {([
+          { key: "todos", label: "Todos", count: statusCounts.todos, color: "bg-secondary text-secondary-foreground" },
+          { key: "em_andamento", label: "Em Andamento", count: statusCounts.em_andamento, color: "bg-primary/15 text-primary" },
+          { key: "concluido", label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "pos_venda", label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
+          { key: "cancelado", label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
+          { key: "orcamento", label: "Orçamento", count: statusCounts.orcamento, color: "bg-secondary text-secondary-foreground" },
+          { key: "aprovado", label: "Aprovado", count: statusCounts.aprovado, color: "bg-success/15 text-success" },
+          { key: "proposta", label: "Proposta", count: statusCounts.proposta, color: "bg-warning/15 text-warning" },
+          { key: "vendido", label: "Vendido", count: statusCounts.vendido, color: "bg-primary/15 text-primary" },
+        ] as const).map(s => (
+          <button key={s.key} onClick={() => { setMainTab(s.key); setFilterStatus(s.key as any); }} className={`rounded p-2 text-center transition ${mainTab === s.key ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+            <div className="text-lg font-bold">{s.count}</div>
+            <div className="text-[10px] font-medium truncate">{s.label}</div>
           </button>
         ))}
       </div>
 
-      {showForm && viewMode === "list" && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <Tabs value={mainTab} onValueChange={v => { setMainTab(v); if (v !== "financeiro_global" && v !== "pendencias") setFilterStatus(v as any); }}>
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
+          <TabsTrigger value="todos" className="text-xs">Todos</TabsTrigger>
+          <TabsTrigger value="em_andamento" className="text-xs">Em Andamento</TabsTrigger>
+          <TabsTrigger value="concluido" className="text-xs">Concluído</TabsTrigger>
+          <TabsTrigger value="pos_venda" className="text-xs">Pós-Venda</TabsTrigger>
+          <TabsTrigger value="cancelado" className="text-xs">Cancelado</TabsTrigger>
+          <TabsTrigger value="pendencias" className="text-xs">Pendências ({pendenciasCount})</TabsTrigger>
+          <TabsTrigger value="financeiro_global" className="text-xs">💰 Financeiro</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="financeiro_global">
+          <FinanceiroGlobalSection projetos={projetos ?? []} empresaId={empresaId} />
+        </TabsContent>
+
+        <TabsContent value="pendencias">
+          <PendenciasSection projetos={projetos ?? []} pendenciaCounts={pendenciaCounts ?? {}} navigate={navigate} />
+        </TabsContent>
+
+        {["todos", "em_andamento", "concluido", "pos_venda", "cancelado", "orcamento", "aprovado", "proposta", "vendido"].map(tabKey => (
+          <TabsContent key={tabKey} value={tabKey}>
+      {showForm && (
+        <div className="bg-card border border-border rounded-lg p-4 space-y-4 mb-4">
           <h2 className="text-sm font-semibold text-foreground">Novo Projeto</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
