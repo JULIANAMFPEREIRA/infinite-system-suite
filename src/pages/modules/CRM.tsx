@@ -496,6 +496,13 @@ const CRM = () => {
                     <p className="text-[10px] text-muted-foreground">Apenas visualização — nenhum registro financeiro será criado.</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="avista">À Vista</option>
+                          <option value="parcelado">Parcelado</option>
+                        </select>
+                      </div>
+                      <div className="space-y-0.5">
                         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
                         <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                           <option value="boleto">Boleto</option>
@@ -505,42 +512,54 @@ const CRM = () => {
                           <option value="cheque">Cheque</option>
                         </select>
                       </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
-                        <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
-                        <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo</label>
-                        <select value={simIntervalo} onChange={e => setSimIntervalo(e.target.value as any)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                          <option value="mensal">Mensal</option>
-                          <option value="quinzenal">Quinzenal</option>
-                          <option value="semanal">Semanal</option>
-                        </select>
-                      </div>
+                      {simCondicao === "parcelado" && (
+                        <>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
+                            <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
+                            <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label>
+                            <input type="number" value={simIntervalo} onChange={e => setSimIntervalo(Math.max(1, Number(e.target.value)))} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label>
+                            <input type="number" value={simJuros} onChange={e => setSimJuros(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Simulation result */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
                       <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p>
                         <p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p>
                       </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
-                        <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
-                        <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-secondary/30 rounded p-2 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
-                        <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
-                      </div>
+                      {simCondicao === "parcelado" && (
+                        <>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
+                            <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
+                            <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-secondary/30 rounded p-2 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
+                            <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
+                          </div>
+                          <div className="bg-primary/10 rounded p-2 text-center border border-primary/20">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p>
+                            <p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {simulacao.parcelas.length > 0 && (
