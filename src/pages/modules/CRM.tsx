@@ -919,7 +919,6 @@ const CRM = () => {
                               </button>
                             </>
                           )}
-                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
                             className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition"
