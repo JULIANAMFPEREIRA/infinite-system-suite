@@ -54,10 +54,12 @@ const CRM = () => {
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
   // Payment simulation state
+  const [simCondicao, setSimCondicao] = useState<"avista" | "parcelado">("avista");
   const [simFormaPgto, setSimFormaPgto] = useState("boleto");
   const [simParcelas, setSimParcelas] = useState(1);
   const [simEntrada, setSimEntrada] = useState(0);
-  const [simIntervalo, setSimIntervalo] = useState<"mensal" | "quinzenal" | "semanal">("mensal");
+  const [simIntervalo, setSimIntervalo] = useState(30);
+  const [simJuros, setSimJuros] = useState(0);
 
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
