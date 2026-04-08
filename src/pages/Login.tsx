@@ -61,7 +61,7 @@ const Login = () => {
         >
           {/* Logo + Title inside card */}
           <div className="text-center flex flex-col items-center">
-              <img src={logoGold} alt="INFINIT NETWORK" className="object-contain h-12 mb-3" />
+              <img src={logoGold} alt="INFINIT NETWORK" className="object-contain h-24 mb-4" />
               <h1 className="text-2xl font-bold tracking-wide text-white">INFINIT SYSTEM</h1>
               <p className="text-sm text-blue-300/70 mt-1">ERP - Home & Automação</p>
           </div>
