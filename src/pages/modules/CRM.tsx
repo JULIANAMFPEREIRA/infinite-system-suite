@@ -72,7 +72,16 @@ const CRM = () => {
   const [simJuros, setSimJuros] = useState(0);
   const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(null);
 
-  const { data: clientes, isLoading, isError } = useQuery({
+  // Lightbox & preview state
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [previewDoc, setPreviewDoc] = useState<{ url: string; nome: string } | null>(null);
+
+  const isPreviewable = (filename: string) => {
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    return ["pdf", "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext);
+  };
+
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").order("created_at", { ascending: false });
