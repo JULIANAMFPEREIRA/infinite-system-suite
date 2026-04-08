@@ -825,6 +825,64 @@ const CRM = () => {
             </TabsContent>
           )}
         </Tabs>
+
+        {/* ─── LIGHTBOX IMAGENS ─── */}
+        <Dialog open={lightboxIndex !== null} onOpenChange={() => setLightboxIndex(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex flex-col items-center justify-center">
+            {lightboxIndex !== null && imagens[lightboxIndex] && (
+              <>
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                  <button onClick={() => setLightboxZoom(z => Math.max(0.5, z - 0.25))} className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ZoomOut size={16} /></button>
+                  <span className="text-white/70 text-xs min-w-[40px] text-center">{Math.round(lightboxZoom * 100)}%</span>
+                  <button onClick={() => setLightboxZoom(z => Math.min(3, z + 0.25))} className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ZoomIn size={16} /></button>
+                  <a href={(imagens[lightboxIndex] as any).url} target="_blank" download className="p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><Download size={16} /></a>
+                </div>
+                {imagens.length > 1 && (
+                  <>
+                    <button onClick={() => { setLightboxIndex(i => (i! - 1 + imagens.length) % imagens.length); setLightboxZoom(1); }} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ChevronLeft size={20} /></button>
+                    <button onClick={() => { setLightboxIndex(i => (i! + 1) % imagens.length); setLightboxZoom(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/15 text-white hover:bg-white/25 transition"><ChevronRight size={20} /></button>
+                  </>
+                )}
+                <div className="flex-1 flex items-center justify-center overflow-auto w-full p-8">
+                  <img
+                    src={(imagens[lightboxIndex] as any).url}
+                    alt={(imagens[lightboxIndex] as any).nome_arquivo}
+                    className="max-w-full max-h-[80vh] object-contain transition-transform duration-200"
+                    style={{ transform: `scale(${lightboxZoom})` }}
+                  />
+                </div>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+                  <span className="text-white/80 text-xs bg-black/60 px-3 py-1 rounded-full">{(imagens[lightboxIndex] as any).nome_arquivo} — {lightboxIndex + 1}/{imagens.length}</span>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── PREVIEW DOCUMENTO ─── */}
+        <Dialog open={previewDoc !== null} onOpenChange={() => setPreviewDoc(null)}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+            {previewDoc && (
+              <>
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+                  <span className="text-sm font-medium truncate">{previewDoc.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <a href={previewDoc.url} target="_blank" download className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><Download size={13} /> Download</a>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-muted/30">
+                  {previewDoc.nome.toLowerCase().endsWith(".pdf") ? (
+                    <iframe src={previewDoc.url} className="w-full h-[80vh] border-none" title={previewDoc.nome} />
+                  ) : (
+                    <div className="flex items-center justify-center p-8">
+                      <img src={previewDoc.url} alt={previewDoc.nome} className="max-w-full max-h-[75vh] object-contain" />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
