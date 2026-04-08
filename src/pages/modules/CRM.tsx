@@ -226,7 +226,7 @@ const CRM = () => {
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
         if (error) throw error;
         if (statusCrm === "projeto" && oldCliente?.status_crm !== "projeto") {
-          await autoCreateProject(editId, nome, enderecoObra || null, endereco || null, payload.arquiteto_id);
+          await autoCreateProject(editId, nome, enderecoObra || null, endereco || null, payload.arquiteto_id, oldCliente?.notas);
         }
       } else {
         const { error } = await supabase.from("clientes").insert({ ...payload, empresa_id: empresaId! });
