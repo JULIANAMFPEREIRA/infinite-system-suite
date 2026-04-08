@@ -542,7 +542,14 @@ const CRM = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => { refetchCrmItens(); resetItemForm(); toast.success(editItemId ? "Item atualizado" : "Item adicionado"); },
+    onSuccess: () => {
+      refetchCrmItens(); resetItemForm(); toast.success(editItemId ? "Item atualizado" : "Item adicionado");
+      // Auto-sync if orcamento is approved
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
