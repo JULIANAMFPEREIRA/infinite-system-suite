@@ -248,6 +248,44 @@ const Configuracoes = () => {
           <p className="text-xs text-muted-foreground">Nenhum usuário encontrado.</p>
         )}
       </div>
+
+      {/* 📌 7. Cadastro de Equipe */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Users size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Equipe / Funcionários</h2>
+        </div>
+        <div className="flex gap-2 items-end flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={eqNome} onChange={e => setEqNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Função</label><input value={eqFuncao} onChange={e => setEqFuncao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Contato</label><input value={eqContato} onChange={e => setEqContato(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <button onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"><Plus size={14} /></button>
+        </div>
+        {equipe && equipe.length > 0 ? (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-secondary/60">
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Função</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Contato</th>
+                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+              </tr></thead>
+              <tbody>
+                {equipe.map((m: any) => (
+                  <tr key={m.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2.5 py-1.5 font-medium">{m.nome}</td>
+                    <td className="px-2.5 py-1.5">{m.funcao ?? "—"}</td>
+                    <td className="px-2.5 py-1.5">{m.contato ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <button onClick={() => { if (window.confirm("Remover membro?")) deleteEquipeMember.mutate(m.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Nenhum membro cadastrado.</p>}
+      </div>
     </div>
   );
 };
