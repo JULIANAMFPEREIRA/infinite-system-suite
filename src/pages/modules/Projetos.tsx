@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check } from "lucide-react";
+import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign } from "lucide-react";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque } from "@/hooks/useNecessidadesCompra";
+import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque, useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
 import { useFormasPagamento } from "@/hooks/useCategorias";
 import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/useVisitasTecnicas";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -177,6 +177,7 @@ const Projetos = () => {
             <TabsTrigger value="visitas" className="text-xs">Visitas Técnicas</TabsTrigger>
             <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
             <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>
+            <TabsTrigger value="comissoes" className="text-xs">Comissões</TabsTrigger>
             <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
             <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>
           </TabsList>
@@ -224,7 +225,7 @@ const Projetos = () => {
 
           <TabsContent value="itens">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoItensSection projetoId={selectedProjetoId} />
+              <ProjetoItensSection projetoId={selectedProjetoId} projetoNome={nome} clienteId={clienteId} empresaId={empresaId} numeroParcelas={numeroParcelas} />
             </div>
           </TabsContent>
 
@@ -246,15 +247,15 @@ const Projetos = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="comissoes">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoComissoesSection projetoId={selectedProjetoId} arquitetoId={arquitetoId} />
+            </div>
+          </TabsContent>
+
           <TabsContent value="cronograma">
-            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Cronograma</h3>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div><span className="text-muted-foreground">Início:</span> <strong>{dataInicio || "Não definido"}</strong></div>
-                <div><span className="text-muted-foreground">Previsão:</span> <strong>{dataPrevisao || "Não definido"}</strong></div>
-                <div><span className="text-muted-foreground">Status:</span> <strong>{statusLabels[currentProjeto?.status as StatusProjeto] ?? "—"}</strong></div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4">Funcionalidade de etapas detalhadas em desenvolvimento.</p>
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoCronogramaSection projeto={currentProjeto} dataInicio={dataInicio} dataPrevisao={dataPrevisao} />
             </div>
           </TabsContent>
 
@@ -382,8 +383,8 @@ const Projetos = () => {
 };
 
 // ======== ITENS DO PROJETO ========
-const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
-  const empresaId = useEmpresa();
+const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number }) => {
+  const qc = useQueryClient();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
   const deleteItem = useDeleteProjetoItem();
@@ -409,6 +410,8 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   const [rt, setRt] = useState(0);
   const [produtoId, setProdutoId] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showGerarParcelas, setShowGerarParcelas] = useState(false);
+  const [gerarQtdParcelas, setGerarQtdParcelas] = useState(numeroParcelas);
 
   const filteredProdutos = produtos?.filter(p => p.nome.toLowerCase().includes(desc.toLowerCase())) ?? [];
 
@@ -420,6 +423,7 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
   const totalCusto = itens?.reduce((acc, i) => acc + (i.quantidade ?? 1) * (i.preco_custo ?? 0), 0) ?? 0;
   const totalVenda = itens?.reduce((acc, i) => acc + (i.quantidade ?? 1) * (i.preco_venda ?? 0), 0) ?? 0;
   const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
+  const lucro = totalVenda - totalCusto;
 
   const handleAddItem = async () => {
     if (!desc.trim()) { toast.error("Descrição obrigatória"); return; }
@@ -446,14 +450,42 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
     try { await deleteItem.mutateAsync({ id: itemId, projetoId }); toast.success("Item removido"); } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleGerarParcelas = async () => {
+    if (totalVenda <= 0) { toast.error("Valor de venda total deve ser maior que 0"); return; }
+    if (!empresaId) return;
+    try {
+      const valorParcela = Math.round((totalVenda / gerarQtdParcelas) * 100) / 100;
+      const today = new Date();
+      const inserts = Array.from({ length: gerarQtdParcelas }, (_, i) => {
+        const dt = new Date(today); dt.setMonth(dt.getMonth() + i + 1);
+        return {
+          empresa_id: empresaId, projeto_id: projetoId, cliente_id: clienteId || null,
+          descricao: `Parcela ${i + 1}/${gerarQtdParcelas} — ${projetoNome}`,
+          valor: valorParcela, parcela: i + 1,
+          data_vencimento: dt.toISOString().split("T")[0], status: "pendente" as const,
+        };
+      });
+      await supabase.from("financeiro_receber").insert(inserts);
+      qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
+      toast.success(`${gerarQtdParcelas} parcelas geradas!`);
+      setShowGerarParcelas(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Itens do Projeto</h3>
-      <div className="flex gap-4 text-[11px]">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Itens do Projeto</h3>
+        <button onClick={() => { setShowGerarParcelas(true); setGerarQtdParcelas(numeroParcelas); }} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-success text-white hover:brightness-105">
+          <DollarSign size={12} /> Gerar Pagamento
+        </button>
+      </div>
+
+      <div className="flex gap-4 text-[11px] flex-wrap">
         <span className="text-muted-foreground">Custo: <strong className="text-foreground">R$ {totalCusto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
         <span className="text-muted-foreground">Venda: <strong className="text-foreground">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
         <span className="text-muted-foreground">Margem: <strong className={margem > 0 ? "text-success" : "text-destructive"}>{margem.toFixed(1)}%</strong></span>
-        <span className="text-muted-foreground">Lucro: <strong className={totalVenda - totalCusto > 0 ? "text-success" : "text-destructive"}>R$ {(totalVenda - totalCusto).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+        <span className="text-muted-foreground">Lucro: <strong className={lucro > 0 ? "text-success" : "text-destructive"}>R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
       </div>
 
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : itens && itens.length > 0 && (
@@ -522,6 +554,24 @@ const ProjetoItensSection = ({ projetoId }: { projetoId: string }) => {
         <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">RT%</label><input type="number" value={rt} onChange={e => setRt(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
         <button onClick={handleAddItem} disabled={createItem.isPending} className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50"><Plus size={12} /></button>
       </div>
+
+      <Dialog open={showGerarParcelas} onOpenChange={setShowGerarParcelas}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Gerar Parcelas</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">Total de Venda: <strong className="text-foreground">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></p>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Nº de Parcelas</label>
+              <input type="number" min={1} value={gerarQtdParcelas} onChange={e => setGerarQtdParcelas(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+            </div>
+            <p className="text-xs text-muted-foreground">Valor por parcela: <strong>R$ {(totalVenda / (gerarQtdParcelas || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></p>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowGerarParcelas(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleGerarParcelas} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Gerar Parcelas</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -533,6 +583,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const { data: visitas, isLoading } = useVisitasTecnicas(projetoId);
   const createVisita = useCreateVisita();
   const updateVisita = useUpdateVisita();
+  const { data: formasPgto } = useFormasPagamento();
 
   const { data: tecnicos } = useQuery({
     queryKey: ["tecnicos_select", empresaId],
@@ -553,6 +604,12 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const [produtosLevados, setProdutosLevados] = useState("");
   const [valor, setValor] = useState(0);
   const [dataPagamento, setDataPagamento] = useState("");
+
+  // Baixa modal
+  const [showBaixa, setShowBaixa] = useState(false);
+  const [baixaVisitaId, setBaixaVisitaId] = useState<string | null>(null);
+  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaForma, setBaixaForma] = useState("");
 
   const resetVisitaForm = () => {
     setEditId(null); setTecnicoId(""); setData(""); setDescricao("");
@@ -604,10 +661,17 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const markPago = async (visita: any) => {
+  const openBaixa = (v: any) => {
+    setBaixaVisitaId(v.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setShowBaixa(true);
+  };
+
+  const handleBaixa = async () => {
+    if (!baixaVisitaId) return;
     try {
-      await updateVisita.mutateAsync({ id: visita.id, projeto_id: projetoId, status_pagamento: "pago", data_pagamento: new Date().toISOString().split("T")[0] });
+      await updateVisita.mutateAsync({ id: baixaVisitaId, projeto_id: projetoId, status_pagamento: "pago", data_pagamento: baixaData });
+      await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("projeto_id", projetoId).eq("fornecedor_id", visitas?.find(v => v.id === baixaVisitaId)?.tecnico_id ?? "");
       toast.success("Pagamento registrado");
+      setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -662,11 +726,11 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
                   <td className="px-2 py-1.5">{v.data ?? "—"}</td>
                   <td className="px-2 py-1.5">{v.descricao ?? "—"}</td>
                   <td className="px-2 py-1.5 text-right">R$ {(v.valor_pago_tecnico ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                     {v.status_pagamento === "pago" ? (
                       <span className="px-1.5 py-0.5 rounded text-[11px] bg-success/15 text-success">Pago</span>
                     ) : (
-                      <button onClick={e => { e.stopPropagation(); markPago(v); }} className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning hover:bg-warning/25">Pendente</button>
+                      <button onClick={() => openBaixa(v)} className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning hover:bg-warning/25">Pendente</button>
                     )}
                   </td>
                   <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
@@ -681,11 +745,31 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
           </table>
         </div>
       ) : <p className="text-xs text-muted-foreground">Nenhuma visita registrada.</p>}
+
+      <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Pagamento — Visita Técnica</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// ======== FINANCEIRO DO PROJETO (PARCELAS) ========
+// ======== FINANCEIRO DO PROJETO ========
 const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { projetoId: string; projetoNome: string; clienteId: string }) => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
@@ -744,12 +828,27 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleDeleteParcela = async (id: string) => {
+    try {
+      const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
+      toast.success("Parcela excluída");
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   // Baixa modal
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Baixa pagar modal
+  const [showBaixaPagar, setShowBaixaPagar] = useState(false);
+  const [baixaPagarId, setBaixaPagarId] = useState<string | null>(null);
+  const [baixaPagarData, setBaixaPagarData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaPagarForma, setBaixaPagarForma] = useState("");
 
   const handleBaixa = async () => {
     if (!baixaId) return;
@@ -761,9 +860,21 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleBaixaPagar = async () => {
+    if (!baixaPagarId) return;
+    try {
+      const { error } = await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaPagarData }).eq("id", baixaPagarId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      toast.success("Pago!"); setShowBaixaPagar(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const totalReceber = parcelas?.reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
   const totalRecebido = parcelas?.filter(p => p.status === "pago").reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
   const totalPagar = contasPagar?.reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
+  const totalPago = contasPagar?.filter(p => p.status === "pago").reduce((acc, p) => acc + (p.valor ?? 0), 0) ?? 0;
+  const lucro = totalRecebido - totalPago;
   const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : s === "vencido" ? "bg-destructive/15 text-destructive" : "bg-warning/15 text-warning";
 
   return (
@@ -775,10 +886,12 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
         </button>
       </div>
 
-      <div className="flex gap-4 text-[11px]">
-        <span className="text-muted-foreground">A Receber: <strong className="text-foreground">R$ {totalReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
-        <span className="text-muted-foreground">Recebido: <strong className="text-success">R$ {totalRecebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
-        <span className="text-muted-foreground">A Pagar: <strong className="text-destructive">R$ {totalPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-[11px]">
+        <div className="bg-secondary/30 rounded p-2"><span className="text-muted-foreground block">A Receber</span><strong className="text-foreground">R$ {totalReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+        <div className="bg-success/10 rounded p-2"><span className="text-muted-foreground block">Recebido</span><strong className="text-success">R$ {totalRecebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+        <div className="bg-secondary/30 rounded p-2"><span className="text-muted-foreground block">A Pagar</span><strong className="text-foreground">R$ {totalPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+        <div className="bg-destructive/10 rounded p-2"><span className="text-muted-foreground block">Pago</span><strong className="text-destructive">R$ {totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+        <div className={`rounded p-2 ${lucro >= 0 ? "bg-success/10" : "bg-destructive/10"}`}><span className="text-muted-foreground block">Lucro</span><strong className={lucro >= 0 ? "text-success" : "text-destructive"}>R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
       </div>
 
       {showForm && (
@@ -826,6 +939,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                       <div className="flex items-center justify-center gap-1">
                         {p.status === "pendente" && <button onClick={() => { setBaixaId(p.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true); }} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={12} /></button>}
                         <button onClick={() => openEditParcela(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                        <button onClick={() => { if (window.confirm("Excluir parcela?")) handleDeleteParcela(p.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                       </div>
                     </td>
                   </tr>
@@ -847,6 +961,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
               </tr></thead>
               <tbody>
                 {contasPagar.map(c => (
@@ -856,6 +971,11 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                     <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                     <td className="px-2 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
                     <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                    <td className="px-2 py-1.5 text-center">
+                      {c.status === "pendente" && (
+                        <button onClick={() => { setBaixaPagarId(c.id); setBaixaPagarData(new Date().toISOString().split("T")[0]); setBaixaPagarForma(""); setShowBaixaPagar(true); }} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={12} /></button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -884,12 +1004,33 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showBaixaPagar} onOpenChange={setShowBaixaPagar}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Pagamento</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={baixaPagarData} onChange={e => setBaixaPagarData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaPagarForma} onChange={e => setBaixaPagarForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixaPagar(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixaPagar} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 // ======== COMPRAS DO PROJETO ========
 const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
+  const qc = useQueryClient();
   const { data: compras, isLoading } = useQuery({
     queryKey: ["compras_projeto", projetoId],
     queryFn: async () => {
@@ -900,11 +1041,48 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
     enabled: !!projetoId,
   });
 
+  const { data: necessidades } = useNecessidadesCompra(projetoId);
+
+  const changeCompraStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("compras").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras_projeto", projetoId] }); toast.success("Status atualizado"); },
+  });
+
   const statusColor = (s: string) => s === "entregue" ? "bg-success/15 text-success" : s === "cancelada" ? "bg-destructive/15 text-destructive" : s === "aprovada" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning";
 
+  const pendentes = necessidades?.filter(n => n.status === "pendente") ?? [];
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <h3 className="text-sm font-semibold text-foreground">Compras do Projeto</h3>
+
+      {pendentes.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-warning mb-2">⚠️ Itens Pendentes de Compra ({pendentes.length})</h4>
+          <div className="border border-warning/30 rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-warning/10">
+                <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
+                <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Qtd</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              </tr></thead>
+              <tbody>
+                {pendentes.map((n: any) => (
+                  <tr key={n.id} className="border-b border-border last:border-b-0">
+                    <td className="px-2 py-1.5">{n.descricao ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-right">{n.quantidade}</td>
+                    <td className="px-2 py-1.5 text-center"><span className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning font-medium">Pendente</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : compras && compras.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
@@ -914,6 +1092,7 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Qtd</th>
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Total</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
             </tr></thead>
             <tbody>
               {compras.map(c => (
@@ -922,13 +1101,228 @@ const ProjetoComprasSection = ({ projetoId }: { projetoId: string }) => {
                   <td className="px-2 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
                   <td className="px-2 py-1.5 text-right">{c.quantidade}</td>
                   <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                  <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                  <td className="px-2 py-1.5 text-center">
+                    <select value={c.status ?? "pendente"} onChange={e => changeCompraStatus.mutate({ id: c.id, status: e.target.value })} onClick={e => e.stopPropagation()} className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}>
+                      <option value="pendente">Pendente</option>
+                      <option value="aprovada">Aprovada</option>
+                      <option value="entregue">Entregue</option>
+                      <option value="cancelada">Cancelada</option>
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5 text-center">
+                    <button onClick={() => openEditCompra(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : <p className="text-xs text-muted-foreground">Nenhuma compra vinculada.</p>}
+    </div>
+  );
+};
+
+// ======== COMISSÕES DO PROJETO ========
+const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string; arquitetoId: string }) => {
+  const empresaId = useEmpresa();
+  const qc = useQueryClient();
+  const { data: formasPgto } = useFormasPagamento();
+
+  const { data: comissoes, isLoading } = useQuery({
+    queryKey: ["comissoes_projeto", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("comissoes").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projetoId,
+  });
+
+  const { data: fornecedores } = useQuery({
+    queryKey: ["arquitetos_comissao", empresaId],
+    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("tipo", "arquiteto").order("nome"); return data ?? []; },
+    enabled: !!empresaId,
+  });
+
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [fornecedorId, setFornecedorId] = useState(arquitetoId);
+  const [percentual, setPercentual] = useState(0);
+  const [valor, setValor] = useState(0);
+  const [vencimento, setVencimento] = useState("");
+
+  const [showBaixa, setShowBaixa] = useState(false);
+  const [baixaId, setBaixaId] = useState<string | null>(null);
+  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaForma, setBaixaForma] = useState("");
+
+  const resetForm = () => { setEditId(null); setFornecedorId(arquitetoId); setPercentual(0); setValor(0); setVencimento(""); setShowForm(false); };
+
+  const handleSave = async () => {
+    if (!fornecedorId) { toast.error("Selecione o arquiteto/parceiro"); return; }
+    if (!empresaId) return;
+    try {
+      if (editId) {
+        const { error } = await supabase.from("comissoes").update({ fornecedor_id: fornecedorId, percentual, valor, data_vencimento: vencimento || null }).eq("id", editId);
+        if (error) throw error;
+        await supabase.from("financeiro_pagar").update({ valor, fornecedor_id: fornecedorId, data_vencimento: vencimento || null }).eq("comissao_id", editId);
+        toast.success("Comissão atualizada");
+      } else {
+        const { error } = await supabase.from("comissoes").insert({
+          empresa_id: empresaId, projeto_id: projetoId, fornecedor_id: fornecedorId,
+          percentual, valor, data_vencimento: vencimento || null, status: "pendente",
+        });
+        if (error) throw error;
+        toast.success("Comissão criada");
+      }
+      qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      resetForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const openEdit = (c: any) => {
+    setEditId(c.id); setFornecedorId(c.fornecedor_id); setPercentual(c.percentual ?? 0); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setShowForm(true);
+  };
+
+  const openBaixa = (c: any) => {
+    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setShowBaixa(true);
+  };
+
+  const handleBaixa = async () => {
+    if (!baixaId) return;
+    try {
+      const { error } = await supabase.from("comissoes").update({ status: "pago" }).eq("id", baixaId);
+      if (error) throw error;
+      await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("comissao_id", baixaId);
+      qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      toast.success("Comissão paga"); setShowBaixa(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from("comissoes").delete().eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
+      toast.success("Comissão excluída");
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Comissões (RT)</h3>
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+          <Plus size={12} className="inline mr-1" />Nova Comissão
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-secondary/30 rounded p-3 space-y-2">
+          <h4 className="text-xs font-semibold">{editId ? "Editar Comissão" : "Nova Comissão"}</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto/Parceiro *</label>
+              <select value={fornecedorId} onChange={e => setFornecedorId(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Percentual</label><input type="number" value={percentual} onChange={e => setPercentual(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground">Salvar</button>
+            <button onClick={resetForm} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : comissoes && comissoes.length > 0 ? (
+        <div className="border border-border rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-secondary/60">
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Arquiteto</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">%</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
+            </tr></thead>
+            <tbody>
+              {comissoes.map(c => (
+                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                  <td className="px-2 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-right">{c.percentual ?? 0}%</td>
+                  <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-2 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                  <td className="px-2 py-1.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                      {c.status !== "pago" && <button onClick={() => openBaixa(c)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success" title="Dar baixa"><Check size={12} /></button>}
+                      <button onClick={() => { if (window.confirm("Excluir comissão?")) handleDelete(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="text-xs text-muted-foreground">Nenhuma comissão encontrada.</p>}
+
+      <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Pagamento — Comissão</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ======== CRONOGRAMA ========
+const ProjetoCronogramaSection = ({ projeto, dataInicio, dataPrevisao }: { projeto: any; dataInicio: string; dataPrevisao: string }) => {
+  const status = projeto?.status as StatusProjeto | undefined;
+  const statusIdx = status ? statusOptions.indexOf(status) : 0;
+  const progress = status === "cancelado" ? 0 : Math.round((statusIdx / (statusOptions.length - 2)) * 100);
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-foreground">Cronograma</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div><span className="text-muted-foreground">Início:</span> <strong>{dataInicio || "Não definido"}</strong></div>
+        <div><span className="text-muted-foreground">Previsão:</span> <strong>{dataPrevisao || "Não definido"}</strong></div>
+        <div><span className="text-muted-foreground">Status:</span> <strong>{statusLabels[status ?? "orcamento"]}</strong></div>
+        <div><span className="text-muted-foreground">Progresso:</span> <strong>{progress}%</strong></div>
+      </div>
+      <div className="w-full bg-secondary rounded-full h-3">
+        <div className="bg-primary h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="flex gap-1 flex-wrap mt-2">
+        {statusOptions.filter(s => s !== "cancelado").map((s, i) => (
+          <div key={s} className={`px-2 py-1 rounded text-[10px] font-medium ${i <= statusIdx && status !== "cancelado" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+            {statusLabels[s]}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
