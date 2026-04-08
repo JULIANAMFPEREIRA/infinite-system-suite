@@ -459,6 +459,7 @@ export type Database = {
           descricao: string
           empresa_id: string
           id: string
+          orcamento_id: string | null
           preco_custo: number | null
           preco_venda: number | null
           produto_id: string | null
@@ -471,6 +472,7 @@ export type Database = {
           descricao: string
           empresa_id: string
           id?: string
+          orcamento_id?: string | null
           preco_custo?: number | null
           preco_venda?: number | null
           produto_id?: string | null
@@ -483,6 +485,7 @@ export type Database = {
           descricao?: string
           empresa_id?: string
           id?: string
+          orcamento_id?: string | null
           preco_custo?: number | null
           preco_venda?: number | null
           produto_id?: string | null
@@ -505,10 +508,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_itens_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orcamentos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_itens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_orcamentos: {
+        Row: {
+          aprovado: boolean
+          cliente_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          simulacao_pagamento: Json | null
+        }
+        Insert: {
+          aprovado?: boolean
+          cliente_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome?: string
+          simulacao_pagamento?: Json | null
+        }
+        Update: {
+          aprovado?: boolean
+          cliente_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          simulacao_pagamento?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_orcamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_orcamentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
