@@ -927,8 +927,17 @@ const CRM = () => {
                       >
                         <div className="flex items-center gap-2">
                           {orc.aprovado && <Check size={16} className="text-success" />}
-                          <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`}>{orc.nome}</span>
+                          {editingOrcNome === orc.id ? (
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <input value={orcNomeInput} onChange={e => setOrcNomeInput(e.target.value)} className="h-6 px-1.5 text-xs bg-background border border-primary rounded w-32" autoFocus onKeyDown={e => { if (e.key === "Enter") renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput }); if (e.key === "Escape") setEditingOrcNome(null); }} />
+                              <button onClick={() => renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput })} className="text-primary"><Check size={12} /></button>
+                              <button onClick={() => setEditingOrcNome(null)} className="text-muted-foreground"><X size={12} /></button>
+                            </div>
+                          ) : (
+                            <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`} onDoubleClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }}>{orc.nome}</span>
+                          )}
                           {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
+                          {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>}
                         </div>
                         <div className="flex items-center gap-2">
                           {!orc.aprovado ? (
