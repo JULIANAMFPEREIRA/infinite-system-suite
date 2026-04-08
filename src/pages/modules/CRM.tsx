@@ -555,7 +555,13 @@ const CRM = () => {
 
   const deleteCrmItem = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("crm_itens").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { refetchCrmItens(); toast.success("Item excluído"); },
+    onSuccess: () => {
+      refetchCrmItens(); toast.success("Item excluído");
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    },
   });
 
   // File upload
