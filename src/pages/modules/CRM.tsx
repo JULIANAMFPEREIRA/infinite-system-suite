@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -26,7 +26,7 @@ const CRM = () => {
   const { data: contratos } = useContratos();
   const { data: arquitetos } = useArquitetos();
 
-  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
@@ -52,6 +52,12 @@ const CRM = () => {
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
   const [editItemId, setEditItemId] = useState<string | null>(null);
+
+  // Payment simulation state
+  const [simFormaPgto, setSimFormaPgto] = useState("boleto");
+  const [simParcelas, setSimParcelas] = useState(1);
+  const [simEntrada, setSimEntrada] = useState(0);
+  const [simIntervalo, setSimIntervalo] = useState<"mensal" | "quinzenal" | "semanal">("mensal");
 
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
@@ -122,6 +128,24 @@ const CRM = () => {
     }
     toast.success("Projeto criado automaticamente com itens do CRM!");
   };
+
+  /* ─── Save new client and open detail ─── */
+  const saveNewClient = useMutation({
+    mutationFn: async () => {
+      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId! };
+      const { data, error } = await supabase.from("clientes").insert(payload).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+      toast.success("Cliente cadastrado!");
+      resetForm();
+      setDetailClient(data);
+      setViewMode("detail");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -207,6 +231,24 @@ const CRM = () => {
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
   const totalCrmVenda = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
 
+  // Payment simulation
+  const simulacao = useMemo(() => {
+    const total = totalCrmVenda;
+    const entrada = Math.min(simEntrada, total);
+    const restante = total - entrada;
+    const valorParcela = simParcelas > 0 ? restante / simParcelas : 0;
+    const hoje = new Date();
+    const parcelas: { numero: number; valor: number; data: string }[] = [];
+    for (let i = 0; i < simParcelas; i++) {
+      const d = new Date(hoje);
+      if (simIntervalo === "mensal") d.setMonth(d.getMonth() + i + (entrada > 0 ? 1 : 1));
+      else if (simIntervalo === "quinzenal") d.setDate(d.getDate() + (i + 1) * 15);
+      else d.setDate(d.getDate() + (i + 1) * 7);
+      parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
+    }
+    return { total, entrada, restante, valorParcela, parcelas };
+  }, [totalCrmVenda, simEntrada, simParcelas, simIntervalo]);
+
   // Status counts
   const statusCounts = {
     lead: clientes?.filter(c => c.status_crm === "lead").length ?? 0,
@@ -216,6 +258,63 @@ const CRM = () => {
   };
 
   const isProjeto = detailClient?.status_crm === "projeto";
+
+  /* ─── NEW CLIENT VIEW ─── */
+  if (viewMode === "new") {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <button onClick={backToList} className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition">
+            <ArrowLeft size={14} /> Voltar
+          </button>
+          <h1 className="text-lg font-bold text-foreground">Novo Cliente</h1>
+        </div>
+
+        <Tabs defaultValue="dados" className="w-full">
+          <TabsList className="flex flex-wrap h-auto gap-1">
+            <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
+            <TabsTrigger value="itens" className="text-xs" disabled>Itens (Pré-Projeto)</TabsTrigger>
+            <TabsTrigger value="anotacoes" className="text-xs" disabled>Anotações</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dados">
+            <div className="bg-card border border-border rounded p-3 space-y-3">
+              <h2 className="text-xs font-semibold text-foreground">Cadastrar Cliente</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">E-mail</label><input value={email} onChange={e => setEmail(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Telefone</label><input value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço</label><input value={endereco} onChange={e => setEndereco(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Origem</label>
+                  <select value={origem} onChange={e => setOrigem(e.target.value as OrigemLead)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                    <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="indicacao">Indicação</option><option value="arquiteto">Arquiteto</option><option value="outro">Outro</option>
+                  </select>
+                </div>
+                {origem === "arquiteto" && (
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+                    <select value={arquitetoIdOrigem} onChange={e => setArquitetoIdOrigem(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                      <option value="">Selecione...</option>
+                      {(arquitetos ?? []).map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
+                  <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                    <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => saveNewClient.mutate()} disabled={saveNewClient.isPending || !nome.trim()} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50">Salvar e Continuar</button>
+                <button onClick={() => { resetForm(); setViewMode("list"); }} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80">Cancelar</button>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
 
   /* ─── DETAIL VIEW ─── */
   if (viewMode === "detail" && detailClient) {
@@ -229,17 +328,17 @@ const CRM = () => {
           <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[detailClient.status_crm as StatusCRM]}`}>{statusLabels[detailClient.status_crm as StatusCRM]}</span>
         </div>
 
-        <Tabs defaultValue="resumo" className="w-full">
+        <Tabs defaultValue="dados" className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-1">
-            <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
+            <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
             {isProjeto && <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>}
             {isProjeto && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
           </TabsList>
 
-          {/* ─── RESUMO ─── */}
-          <TabsContent value="resumo">
+          {/* ─── DADOS DO CLIENTE ─── */}
+          <TabsContent value="dados">
             <div className="space-y-3">
               {/* Quick info cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -384,6 +483,88 @@ const CRM = () => {
                     <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
                     <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong></span>
                   </div>
+
+                  {/* ─── SIMULAÇÃO DE PAGAMENTO ─── */}
+                  <div className="bg-card border border-border rounded p-3 space-y-3">
+                    <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento</h4>
+                    <p className="text-[10px] text-muted-foreground">Apenas visualização — nenhum registro financeiro será criado.</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
+                        <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="boleto">Boleto</option>
+                          <option value="pix">PIX</option>
+                          <option value="cartao">Cartão</option>
+                          <option value="transferencia">Transferência</option>
+                          <option value="cheque">Cheque</option>
+                        </select>
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label>
+                        <input type="number" value={simParcelas} onChange={e => setSimParcelas(Math.max(1, Number(e.target.value)))} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label>
+                        <input type="number" value={simEntrada} onChange={e => setSimEntrada(Math.max(0, Number(e.target.value)))} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo</label>
+                        <select value={simIntervalo} onChange={e => setSimIntervalo(e.target.value as any)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="mensal">Mensal</option>
+                          <option value="quinzenal">Quinzenal</option>
+                          <option value="semanal">Semanal</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Simulation result */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="bg-secondary/30 rounded p-2 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</p>
+                        <p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded p-2 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p>
+                        <p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded p-2 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p>
+                        <p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded p-2 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p>
+                        <p className="text-sm font-bold text-foreground">{simParcelas}x</p>
+                      </div>
+                    </div>
+
+                    {simulacao.parcelas.length > 0 && (
+                      <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead><tr className="bg-secondary/60">
+                            <th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th>
+                            <th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th>
+                            <th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th>
+                          </tr></thead>
+                          <tbody>
+                            {simulacao.entrada > 0 && (
+                              <tr className="border-b border-border bg-primary/5">
+                                <td className="px-2.5 py-1 text-center font-medium">Entrada</td>
+                                <td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td>
+                                <td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td>
+                              </tr>
+                            )}
+                            {simulacao.parcelas.map(p => (
+                              <tr key={p.numero} className="border-b border-border last:border-b-0">
+                                <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
+                                <td className="px-2.5 py-1 text-right">R$ {p.valor.toFixed(2)}</td>
+                                <td className="px-2.5 py-1 text-center">{p.data}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado.</p>}
@@ -435,7 +616,7 @@ const CRM = () => {
           <Users size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">CRM — Gestão de Clientes</h1>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+        <button onClick={() => { resetForm(); setViewMode("new"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
           <Plus size={14} /> Novo Cliente
         </button>
       </div>
