@@ -790,24 +790,38 @@ const CRM = () => {
                   </button>
                 </div>
                 {orcamentos && orcamentos.length > 0 ? (
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-3 flex-wrap">
                     {orcamentos.map(orc => (
-                      <div key={orc.id} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs cursor-pointer transition ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 text-primary font-medium" : "border-border bg-card text-foreground hover:bg-secondary/30"} ${orc.aprovado ? "ring-1 ring-success" : ""}`}>
-                        <button onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }} className="flex items-center gap-1">
-                          {orc.aprovado && <Check size={11} className="text-success" />}
-                          <span>{orc.nome}</span>
-                        </button>
-                        <div className="flex items-center gap-0.5 ml-1 border-l border-border pl-1">
+                      <div
+                        key={orc.id}
+                        onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }}
+                        className={`flex flex-col gap-2 px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 shadow-md" : "border-border bg-card hover:bg-secondary/30 hover:border-primary/40"} ${orc.aprovado ? "ring-2 ring-success ring-offset-1" : ""}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {orc.aprovado && <Check size={16} className="text-success" />}
+                          <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`}>{orc.nome}</span>
+                          {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
                           {!orc.aprovado && (
-                            <button onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-success/15 text-muted-foreground hover:text-success" title="Aprovar">
-                              <Check size={10} />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-success/15 text-success hover:bg-success/25 text-xs font-medium border border-success/30 transition"
+                            >
+                              <Check size={14} /> Aprovar
                             </button>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Duplicar">
-                            <Copy size={10} />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
+                            className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition"
+                          >
+                            <Copy size={14} /> Duplicar
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }} className="p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive" title="Excluir">
-                            <Trash2 size={10} />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
+                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
+                          >
+                            <Trash2 size={14} /> Excluir
                           </button>
                         </div>
                       </div>
