@@ -841,12 +841,19 @@ const CRM = () => {
                           {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
                         </div>
                         <div className="flex items-center gap-2">
-                          {!orc.aprovado && (
+                          {!orc.aprovado ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
                               className="flex items-center gap-1 h-8 px-3 rounded bg-success/15 text-success hover:bg-success/25 text-xs font-medium border border-success/30 transition"
                             >
                               <Check size={14} /> Aprovar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
+                            >
+                              <X size={14} /> Desaprovar
                             </button>
                           )}
                           <button
@@ -855,12 +862,14 @@ const CRM = () => {
                           >
                             <Copy size={14} /> Duplicar
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
-                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
-                          >
-                            <Trash2 size={14} /> Excluir
-                          </button>
+                          {!orc.aprovado && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
+                              className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
+                            >
+                              <Trash2 size={14} /> Excluir
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
