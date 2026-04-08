@@ -48,9 +48,6 @@ const Login = () => {
       <div className="absolute inset-0 bg-black/30" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center max-h-screen py-4">
-        {/* Logo above card */}
-        <img src={logoGold} alt="INFINIT NETWORK" className="object-contain mb-3 flex-shrink-0 flex-1 max-h-[35vh] min-h-[80px]" />
-
         {/* Glass card */}
         <div
           className="rounded-2xl p-8 space-y-5 w-full flex-shrink-0"
@@ -62,8 +59,9 @@ const Login = () => {
             boxShadow: "0 8px 48px rgba(0, 0, 0, 0.5), 0 0 80px rgba(56, 140, 220, 0.08)",
           }}
         >
-          {/* Title */}
-          <div className="text-center">
+          {/* Logo + Title inside card */}
+          <div className="text-center flex flex-col items-center">
+              <img src={logoGold} alt="INFINIT NETWORK" className="object-contain h-12 mb-3" />
               <h1 className="text-2xl font-bold tracking-wide text-white">INFINIT SYSTEM</h1>
               <p className="text-sm text-blue-300/70 mt-1">ERP - Home & Automação</p>
           </div>
