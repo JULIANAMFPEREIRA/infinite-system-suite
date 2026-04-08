@@ -458,9 +458,10 @@ const CRM = () => {
         </div>
 
         <Tabs defaultValue="dados" className="w-full">
-          <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
+            <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
