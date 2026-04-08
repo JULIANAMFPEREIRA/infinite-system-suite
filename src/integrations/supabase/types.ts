@@ -92,6 +92,7 @@ export type Database = {
       }
       clientes: {
         Row: {
+          arquiteto_id: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -107,6 +108,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arquiteto_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -122,6 +124,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arquiteto_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -137,6 +140,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_arquiteto_id_fkey"
+            columns: ["arquiteto_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -390,6 +400,64 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_itens: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          preco_custo: number | null
+          preco_venda: number | null
+          produto_id: string | null
+          quantidade: number | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          produto_id?: string | null
+          quantidade?: number | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          produto_id?: string | null
+          quantidade?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_itens_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -1183,7 +1251,12 @@ export type Database = {
         | "tecnico"
         | "arquiteto"
         | "cliente"
-      origem_lead: "whatsapp" | "instagram" | "indicacao" | "outro"
+      origem_lead:
+        | "whatsapp"
+        | "instagram"
+        | "indicacao"
+        | "outro"
+        | "arquiteto"
       status_comissao: "pendente" | "pago"
       status_compra: "pendente" | "aprovada" | "entregue" | "cancelada"
       status_crm: "lead" | "contato" | "proposta" | "projeto"
@@ -1338,7 +1411,7 @@ export const Constants = {
         "arquiteto",
         "cliente",
       ],
-      origem_lead: ["whatsapp", "instagram", "indicacao", "outro"],
+      origem_lead: ["whatsapp", "instagram", "indicacao", "outro", "arquiteto"],
       status_comissao: ["pendente", "pago"],
       status_compra: ["pendente", "aprovada", "entregue", "cancelada"],
       status_crm: ["lead", "contato", "proposta", "projeto"],
