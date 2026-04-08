@@ -903,12 +903,22 @@ const CRM = () => {
                               <Check size={14} /> Aprovar
                             </button>
                           ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
-                              className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
-                            >
-                              <X size={14} /> Desaprovar
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }}
+                                disabled={manualSync.isPending}
+                                className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition disabled:opacity-50"
+                              >
+                                <RefreshCw size={14} className={manualSync.isPending ? "animate-spin" : ""} /> Atualizar Projeto
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
+                                className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
+                              >
+                                <X size={14} /> Desaprovar
+                              </button>
+                            </>
+                          )}
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
