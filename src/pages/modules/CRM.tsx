@@ -484,10 +484,10 @@ const CRM = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex gap-4 text-xs p-2 bg-secondary/30 rounded">
+                  <div className="flex gap-4 text-xs p-2 bg-secondary/30 rounded flex-wrap">
                     <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
                     <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
-                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong></span>
+                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
                   </div>
 
                   {/* ─── SIMULAÇÃO DE PAGAMENTO ─── */}
