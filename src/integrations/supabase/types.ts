@@ -369,6 +369,54 @@ export type Database = {
           },
         ]
       }
+      crm_arquivos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          nome_arquivo: string
+          tamanho: number | null
+          tipo: string
+          url: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome_arquivo: string
+          tamanho?: number | null
+          tipo?: string
+          url: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho?: number | null
+          tipo?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_arquivos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_arquivos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_interacoes: {
         Row: {
           cliente_id: string
@@ -415,6 +463,7 @@ export type Database = {
           preco_venda: number | null
           produto_id: string | null
           quantidade: number | null
+          rt_comissao: number | null
         }
         Insert: {
           cliente_id: string
@@ -426,6 +475,7 @@ export type Database = {
           preco_venda?: number | null
           produto_id?: string | null
           quantidade?: number | null
+          rt_comissao?: number | null
         }
         Update: {
           cliente_id?: string
@@ -437,6 +487,7 @@ export type Database = {
           preco_venda?: number | null
           produto_id?: string | null
           quantidade?: number | null
+          rt_comissao?: number | null
         }
         Relationships: [
           {
@@ -488,6 +539,41 @@ export type Database = {
           segmento?: string | null
         }
         Relationships: []
+      }
+      equipe: {
+        Row: {
+          contato: string | null
+          created_at: string
+          empresa_id: string
+          funcao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          contato?: string | null
+          created_at?: string
+          empresa_id: string
+          funcao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          contato?: string | null
+          created_at?: string
+          empresa_id?: string
+          funcao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipe_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       estoque_itens: {
         Row: {
