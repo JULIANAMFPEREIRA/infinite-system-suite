@@ -548,7 +548,6 @@ const CRM = () => {
     onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
   });
 
-  const clienteContratos = contratos?.filter(c => c.cliente_id === detailClient?.id) ?? [];
   const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
 
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
