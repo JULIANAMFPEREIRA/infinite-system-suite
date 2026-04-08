@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,92 +213,128 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ─── Reusable sync function ───
+  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
+    if (!detailClient?.id || !empresaId) return;
+
+    const { data: orcData } = await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single();
+    if (!orcData?.aprovado) return; // Only sync approved
+
+    const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
+    const items = approvedItems ?? [];
+    const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+    const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
+    const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
+
+    const sim = (orcData.simulacao_pagamento as any) ?? {};
+    const simParcelas = sim.parcelas ?? [];
+    const simFormaPgto = sim.formaPagamento ?? "";
+
+    const cliente = clientes?.find(c => c.id === detailClient.id);
+    const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
+    const descParts = [`Projeto criado a partir do CRM — ${orcData.nome ?? "Orçamento"}`];
+    if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
+    if (cliente?.notas) descParts.push(`Obs: ${cliente.notas}`);
+
+    const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
+
+    // Check if project already exists for this orcamento
+    const { data: existingProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+
+    let projId: string;
+
+    if (existingProjects && existingProjects.length > 0) {
+      projId = existingProjects[0].id;
+      await supabase.from("projetos").update({
+        venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
+        numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
+        forma_pagamento: simFormaPgto || null,
+        descricao: descParts.join(" | "),
+        status: "aprovado",
+        observacoes_pagamento: `Sincronizado em ${new Date().toLocaleString("pt-BR")}`,
+      }).eq("id", projId);
+    } else {
+      const newProjeto = await createProjeto.mutateAsync({
+        nome: `Projeto — ${detailClient.nome} — ${orcData.nome ?? ""}`,
+        descricao: descParts.join(" | "),
+        cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
+        arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
+        venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
+        numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
+        forma_pagamento: simFormaPgto || null,
+        observacoes_pagamento: `Criado em ${new Date().toLocaleString("pt-BR")}`,
+        orcamento_id: orcId,
+      } as any);
+      projId = newProjeto.id;
+    }
+
+    // ── Sync itens ──
+    await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
+    for (const item of items) {
+      await createProjetoItem.mutateAsync({
+        projeto_id: projId, descricao: item.descricao,
+        quantidade: Number(item.quantidade) || 1,
+        preco_custo: Number(item.preco_custo) || 0,
+        preco_venda: Number(item.preco_venda) || 0,
+        tipo: "produto", produto_id: item.produto_id || null,
+        rt_percentual: Number((item as any).rt_comissao) || 0,
+      });
+    }
+
+    // ── Sync financeiro_receber ──
+    await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
+    if (simParcelas.length > 0) {
+      const inserts = simParcelas.map((p: any, i: number) => ({
+        empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
+        descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
+        valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
+      }));
+      await supabase.from("financeiro_receber").insert(inserts);
+    }
+
+    // ── Sync comissões (RT) ──
+    // Delete old auto-generated comissões for this project (only those not yet paid)
+    await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
+    // Generate RT comissões for items that have rt_comissao > 0
+    const arquitetoId = detailClient.arquiteto_id;
+    if (arquitetoId) {
+      // Get new projeto_itens to link comissões
+      const { data: projItens } = await supabase.from("projeto_itens").select("id, descricao, rt_percentual, preco_venda, quantidade").eq("projeto_id", projId);
+      for (const pi of (projItens ?? [])) {
+        const rtVal = Number(pi.rt_percentual) || 0;
+        if (rtVal > 0) {
+          await supabase.from("comissoes").insert({
+            empresa_id: empresaId, projeto_id: projId, fornecedor_id: arquitetoId,
+            projeto_item_id: pi.id, valor: rtVal,
+            percentual: Number(pi.preco_venda) > 0 ? (rtVal / (Number(pi.preco_venda) * Number(pi.quantidade))) * 100 : 0,
+            status: "pendente",
+          });
+        }
+      }
+    }
+
+    if (opts?.showToast !== false) {
+      toast.success(existingProjects && existingProjects.length > 0
+        ? "Projeto atualizado com dados do orçamento!"
+        : "Projeto criado a partir do orçamento aprovado!");
+    }
+  }, [detailClient, empresaId, clientes, createProjeto, createProjetoItem]);
+
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
       if (!detailClient?.id || !empresaId) return;
-      // Approve this orcamento (allow multiple approvals)
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
       if (error) throw error;
-
-      // Get orcamento data
-      const { data: orcData } = await supabase.from("crm_orcamentos").select("*, simulacao_pagamento").eq("id", orcId).single();
-      const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
-      const items = approvedItems ?? [];
-      const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-      const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
-      const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
-
-      const sim = (orcData?.simulacao_pagamento as any) ?? {};
-      const simParcelas = sim.parcelas ?? [];
-      const simFormaPgto = sim.formaPagamento ?? "";
-
-      const cliente = clientes?.find(c => c.id === detailClient.id);
-      const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
-      const descParts = [`Projeto criado a partir do CRM — ${orcData?.nome ?? "Orçamento"}`];
-      if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
-      if (cliente?.notas) descParts.push(`Obs: ${cliente.notas}`);
-
-      // Check if a project already exists for THIS orcamento
-      const { data: existingProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
-
-      const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
-
-      if (existingProjects && existingProjects.length > 0) {
-        // Update existing project linked to this orcamento
-        const projId = existingProjects[0].id;
-        await supabase.from("projetos").update({
-          venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
-          numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
-          forma_pagamento: simFormaPgto || null,
-          descricao: descParts.join(" | "),
-          status: "aprovado",
-        }).eq("id", projId);
-
-        await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
-        for (const item of items) {
-          await createProjetoItem.mutateAsync({ projeto_id: projId, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
-        }
-
-        await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
-        if (simParcelas.length > 0) {
-          const inserts = simParcelas.map((p: any, i: number) => ({
-            empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
-            descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
-            valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
-          }));
-          await supabase.from("financeiro_receber").insert(inserts);
-        }
-        toast.success("Projeto atualizado com dados do orçamento!");
-      } else {
-        // Create new project for this orcamento
-        const newProjeto = await createProjeto.mutateAsync({
-          nome: `Projeto — ${detailClient.nome} — ${orcData?.nome ?? ""}`,
-          descricao: descParts.join(" | "),
-          cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
-          arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
-          venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
-          numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
-          forma_pagamento: simFormaPgto || null,
-          observacoes_pagamento: cliente?.notas || null,
-          orcamento_id: orcId,
-        } as any);
-
-        for (const item of items) {
-          await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number((item as any).rt_comissao) || 0 });
-        }
-
-        if (simParcelas.length > 0) {
-          const inserts = simParcelas.map((p: any, i: number) => ({
-            empresa_id: empresaId, projeto_id: newProjeto.id, cliente_id: detailClient.id,
-            descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
-            valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
-          }));
-          await supabase.from("financeiro_receber").insert(inserts);
-        }
-        toast.success("Projeto criado a partir do orçamento aprovado!");
-      }
+      await syncOrcamentoToProject(orcId);
     },
-    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); },
+    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Manual sync button
+  const manualSync = useMutation({
+    mutationFn: async (orcId: string) => { await syncOrcamentoToProject(orcId); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -506,13 +542,26 @@ const CRM = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => { refetchCrmItens(); resetItemForm(); toast.success(editItemId ? "Item atualizado" : "Item adicionado"); },
+    onSuccess: () => {
+      refetchCrmItens(); resetItemForm(); toast.success(editItemId ? "Item atualizado" : "Item adicionado");
+      // Auto-sync if orcamento is approved
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const deleteCrmItem = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("crm_itens").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { refetchCrmItens(); toast.success("Item excluído"); },
+    onSuccess: () => {
+      refetchCrmItens(); toast.success("Item excluído");
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    },
   });
 
   // File upload
@@ -606,15 +655,24 @@ const CRM = () => {
     setEditingParcelas(current);
   };
 
-  const handleSaveSimulacao = () => {
+  const handleSaveSimulacao = async () => {
     const simData = {
       condicao: simCondicao, formaPagamento: simFormaPgto,
       numParcelas: simParcelas, entrada: simEntrada,
       intervalo: simIntervalo, juros: simJuros,
       parcelas: parcelasParaExibir,
     };
-    saveOrcamentoSimulacao(simData);
+    await saveOrcamentoSimulacao(simData);
     toast.success("Simulação salva!");
+    // Auto-sync if approved
+    if (activeOrcamentoId) {
+      const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
+      if (orc?.aprovado) {
+        await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+        qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+        toast.success("Financeiro do projeto atualizado!");
+      }
+    }
   };
 
   // Status counts
@@ -845,12 +903,21 @@ const CRM = () => {
                               <Check size={14} /> Aprovar
                             </button>
                           ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
-                              className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
-                            >
-                              <X size={14} /> Desaprovar
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }}
+                                disabled={manualSync.isPending}
+                                className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition disabled:opacity-50"
+                              >
+                                <RefreshCw size={14} className={manualSync.isPending ? "animate-spin" : ""} /> Atualizar Projeto
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
+                                className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
+                              >
+                                <X size={14} /> Desaprovar
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
