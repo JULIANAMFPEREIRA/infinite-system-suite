@@ -71,7 +71,7 @@ const Login = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-200">Nome Completo</label>
@@ -168,7 +168,7 @@ const Login = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-gray-500 mt-5">
+        <p className="text-center text-xs text-gray-500 mt-3">
           © 2026 INFINIT NETWORK — SMP Consultoria LTDA
         </p>
       </div>
