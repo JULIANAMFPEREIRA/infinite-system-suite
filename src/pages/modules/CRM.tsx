@@ -173,7 +173,7 @@ const CRM = () => {
       nome: `Projeto — ${clienteNome}`,
       descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
-      arquiteto_id: arqId || null, status: "proposta",
+      arquiteto_id: arqId || null, status: "aprovado",
       venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
       numero_parcelas: simParcCount > 0 ? simParcCount : 1,
       forma_pagamento: simFormaPgto || null,
@@ -928,20 +928,18 @@ const CRM = () => {
         </button>
       </div>
 
-      {/* Status counts */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {(["lead", "contato", "proposta", "projeto"] as StatusCRM[]).map(s => (
-          <button key={s} onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)} className={`flex items-center justify-between p-2.5 rounded border transition ${filterStatus === s ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-secondary/30"}`}>
-            <span className="text-xs font-medium text-foreground">{statusLabels[s]}</span>
-            <span className={`text-lg font-bold ${filterStatus === s ? "text-primary" : "text-muted-foreground"}`}>{statusCounts[s]}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-1.5 flex-wrap">
-        {(["todos", "lead", "contato", "proposta", "projeto"] as const).map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)} className={`px-2.5 py-1 rounded text-[11px] font-medium transition ${filterStatus === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-            {s === "todos" ? "Todos" : statusLabels[s as StatusCRM]}
+      {/* Status counters - same pattern as Projetos */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        {([
+          { key: "todos" as const, label: "Todos", count: (clientes ?? []).length, color: "bg-secondary text-secondary-foreground" },
+          { key: "lead" as const, label: "Lead", count: statusCounts.lead, color: "bg-secondary text-secondary-foreground" },
+          { key: "contato" as const, label: "Em Contato", count: statusCounts.contato, color: "bg-warning/15 text-warning" },
+          { key: "proposta" as const, label: "Proposta Enviada", count: statusCounts.proposta, color: "bg-primary/15 text-primary" },
+          { key: "projeto" as const, label: "Projeto", count: statusCounts.projeto, color: "bg-success/15 text-success" },
+        ]).map(s => (
+          <button key={s.key} onClick={() => setFilterStatus(s.key)} className={`rounded p-2 text-center transition ${filterStatus === s.key ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+            <div className="text-lg font-bold">{s.count}</div>
+            <div className="text-[10px] font-medium truncate">{s.label}</div>
           </button>
         ))}
       </div>
