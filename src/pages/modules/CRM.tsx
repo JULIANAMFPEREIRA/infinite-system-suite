@@ -1063,38 +1063,21 @@ const CRM = () => {
             </div>
           </TabsContent>
 
-          {/* ─── PROJETOS (condicional) ─── */}
-          {isProjeto && (
-            <TabsContent value="projetos">
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Projetos Vinculados</h4>
-                {clienteProjetos && clienteProjetos.length > 0 ? clienteProjetos.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 rounded bg-card border border-border cursor-pointer hover:bg-secondary/30 transition" onClick={() => window.location.href = `/projetos?open=${p.id}`}>
+          {/* ─── PROJETOS ─── */}
+          <TabsContent value="projetos">
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Projetos Vinculados</h4>
+              {clienteProjetos && clienteProjetos.length > 0 ? clienteProjetos.map((p: any) => (
+                <div key={p.id} className="flex items-center justify-between p-3 rounded bg-card border border-border cursor-pointer hover:bg-secondary/30 transition" onClick={() => window.location.href = `/projetos?open=${p.id}`}>
+                  <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium">{p.nome}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/15 text-primary">{p.status}</span>
+                    {p.venda_total != null && <span className="text-[10px] text-muted-foreground">R$ {Number(p.venda_total).toFixed(2)}</span>}
                   </div>
-                )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum projeto vinculado.</p>}
-              </div>
-            </TabsContent>
-          )}
-
-          {/* ─── CONTRATOS (condicional) ─── */}
-          {isProjeto && (
-            <TabsContent value="contratos">
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><FileText size={12} /> Contratos</h4>
-                {clienteContratos.length > 0 ? clienteContratos.map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded bg-card border border-border">
-                    <span className="text-xs">{c.descricao ?? "Contrato"}</span>
-                    <div className="flex items-center gap-2">
-                      {c.valor && <span className="text-xs font-medium">R$ {Number(c.valor).toFixed(2)}</span>}
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-warning/15 text-warning">{c.status}</span>
-                    </div>
-                  </div>
-                )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum contrato vinculado.</p>}
-              </div>
-            </TabsContent>
-          )}
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${p.status === "cancelado" ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>{p.status}</span>
+                </div>
+              )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum projeto vinculado. Aprove um orçamento para criar um projeto.</p>}
+            </div>
+          </TabsContent>
         </Tabs>
 
         {/* ─── LIGHTBOX IMAGENS ─── */}
