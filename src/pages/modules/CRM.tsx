@@ -29,7 +29,6 @@ const CRM = () => {
   const qc = useQueryClient();
   const createProjeto = useCreateProjeto();
   const createProjetoItem = useCreateProjetoItem();
-  const { data: contratos } = useContratos();
   const { data: arquitetos } = useArquitetos();
 
   const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
