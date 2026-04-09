@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Search, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
@@ -30,9 +30,9 @@ const TopBar = () => {
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
-      <div className="flex items-center gap-3 flex-1 max-w-xs">
-        <Search size={16} className="text-muted-foreground" />
-        <input type="text" placeholder="Buscar..." className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full" />
+      <div className="flex flex-col justify-center">
+        <h1 className="text-sm font-bold tracking-widest text-foreground uppercase">ERP INFINIT NETWORK</h1>
+        <p className="text-[10px] text-muted-foreground font-light tracking-wide">Sistema Inteligente de Gestão Comercial e Projetos</p>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
