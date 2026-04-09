@@ -212,7 +212,7 @@ const Dashboard = () => {
       </div>
 
       {/* 2. AÇÕES RÁPIDAS */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={() => navigate("/projetos")}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50"

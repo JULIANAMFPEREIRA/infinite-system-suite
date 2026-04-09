@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Bell, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
 import logoInfinit from "@/assets/logo-infinit.png";
 
-const TopBar = () => {
+interface TopBarProps {
+  onToggleMobileMenu?: () => void;
+}
+
+const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
   const { profile, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const [showNotif, setShowNotif] = useState(false);
@@ -30,18 +34,27 @@ const TopBar = () => {
   const handleLogout = async () => { await signOut(); navigate("/login"); };
 
   return (
-    <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
-      <div className="flex items-center gap-3">
-        <img src={logoInfinit} alt="Infinit Network" className="h-7 w-auto object-contain" />
+    <header className="h-14 md:h-14 border-b border-border bg-card flex items-center justify-between px-3 md:px-6">
+      <div className="flex items-center gap-2 md:gap-3">
+        {/* Hamburger for mobile */}
+        <button
+          onClick={onToggleMobileMenu}
+          className="md:hidden p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
+        >
+          <Menu size={20} />
+        </button>
+        <img src={logoInfinit} alt="Infinit Network" className="h-6 md:h-7 w-auto object-contain" />
         <div className="flex flex-col justify-center">
-          <h1 className="text-sm font-bold tracking-widest text-foreground uppercase leading-tight">
-            <span className="text-[10px] font-medium text-muted-foreground mr-1 tracking-wider">ERP</span>
-            <span className="text-sm font-bold text-foreground tracking-widest">INFINIT NETWORK</span>
+          <h1 className="text-sm font-bold text-foreground uppercase leading-tight" style={{ letterSpacing: "0.15em" }}>
+            <span className="text-[10px] font-medium text-muted-foreground mr-1" style={{ letterSpacing: "0.12em" }}>ERP</span>
+            <span className="text-xs md:text-sm font-bold text-foreground" style={{ letterSpacing: "0.18em" }}>INFINIT NETWORK</span>
           </h1>
-          <p className="text-[9px] text-muted-foreground font-light tracking-wide mt-0.5">Sistema Inteligente de Gestão Comercial e Projetos</p>
+          <p className="text-[8px] md:text-[9px] text-muted-foreground font-light mt-0.5 hidden sm:block" style={{ letterSpacing: "0.08em" }}>
+            Sistema Inteligente de Gestão Comercial e Projetos
+          </p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <div className="relative">
           <button onClick={() => setShowNotif(!showNotif)} className="relative p-2 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <Bell size={16} />
@@ -69,8 +82,8 @@ const TopBar = () => {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3 pl-4 border-l border-border">
-          <div className="text-right">
+        <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-border">
+          <div className="text-right hidden sm:block">
             <p className="text-xs font-medium text-foreground">{profile?.full_name ?? "Usuário"}</p>
             <p className="text-[11px] text-muted-foreground">{roles[0] ?? "—"}</p>
           </div>
