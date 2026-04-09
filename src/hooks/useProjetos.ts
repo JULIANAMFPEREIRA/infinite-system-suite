@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
+import { logAtividade } from "./useAuditLog";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export const useProjetos = () => {
@@ -48,6 +49,7 @@ export const useCreateProjeto = () => {
         .select()
         .single();
       if (error) throw error;
+      await logAtividade("projetos", "criacao", data.id, empresaId, null, data);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projetos"] }),
@@ -61,6 +63,7 @@ export const useUpdateProjeto = () => {
     mutationFn: async ({ id, ...updates }: TablesUpdate<"projetos"> & { id: string }) => {
       const { error } = await supabase.from("projetos").update(updates).eq("id", id);
       if (error) throw error;
+      await logAtividade("projetos", "edicao", id, null, null, updates as any);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projetos"] }),
   });
