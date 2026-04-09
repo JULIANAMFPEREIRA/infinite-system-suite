@@ -19,7 +19,6 @@ const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "CRM", icon: Users, path: "/crm" },
   { label: "Projetos", icon: FolderKanban, path: "/projetos" },
-  { label: "Itens a Comprar", icon: ClipboardList, path: "/itens-comprar" },
   { label: "Cronograma", icon: Wrench, path: "/cronograma" },
   {
     label: "Financeiro", icon: DollarSign, children: [
@@ -27,13 +26,14 @@ const navItems: NavItem[] = [
       { label: "Contas a Pagar", path: "/financeiro/pagar" },
       { label: "Fluxo de Caixa", path: "/financeiro/fluxo" },
       { label: "Finanças Pessoais", path: "/financas-pessoais" },
+      { label: "Comissões (RT)", path: "/comissoes" },
+      { label: "Compras", path: "/compras" },
+      { label: "Itens a Comprar", path: "/itens-comprar" },
     ]
   },
   { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores" },
-  { label: "Compras", icon: ShoppingCart, path: "/compras" },
   { label: "Estoque", icon: Package, path: "/estoque" },
   { label: "Kits", icon: Boxes, path: "/kits" },
-  { label: "Comissões (RT)", icon: UserCheck, path: "/comissoes" },
   { label: "DRE", icon: TrendingUp, path: "/dre" },
   { label: "Relatórios", icon: BarChart3, path: "/relatorios" },
   { label: "Automações", icon: Bell, path: "/automacoes" },
