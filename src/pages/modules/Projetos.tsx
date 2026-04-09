@@ -1452,6 +1452,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
+  const [baixaObs, setBaixaObs] = useState("");
 
   const resetForm = () => { setEditId(null); setFornecedorId(arquitetoId); setPercentual(0); setValor(0); setVencimento(""); setShowForm(false); };
 
@@ -1460,7 +1461,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
     if (!empresaId) return;
     try {
       if (editId) {
-        const { error } = await supabase.from("comissoes").update({ fornecedor_id: fornecedorId, percentual, valor, data_vencimento: vencimento || null }).eq("id", editId);
+        const { error } = await supabase.from("comissoes").update({ fornecedor_id: fornecedorId, percentual, valor, data_vencimento: vencimento || null } as any).eq("id", editId);
         if (error) throw error;
         await supabase.from("financeiro_pagar").update({ valor, fornecedor_id: fornecedorId, data_vencimento: vencimento || null }).eq("comissao_id", editId);
         toast.success("Comissão atualizada");
@@ -1483,13 +1484,13 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   };
 
   const openBaixa = (c: any) => {
-    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setShowBaixa(true);
+    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
   };
 
   const handleBaixa = async () => {
     if (!baixaId) return;
     try {
-      const { error } = await supabase.from("comissoes").update({ status: "pago" }).eq("id", baixaId);
+      const { error } = await supabase.from("comissoes").update({ status: "pago", forma_pagamento: baixaForma || null, observacao: baixaObs || null } as any).eq("id", baixaId);
       if (error) throw error;
       await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("comissao_id", baixaId);
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
@@ -1548,6 +1549,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pagamento</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
             </tr></thead>
             <tbody>
@@ -1558,6 +1560,14 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
                   <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-2 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
                   <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                  <td className="px-2 py-1.5 text-center text-[10px] text-muted-foreground">
+                    {c.status === "pago" ? (
+                      <div className="space-y-0.5">
+                        {(c as any).forma_pagamento && <div>{(c as any).forma_pagamento}</div>}
+                        {(c as any).observacao && <div className="italic">{(c as any).observacao}</div>}
+                      </div>
+                    ) : "—"}
+                  </td>
                   <td className="px-2 py-1.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
@@ -1584,6 +1594,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
                 <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
               </select>
             </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder="Observação opcional" /></div>
           </div>
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
