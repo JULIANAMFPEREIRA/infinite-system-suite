@@ -4,7 +4,7 @@ import {
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
   AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
-import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -148,8 +148,8 @@ const Dashboard = () => {
         statusCounts,
         proximasVisitas,
         itensComprarDetalhados,
-        receberRaw: receber,
-        pagarRaw: pagar,
+
+
       };
     },
     enabled: !!empresaId,
@@ -303,13 +303,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* GRÁFICO RECEITAS vs DESPESAS */}
-      {stats?.receberRaw && stats?.pagarRaw && (
-        <RevenueExpensesChart
-          receber={stats.receberRaw}
-          pagar={stats.pagarRaw}
-        />
-      )}
+
+
 
       {/* 2. AÇÕES RÁPIDAS */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
