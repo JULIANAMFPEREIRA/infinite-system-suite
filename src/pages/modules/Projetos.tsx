@@ -14,28 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
 import AtividadeLog from "@/components/projeto/AtividadeLog";
+import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
 
-type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
-const statusLabels: Record<StatusProjeto, string> = {
-  lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
-  vendido: "Vendido", em_andamento: "Em Andamento", infraestrutura: "Infraestrutura",
-  instalacao: "Instalação", cabeamento: "Cabeamento", programacao: "Programação",
-  personalizacao: "Personalização", concluido: "Concluído",
-  pos_venda: "Pós-Venda", cancelado: "Cancelado"
-};
-const statusColors: Record<StatusProjeto, string> = {
-  lead: "bg-secondary text-secondary-foreground", proposta: "bg-warning/15 text-warning",
-  orcamento: "bg-secondary text-secondary-foreground", aprovado: "bg-success/15 text-success",
-  vendido: "bg-primary/15 text-primary", em_andamento: "bg-primary/15 text-primary",
-  infraestrutura: "bg-amber-500/15 text-amber-600", instalacao: "bg-blue-500/15 text-blue-600",
-  cabeamento: "bg-violet-500/15 text-violet-600", programacao: "bg-cyan-500/15 text-cyan-600",
-  personalizacao: "bg-pink-500/15 text-pink-600",
-  concluido: "bg-info/15 text-info", pos_venda: "bg-accent text-accent-foreground",
-  cancelado: "bg-destructive/15 text-destructive"
-};
-const statusOptions: StatusProjeto[] = ["infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "pos_venda", "cancelado"];
+const statusLabels = statusProjetoLabels;
+const statusColors = statusProjetoColors;
+const statusOptions = statusProjetoOperacionais;
 const projetoIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ProjetoState = ({
