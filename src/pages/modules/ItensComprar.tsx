@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardList, ShoppingCart, Check, DollarSign } from "lucide-react";
+import { ClipboardList, ShoppingCart, Check } from "lucide-react";
 import { useNecessidadesCompra, useConverterEmCompra } from "@/hooks/useNecessidadesCompra";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,16 +15,18 @@ const ItensComprar = () => {
 
   const filtered = necessidades?.filter(n => filterStatus === "todos" || n.status === filterStatus) ?? [];
 
+  const getValorUnit = (n: any) => Number(n.projeto_itens?.preco_custo) || 0;
+  const getValorTotal = (n: any) => getValorUnit(n) * (Number(n.quantidade) || 1);
+
   const handleConverter = async (nec: any) => {
     try {
       const compra = await converter.mutateAsync(nec);
-      // Generate conta a pagar for this purchase
       if (empresaId && compra) {
         await supabase.from("financeiro_pagar").insert({
           empresa_id: empresaId,
           projeto_id: nec.projeto_id,
           descricao: `Compra — ${nec.descricao ?? "Sem descrição"}`,
-          valor: (compra.valor_total ?? 0),
+          valor: getValorTotal(nec),
           data_vencimento: compra.data_compra || null,
           status: "pendente",
         });
@@ -35,6 +37,8 @@ const ItensComprar = () => {
       toast.error(err.message);
     }
   };
+
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -63,7 +67,10 @@ const ItensComprar = () => {
                 <tr className="bg-secondary/60">
                   <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Descrição</th>
                   <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Projeto</th>
+                  <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Cliente</th>
                   <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Qtd</th>
+                  <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Valor Unit.</th>
+                  <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Total</th>
                   <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Status</th>
                   <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
                 </tr>
@@ -73,7 +80,10 @@ const ItensComprar = () => {
                   <tr key={n.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
                     <td className="px-2.5 py-1.5 text-foreground">{n.descricao ?? "—"}</td>
                     <td className="px-2.5 py-1.5 text-foreground">{n.projetos?.nome ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-foreground">{n.projetos?.clientes?.nome ?? "—"}</td>
                     <td className="px-2.5 py-1.5 text-right text-foreground">{n.quantidade}</td>
+                    <td className="px-2.5 py-1.5 text-right text-foreground">{fmt(getValorUnit(n))}</td>
+                    <td className="px-2.5 py-1.5 text-right font-medium text-foreground">{fmt(getValorTotal(n))}</td>
                     <td className="px-2.5 py-1.5 text-center">
                       <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${n.status === "pendente" ? "bg-warning/15 text-warning" : "bg-success/15 text-success"}`}>
                         {n.status === "pendente" ? "Pendente" : "Comprado"}

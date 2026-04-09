@@ -337,20 +337,17 @@ const CRM = () => {
         }
       }
 
-      // ── Sync necessidades de compra ──
-      await supabase.from("necessidades_compra").delete().eq("projeto_id", projId).eq("status", "pendente");
-      for (const pi of (projItens ?? [])) {
-        if (pi.produto_id) {
-          const { count } = await supabase.from("estoque_itens").select("id", { count: "exact", head: true }).eq("produto_id", pi.produto_id).eq("status", "disponivel");
-          if ((count ?? 0) < (Number(pi.quantidade) || 1)) {
-            await supabase.from("necessidades_compra").insert({
-              empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
-              produto_id: pi.produto_id, descricao: pi.descricao ?? "",
-              quantidade: Number(pi.quantidade) || 1, status: "pendente",
-            });
-          }
-        }
-      }
+    }
+
+    // ── Sync necessidades de compra (ALL items, not just with arquiteto) ──
+    await supabase.from("necessidades_compra").delete().eq("projeto_id", projId).eq("status", "pendente");
+    const { data: projItensCompra } = await supabase.from("projeto_itens").select("id, descricao, preco_custo, quantidade, produto_id").eq("projeto_id", projId);
+    for (const pi of (projItensCompra ?? [])) {
+      await supabase.from("necessidades_compra").insert({
+        empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
+        produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
+        quantidade: Number(pi.quantidade) || 1, status: "pendente",
+      });
     }
 
     if (opts?.showToast !== false) {
