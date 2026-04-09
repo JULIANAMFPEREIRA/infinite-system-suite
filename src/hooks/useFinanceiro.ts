@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
+import { logAtividade } from "./useAuditLog";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export const useFinanceiroPagar = () => {
@@ -36,8 +37,9 @@ export const useCreateContaPagar = () => {
   const empresaId = useEmpresa();
   return useMutation({
     mutationFn: async (conta: Omit<TablesInsert<"financeiro_pagar">, "empresa_id">) => {
-      const { error } = await supabase.from("financeiro_pagar").insert({ ...conta, empresa_id: empresaId! });
+      const { data, error } = await supabase.from("financeiro_pagar").insert({ ...conta, empresa_id: empresaId! }).select().single();
       if (error) throw error;
+      await logAtividade("financeiro_pagar", "criacao", data.id, empresaId, null, { ...conta, projeto_id: conta.projeto_id });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }),
   });
@@ -48,8 +50,9 @@ export const useCreateContaReceber = () => {
   const empresaId = useEmpresa();
   return useMutation({
     mutationFn: async (conta: Omit<TablesInsert<"financeiro_receber">, "empresa_id">) => {
-      const { error } = await supabase.from("financeiro_receber").insert({ ...conta, empresa_id: empresaId! });
+      const { data, error } = await supabase.from("financeiro_receber").insert({ ...conta, empresa_id: empresaId! }).select().single();
       if (error) throw error;
+      await logAtividade("financeiro_receber", "criacao", data.id, empresaId, null, { ...conta, projeto_id: conta.projeto_id });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_receber"] }),
   });
@@ -61,6 +64,7 @@ export const useUpdateContaPagar = () => {
     mutationFn: async ({ id, ...updates }: TablesUpdate<"financeiro_pagar"> & { id: string }) => {
       const { error } = await supabase.from("financeiro_pagar").update(updates).eq("id", id);
       if (error) throw error;
+      await logAtividade("financeiro_pagar", "edicao", id, null, null, updates as any);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }),
   });
@@ -72,6 +76,7 @@ export const useUpdateContaReceber = () => {
     mutationFn: async ({ id, ...updates }: TablesUpdate<"financeiro_receber"> & { id: string }) => {
       const { error } = await supabase.from("financeiro_receber").update(updates).eq("id", id);
       if (error) throw error;
+      await logAtividade("financeiro_receber", "edicao", id, null, null, updates as any);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_receber"] }),
   });
@@ -83,6 +88,7 @@ export const useDeleteContaPagar = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("financeiro_pagar").delete().eq("id", id);
       if (error) throw error;
+      await logAtividade("financeiro_pagar", "exclusao", id, null);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }),
   });
@@ -94,6 +100,7 @@ export const useDeleteContaReceber = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
       if (error) throw error;
+      await logAtividade("financeiro_receber", "exclusao", id, null);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["financeiro_receber"] }),
   });
