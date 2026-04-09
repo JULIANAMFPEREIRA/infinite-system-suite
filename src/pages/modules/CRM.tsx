@@ -1464,6 +1464,22 @@ const CRM = () => {
   );
 };
 
+/* ─── Auto-create first orcamento when Itens tab is opened ─── */
+const AutoCreateOrcamento = ({ orcamentos, detailClientId, empresaId, createOrcamento, activeOrcamentoId, setActiveOrcamentoId, loadSimFromOrc }: any) => {
+  const didAutoCreate = useRef(false);
+  useEffect(() => {
+    if (orcamentos && orcamentos.length === 0 && detailClientId && empresaId && !didAutoCreate.current && !createOrcamento.isPending) {
+      didAutoCreate.current = true;
+      createOrcamento.mutate();
+    }
+    if (orcamentos && orcamentos.length > 0 && !activeOrcamentoId) {
+      setActiveOrcamentoId(orcamentos[0].id);
+      loadSimFromOrc(orcamentos[0]);
+    }
+  }, [orcamentos, detailClientId, empresaId, activeOrcamentoId]);
+  return null;
+};
+
 /* ─── Inline Edit Form for Detail View ─── */
 const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, endereco: initEnd, enderecoObra: initObra, origem: initOrigem, statusCrm: initStatus, arquitetoId: initArqId, arquitetos, notas: initNotas, onSave }: any) => {
   const [nome, setNome] = useState(initNome ?? "");
