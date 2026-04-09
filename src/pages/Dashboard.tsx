@@ -145,7 +145,7 @@ const Dashboard = () => {
         {/* A Receber (Mês) */}
         <div
           onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -162,7 +162,7 @@ const Dashboard = () => {
         {/* Inadimplentes */}
         <div
           onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -179,7 +179,7 @@ const Dashboard = () => {
         {/* Itens a Comprar */}
         <div
           onClick={() => navigate("/itens-comprar")}
-          className="cursor-pointer group bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -196,7 +196,7 @@ const Dashboard = () => {
         {/* Total de Projetos */}
         <div
           onClick={() => navigate("/projetos")}
-          className="cursor-pointer group bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
