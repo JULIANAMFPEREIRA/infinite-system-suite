@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import TopBar from "./TopBar";
 
 const AppLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,7 +20,9 @@ const AppLayout = () => {
       <div className="md:ml-56 flex flex-col min-h-screen transition-all duration-300">
         <TopBar onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
         <main className="flex-1 p-3 md:p-5 overflow-auto">
-          <Outlet />
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
         </main>
         <footer className="px-5 py-2 border-t border-border text-center">
           <p className="text-[11px] text-muted-foreground italic">

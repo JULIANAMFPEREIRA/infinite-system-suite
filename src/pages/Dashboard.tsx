@@ -131,7 +131,7 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
@@ -145,7 +145,7 @@ const Dashboard = () => {
         {/* A Receber (Mês) */}
         <div
           onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -162,7 +162,7 @@ const Dashboard = () => {
         {/* Inadimplentes */}
         <div
           onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -179,7 +179,7 @@ const Dashboard = () => {
         {/* Itens a Comprar */}
         <div
           onClick={() => navigate("/itens-comprar")}
-          className="cursor-pointer group bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -196,7 +196,7 @@ const Dashboard = () => {
         {/* Total de Projetos */}
         <div
           onClick={() => navigate("/projetos")}
-          className="cursor-pointer group bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40"
         >
           <div className="flex items-start justify-between">
             <div className="min-w-0">
@@ -215,21 +215,21 @@ const Dashboard = () => {
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={() => navigate("/projetos")}
-          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
+          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
         >
           <Plus size={14} />
           Novo Projeto
         </button>
         <button
           onClick={() => navigate("/crm")}
-          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
+          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
         >
           <FileText size={14} />
           Novo Orçamento
         </button>
         <button
           onClick={() => navigate("/financeiro/receber")}
-          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg bg-[hsl(152,69%,40%)]/15 hover:bg-[hsl(152,69%,40%)]/25 text-[hsl(152,69%,40%)] text-xs font-semibold transition-colors border border-[hsl(152,69%,40%)]/30 w-full sm:w-auto"
+          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg bg-[hsl(152,69%,40%)]/15 hover:bg-[hsl(152,69%,40%)]/25 text-[hsl(152,69%,40%)] text-xs font-semibold transition-colors border border-[hsl(152,69%,40%)]/30 w-full sm:w-auto"
         >
           <DollarSign size={14} />
           Financeiro
@@ -261,7 +261,7 @@ const Dashboard = () => {
           {(stats?.proximasVisitas?.length ?? 0) > 0 ? (
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
               {stats!.proximasVisitas.map((v, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={i} className="list-item-hover flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/15 text-primary shrink-0">
                     <span className="text-xs font-bold leading-tight">{v.data ? format(new Date(v.data), "dd") : "—"}</span>
                     <span className="text-[9px] uppercase">{v.data ? format(new Date(v.data), "MMM", { locale: ptBR }) : ""}</span>
@@ -302,7 +302,7 @@ const Dashboard = () => {
           {(stats?.itensComprarDetalhados?.length ?? 0) > 0 ? (
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
               {stats!.itensComprarDetalhados.map((item, i) => (
-                <div key={i} className="p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={i} className="list-item-hover p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-foreground truncate">{item.produtoNome}</p>
@@ -338,7 +338,7 @@ const Dashboard = () => {
           {(stats?.statusCounts?.length ?? 0) > 0 ? (
             <div className="space-y-2">
               {stats!.statusCounts.map(s => (
-                <div key={s.key} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={s.key} className="list-item-hover flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                     <span className="text-xs text-foreground">{s.label}</span>
@@ -367,7 +367,7 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[260px] overflow-y-auto pr-1">
             {stats!.inadimplentes.slice(0, 9).map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+              <div key={i} className="list-item-hover flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-foreground truncate">{item.clienteNome}</p>
                   <p className="text-[11px] text-muted-foreground truncate">{item.projetoNome}</p>
