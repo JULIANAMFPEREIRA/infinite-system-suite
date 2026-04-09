@@ -212,24 +212,24 @@ const Dashboard = () => {
       </div>
 
       {/* 2. AÇÕES RÁPIDAS */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={() => navigate("/projetos")}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50"
+          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
         >
           <Plus size={14} />
           Novo Projeto
         </button>
         <button
           onClick={() => navigate("/crm")}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50"
+          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
         >
           <FileText size={14} />
           Novo Orçamento
         </button>
         <button
           onClick={() => navigate("/financeiro/receber")}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[hsl(152,69%,40%)]/15 hover:bg-[hsl(152,69%,40%)]/25 text-[hsl(152,69%,40%)] text-xs font-semibold transition-colors border border-[hsl(152,69%,40%)]/30"
+          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg bg-[hsl(152,69%,40%)]/15 hover:bg-[hsl(152,69%,40%)]/25 text-[hsl(152,69%,40%)] text-xs font-semibold transition-colors border border-[hsl(152,69%,40%)]/30 w-full sm:w-auto"
         >
           <DollarSign size={14} />
           Financeiro

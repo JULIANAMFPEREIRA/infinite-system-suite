@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FolderKanban, Package, ShoppingCart,
   DollarSign, Wallet, BarChart3, FileText, Bell, PenTool,
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
-  ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck, ClipboardList
+  ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck, ClipboardList, X
 } from "lucide-react";
 import logoGold from "@/assets/logo-infinit.png";
 
@@ -44,7 +44,12 @@ const navItems: NavItem[] = [
   { label: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
 
-const AppSidebar = () => {
+interface AppSidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const location = useLocation();
@@ -55,15 +60,30 @@ const AppSidebar = () => {
     );
   };
 
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
-    <aside className={`fixed left-0 top-0 h-screen z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? "w-14" : "w-56"}`}>
-      {/* Logo */}
-      <div className="flex items-center justify-center border-b border-border px-2 py-3">
+    <aside className={`
+      fixed left-0 top-0 h-screen z-50 flex flex-col border-r border-border bg-card transition-all duration-300
+      ${collapsed ? "w-14" : "w-56"}
+      ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+      md:translate-x-0
+    `}>
+      {/* Logo + Close on mobile */}
+      <div className="flex items-center justify-between border-b border-border px-2 py-3">
         {!collapsed ? (
           <img src={logoGold} alt="INFINIT NETWORK" className="w-full object-contain" />
         ) : (
           <img src={logoGold} alt="INFINIT NETWORK" className="w-10 object-contain" />
         )}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded-md hover:bg-secondary text-muted-foreground"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Nav */}
@@ -94,6 +114,7 @@ const AppSidebar = () => {
                       <NavLink
                         key={child.path}
                         to={child.path}
+                        onClick={handleNavClick}
                         className={({ isActive }) =>
                           `block px-2.5 py-1.5 rounded text-xs transition-colors ${isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:bg-secondary"}`
                         }
@@ -111,6 +132,7 @@ const AppSidebar = () => {
             <NavLink
               key={item.path}
               to={item.path!}
+              onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-2.5 py-2 rounded text-xs transition-colors ${isActive ? "bg-accent text-accent-foreground font-medium border-l-2 border-primary" : "text-sidebar-foreground hover:bg-secondary"}`
               }
@@ -122,10 +144,10 @@ const AppSidebar = () => {
         })}
       </nav>
 
-      {/* Collapse */}
+      {/* Collapse - only on desktop */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-border text-muted-foreground hover:text-primary transition-colors"
+        className="hidden md:flex items-center justify-center h-10 border-t border-border text-muted-foreground hover:text-primary transition-colors"
       >
         {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
