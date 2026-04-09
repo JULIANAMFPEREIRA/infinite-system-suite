@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque, useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
@@ -82,6 +83,7 @@ const Projetos = () => {
   const [enderecoObra, setEnderecoObra] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("");
   const [numeroParcelas, setNumeroParcelas] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
@@ -90,14 +92,14 @@ const Projetos = () => {
     const all = projetos ?? [];
     return {
       todos: all.length,
-      em_andamento: all.filter(p => p.status === "em_andamento").length,
+      infraestrutura: all.filter(p => p.status === "infraestrutura").length,
+      instalacao: all.filter(p => p.status === "instalacao").length,
+      cabeamento: all.filter(p => p.status === "cabeamento").length,
+      programacao: all.filter(p => p.status === "programacao").length,
+      personalizacao: all.filter(p => p.status === "personalizacao").length,
       concluido: all.filter(p => p.status === "concluido").length,
       pos_venda: all.filter(p => p.status === "pos_venda").length,
       cancelado: all.filter(p => p.status === "cancelado").length,
-      orcamento: all.filter(p => p.status === "orcamento").length,
-      aprovado: all.filter(p => p.status === "aprovado").length,
-      proposta: all.filter(p => p.status === "proposta").length,
-      vendido: all.filter(p => p.status === "vendido").length,
     };
   }, [projetos]);
 
@@ -207,8 +209,31 @@ const Projetos = () => {
   });
 
   const removeProjeto = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("projetos").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto excluído"); resetForm(); },
+    mutationFn: async (id: string) => {
+      // Cascade delete all linked data
+      await supabase.from("visitas_tecnicas").delete().eq("projeto_id", id);
+      await supabase.from("comissoes").delete().eq("projeto_id", id);
+      await supabase.from("financeiro_receber").delete().eq("projeto_id", id);
+      await supabase.from("financeiro_pagar").delete().eq("projeto_id", id);
+      await supabase.from("necessidades_compra").delete().eq("projeto_id", id);
+      await supabase.from("compras").delete().eq("projeto_id", id);
+      await supabase.from("contratos").delete().eq("projeto_id", id);
+      await supabase.from("estoque_itens").delete().eq("projeto_id", id);
+      await supabase.from("projeto_itens").delete().eq("projeto_id", id);
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const projeto = projetos?.find(p => p.id === id);
+        await supabase.from("audit_logs").insert({
+          tabela: "projetos", registro_id: id, acao: "exclusao",
+          usuario_id: user.id, empresa_id: empresaId,
+          dados_anteriores: projeto ? JSON.parse(JSON.stringify(projeto)) : null,
+        });
+      }
+      const { error } = await supabase.from("projetos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto e dados vinculados excluídos"); resetForm(); setDeleteTarget(null); },
     onError: (err: any) => toast.error(err.message),
   });
 
