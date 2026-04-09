@@ -327,7 +327,7 @@ const Projetos = () => {
                 {currentProjeto.status !== "aprovado" && (
                   <button onClick={() => changeStatus.mutate({ id: detailProjetoId, status: "aprovado", projeto: currentProjeto })} className="px-4 py-1.5 rounded bg-success text-white text-xs font-medium hover:brightness-105 transition">Aprovar Projeto</button>
                 )}
-                <button onClick={() => { if (window.confirm("Excluir projeto?")) removeProjeto.mutate(detailProjetoId); }} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
+                <button onClick={() => setDeleteTarget({ id: detailProjetoId, nome: currentProjeto.nome })} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
               </div>
             </div>
           </TabsContent>
@@ -514,7 +514,7 @@ const Projetos = () => {
                         <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                            <button onClick={() => { if (window.confirm("Excluir projeto e todos os itens vinculados?")) removeProjeto.mutate(p.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                            <button onClick={() => setDeleteTarget({ id: p.id, nome: p.nome })} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>
