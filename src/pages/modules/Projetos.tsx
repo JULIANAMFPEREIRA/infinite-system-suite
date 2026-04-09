@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
+import AtividadeLog from "@/components/projeto/AtividadeLog";
 
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
