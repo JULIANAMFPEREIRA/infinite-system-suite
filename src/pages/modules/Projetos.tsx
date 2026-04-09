@@ -385,36 +385,36 @@ const Projetos = () => {
       </div>
 
       {/* Status counters - same pattern as CRM */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-11 gap-1.5">
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
           { key: "infraestrutura" as const, label: "Infra", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
-          { key: "instalacao" as const, label: "Instal.", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
+          { key: "instalacao" as const, label: "Instalação", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
           { key: "cabeamento" as const, label: "Cabeam.", count: statusCounts.cabeamento, color: "bg-violet-500/15 text-violet-600" },
-          { key: "programacao" as const, label: "Progr.", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
+          { key: "programacao" as const, label: "Program.", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
           { key: "personalizacao" as const, label: "Person.", count: statusCounts.personalizacao, color: "bg-pink-500/15 text-pink-600" },
-          { key: "concluido" as const, label: "Concl.", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
           { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
-          { key: "cancelado" as const, label: "Canc.", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
+          { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
         ] as const).map(s => (
-          <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
-            <span className="text-sm font-bold mr-1">{s.count}</span>
-            <span className="text-[10px] font-medium">{s.label}</span>
+          <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded px-1 py-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+            <div className="text-lg font-bold leading-none">{s.count}</div>
+            <div className="text-[9px] font-medium mt-0.5 truncate">{s.label}</div>
           </button>
         ))}
         <button
           onClick={() => setMainTab(mainTab === "pendencias" ? "lista" : "pendencias")}
-          className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${mainTab === "pendencias" ? "ring-2 ring-warning" : "hover:opacity-80"} bg-warning/15 text-warning`}
+          className={`rounded px-1 py-2 text-center transition ${mainTab === "pendencias" ? "ring-2 ring-warning" : "hover:opacity-80"} bg-warning/15 text-warning`}
         >
-          <span className="text-sm font-bold mr-1">{pendenciasCount}</span>
-          <span className="text-[10px] font-medium">Pend.</span>
+          <div className="text-lg font-bold leading-none">{pendenciasCount}</div>
+          <div className="text-[9px] font-medium mt-0.5 truncate">Pendências</div>
         </button>
         <button
           onClick={() => setMainTab(mainTab === "financeiro_global" ? "lista" : "financeiro_global")}
-          className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
+          className={`rounded px-1 py-2 text-center transition ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
         >
-          <DollarSign size={14} className="inline mr-0.5" />
-          <span className="text-[10px] font-medium">Financeiro</span>
+          <div className="text-lg font-bold leading-none"><DollarSign size={18} className="mx-auto" /></div>
+          <div className="text-[9px] font-medium mt-0.5 truncate">Financeiro</div>
         </button>
       </div>
 
