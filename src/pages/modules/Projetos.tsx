@@ -333,7 +333,7 @@ const Projetos = () => {
 
           <TabsContent value="itens">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoItensSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} empresaId={empresaId} numeroParcelas={numeroParcelas} />
+              <ProjetoItensSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} empresaId={empresaId} numeroParcelas={numeroParcelas} isCrmGenerated={isCrmGenerated} />
             </div>
           </TabsContent>
 
@@ -755,9 +755,16 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Itens do Projeto</h3>
-        <button onClick={() => { setShowGerarParcelas(true); setGerarQtdParcelas(numeroParcelas); }} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-success text-white hover:brightness-105">
-          <DollarSign size={12} /> Gerar Pagamento
-        </button>
+        <div className="flex items-center gap-2">
+          {isCrmGenerated && (
+            <span className="text-[10px] text-muted-foreground italic">Financeiro gerado via CRM</span>
+          )}
+          {!isCrmGenerated && (
+            <button onClick={() => { setShowGerarParcelas(true); setGerarQtdParcelas(numeroParcelas); }} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-success text-white hover:brightness-105">
+              <DollarSign size={12} /> Gerar Pagamento
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-4 text-[11px] flex-wrap">
