@@ -1569,6 +1569,50 @@ const CRM = () => {
     );
   }
 
+  /* ─── Kanban helpers ─── */
+  const kanbanColumns: { key: StatusCRM; label: string; color: string; borderColor: string; bgColor: string }[] = [
+    { key: "lead", label: "Leads", color: "text-muted-foreground", borderColor: "border-muted-foreground/30", bgColor: "bg-secondary/30" },
+    { key: "contato", label: "Em Contato", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
+    { key: "proposta", label: "Proposta Enviada", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
+    { key: "projeto", label: "Projetos", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
+  ];
+
+  const getClientOrcamentos = (clienteId: string) => (allOrcamentos ?? []).filter(o => o.cliente_id === clienteId);
+  const getClientProjetos = (clienteId: string) => (allProjetos ?? []).filter(p => p.cliente_id === clienteId);
+  const getClientTotalVenda = (clienteId: string) => {
+    const orcs = getClientOrcamentos(clienteId);
+    const approved = orcs.find(o => o.aprovado);
+    if (approved?.simulacao_pagamento) {
+      const sim = approved.simulacao_pagamento as any;
+      const parcelas = sim.parcelas ?? [];
+      if (parcelas.length > 0) return parcelas.reduce((s: number, p: any) => s + (Number(p.valor) || 0), 0) + (Number(sim.entrada) || 0);
+    }
+    const projs = getClientProjetos(clienteId);
+    if (projs.length > 0) return projs.reduce((s, p) => s + (Number(p.venda_total) || 0), 0);
+    return 0;
+  };
+
+  const handleDragStart = (e: React.DragEvent, clientId: string) => {
+    setDragClientId(clientId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", clientId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStatus: StatusCRM) => {
+    e.preventDefault();
+    const clientId = e.dataTransfer.getData("text/plain");
+    const client = clientes?.find(c => c.id === clientId);
+    if (client && client.status_crm !== targetStatus) {
+      changeStatusInline.mutate({ id: clientId, newStatus: targetStatus, old: client });
+    }
+    setDragClientId(null);
+  };
+
   /* ─── LIST VIEW ─── */
   return (
     <div className="space-y-4 animate-fade-in">
@@ -1577,25 +1621,19 @@ const CRM = () => {
           <Users size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">CRM — Gestão de Clientes</h1>
         </div>
-        <button onClick={() => { resetForm(); setViewMode("new"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
-          <Plus size={14} /> Novo Cliente
-        </button>
-      </div>
-
-      {/* Status counters */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        {([
-          { key: "todos" as const, label: "Todos", count: (clientes ?? []).length, color: "bg-secondary text-secondary-foreground" },
-          { key: "lead" as const, label: "Lead", count: statusCounts.lead, color: "bg-secondary text-secondary-foreground" },
-          { key: "contato" as const, label: "Em Contato", count: statusCounts.contato, color: "bg-warning/15 text-warning" },
-          { key: "proposta" as const, label: "Proposta Enviada", count: statusCounts.proposta, color: "bg-primary/15 text-primary" },
-          { key: "projeto" as const, label: "Projeto", count: statusCounts.projeto, color: "bg-success/15 text-success" },
-        ]).map(s => (
-          <button key={s.key} onClick={() => setFilterStatus(s.key)} className={`rounded p-2 text-center transition ${filterStatus === s.key ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
-            <div className="text-lg font-bold">{s.count}</div>
-            <div className="text-[10px] font-medium truncate">{s.label}</div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-secondary/50 rounded-lg p-0.5">
+            <button onClick={() => setListViewType("kanban")} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition ${listViewType === "kanban" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <LayoutGrid size={13} /> Kanban
+            </button>
+            <button onClick={() => setListViewType("table")} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition ${listViewType === "table" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <List size={13} /> Lista
+            </button>
+          </div>
+          <button onClick={() => { resetForm(); setViewMode("new"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+            <Plus size={14} /> Novo Cliente
           </button>
-        ))}
+        </div>
       </div>
 
       {showForm && (
@@ -1634,51 +1672,177 @@ const CRM = () => {
       )}
 
       {isLoading ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : isError ? <p className="text-center py-8 text-xs text-destructive">Erro ao carregar dados.</p> : (
-        <div className="border border-border rounded overflow-hidden">
-          <table className="w-full text-xs">
-            <thead><tr className="bg-secondary/60">
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
-              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
-            </tr></thead>
-            <tbody>
-              {filtered.map(c => (
-                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openDetail(c)}>
-                  <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
-                  <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{origemLabels[c.origem as OrigemLead] ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c as any).fornecedores?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                    <select
-                      value={c.status_crm ?? "lead"}
-                      onChange={e => { e.stopPropagation(); changeStatusInline.mutate({ id: c.id, newStatus: e.target.value as StatusCRM, old: c }); }}
-                      className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusColors[c.status_crm as StatusCRM]} bg-transparent`}
-                      style={{ backgroundImage: "none" }}
-                    >
-                      <option value="lead">Lead</option>
-                      <option value="contato">Em Contato</option>
-                      <option value="proposta">Proposta Enviada</option>
-                      <option value="projeto">Projeto</option>
-                    </select>
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => openDetail(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Eye size={13} /></button>
-                      <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                      <button onClick={() => setDeleteClientTarget({ id: c.id, nome: c.nome })} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+        <>
+          {/* ═══════ KANBAN VIEW ═══════ */}
+          {listViewType === "kanban" && (
+            <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ minHeight: "calc(100vh - 200px)" }}>
+              {kanbanColumns.map(col => {
+                const colClients = (clientes ?? []).filter(c => c.status_crm === col.key);
+                const isDragOver = dragClientId !== null;
+                return (
+                  <div
+                    key={col.key}
+                    className={`flex-shrink-0 w-[280px] md:w-1/4 md:min-w-[240px] flex flex-col rounded-xl border ${col.borderColor} ${col.bgColor} snap-center transition-all ${isDragOver ? "ring-1 ring-primary/20" : ""}`}
+                    onDragOver={handleDragOver}
+                    onDrop={e => handleDrop(e, col.key)}
+                  >
+                    {/* Column header */}
+                    <div className={`flex items-center justify-between px-3 py-2.5 border-b ${col.borderColor}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${col.color}`}>{col.label}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/80 ${col.color}`}>{colClients.length}</span>
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+
+                    {/* Cards */}
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                      {colClients.map(c => {
+                        const orcs = getClientOrcamentos(c.id);
+                        const projs = getClientProjetos(c.id);
+                        const totalVenda = getClientTotalVenda(c.id);
+                        const hasApproved = orcs.some(o => o.aprovado);
+
+                        return (
+                          <div
+                            key={c.id}
+                            draggable
+                            onDragStart={e => handleDragStart(e, c.id)}
+                            onDragEnd={() => setDragClientId(null)}
+                            onClick={() => openDetail(c)}
+                            className={`group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.01] active:scale-[0.98] ${dragClientId === c.id ? "opacity-40 scale-95" : ""}`}
+                          >
+                            {/* Drag handle */}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity">
+                              <GripVertical size={12} className="text-muted-foreground" />
+                            </div>
+
+                            {/* Client name */}
+                            <p className="text-sm font-semibold text-foreground truncate pr-4">{c.nome}</p>
+
+                            {/* Origin & Arquiteto */}
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{origemLabels[c.origem as OrigemLead] ?? "Outro"}</span>
+                              {(c as any).fornecedores?.nome && (
+                                <span className="text-[10px] text-muted-foreground truncate">🏗️ {(c as any).fornecedores.nome}</span>
+                              )}
+                            </div>
+
+                            {/* Budget / Project info */}
+                            {(orcs.length > 0 || projs.length > 0) && (
+                              <div className="mt-2 space-y-1">
+                                {orcs.length > 0 && (
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <FileText size={10} />
+                                    <span>{orcs.length} orç.</span>
+                                    {hasApproved && <span className="text-success font-bold">✓ Aprovado</span>}
+                                  </div>
+                                )}
+                                {projs.length > 0 && (
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <Package size={10} />
+                                    <span>{projs.length} projeto{projs.length > 1 ? "s" : ""}</span>
+                                    <span className="text-[10px] px-1 py-0 rounded bg-success/10 text-success font-medium">{projs[0].status}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Total value */}
+                            {totalVenda > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1">
+                                <DollarSign size={11} className="text-primary" />
+                                <span className="text-xs font-bold text-primary">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+
+                            {/* Quick actions on hover */}
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                              <button onClick={e => { e.stopPropagation(); openEdit(c); }} className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={10} /></button>
+                              <button onClick={e => { e.stopPropagation(); setDeleteClientTarget({ id: c.id, nome: c.nome }); }} className="p-1 rounded bg-secondary/80 hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={10} /></button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {colClients.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50">
+                          <Users size={20} className="mb-1" />
+                          <p className="text-[10px]">Nenhum cliente</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ═══════ TABLE VIEW ═══════ */}
+          {listViewType === "table" && (
+            <>
+              {/* Status counters */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {([
+                  { key: "todos" as const, label: "Todos", count: (clientes ?? []).length, color: "bg-secondary text-secondary-foreground" },
+                  { key: "lead" as const, label: "Lead", count: statusCounts.lead, color: "bg-secondary text-secondary-foreground" },
+                  { key: "contato" as const, label: "Em Contato", count: statusCounts.contato, color: "bg-warning/15 text-warning" },
+                  { key: "proposta" as const, label: "Proposta Enviada", count: statusCounts.proposta, color: "bg-primary/15 text-primary" },
+                  { key: "projeto" as const, label: "Projeto", count: statusCounts.projeto, color: "bg-success/15 text-success" },
+                ]).map(s => (
+                  <button key={s.key} onClick={() => setFilterStatus(s.key)} className={`rounded p-2 text-center transition ${filterStatus === s.key ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+                    <div className="text-lg font-bold">{s.count}</div>
+                    <div className="text-[10px] font-medium truncate">{s.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="border border-border rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-secondary/60">
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
+                    <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
+                    <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+                  </tr></thead>
+                  <tbody>
+                    {filtered.map(c => (
+                      <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openDetail(c)}>
+                        <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
+                        <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
+                        <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
+                        <td className="px-2.5 py-1.5">{origemLabels[c.origem as OrigemLead] ?? "—"}</td>
+                        <td className="px-2.5 py-1.5">{(c as any).fornecedores?.nome ?? "—"}</td>
+                        <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                          <select
+                            value={c.status_crm ?? "lead"}
+                            onChange={e => { e.stopPropagation(); changeStatusInline.mutate({ id: c.id, newStatus: e.target.value as StatusCRM, old: c }); }}
+                            className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusColors[c.status_crm as StatusCRM]} bg-transparent`}
+                            style={{ backgroundImage: "none" }}
+                          >
+                            <option value="lead">Lead</option>
+                            <option value="contato">Em Contato</option>
+                            <option value="proposta">Proposta Enviada</option>
+                            <option value="projeto">Projeto</option>
+                          </select>
+                        </td>
+                        <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => openDetail(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Eye size={13} /></button>
+                            <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteClientTarget({ id: c.id, nome: c.nome })} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       <AlertDialog open={!!deleteClientTarget} onOpenChange={open => { if (!open) setDeleteClientTarget(null); }}>
