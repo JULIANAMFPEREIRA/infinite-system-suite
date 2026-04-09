@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
+import { logAtividade } from "./useAuditLog";
 
 export const useContratos = () => {
   const empresaId = useEmpresa();
@@ -23,8 +24,9 @@ export const useCreateContrato = () => {
   const empresaId = useEmpresa();
   return useMutation({
     mutationFn: async (contrato: { projeto_id?: string | null; cliente_id?: string | null; status?: string; descricao?: string | null; valor?: number; data_envio?: string | null; data_assinatura?: string | null }) => {
-      const { error } = await supabase.from("contratos").insert({ ...contrato, empresa_id: empresaId! } as any);
+      const { data, error } = await supabase.from("contratos").insert({ ...contrato, empresa_id: empresaId! } as any).select().single();
       if (error) throw error;
+      await logAtividade("contratos", "criacao", data.id, empresaId, null, { ...contrato, projeto_id: contrato.projeto_id });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
   });
@@ -36,6 +38,7 @@ export const useUpdateContrato = () => {
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
       const { error } = await supabase.from("contratos").update(updates as any).eq("id", id);
       if (error) throw error;
+      await logAtividade("contratos", "edicao", id, null, null, updates);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
   });
@@ -47,6 +50,7 @@ export const useDeleteContrato = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("contratos").delete().eq("id", id);
       if (error) throw error;
+      await logAtividade("contratos", "exclusao", id, null);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
   });

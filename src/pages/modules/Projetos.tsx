@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
+import AtividadeLog from "@/components/projeto/AtividadeLog";
 
 type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
@@ -296,6 +297,7 @@ const Projetos = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
+            <TabsTrigger value="atividades" className="text-xs">Atividades</TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumo">
@@ -388,6 +390,12 @@ const Projetos = () => {
           <TabsContent value="documentos">
             <div className="bg-card border border-border rounded-lg p-4">
               <ProjetoArquivosSection clienteId={currentProjeto.cliente_id} tipo="documento" />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="atividades">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <AtividadeLog projetoId={currentProjeto.id} />
             </div>
           </TabsContent>
         </Tabs>
