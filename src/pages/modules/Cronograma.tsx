@@ -2,16 +2,9 @@ import { Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import type { Database } from "@/integrations/supabase/types";
+import { statusProjetoLabels, type StatusProjeto } from "@/lib/statusConfig";
 
-type StatusProjeto = Database["public"]["Enums"]["status_projeto"];
-const statusLabels: Record<StatusProjeto, string> = {
-  lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
-  vendido: "Vendido", em_andamento: "Em Andamento", infraestrutura: "Infraestrutura",
-  instalacao: "Instalação", cabeamento: "Cabeamento", programacao: "Programação",
-  personalizacao: "Personalização", concluido: "Concluído",
-  pos_venda: "Pós-Venda", cancelado: "Cancelado"
-};
+const statusLabels = statusProjetoLabels;
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
   em_andamento: 35, infraestrutura: 45, instalacao: 55, cabeamento: 65,

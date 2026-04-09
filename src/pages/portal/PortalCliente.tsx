@@ -3,19 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { FolderKanban, Clock, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { statusProjetoLabels, statusProjetoColors } from "@/lib/statusConfig";
 
-const statusLabel: Record<string, string> = {
-  lead: "Lead", proposta: "Proposta", orcamento: "Orçamento", aprovado: "Aprovado",
-  em_andamento: "Em Andamento", concluido: "Concluído", pos_venda: "Pós-Venda",
-  vendido: "Vendido", cancelado: "Cancelado",
-};
-const statusColor: Record<string, string> = {
-  lead: "bg-secondary text-secondary-foreground", proposta: "bg-warning/15 text-warning",
-  aprovado: "bg-success/15 text-success", em_andamento: "bg-primary/15 text-primary",
-  concluido: "bg-info/15 text-info", vendido: "bg-success/15 text-success",
-  cancelado: "bg-destructive/15 text-destructive", orcamento: "bg-secondary text-secondary-foreground",
-  pos_venda: "bg-accent text-accent-foreground",
-};
+const statusLabel = statusProjetoLabels as Record<string, string>;
+const statusColor = statusProjetoColors as Record<string, string>;
 
 const PortalCliente = () => {
   const { user, signOut } = useAuth();

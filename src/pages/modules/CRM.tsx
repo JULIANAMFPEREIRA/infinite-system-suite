@@ -17,12 +17,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { statusCrmLabels, statusCrmColors, statusCrmKanban, statusCrmOptions, type StatusCRM } from "@/lib/statusConfig";
 
-type StatusCRM = Database["public"]["Enums"]["status_crm"];
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
 
-const statusLabels: Record<StatusCRM, string> = { lead: "Lead", contato: "Em Contato", proposta: "Proposta Enviada", projeto: "Projeto" };
-const statusColors: Record<StatusCRM, string> = { lead: "bg-secondary text-secondary-foreground", contato: "bg-warning/15 text-warning", proposta: "bg-primary/15 text-primary", projeto: "bg-success/15 text-success" };
 const origemLabels: Record<OrigemLead, string> = { whatsapp: "WhatsApp", instagram: "Instagram", indicacao: "Indicação", arquiteto: "Arquiteto", outro: "Outro" };
 
 const CRM = () => {
@@ -1003,7 +1001,7 @@ const CRM = () => {
                 )}
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
                   <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                    <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+                    {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1 col-span-2 md:col-span-4">
@@ -1031,7 +1029,7 @@ const CRM = () => {
             <ArrowLeft size={14} /> Voltar
           </button>
           <h1 className="text-lg font-bold text-foreground">{detailClient.nome}</h1>
-          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[detailClient.status_crm as StatusCRM]}`}>{statusLabels[detailClient.status_crm as StatusCRM]}</span>
+          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[detailClient.status_crm as StatusCRM]}`}>{statusCrmLabels[detailClient.status_crm as StatusCRM]}</span>
         </div>
 
         <Tabs defaultValue="dados" className="w-full">
@@ -1062,7 +1060,7 @@ const CRM = () => {
                 </div>
                 <div className="bg-card border border-border rounded p-3 space-y-1">
                   <div className="flex items-center gap-1.5 text-muted-foreground"><FileText size={12} /><span className="text-[10px] uppercase tracking-wider font-semibold">Status</span></div>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[detailClient.status_crm as StatusCRM]}`}>{statusLabels[detailClient.status_crm as StatusCRM]}</span>
+                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[detailClient.status_crm as StatusCRM]}`}>{statusCrmLabels[detailClient.status_crm as StatusCRM]}</span>
                 </div>
               </div>
 
@@ -1570,12 +1568,7 @@ const CRM = () => {
   }
 
   /* ─── Kanban helpers ─── */
-  const kanbanColumns: { key: StatusCRM; label: string; color: string; borderColor: string; bgColor: string }[] = [
-    { key: "lead", label: "Leads", color: "text-muted-foreground", borderColor: "border-muted-foreground/30", bgColor: "bg-secondary/30" },
-    { key: "contato", label: "Em Contato", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
-    { key: "proposta", label: "Proposta Enviada", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
-    { key: "projeto", label: "Projetos", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
-  ];
+  const kanbanColumns = statusCrmKanban;
 
   const getClientOrcamentos = (clienteId: string) => (allOrcamentos ?? []).filter(o => o.cliente_id === clienteId);
   const getClientProjetos = (clienteId: string) => (allProjetos ?? []).filter(p => p.cliente_id === clienteId);
@@ -1660,7 +1653,7 @@ const CRM = () => {
             )}
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
               <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+                {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           </div>
@@ -1818,7 +1811,7 @@ const CRM = () => {
                           <select
                             value={c.status_crm ?? "lead"}
                             onChange={e => { e.stopPropagation(); changeStatusInline.mutate({ id: c.id, newStatus: e.target.value as StatusCRM, old: c }); }}
-                            className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusColors[c.status_crm as StatusCRM]} bg-transparent`}
+                            className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusCrmColors[c.status_crm as StatusCRM]} bg-transparent`}
                             style={{ backgroundImage: "none" }}
                           >
                             <option value="lead">Lead</option>
@@ -1923,7 +1916,7 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
       )}
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
         <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-          <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+          {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
       <div className="space-y-1 col-span-2 md:col-span-4"><label className="text-[11px] text-muted-foreground">Observação da Origem</label>

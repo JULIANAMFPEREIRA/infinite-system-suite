@@ -97,14 +97,14 @@ const Dashboard = () => {
 
       // Status operacionais
       const statusOperacionais = [
-        { key: "infraestrutura", label: "Infraestrutura", color: "hsl(200, 80%, 55%)" },
-        { key: "instalacao", label: "Instalação", color: "hsl(38, 92%, 50%)" },
-        { key: "cabeamento", label: "Cabeamento", color: "hsl(280, 60%, 50%)" },
-        { key: "programacao", label: "Programação", color: "hsl(152, 69%, 40%)" },
-        { key: "personalizacao", label: "Personalização", color: "hsl(340, 70%, 50%)" },
-        { key: "em_andamento", label: "Em Andamento", color: "hsl(210, 70%, 50%)" },
-        { key: "pos_venda", label: "Pós-venda", color: "hsl(170, 60%, 45%)" },
-        { key: "concluido", label: "Concluído", color: "hsl(140, 60%, 40%)" },
+        { key: "infraestrutura", label: "INFRAESTRUTURA", color: "hsl(200, 80%, 55%)" },
+        { key: "instalacao", label: "INSTALAÇÃO", color: "hsl(38, 92%, 50%)" },
+        { key: "cabeamento", label: "CABEAMENTO", color: "hsl(280, 60%, 50%)" },
+        { key: "programacao", label: "PROGRAMAÇÃO", color: "hsl(152, 69%, 40%)" },
+        { key: "personalizacao", label: "PERSONALIZAÇÃO", color: "hsl(340, 70%, 50%)" },
+        { key: "em_andamento", label: "EM ANDAMENTO", color: "hsl(210, 70%, 50%)" },
+        { key: "pos_venda", label: "PÓS-VENDA", color: "hsl(170, 60%, 45%)" },
+        { key: "concluido", label: "CONCLUÍDO", color: "hsl(140, 60%, 40%)" },
       ];
       const statusCounts = statusOperacionais
         .map(s => ({ ...s, count: projetos.filter(p => p.status === s.key).length }))
