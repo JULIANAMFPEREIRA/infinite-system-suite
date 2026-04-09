@@ -1146,6 +1146,9 @@ const CRM = () => {
                     }} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
                       <Plus size={11} /> Salvar e Novo Orçamento
                     </button>
+                    <button onClick={gerarPropostaPDF} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80">
+                      <Printer size={11} /> Gerar Proposta (PDF)
+                    </button>
                   </div>
                 </div>
                 {orcamentos && orcamentos.length > 0 ? (
