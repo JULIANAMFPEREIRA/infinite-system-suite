@@ -3,7 +3,18 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, ...props }, ref) => {
+    const isEmail = type === "email";
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isEmail) {
+        e.target.value = e.target.value.toLowerCase();
+      } else if (type !== "password" && type !== "number" && type !== "date" && type !== "time" && type !== "datetime-local" && type !== "month" && type !== "week" && type !== "color" && type !== "range" && type !== "hidden" && type !== "file") {
+        e.target.value = e.target.value.toUpperCase();
+      }
+      onChange?.(e);
+    };
+
     return (
       <input
         type={type}
@@ -12,6 +23,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
     );
