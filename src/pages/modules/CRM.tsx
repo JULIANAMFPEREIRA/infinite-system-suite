@@ -1401,6 +1401,23 @@ const CRM = () => {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!deleteClientTarget} onOpenChange={open => { if (!open) setDeleteClientTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Excluir Cliente Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação irá excluir permanentemente o cliente <strong>"{deleteClientTarget?.nome}"</strong> e todos os dados vinculados (orçamentos, projetos, financeiro, documentos, interações). Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteClientTarget) { remove.mutate(deleteClientTarget.id); setDeleteClientTarget(null); } }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
