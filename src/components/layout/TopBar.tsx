@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Search, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
