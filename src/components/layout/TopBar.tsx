@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
+import logoInfinit from "@/assets/logo-infinit.png";
 
 const TopBar = () => {
   const { profile, roles, signOut } = useAuth();
@@ -30,9 +31,15 @@ const TopBar = () => {
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
-      <div className="flex flex-col justify-center">
-        <h1 className="text-sm font-bold tracking-widest text-foreground uppercase">ERP INFINIT NETWORK</h1>
-        <p className="text-[10px] text-muted-foreground font-light tracking-wide">Sistema Inteligente de Gestão Comercial e Projetos</p>
+      <div className="flex items-center gap-3">
+        <img src={logoInfinit} alt="Infinit Network" className="h-7 w-auto object-contain" />
+        <div className="flex flex-col justify-center">
+          <h1 className="text-sm font-bold tracking-widest text-foreground uppercase leading-tight">
+            <span className="text-[10px] font-medium text-muted-foreground mr-1 tracking-wider">ERP</span>
+            <span className="text-sm font-bold text-foreground tracking-widest">INFINIT NETWORK</span>
+          </h1>
+          <p className="text-[9px] text-muted-foreground font-light tracking-wide mt-0.5">Sistema Inteligente de Gestão Comercial e Projetos</p>
+        </div>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
