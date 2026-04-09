@@ -148,8 +148,8 @@ const Dashboard = () => {
         statusCounts,
         proximasVisitas,
         itensComprarDetalhados,
-        receberRaw: receber,
-        pagarRaw: pagar,
+
+
       };
     },
     enabled: !!empresaId,
