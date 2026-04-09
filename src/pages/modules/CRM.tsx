@@ -367,14 +367,14 @@ const CRM = () => {
       if (error) throw error;
       await syncOrcamentoToProject(orcId);
     },
-    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); },
+    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
   // Manual sync button
   const manualSync = useMutation({
     mutationFn: async (orcId: string) => { await syncOrcamentoToProject(orcId); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
