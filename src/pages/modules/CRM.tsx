@@ -380,10 +380,23 @@ const CRM = () => {
     mutationFn: async (orcId: string) => {
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
       if (error) throw error;
-      // Cancel linked project (don't delete — preserve data)
+      // Find linked projects
       const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
       if (linkedProjects && linkedProjects.length > 0) {
         for (const proj of linkedProjects) {
+          // Delete necessidades_compra (itens a comprar)
+          await supabase.from("necessidades_compra").delete().eq("projeto_id", proj.id);
+          // Delete financeiro_pagar linked to project
+          await supabase.from("financeiro_pagar").delete().eq("projeto_id", proj.id);
+          // Delete financeiro_receber linked to project
+          await supabase.from("financeiro_receber").delete().eq("projeto_id", proj.id);
+          // Delete comissoes linked to project
+          await supabase.from("comissoes").delete().eq("projeto_id", proj.id);
+          // Delete compras linked to project
+          await supabase.from("compras").delete().eq("projeto_id", proj.id);
+          // Delete projeto_itens
+          await supabase.from("projeto_itens").delete().eq("projeto_id", proj.id);
+          // Cancel the project
           await supabase.from("projetos").update({ status: "cancelado" }).eq("id", proj.id);
         }
       }
@@ -392,7 +405,13 @@ const CRM = () => {
       refetchOrcamentos();
       qc.invalidateQueries({ queryKey: ["projetos"] });
       qc.invalidateQueries({ queryKey: ["cliente_projetos"] });
-      toast.success("Orçamento desaprovado. Projeto vinculado foi cancelado.");
+      qc.invalidateQueries({ queryKey: ["necessidades_compra"] });
+      qc.invalidateQueries({ queryKey: ["necessidades_compra_counts"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+      qc.invalidateQueries({ queryKey: ["comissoes"] });
+      qc.invalidateQueries({ queryKey: ["compras"] });
+      toast.success("Orçamento desaprovado. Dados vinculados foram removidos.");
     },
     onError: (err: any) => toast.error(err.message),
   });
