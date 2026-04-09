@@ -263,9 +263,11 @@ const Projetos = () => {
       return <ProjetoState title="Projeto não encontrado" description="Verifique se o projeto ainda existe antes de tentar abrir novamente." onBack={resetForm} />;
     }
 
+    const isCrmGenerated = !!currentProjeto.orcamento_id;
+
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button onClick={resetForm} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition">
             <ArrowLeft size={14} /> Voltar para lista
           </button>
@@ -274,6 +276,11 @@ const Projetos = () => {
           <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[currentProjeto.status as StatusProjeto]}`}>
             {statusLabels[currentProjeto.status as StatusProjeto]}
           </span>
+          {isCrmGenerated && (
+            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+              ⚡ Gerado automaticamente via CRM
+            </span>
+          )}
         </div>
 
         <Tabs defaultValue="resumo" className="w-full">
@@ -326,7 +333,7 @@ const Projetos = () => {
 
           <TabsContent value="itens">
             <div className="bg-card border border-border rounded-lg p-4">
-              <ProjetoItensSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} empresaId={empresaId} numeroParcelas={numeroParcelas} />
+              <ProjetoItensSection projetoId={detailProjetoId} projetoNome={nome || currentProjeto.nome} clienteId={clienteId || currentProjeto.cliente_id || ""} empresaId={empresaId} numeroParcelas={numeroParcelas} isCrmGenerated={isCrmGenerated} />
             </div>
           </TabsContent>
 
@@ -655,7 +662,7 @@ const PendenciasSection = ({ projetos, pendenciaCounts, navigate }: { projetos: 
 };
 
 // ======== ITENS DO PROJETO ========
-const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number }) => {
+const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas, isCrmGenerated }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number; isCrmGenerated?: boolean }) => {
   const qc = useQueryClient();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
@@ -748,9 +755,16 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Itens do Projeto</h3>
-        <button onClick={() => { setShowGerarParcelas(true); setGerarQtdParcelas(numeroParcelas); }} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-success text-white hover:brightness-105">
-          <DollarSign size={12} /> Gerar Pagamento
-        </button>
+        <div className="flex items-center gap-2">
+          {isCrmGenerated && (
+            <span className="text-[10px] text-muted-foreground italic">Financeiro gerado via CRM</span>
+          )}
+          {!isCrmGenerated && (
+            <button onClick={() => { setShowGerarParcelas(true); setGerarQtdParcelas(numeroParcelas); }} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-success text-white hover:brightness-105">
+              <DollarSign size={12} /> Gerar Pagamento
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-4 text-[11px] flex-wrap">
