@@ -154,7 +154,24 @@ const Dashboard = () => {
       </div>
 
       {/* 1. INDICADORES PRINCIPAIS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Total a Receber (Geral) */}
+        <div
+          onClick={() => navigate("/financeiro/receber")}
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 rounded-xl border border-[hsl(210,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(210,70%,50%)]/40"
+        >
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total a Receber</p>
+              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.totalReceberGeral ?? 0)}</p>
+              <p className="text-[11px] text-[hsl(210,70%,50%)] mt-1">Todas as pendentes</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[hsl(210,70%,50%)]/20 text-[hsl(210,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
+              <TrendingUp size={20} />
+            </div>
+          </div>
+        </div>
+
         {/* A Receber (Mês) */}
         <div
           onClick={() => navigate("/financeiro/receber")}
@@ -185,6 +202,23 @@ const Dashboard = () => {
             </div>
             <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive group-hover:scale-110 transition-transform shrink-0">
               <UserX size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Compras do Mês */}
+        <div
+          onClick={() => navigate("/itens-comprar")}
+          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(280,60%,50%)]/15 to-[hsl(280,60%,50%)]/5 rounded-xl border border-[hsl(280,60%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(280,60%,50%)]/40"
+        >
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Compras do Mês</p>
+              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.comprasMesValor ?? 0)}</p>
+              <p className="text-[11px] text-[hsl(280,60%,50%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[hsl(280,60%,50%)]/20 text-[hsl(280,60%,50%)] group-hover:scale-110 transition-transform shrink-0">
+              <Receipt size={20} />
             </div>
           </div>
         </div>
