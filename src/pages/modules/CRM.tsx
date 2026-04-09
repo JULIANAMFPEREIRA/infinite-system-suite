@@ -494,7 +494,7 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
-      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
+      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
