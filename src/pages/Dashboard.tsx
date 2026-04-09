@@ -81,6 +81,14 @@ const Dashboard = () => {
         .filter(c => c.data_compra && new Date(c.data_compra) >= inicioMes && new Date(c.data_compra) <= fimMes && c.status !== "cancelada")
         .reduce((a, c) => a + (Number(c.valor_total) || 0), 0);
 
+      // Contas a Pagar
+      const pagarMes = pagar
+        .filter(p => (p.status === "pendente" || p.status === "vencido") && p.data_vencimento && new Date(p.data_vencimento) >= inicioMes && new Date(p.data_vencimento) <= fimMes)
+        .reduce((a, p) => a + (Number(p.valor) || 0), 0);
+      const pagarGeral = pagar
+        .filter(p => p.status === "pendente" || p.status === "vencido")
+        .reduce((a, p) => a + (Number(p.valor) || 0), 0);
+
       const receberMes = receber
         .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes)
         .reduce((a, r) => a + (r.valor ?? 0), 0);
@@ -133,6 +141,8 @@ const Dashboard = () => {
         receberMes,
         totalReceberGeral,
         comprasMesValor,
+        pagarMes,
+        pagarGeral,
         projetosAtivosCount: projetosAtivos.length,
         statusCounts,
         proximasVisitas,
