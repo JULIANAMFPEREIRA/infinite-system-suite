@@ -263,9 +263,11 @@ const Projetos = () => {
       return <ProjetoState title="Projeto não encontrado" description="Verifique se o projeto ainda existe antes de tentar abrir novamente." onBack={resetForm} />;
     }
 
+    const isCrmGenerated = !!currentProjeto.orcamento_id;
+
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button onClick={resetForm} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition">
             <ArrowLeft size={14} /> Voltar para lista
           </button>
@@ -274,6 +276,11 @@ const Projetos = () => {
           <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[currentProjeto.status as StatusProjeto]}`}>
             {statusLabels[currentProjeto.status as StatusProjeto]}
           </span>
+          {isCrmGenerated && (
+            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+              ⚡ Gerado automaticamente via CRM
+            </span>
+          )}
         </div>
 
         <Tabs defaultValue="resumo" className="w-full">
@@ -655,7 +662,7 @@ const PendenciasSection = ({ projetos, pendenciaCounts, navigate }: { projetos: 
 };
 
 // ======== ITENS DO PROJETO ========
-const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number }) => {
+const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas, isCrmGenerated }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number; isCrmGenerated?: boolean }) => {
   const qc = useQueryClient();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();

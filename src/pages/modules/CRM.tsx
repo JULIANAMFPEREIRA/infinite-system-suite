@@ -321,13 +321,10 @@ const CRM = () => {
     }
 
     // ── Sync comissões (RT) ──
-    // Delete old auto-generated comissões for this project (only those not yet paid)
     await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
-    // Generate RT comissões for items that have rt_comissao > 0
     const arquitetoId = detailClient.arquiteto_id;
     if (arquitetoId) {
-      // Get new projeto_itens to link comissões
-      const { data: projItens } = await supabase.from("projeto_itens").select("id, descricao, rt_percentual, preco_venda, quantidade").eq("projeto_id", projId);
+      const { data: projItens } = await supabase.from("projeto_itens").select("id, descricao, rt_percentual, preco_venda, quantidade, produto_id").eq("projeto_id", projId);
       for (const pi of (projItens ?? [])) {
         const rtVal = Number(pi.rt_percentual) || 0;
         if (rtVal > 0) {
@@ -337,6 +334,21 @@ const CRM = () => {
             percentual: Number(pi.preco_venda) > 0 ? (rtVal / (Number(pi.preco_venda) * Number(pi.quantidade))) * 100 : 0,
             status: "pendente",
           });
+        }
+      }
+
+      // ── Sync necessidades de compra ──
+      await supabase.from("necessidades_compra").delete().eq("projeto_id", projId).eq("status", "pendente");
+      for (const pi of (projItens ?? [])) {
+        if (pi.produto_id) {
+          const { count } = await supabase.from("estoque_itens").select("id", { count: "exact", head: true }).eq("produto_id", pi.produto_id).eq("status", "disponivel");
+          if ((count ?? 0) < (Number(pi.quantidade) || 1)) {
+            await supabase.from("necessidades_compra").insert({
+              empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
+              produto_id: pi.produto_id, descricao: pi.descricao ?? "",
+              quantidade: Number(pi.quantidade) || 1, status: "pendente",
+            });
+          }
         }
       }
     }
