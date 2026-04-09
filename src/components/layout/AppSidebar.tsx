@@ -58,11 +58,11 @@ const AppSidebar = () => {
   return (
     <aside className={`fixed left-0 top-0 h-screen z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? "w-14" : "w-56"}`}>
       {/* Logo */}
-      <div className="flex items-center justify-center h-14 border-b border-border px-2">
+      <div className="flex items-center justify-center border-b border-border px-2 py-3">
         {!collapsed ? (
-          <img src={logoGold} alt="INFINIT NETWORK" className="h-7 object-contain" />
+          <img src={logoGold} alt="INFINIT NETWORK" className="w-full object-contain" />
         ) : (
-          <span className="text-primary font-bold text-sm">∞</span>
+          <img src={logoGold} alt="INFINIT NETWORK" className="w-10 object-contain" />
         )}
       </div>
 
