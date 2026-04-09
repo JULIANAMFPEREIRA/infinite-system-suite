@@ -396,13 +396,13 @@ const Projetos = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-2">
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
-          { key: "em_andamento" as const, label: "Em Andamento", count: statusCounts.em_andamento, color: "bg-primary/15 text-primary" },
-          { key: "infraestrutura" as const, label: "Infraestrutura", count: (projetos ?? []).filter(p => p.status === "infraestrutura").length, color: "bg-amber-500/15 text-amber-600" },
-          { key: "instalacao" as const, label: "Instalação", count: (projetos ?? []).filter(p => p.status === "instalacao").length, color: "bg-blue-500/15 text-blue-600" },
-          { key: "cabeamento" as const, label: "Cabeamento", count: (projetos ?? []).filter(p => p.status === "cabeamento").length, color: "bg-violet-500/15 text-violet-600" },
-          { key: "programacao" as const, label: "Programação", count: (projetos ?? []).filter(p => p.status === "programacao").length, color: "bg-cyan-500/15 text-cyan-600" },
-          { key: "personalizacao" as const, label: "Personalização", count: (projetos ?? []).filter(p => p.status === "personalizacao").length, color: "bg-pink-500/15 text-pink-600" },
+          { key: "infraestrutura" as const, label: "Infraestrutura", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
+          { key: "instalacao" as const, label: "Instalação", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
+          { key: "cabeamento" as const, label: "Cabeamento", count: statusCounts.cabeamento, color: "bg-violet-500/15 text-violet-600" },
+          { key: "programacao" as const, label: "Programação", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
+          { key: "personalizacao" as const, label: "Personalização", count: statusCounts.personalizacao, color: "bg-pink-500/15 text-pink-600" },
           { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
           { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
         ] as const).map(s => (
           <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded p-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
