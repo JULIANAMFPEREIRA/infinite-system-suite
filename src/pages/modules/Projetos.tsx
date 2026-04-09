@@ -1811,8 +1811,13 @@ const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) =>
   );
 };
 
-// ======== ARQUIVOS DO PROJETO (via CRM) ========
+// ======== ARQUIVOS DO PROJETO (fonte única: crm_arquivos) ========
 const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null; tipo: "imagem" | "documento" }) => {
+  const qc = useQueryClient();
+  const empresaId = useEmpresa();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const { data: arquivos, isLoading } = useQuery({
     queryKey: ["crm_arquivos", clienteId, tipo],
     queryFn: async () => {
@@ -1823,36 +1828,84 @@ const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null;
     enabled: !!clienteId,
   });
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !clienteId || !empresaId) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop() ?? "";
+        const path = `${empresaId}/${clienteId}/${Date.now()}_${file.name}`;
+        const { error: uploadErr } = await supabase.storage.from("crm-files").upload(path, file);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from("crm-files").getPublicUrl(path);
+        await supabase.from("crm_arquivos").insert({
+          cliente_id: clienteId, empresa_id: empresaId,
+          nome_arquivo: file.name.toUpperCase(), tipo,
+          url: urlData.publicUrl, tamanho: file.size,
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["crm_arquivos", clienteId, tipo] });
+      toast.success(`${tipo === "imagem" ? "Imagem" : "Documento"} enviado!`);
+    } catch (err: any) { toast.error(err.message); }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDelete = async (id: string, url: string) => {
+    try {
+      // Extract path from URL for storage deletion
+      const pathMatch = url.match(/crm-files\/(.+)$/);
+      if (pathMatch) await supabase.storage.from("crm-files").remove([pathMatch[1]]);
+      await supabase.from("crm_arquivos").delete().eq("id", id);
+      qc.invalidateQueries({ queryKey: ["crm_arquivos", clienteId, tipo] });
+      toast.success("Arquivo excluído");
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   if (!clienteId) return <p className="text-xs text-muted-foreground">Projeto sem cliente vinculado.</p>;
 
   const label = tipo === "imagem" ? "Imagens" : "Documentos";
+  const accept = tipo === "imagem" ? "image/*" : ".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv";
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-        <p className="text-[10px] text-muted-foreground">Sincronizado com o CRM</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-muted-foreground">Fonte única · CRM + Projetos</p>
+          <input ref={fileInputRef} type="file" accept={accept} multiple onChange={handleUpload} className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105 disabled:opacity-50">
+            {uploading ? "Enviando..." : <><Plus size={12} className="inline mr-1" />Upload</>}
+          </button>
+        </div>
       </div>
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : arquivos && arquivos.length > 0 ? (
         tipo === "imagem" ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {arquivos.map(img => (
-              <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary/50 transition">
-                <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end p-2">
+              <div key={img.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary/50 transition">
+                <a href={img.url} target="_blank" rel="noopener noreferrer">
+                  <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover" />
+                </a>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-2">
                   <span className="text-[10px] text-white truncate">{img.nome_arquivo}</span>
+                  <button onClick={() => { if (window.confirm("Excluir?")) handleDelete(img.id, img.url); }} className="p-1 rounded bg-black/50 hover:bg-destructive text-white"><Trash2 size={11} /></button>
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         ) : (
           <div className="space-y-1">
             {arquivos.map(doc => (
-              <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded hover:bg-secondary/40 transition text-xs">
-                <FileText size={14} className="text-primary shrink-0" />
-                <span className="truncate text-foreground">{doc.nome_arquivo}</span>
-                <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{doc.tamanho ? `${(doc.tamanho / 1024).toFixed(0)} KB` : ""}</span>
-              </a>
+              <div key={doc.id} className="flex items-center gap-2 p-2 rounded hover:bg-secondary/40 transition text-xs">
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 flex-1 min-w-0">
+                  <FileText size={14} className="text-primary shrink-0" />
+                  <span className="truncate text-foreground">{doc.nome_arquivo}</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{doc.tamanho ? `${(doc.tamanho / 1024).toFixed(0)} KB` : ""}</span>
+                </a>
+                <button onClick={() => { if (window.confirm("Excluir?")) handleDelete(doc.id, doc.url); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive shrink-0"><Trash2 size={12} /></button>
+              </div>
             ))}
           </div>
         )
