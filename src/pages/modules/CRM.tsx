@@ -34,6 +34,7 @@ const CRM = () => {
   const { data: arquitetos } = useArquitetos();
 
   const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
+  const [listViewType, setListViewType] = useState<"kanban" | "table">("kanban");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
@@ -46,6 +47,7 @@ const CRM = () => {
   const [statusCrm, setStatusCrm] = useState<StatusCRM>("lead");
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
   const [novoClienteObs, setNovoClienteObs] = useState("");
+  const [dragClientId, setDragClientId] = useState<string | null>(null);
 
   const [detailClient, setDetailClient] = useState<any>(null);
 
