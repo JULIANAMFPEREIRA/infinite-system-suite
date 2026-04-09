@@ -526,6 +526,23 @@ const Projetos = () => {
           )}
         </>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Excluir Projeto Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação irá excluir permanentemente o projeto <strong>"{deleteTarget?.nome}"</strong> e todos os dados vinculados (financeiro, comissões RT, compras, visitas técnicas, contratos, estoque e itens). Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && removeProjeto.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
