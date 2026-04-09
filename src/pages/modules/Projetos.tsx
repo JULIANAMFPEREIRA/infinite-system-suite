@@ -1711,8 +1711,13 @@ const ProjetoContratosSection = ({ projetoId }: { projetoId: string }) => {
   );
 };
 
-// ======== ANOTAÇÕES DO PROJETO (via CRM) ========
+// ======== ANOTAÇÕES DO PROJETO (fonte única: crm_interacoes) ========
 const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) => {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [tipo, setTipo] = useState("outro");
+  const [descricao, setDescricao] = useState("");
+
   const { data: interacoes, isLoading } = useQuery({
     queryKey: ["crm_interacoes", clienteId],
     queryFn: async () => {
@@ -1723,6 +1728,32 @@ const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) =>
     enabled: !!clienteId,
   });
 
+  const saveNote = useMutation({
+    mutationFn: async () => {
+      if (!clienteId || !descricao.trim()) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("crm_interacoes").insert({
+        cliente_id: clienteId, tipo, descricao: descricao.toUpperCase(), usuario_id: user?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm_interacoes", clienteId] });
+      setDescricao(""); setTipo("outro"); setShowForm(false);
+      toast.success("Anotação salva!");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteNote = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("crm_interacoes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm_interacoes", clienteId] }); toast.success("Anotação excluída"); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   if (!clienteId) return <p className="text-xs text-muted-foreground">Projeto sem cliente vinculado.</p>;
 
   const tipoLabels: Record<string, string> = { ligacao: "📞 Ligação", reuniao: "🤝 Reunião", email: "📧 E-mail", visita: "🏠 Visita", whatsapp: "💬 WhatsApp", outro: "📝 Outro" };
@@ -1731,15 +1762,45 @@ const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) =>
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
-        <p className="text-[10px] text-muted-foreground">Sincronizado com o CRM</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-muted-foreground">Fonte única · CRM + Projetos</p>
+          <button onClick={() => setShowForm(!showForm)} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+            <Plus size={12} className="inline mr-1" />Nova
+          </button>
+        </div>
       </div>
+
+      {showForm && (
+        <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Tipo</label>
+              <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                {Object.entries(tipoLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <label className="text-[11px] text-muted-foreground">Descrição *</label>
+              <input value={descricao} onChange={e => setDescricao(e.target.value.toUpperCase())} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" placeholder="Descreva a interação..." />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => saveNote.mutate()} disabled={!descricao.trim()} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground disabled:opacity-50">Salvar</button>
+            <button onClick={() => { setShowForm(false); setDescricao(""); }} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : interacoes && interacoes.length > 0 ? (
         <div className="space-y-2">
           {interacoes.map(i => (
             <div key={i.id} className="bg-secondary/30 rounded-lg p-3 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium">{tipoLabels[i.tipo ?? "outro"] ?? i.tipo}</span>
-                <span className="text-[10px] text-muted-foreground">{new Date(i.created_at).toLocaleDateString("pt-BR")} {new Date(i.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">{new Date(i.created_at).toLocaleDateString("pt-BR")} {new Date(i.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <button onClick={() => { if (window.confirm("Excluir anotação?")) deleteNote.mutate(i.id); }} className="p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
+                </div>
               </div>
               <p className="text-xs text-foreground whitespace-pre-wrap">{i.descricao ?? "—"}</p>
             </div>
