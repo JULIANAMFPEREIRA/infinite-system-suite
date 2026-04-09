@@ -310,16 +310,8 @@ const Projetos = () => {
                   </select>
                 </div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma Pagamento</label>
-                  <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                    <option value="">Selecionar...</option>
-                    {formasPagamento?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
-                    <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Transferência">Transferência</option>
-                  </select>
-                </div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data de Fechamento</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Observações Pagamento</label><input value={observacoesPagamento} onChange={e => setObservacoesPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
               </div>
               <div className="flex gap-2">
@@ -393,36 +385,36 @@ const Projetos = () => {
       </div>
 
       {/* Status counters - same pattern as CRM */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
-          { key: "infraestrutura" as const, label: "Infraestrutura", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
-          { key: "instalacao" as const, label: "Instalação", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
-          { key: "cabeamento" as const, label: "Cabeamento", count: statusCounts.cabeamento, color: "bg-violet-500/15 text-violet-600" },
-          { key: "programacao" as const, label: "Programação", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
-          { key: "personalizacao" as const, label: "Personalização", count: statusCounts.personalizacao, color: "bg-pink-500/15 text-pink-600" },
-          { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "infraestrutura" as const, label: "Infra", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
+          { key: "instalacao" as const, label: "Instal.", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
+          { key: "cabeamento" as const, label: "Cabeam.", count: statusCounts.cabeamento, color: "bg-violet-500/15 text-violet-600" },
+          { key: "programacao" as const, label: "Progr.", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
+          { key: "personalizacao" as const, label: "Person.", count: statusCounts.personalizacao, color: "bg-pink-500/15 text-pink-600" },
+          { key: "concluido" as const, label: "Concl.", count: statusCounts.concluido, color: "bg-info/15 text-info" },
           { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
-          { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
+          { key: "cancelado" as const, label: "Canc.", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
         ] as const).map(s => (
-          <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded p-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
-            <div className="text-lg font-bold">{s.count}</div>
-            <div className="text-[10px] font-medium truncate">{s.label}</div>
+          <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
+            <span className="text-sm font-bold mr-1">{s.count}</span>
+            <span className="text-[10px] font-medium">{s.label}</span>
           </button>
         ))}
         <button
           onClick={() => setMainTab(mainTab === "pendencias" ? "lista" : "pendencias")}
-          className={`rounded p-2 text-center transition ${mainTab === "pendencias" ? "ring-2 ring-warning" : "hover:opacity-80"} bg-warning/15 text-warning`}
+          className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${mainTab === "pendencias" ? "ring-2 ring-warning" : "hover:opacity-80"} bg-warning/15 text-warning`}
         >
-          <div className="text-lg font-bold">{pendenciasCount}</div>
-          <div className="text-[10px] font-medium truncate">Pendências</div>
+          <span className="text-sm font-bold mr-1">{pendenciasCount}</span>
+          <span className="text-[10px] font-medium">Pend.</span>
         </button>
         <button
           onClick={() => setMainTab(mainTab === "financeiro_global" ? "lista" : "financeiro_global")}
-          className={`rounded p-2 text-center transition ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
+          className={`rounded px-2.5 py-1.5 text-center transition whitespace-nowrap ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
         >
-          <div className="text-lg font-bold"><DollarSign size={18} className="mx-auto" /></div>
-          <div className="text-[10px] font-medium truncate">Financeiro</div>
+          <DollarSign size={14} className="inline mr-0.5" />
+          <span className="text-[10px] font-medium">Financeiro</span>
         </button>
       </div>
 
@@ -1224,6 +1216,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+                <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pagamento</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
               </tr></thead>
               <tbody>
@@ -1233,6 +1226,11 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                     <td className="px-2 py-1.5 text-right font-medium">R$ {(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                     <td className="px-2 py-1.5 text-center">{p.data_vencimento ?? "—"}</td>
                     <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(p.status ?? "pendente")}`}>{p.status}</span></td>
+                    <td className="px-2 py-1.5 text-center text-[10px] text-muted-foreground">
+                      {p.status === "pago" ? (
+                        <span>{p.data_pagamento ?? "—"}</span>
+                      ) : "—"}
+                    </td>
                     <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         {p.status === "pendente" && <button onClick={() => { setBaixaId(p.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true); }} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={12} /></button>}
@@ -1453,6 +1451,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
+  const [baixaObs, setBaixaObs] = useState("");
 
   const resetForm = () => { setEditId(null); setFornecedorId(arquitetoId); setPercentual(0); setValor(0); setVencimento(""); setShowForm(false); };
 
@@ -1461,7 +1460,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
     if (!empresaId) return;
     try {
       if (editId) {
-        const { error } = await supabase.from("comissoes").update({ fornecedor_id: fornecedorId, percentual, valor, data_vencimento: vencimento || null }).eq("id", editId);
+        const { error } = await supabase.from("comissoes").update({ fornecedor_id: fornecedorId, percentual, valor, data_vencimento: vencimento || null } as any).eq("id", editId);
         if (error) throw error;
         await supabase.from("financeiro_pagar").update({ valor, fornecedor_id: fornecedorId, data_vencimento: vencimento || null }).eq("comissao_id", editId);
         toast.success("Comissão atualizada");
@@ -1484,13 +1483,13 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   };
 
   const openBaixa = (c: any) => {
-    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setShowBaixa(true);
+    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
   };
 
   const handleBaixa = async () => {
     if (!baixaId) return;
     try {
-      const { error } = await supabase.from("comissoes").update({ status: "pago" }).eq("id", baixaId);
+      const { error } = await supabase.from("comissoes").update({ status: "pago", forma_pagamento: baixaForma || null, observacao: baixaObs || null } as any).eq("id", baixaId);
       if (error) throw error;
       await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("comissao_id", baixaId);
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
@@ -1549,6 +1548,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
               <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Vencimento</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pagamento</th>
               <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
             </tr></thead>
             <tbody>
@@ -1559,6 +1559,14 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
                   <td className="px-2 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-2 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
                   <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span></td>
+                  <td className="px-2 py-1.5 text-center text-[10px] text-muted-foreground">
+                    {c.status === "pago" ? (
+                      <div className="space-y-0.5">
+                        {(c as any).forma_pagamento && <div>{(c as any).forma_pagamento}</div>}
+                        {(c as any).observacao && <div className="italic">{(c as any).observacao}</div>}
+                      </div>
+                    ) : "—"}
+                  </td>
                   <td className="px-2 py-1.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
@@ -1585,6 +1593,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
                 <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
               </select>
             </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder="Observação opcional" /></div>
           </div>
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>

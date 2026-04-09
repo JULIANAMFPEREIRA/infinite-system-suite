@@ -161,8 +161,10 @@ export type Database = {
           created_at: string
           data_vencimento: string | null
           empresa_id: string
+          forma_pagamento: string | null
           fornecedor_id: string
           id: string
+          observacao: string | null
           percentual: number | null
           projeto_id: string
           projeto_item_id: string | null
@@ -173,8 +175,10 @@ export type Database = {
           created_at?: string
           data_vencimento?: string | null
           empresa_id: string
+          forma_pagamento?: string | null
           fornecedor_id: string
           id?: string
+          observacao?: string | null
           percentual?: number | null
           projeto_id: string
           projeto_item_id?: string | null
@@ -185,8 +189,10 @@ export type Database = {
           created_at?: string
           data_vencimento?: string | null
           empresa_id?: string
+          forma_pagamento?: string | null
           fornecedor_id?: string
           id?: string
+          observacao?: string | null
           percentual?: number | null
           projeto_id?: string
           projeto_item_id?: string | null
