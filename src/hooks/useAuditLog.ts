@@ -6,6 +6,28 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AcaoAudit = Database["public"]["Enums"]["acao_audit"];
 
+/** Plain function — can be called anywhere (no hook dependency) */
+export const logAtividade = async (
+  tabela: string,
+  acao: AcaoAudit,
+  registroId: string | null,
+  empresaId: string | null,
+  dadosAnteriores?: Record<string, any> | null,
+  dadosNovos?: Record<string, any> | null
+) => {
+  if (!empresaId) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.from("audit_logs").insert({
+    tabela,
+    acao,
+    registro_id: registroId,
+    empresa_id: empresaId,
+    usuario_id: user?.id ?? null,
+    dados_anteriores: dadosAnteriores ?? null,
+    dados_novos: dadosNovos ?? null,
+  });
+};
+
 export const useLogAtividade = () => {
   const { user } = useAuth();
   const empresaId = useEmpresa();
