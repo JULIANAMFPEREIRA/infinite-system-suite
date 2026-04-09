@@ -372,6 +372,24 @@ const Projetos = () => {
               <ProjetoContratosSection projetoId={detailProjetoId} />
             </div>
           </TabsContent>
+
+          <TabsContent value="anotacoes">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoAnotacoesSection clienteId={currentProjeto.cliente_id} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="imagens">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoArquivosSection clienteId={currentProjeto.cliente_id} tipo="imagem" />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="documentos">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <ProjetoArquivosSection clienteId={currentProjeto.cliente_id} tipo="documento" />
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     );
