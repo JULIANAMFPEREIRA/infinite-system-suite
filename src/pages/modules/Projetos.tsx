@@ -310,15 +310,8 @@ const Projetos = () => {
                   </select>
                 </div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma Pagamento</label>
-                  <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                    <option value="">Selecionar...</option>
-                    {formasPagamento?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
-                    <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Transferência">Transferência</option>
-                  </select>
-                </div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data de Fechamento</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Observações Pagamento</label><input value={observacoesPagamento} onChange={e => setObservacoesPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
               </div>
