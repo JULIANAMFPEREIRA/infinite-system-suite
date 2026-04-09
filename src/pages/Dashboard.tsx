@@ -261,7 +261,7 @@ const Dashboard = () => {
           {(stats?.proximasVisitas?.length ?? 0) > 0 ? (
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
               {stats!.proximasVisitas.map((v, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={i} className="list-item-hover flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/15 text-primary shrink-0">
                     <span className="text-xs font-bold leading-tight">{v.data ? format(new Date(v.data), "dd") : "—"}</span>
                     <span className="text-[9px] uppercase">{v.data ? format(new Date(v.data), "MMM", { locale: ptBR }) : ""}</span>
@@ -302,7 +302,7 @@ const Dashboard = () => {
           {(stats?.itensComprarDetalhados?.length ?? 0) > 0 ? (
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
               {stats!.itensComprarDetalhados.map((item, i) => (
-                <div key={i} className="p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={i} className="list-item-hover p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-foreground truncate">{item.produtoNome}</p>
@@ -338,7 +338,7 @@ const Dashboard = () => {
           {(stats?.statusCounts?.length ?? 0) > 0 ? (
             <div className="space-y-2">
               {stats!.statusCounts.map(s => (
-                <div key={s.key} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+                <div key={s.key} className="list-item-hover flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                     <span className="text-xs text-foreground">{s.label}</span>
