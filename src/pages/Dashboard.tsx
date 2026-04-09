@@ -71,6 +71,16 @@ const Dashboard = () => {
       const inadimplentesValorTotal = inadimplentes.reduce((a, r) => a + (r.valor ?? 0), 0);
       const clientesInadimplentesUnicos = new Set(inadimplentes.map(i => i.cliente_id).filter(Boolean)).size;
 
+      // Total a Receber GERAL (todas as pendentes, independente do mês)
+      const totalReceberGeral = receber
+        .filter(r => r.status === "pendente" || r.status === "vencido")
+        .reduce((a, r) => a + (r.valor ?? 0), 0);
+
+      // Compras do Mês (compras realizadas + itens pendentes convertidos no mês atual)
+      const comprasMesValor = compras
+        .filter(c => c.data_compra && new Date(c.data_compra) >= inicioMes && new Date(c.data_compra) <= fimMes && c.status !== "cancelada")
+        .reduce((a, c) => a + (Number(c.valor_total) || 0), 0);
+
       const receberMes = receber
         .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes)
         .reduce((a, r) => a + (r.valor ?? 0), 0);
