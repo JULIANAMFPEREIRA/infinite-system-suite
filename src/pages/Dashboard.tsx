@@ -131,7 +131,7 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
