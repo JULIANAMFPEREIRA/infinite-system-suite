@@ -33,7 +33,7 @@ const statusColors: Record<StatusProjeto, string> = {
   concluido: "bg-info/15 text-info", pos_venda: "bg-accent text-accent-foreground",
   cancelado: "bg-destructive/15 text-destructive"
 };
-const statusOptions: StatusProjeto[] = ["em_andamento", "infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "cancelado", "lead", "proposta", "orcamento", "aprovado", "vendido", "pos_venda"];
+const statusOptions: StatusProjeto[] = ["infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "pos_venda", "cancelado"];
 const projetoIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ProjetoState = ({
