@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -948,14 +948,58 @@ const CRM = () => {
 
           {/* ─── ITENS PRÉ-PROJETO (com múltiplos orçamentos) ─── */}
           <TabsContent value="itens">
+            <AutoCreateOrcamento
+              orcamentos={orcamentos}
+              detailClientId={detailClient?.id}
+              empresaId={empresaId}
+              createOrcamento={createOrcamento}
+              activeOrcamentoId={activeOrcamentoId}
+              setActiveOrcamentoId={setActiveOrcamentoId}
+              loadSimFromOrc={loadSimFromOrc}
+            />
             <div className="space-y-3">
               {/* Orcamento selector */}
               <div className="bg-card border border-border rounded p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold">Orçamentos</h4>
-                  <button onClick={() => createOrcamento.mutate()} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
-                    <Plus size={11} /> Novo Orçamento
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={async () => {
+                      if (activeOrcamentoId) {
+                        const simData = {
+                          condicao: simCondicao, formaPagamento: simFormaPgto,
+                          numParcelas: simParcelas, entrada: simEntrada,
+                          intervalo: simIntervalo, juros: simJuros,
+                          parcelas: parcelasParaExibir,
+                        };
+                        await saveOrcamentoSimulacao(simData);
+                        if (activeOrc?.aprovado) {
+                          await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+                          qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+                        }
+                      }
+                      toast.success("Orçamento salvo!");
+                    }} disabled={!activeOrcamentoId} className="flex items-center gap-1 h-7 px-3 rounded bg-success text-white text-[11px] font-medium disabled:opacity-50 hover:brightness-105 transition">
+                      <Check size={11} /> Salvar Orçamento
+                    </button>
+                    <button onClick={async () => {
+                      if (activeOrcamentoId) {
+                        const simData = {
+                          condicao: simCondicao, formaPagamento: simFormaPgto,
+                          numParcelas: simParcelas, entrada: simEntrada,
+                          intervalo: simIntervalo, juros: simJuros,
+                          parcelas: parcelasParaExibir,
+                        };
+                        await saveOrcamentoSimulacao(simData);
+                        if (activeOrc?.aprovado) {
+                          await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+                        }
+                        toast.success("Orçamento salvo!");
+                      }
+                      createOrcamento.mutate();
+                    }} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
+                      <Plus size={11} /> Salvar e Novo Orçamento
+                    </button>
+                  </div>
                 </div>
                 {orcamentos && orcamentos.length > 0 ? (
                   <div className="flex gap-3 flex-wrap">
@@ -979,7 +1023,7 @@ const CRM = () => {
                           {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
                           {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {!orc.aprovado ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
@@ -1010,20 +1054,18 @@ const CRM = () => {
                           >
                             <Copy size={14} /> Duplicar
                           </button>
-                          {!orc.aprovado && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }}
-                              className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
-                            >
-                              <Trash2 size={14} /> Excluir
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (window.confirm("⚠️ Excluir orçamento e seus itens? Essa ação é permanente.")) deleteOrcamento.mutate(orc.id); }}
+                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
+                          >
+                            <Trash2 size={14} /> Excluir
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">Crie um orçamento para organizar os itens do pré-projeto.</p>
+                  <p className="text-[11px] text-muted-foreground">Criando primeiro orçamento...</p>
                 )}
               </div>
 
@@ -1420,6 +1462,22 @@ const CRM = () => {
       </AlertDialog>
     </div>
   );
+};
+
+/* ─── Auto-create first orcamento when Itens tab is opened ─── */
+const AutoCreateOrcamento = ({ orcamentos, detailClientId, empresaId, createOrcamento, activeOrcamentoId, setActiveOrcamentoId, loadSimFromOrc }: any) => {
+  const didAutoCreate = useRef(false);
+  useEffect(() => {
+    if (orcamentos && orcamentos.length === 0 && detailClientId && empresaId && !didAutoCreate.current && !createOrcamento.isPending) {
+      didAutoCreate.current = true;
+      createOrcamento.mutate();
+    }
+    if (orcamentos && orcamentos.length > 0 && !activeOrcamentoId) {
+      setActiveOrcamentoId(orcamentos[0].id);
+      loadSimFromOrc(orcamentos[0]);
+    }
+  }, [orcamentos, detailClientId, empresaId, activeOrcamentoId]);
+  return null;
 };
 
 /* ─── Inline Edit Form for Detail View ─── */
