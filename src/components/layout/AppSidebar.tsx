@@ -6,7 +6,7 @@ import {
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
   ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck, ClipboardList, X
 } from "lucide-react";
-import logoGold from "@/assets/logo-infinit.png";
+
 
 interface NavItem {
   label: string;
