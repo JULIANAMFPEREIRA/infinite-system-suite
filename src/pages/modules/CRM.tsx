@@ -1001,7 +1001,7 @@ const CRM = () => {
                 )}
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
                   <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                    <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+                    {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1 col-span-2 md:col-span-4">
@@ -1653,7 +1653,7 @@ const CRM = () => {
             )}
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
               <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+                {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           </div>
@@ -1916,7 +1916,7 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
       )}
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
         <select value={statusCrm} onChange={e => setStatusCrm(e.target.value as StatusCRM)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-          <option value="lead">Lead</option><option value="contato">Em Contato</option><option value="proposta">Proposta Enviada</option><option value="projeto">Projeto</option>
+          {statusCrmOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
       <div className="space-y-1 col-span-2 md:col-span-4"><label className="text-[11px] text-muted-foreground">Observação da Origem</label>
