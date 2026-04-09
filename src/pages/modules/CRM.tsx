@@ -1568,12 +1568,7 @@ const CRM = () => {
   }
 
   /* ─── Kanban helpers ─── */
-  const kanbanColumns: { key: StatusCRM; label: string; color: string; borderColor: string; bgColor: string }[] = [
-    { key: "lead", label: "Leads", color: "text-muted-foreground", borderColor: "border-muted-foreground/30", bgColor: "bg-secondary/30" },
-    { key: "contato", label: "Em Contato", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
-    { key: "proposta", label: "Proposta Enviada", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
-    { key: "projeto", label: "Projetos", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
-  ];
+  const kanbanColumns = statusCrmKanban;
 
   const getClientOrcamentos = (clienteId: string) => (allOrcamentos ?? []).filter(o => o.cliente_id === clienteId);
   const getClientProjetos = (clienteId: string) => (allProjetos ?? []).filter(p => p.cliente_id === clienteId);
