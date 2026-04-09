@@ -8,10 +8,10 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile overlay */}
+      {/* Mobile overlay with fade */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
