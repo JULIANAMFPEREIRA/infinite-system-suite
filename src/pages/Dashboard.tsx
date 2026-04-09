@@ -4,6 +4,7 @@ import {
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
   AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
+import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
