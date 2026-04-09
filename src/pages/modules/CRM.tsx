@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,7 +278,7 @@ const CRM = () => {
         numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
         forma_pagamento: simFormaPgto || null,
         descricao: descParts.join(" | "),
-        status: "aprovado",
+        status: "infraestrutura",
         observacoes_pagamento: `Sincronizado em ${new Date().toLocaleString("pt-BR")}`,
       }).eq("id", projId);
     } else {
@@ -284,7 +286,7 @@ const CRM = () => {
         nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
         descricao: descParts.join(" | "),
         cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
-        arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
+        arquiteto_id: detailClient.arquiteto_id || null, status: "infraestrutura",
         venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
         numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
         forma_pagamento: simFormaPgto || null,
@@ -463,7 +465,7 @@ const CRM = () => {
       nome: `${clienteNome} — ${approvedOrc?.nome ?? ""}`.trim(),
       descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
-      arquiteto_id: arqId || null, status: "aprovado",
+      arquiteto_id: arqId || null, status: "infraestrutura",
       venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
       numero_parcelas: simParcCount > 0 ? simParcCount : 1,
       forma_pagamento: simFormaPgto || null,
