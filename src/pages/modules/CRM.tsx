@@ -91,6 +91,28 @@ const CRM = () => {
     enabled: !!empresaId,
   });
 
+  // All orcamentos for kanban card display
+  const { data: allOrcamentos } = useQuery({
+    queryKey: ["all_crm_orcamentos", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  // All projetos for kanban card display
+  const { data: allProjetos } = useQuery({
+    queryKey: ["all_projetos_kanban", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").neq("status", "cancelado").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
   const { data: interacoes, refetch: refetchInteracoes } = useQuery({
     queryKey: ["crm_interacoes", detailClient?.id],
     queryFn: async () => {
