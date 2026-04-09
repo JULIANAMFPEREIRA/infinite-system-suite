@@ -391,6 +391,12 @@ const Projetos = () => {
               <ProjetoArquivosSection clienteId={currentProjeto.cliente_id} tipo="documento" />
             </div>
           </TabsContent>
+
+          <TabsContent value="atividades">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <AtividadeLog projetoId={currentProjeto.id} />
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     );
