@@ -1132,11 +1132,14 @@ const CRM = () => {
               setActiveOrcamentoId={setActiveOrcamentoId}
               loadSimFromOrc={loadSimFromOrc}
             />
-            <div className="space-y-3">
-              {/* Orcamento selector */}
-              <div className="bg-card border border-border rounded p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold">Orçamentos</h4>
+            <div className="space-y-6">
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* BLOCO 1 — ORÇAMENTOS                                  */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-foreground tracking-tight">Orçamentos</h3>
                   <div className="flex gap-2">
                     <button onClick={async () => {
                       if (activeOrcamentoId) {
@@ -1154,7 +1157,7 @@ const CRM = () => {
                       }
                       toast.success("Orçamento salvo!");
                     }} disabled={!activeOrcamentoId} className="flex items-center gap-1 h-7 px-3 rounded bg-success text-white text-[11px] font-medium disabled:opacity-50 hover:brightness-105 transition">
-                      <Check size={11} /> Salvar Orçamento
+                      <Check size={11} /> Salvar
                     </button>
                     <button onClick={async () => {
                       if (activeOrcamentoId) {
@@ -1172,71 +1175,58 @@ const CRM = () => {
                       }
                       createOrcamento.mutate();
                     }} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
-                      <Plus size={11} /> Salvar e Novo Orçamento
+                      <Plus size={11} /> Novo Orçamento
                     </button>
                     <button onClick={gerarPropostaPDF} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80">
-                      <Printer size={11} /> Gerar Proposta (PDF)
+                      <Printer size={11} /> PDF
                     </button>
                   </div>
                 </div>
+
                 {orcamentos && orcamentos.length > 0 ? (
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {orcamentos.map(orc => (
                       <div
                         key={orc.id}
                         onClick={() => { setActiveOrcamentoId(orc.id); loadSimFromOrc(orc); }}
-                        className={`flex flex-col gap-2 px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all ${activeOrcamentoId === orc.id ? "border-primary bg-primary/10 shadow-md" : "border-border bg-card hover:bg-secondary/30 hover:border-primary/40"} ${orc.aprovado ? "ring-2 ring-success ring-offset-1" : ""}`}
+                        className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all ${activeOrcamentoId === orc.id ? "border-primary bg-primary/5 shadow-lg shadow-primary/5" : "border-border bg-card hover:bg-secondary/20 hover:border-primary/30"} ${orc.aprovado ? "ring-1 ring-success/50" : ""}`}
                       >
-                        <div className="flex items-center gap-2">
-                          {orc.aprovado && <Check size={16} className="text-success" />}
-                          {editingOrcNome === orc.id ? (
-                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                              <input value={orcNomeInput} onChange={e => setOrcNomeInput(e.target.value)} className="h-6 px-1.5 text-xs bg-background border border-primary rounded w-32" autoFocus onKeyDown={e => { if (e.key === "Enter") renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput }); if (e.key === "Escape") setEditingOrcNome(null); }} />
-                              <button onClick={() => renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput })} className="text-primary"><Check size={12} /></button>
-                              <button onClick={() => setEditingOrcNome(null)} className="text-muted-foreground"><X size={12} /></button>
-                            </div>
-                          ) : (
-                            <span className={`font-semibold ${activeOrcamentoId === orc.id ? "text-primary" : "text-foreground"}`} onDoubleClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }}>{orc.nome}</span>
-                          )}
-                          {orc.aprovado && <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-semibold uppercase">Aprovado</span>}
-                          {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {editingOrcNome === orc.id ? (
+                              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                <input value={orcNomeInput} onChange={e => setOrcNomeInput(e.target.value)} className="h-6 px-1.5 text-xs bg-background border border-primary rounded w-32" autoFocus onKeyDown={e => { if (e.key === "Enter") renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput }); if (e.key === "Escape") setEditingOrcNome(null); }} />
+                                <button onClick={() => renameOrcamento.mutate({ id: orc.id, nome: orcNomeInput })} className="text-primary"><Check size={12} /></button>
+                                <button onClick={() => setEditingOrcNome(null)} className="text-muted-foreground"><X size={12} /></button>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-semibold text-foreground truncate" onDoubleClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }}>{orc.nome}</span>
+                            )}
+                            {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary shrink-0"><Pencil size={11} /></button>}
+                          </div>
+                          {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {!orc.aprovado ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }}
-                              className="flex items-center gap-1 h-8 px-3 rounded bg-success/15 text-success hover:bg-success/25 text-xs font-medium border border-success/30 transition"
-                            >
-                              <Check size={14} /> Aprovar
+                            <button onClick={(e) => { e.stopPropagation(); approveOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-success/15 text-success hover:bg-success/25 text-[11px] font-medium border border-success/30 transition">
+                              <Check size={12} /> Aprovar
                             </button>
                           ) : (
                             <>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }}
-                                disabled={manualSync.isPending}
-                                className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition disabled:opacity-50"
-                              >
-                                <RefreshCw size={14} className={manualSync.isPending ? "animate-spin" : ""} /> Atualizar Projeto
+                              <button onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }} disabled={manualSync.isPending} className="flex items-center gap-1 h-7 px-2.5 rounded bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-medium border border-primary/30 transition disabled:opacity-50">
+                                <RefreshCw size={12} className={manualSync.isPending ? "animate-spin" : ""} /> Sync
                               </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }}
-                                className="flex items-center gap-1 h-8 px-3 rounded bg-warning/15 text-warning hover:bg-warning/25 text-xs font-medium border border-warning/30 transition"
-                              >
-                                <X size={14} /> Desaprovar
+                              <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-warning/15 text-warning hover:bg-warning/25 text-[11px] font-medium border border-warning/30 transition">
+                                <X size={12} /> Desaprovar
                               </button>
                             </>
                           )}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }}
-                            className="flex items-center gap-1 h-8 px-3 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium border border-primary/30 transition"
-                          >
-                            <Copy size={14} /> Duplicar
+                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[11px] font-medium transition">
+                            <Copy size={12} />
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); if (window.confirm("⚠️ Excluir orçamento e seus itens? Essa ação é permanente.")) deleteOrcamento.mutate(orc.id); }}
-                            className="flex items-center gap-1 h-8 px-3 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium border border-destructive/30 transition"
-                          >
-                            <Trash2 size={14} /> Excluir
+                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("⚠️ Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-[11px] font-medium transition">
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </div>
@@ -1245,128 +1235,173 @@ const CRM = () => {
                 ) : (
                   <p className="text-[11px] text-muted-foreground">Criando primeiro orçamento...</p>
                 )}
-              </div>
+              </section>
 
-              {/* Item form */}
-              <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-3 space-y-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1"><Package size={12} /> {editItemId ? "Editar Item" : "Novo Item"} {activeOrcamentoId && activeOrc ? `— ${activeOrc.nome}` : ""}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-                  <div className="col-span-2 md:col-span-1 space-y-0.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
-                    <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Quantidade</label>
-                    <input type="number" value={itemQtd} onChange={e => setItemQtd(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Custo (R$)</label>
-                    <input type="number" value={itemCusto} onChange={e => setItemCusto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
-                    <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
-                    <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
-                  </div>
-                  <div className="flex gap-1 items-end">
-                    <button onClick={() => saveCrmItem.mutate()} disabled={!itemDesc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editItemId ? "Salvar" : "Adicionar"}</button>
-                    {editItemId && <button onClick={resetItemForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* BLOCO 2 — ITENS DO ORÇAMENTO                          */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              <section>
+                <h3 className="text-sm font-bold text-foreground tracking-tight mb-3">
+                  Itens do Orçamento {activeOrc ? `— ${activeOrc.nome}` : ""}
+                </h3>
+
+                {/* Form adicionar item */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3 mb-4">
+                  <h4 className="text-xs font-semibold flex items-center gap-1.5 text-foreground"><Package size={13} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                    <div className="col-span-2 md:col-span-1 space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
+                      <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Quantidade</label>
+                      <input type="number" value={itemQtd} onChange={e => setItemQtd(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Custo (R$)</label>
+                      <input type="number" value={itemCusto} onChange={e => setItemCusto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
+                      <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
+                      <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                    </div>
+                    <div className="flex gap-1 items-end">
+                      <button onClick={() => saveCrmItem.mutate()} disabled={!itemDesc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editItemId ? "Salvar" : "Adicionar"}</button>
+                      {editItemId && <button onClick={resetItemForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {(crmItens && crmItens.length > 0) && (
-                <>
-                  <div className="border-2 border-primary/15 rounded-lg overflow-hidden bg-card">
-                    <table className="w-full text-xs">
-                      <thead><tr className="bg-primary/10">
-                        <th className="text-left px-2.5 py-2 font-semibold border-b border-primary/15">Descrição</th>
-                        <th className="text-center px-2.5 py-2 font-semibold border-b border-primary/15">Qtd</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Custo</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Venda</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">RT/Comissão</th>
-                        <th className="text-right px-2.5 py-2 font-semibold border-b border-primary/15">Subtotal</th>
-                        <th className="text-center px-2.5 py-2 font-semibold border-b border-primary/15">Ações</th>
-                      </tr></thead>
-                      <tbody>
-                        {crmItens.map(item => (
-                          <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
-                            <td className="px-2.5 py-1.5">{item.descricao}</td>
-                            <td className="px-2.5 py-1.5 text-center">{item.quantidade}</td>
-                            <td className="px-2.5 py-1.5 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
-                            <td className="px-2.5 py-1.5 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
-                            <td className="px-2.5 py-1.5 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
-                            <td className="px-2.5 py-1.5 text-right font-medium">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
-                            <td className="px-2.5 py-1.5 text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
-                                <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex gap-4 text-xs p-2.5 bg-primary/5 border border-primary/15 rounded-lg flex-wrap">
-                    <span>Qtd Total: <strong className="text-foreground">{totalCrmQtd}</strong></span>
-                    <span>Total Custo: <strong className="text-destructive">R$ {totalCrmCusto.toFixed(2)}</strong></span>
-                    <span>Total Venda: <strong className="text-primary">R$ {totalCrmVenda.toFixed(2)}</strong></span>
-                    <span>Total RT: <strong className="text-warning">R$ {totalCrmRt.toFixed(2)}</strong></span>
-                    <span>Margem: <strong className="text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</strong> ({totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%)</span>
-                  </div>
-                </>
-              )}
-              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-4">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
-
-              {/* Simulação de Pagamento (dentro da aba Itens) */}
-              {activeOrcamentoId && (
-                <div className="bg-card border border-border rounded p-3 space-y-3">
-                  <h4 className="text-xs font-semibold flex items-center gap-1.5"><Calculator size={12} /> Simulação de Pagamento — {activeOrc?.nome}</h4>
-                  <p className="text-[10px] text-muted-foreground">Ao converter para Projeto, as parcelas do orçamento aprovado serão geradas automaticamente no financeiro.</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
-                      <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
-                    <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
-                      <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
-                    {simCondicao === "parcelado" && (<>
-                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                      <div className="space-y-0.5"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-                    </>)}
-                  </div>
-                  <div className={`grid gap-2 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
-                    <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Venda</p><p className="text-sm font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
-                    {simCondicao === "parcelado" && (<>
-                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entrada</p><p className="text-sm font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
-                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor Parcela</p><p className="text-sm font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
-                      <div className="bg-secondary/30 rounded p-2 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Parcelas</p><p className="text-sm font-bold text-foreground">{simParcelas}x</p></div>
-                      <div className="bg-primary/10 rounded p-2 text-center border border-primary/20"><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Final</p><p className="text-sm font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
-                    </>)}
-                  </div>
-                  {parcelasParaExibir.length > 0 && (
-                    <div className="border border-border rounded overflow-hidden max-h-[200px] overflow-y-auto">
+                {/* Tabela de itens */}
+                {(crmItens && crmItens.length > 0) && (
+                  <>
+                    <div className="rounded-lg overflow-hidden border border-border/60 bg-card mb-4">
                       <table className="w-full text-xs">
-                        <thead><tr className="bg-secondary/60"><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Parcela</th><th className="text-right px-2.5 py-1.5 font-semibold border-b border-border">Valor</th><th className="text-center px-2.5 py-1.5 font-semibold border-b border-border">Data Prevista</th></tr></thead>
+                        <thead><tr className="bg-secondary/40">
+                          <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
+                          <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Venda</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">RT</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
+                          <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
+                        </tr></thead>
                         <tbody>
-                          {simulacao.entrada > 0 && (<tr className="border-b border-border bg-primary/5"><td className="px-2.5 py-1 text-center font-medium">Entrada</td><td className="px-2.5 py-1 text-right">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2.5 py-1 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
+                          {crmItens.map(item => (
+                            <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
+                              <td className="px-3 py-2">{item.descricao}</td>
+                              <td className="px-3 py-2 text-center">{item.quantidade}</td>
+                              <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                  <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Totais como cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-card border border-border rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Qtd Total</p>
+                        <p className="text-lg font-bold text-foreground">{totalCrmQtd}</p>
+                      </div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
+                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCusto.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
+                        <p className="text-lg font-bold text-primary">R$ {totalCrmVenda.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
+                        <p className="text-lg font-bold text-warning">R$ {totalCrmRt.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
+                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
+              </section>
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* BLOCO 3 — FINANCEIRO / SIMULAÇÃO DE PAGAMENTO          */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section className="bg-secondary/20 border border-border rounded-xl p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calculator size={15} className="text-primary" />
+                    <h3 className="text-sm font-bold text-foreground tracking-tight">Simulação de Pagamento</h3>
+                    <span className="text-[10px] text-muted-foreground">— {activeOrc?.nome}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground -mt-2">Ao aprovar, as parcelas serão geradas automaticamente no financeiro.</p>
+
+                  {/* Campos em 2 linhas */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                      <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
+                    <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
+                      <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
+                    {simCondicao === "parcelado" && (<>
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                    </>)}
+                  </div>
+                  {simCondicao === "parcelado" && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                    </div>
+                  )}
+
+                  {/* Resumo financeiro em cards */}
+                  <div className={`grid gap-3 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
+                    <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p><p className="text-lg font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
+                    {simCondicao === "parcelado" && (<>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entrada</p><p className="text-lg font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Valor Parcela</p><p className="text-lg font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Parcelas</p><p className="text-lg font-bold text-foreground">{simParcelas}x</p></div>
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Final</p><p className="text-lg font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
+                    </>)}
+                  </div>
+
+                  {/* Tabela de parcelas */}
+                  {parcelasParaExibir.length > 0 && (
+                    <div className="rounded-lg overflow-hidden border border-border/40 max-h-[220px] overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead><tr className="bg-secondary/30"><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Parcela</th><th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Valor</th><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Data Prevista</th></tr></thead>
+                        <tbody>
+                          {simulacao.entrada > 0 && (<tr className="border-t border-border/30 bg-primary/5"><td className="px-3 py-2 text-center font-medium">Entrada</td><td className="px-3 py-2 text-right font-semibold">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-3 py-2 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
                           {parcelasParaExibir.map((p, idx) => (
-                            <tr key={p.numero} className="border-b border-border last:border-b-0">
-                              <td className="px-2.5 py-1 text-center">{p.numero}/{simParcelas}</td>
-                              <td className="px-2.5 py-1 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-6 px-1 text-xs text-right bg-background border border-border rounded" step="0.01" /></td>
-                              <td className="px-2.5 py-1 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-24 h-6 px-1 text-xs text-center bg-background border border-border rounded" placeholder="dd/mm/aaaa" /></td>
+                            <tr key={p.numero} className="border-t border-border/30">
+                              <td className="px-3 py-2 text-center">{p.numero}/{simParcelas}</td>
+                              <td className="px-3 py-2 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-7 px-1.5 text-xs text-right bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" step="0.01" /></td>
+                              <td className="px-3 py-2 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-28 h-7 px-1.5 text-xs text-center bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" placeholder="dd/mm/aaaa" /></td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   )}
-                  <button onClick={handleSaveSimulacao} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105">Salvar Simulação</button>
-                </div>
+
+                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Simulação</button>
+                </section>
               )}
             </div>
           </TabsContent>
