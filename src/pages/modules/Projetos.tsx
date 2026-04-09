@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useNecessidadesPendentesCount, useCreateNecessidade, useCheckEstoque, useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
@@ -33,7 +34,7 @@ const statusColors: Record<StatusProjeto, string> = {
   concluido: "bg-info/15 text-info", pos_venda: "bg-accent text-accent-foreground",
   cancelado: "bg-destructive/15 text-destructive"
 };
-const statusOptions: StatusProjeto[] = ["em_andamento", "infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "cancelado", "lead", "proposta", "orcamento", "aprovado", "vendido", "pos_venda"];
+const statusOptions: StatusProjeto[] = ["infraestrutura", "instalacao", "cabeamento", "programacao", "personalizacao", "concluido", "pos_venda", "cancelado"];
 const projetoIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ProjetoState = ({
@@ -82,6 +83,7 @@ const Projetos = () => {
   const [enderecoObra, setEnderecoObra] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("");
   const [numeroParcelas, setNumeroParcelas] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
@@ -90,14 +92,14 @@ const Projetos = () => {
     const all = projetos ?? [];
     return {
       todos: all.length,
-      em_andamento: all.filter(p => p.status === "em_andamento").length,
+      infraestrutura: all.filter(p => p.status === "infraestrutura").length,
+      instalacao: all.filter(p => p.status === "instalacao").length,
+      cabeamento: all.filter(p => p.status === "cabeamento").length,
+      programacao: all.filter(p => p.status === "programacao").length,
+      personalizacao: all.filter(p => p.status === "personalizacao").length,
       concluido: all.filter(p => p.status === "concluido").length,
       pos_venda: all.filter(p => p.status === "pos_venda").length,
       cancelado: all.filter(p => p.status === "cancelado").length,
-      orcamento: all.filter(p => p.status === "orcamento").length,
-      aprovado: all.filter(p => p.status === "aprovado").length,
-      proposta: all.filter(p => p.status === "proposta").length,
-      vendido: all.filter(p => p.status === "vendido").length,
     };
   }, [projetos]);
 
@@ -207,8 +209,31 @@ const Projetos = () => {
   });
 
   const removeProjeto = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("projetos").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto excluído"); resetForm(); },
+    mutationFn: async (id: string) => {
+      // Cascade delete all linked data
+      await supabase.from("visitas_tecnicas").delete().eq("projeto_id", id);
+      await supabase.from("comissoes").delete().eq("projeto_id", id);
+      await supabase.from("financeiro_receber").delete().eq("projeto_id", id);
+      await supabase.from("financeiro_pagar").delete().eq("projeto_id", id);
+      await supabase.from("necessidades_compra").delete().eq("projeto_id", id);
+      await supabase.from("compras").delete().eq("projeto_id", id);
+      await supabase.from("contratos").delete().eq("projeto_id", id);
+      await supabase.from("estoque_itens").delete().eq("projeto_id", id);
+      await supabase.from("projeto_itens").delete().eq("projeto_id", id);
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const projeto = projetos?.find(p => p.id === id);
+        await supabase.from("audit_logs").insert({
+          tabela: "projetos", registro_id: id, acao: "exclusao",
+          usuario_id: user.id, empresa_id: empresaId,
+          dados_anteriores: projeto ? JSON.parse(JSON.stringify(projeto)) : null,
+        });
+      }
+      const { error } = await supabase.from("projetos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto e dados vinculados excluídos"); resetForm(); setDeleteTarget(null); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -292,7 +317,7 @@ const Projetos = () => {
                     <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Transferência">Transferência</option>
                   </select>
                 </div>
-                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nº Parcelas</label><input type="number" min={1} value={numeroParcelas} onChange={e => setNumeroParcelas(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Início</label><input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Previsão</label><input type="date" value={dataPrevisao} onChange={e => setDataPrevisao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Observações Pagamento</label><input value={observacoesPagamento} onChange={e => setObservacoesPagamento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
@@ -302,7 +327,7 @@ const Projetos = () => {
                 {currentProjeto.status !== "aprovado" && (
                   <button onClick={() => changeStatus.mutate({ id: detailProjetoId, status: "aprovado", projeto: currentProjeto })} className="px-4 py-1.5 rounded bg-success text-white text-xs font-medium hover:brightness-105 transition">Aprovar Projeto</button>
                 )}
-                <button onClick={() => { if (window.confirm("Excluir projeto?")) removeProjeto.mutate(detailProjetoId); }} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
+                <button onClick={() => setDeleteTarget({ id: detailProjetoId, nome: currentProjeto.nome })} className="px-4 py-1.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:brightness-105 transition">Excluir</button>
               </div>
             </div>
           </TabsContent>
@@ -371,13 +396,13 @@ const Projetos = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-2">
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
-          { key: "em_andamento" as const, label: "Em Andamento", count: statusCounts.em_andamento, color: "bg-primary/15 text-primary" },
-          { key: "infraestrutura" as const, label: "Infraestrutura", count: (projetos ?? []).filter(p => p.status === "infraestrutura").length, color: "bg-amber-500/15 text-amber-600" },
-          { key: "instalacao" as const, label: "Instalação", count: (projetos ?? []).filter(p => p.status === "instalacao").length, color: "bg-blue-500/15 text-blue-600" },
-          { key: "cabeamento" as const, label: "Cabeamento", count: (projetos ?? []).filter(p => p.status === "cabeamento").length, color: "bg-violet-500/15 text-violet-600" },
-          { key: "programacao" as const, label: "Programação", count: (projetos ?? []).filter(p => p.status === "programacao").length, color: "bg-cyan-500/15 text-cyan-600" },
-          { key: "personalizacao" as const, label: "Personalização", count: (projetos ?? []).filter(p => p.status === "personalizacao").length, color: "bg-pink-500/15 text-pink-600" },
+          { key: "infraestrutura" as const, label: "Infraestrutura", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
+          { key: "instalacao" as const, label: "Instalação", count: statusCounts.instalacao, color: "bg-blue-500/15 text-blue-600" },
+          { key: "cabeamento" as const, label: "Cabeamento", count: statusCounts.cabeamento, color: "bg-violet-500/15 text-violet-600" },
+          { key: "programacao" as const, label: "Programação", count: statusCounts.programacao, color: "bg-cyan-500/15 text-cyan-600" },
+          { key: "personalizacao" as const, label: "Personalização", count: statusCounts.personalizacao, color: "bg-pink-500/15 text-pink-600" },
           { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-info/15 text-info" },
+          { key: "pos_venda" as const, label: "Pós-Venda", count: statusCounts.pos_venda, color: "bg-accent text-accent-foreground" },
           { key: "cancelado" as const, label: "Cancelado", count: statusCounts.cancelado, color: "bg-destructive/15 text-destructive" },
         ] as const).map(s => (
           <button key={s.key} onClick={() => { setFilterStatus(s.key); setMainTab("lista"); }} className={`rounded p-2 text-center transition ${filterStatus === s.key && mainTab === "lista" ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
@@ -489,7 +514,7 @@ const Projetos = () => {
                         <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                            <button onClick={() => { if (window.confirm("Excluir projeto e todos os itens vinculados?")) removeProjeto.mutate(p.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                            <button onClick={() => setDeleteTarget({ id: p.id, nome: p.nome })} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>
@@ -501,6 +526,23 @@ const Projetos = () => {
           )}
         </>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Excluir Projeto Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação irá excluir permanentemente o projeto <strong>"{deleteTarget?.nome}"</strong> e todos os dados vinculados (financeiro, comissões RT, compras, visitas técnicas, contratos, estoque e itens). Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && removeProjeto.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -525,8 +526,47 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const [deleteClientTarget, setDeleteClientTarget] = useState<{ id: string; nome: string } | null>(null);
+
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("clientes").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => {
+      // Get all projects for this client
+      const { data: clientProjects } = await supabase.from("projetos").select("id").eq("cliente_id", id);
+      const projectIds = (clientProjects ?? []).map(p => p.id);
+      // Cascade delete project-linked data
+      if (projectIds.length > 0) {
+        for (const pid of projectIds) {
+          await supabase.from("visitas_tecnicas").delete().eq("projeto_id", pid);
+          await supabase.from("comissoes").delete().eq("projeto_id", pid);
+          await supabase.from("financeiro_receber").delete().eq("projeto_id", pid);
+          await supabase.from("financeiro_pagar").delete().eq("projeto_id", pid);
+          await supabase.from("necessidades_compra").delete().eq("projeto_id", pid);
+          await supabase.from("compras").delete().eq("projeto_id", pid);
+          await supabase.from("contratos").delete().eq("projeto_id", pid);
+          await supabase.from("estoque_itens").delete().eq("projeto_id", pid);
+          await supabase.from("projeto_itens").delete().eq("projeto_id", pid);
+        }
+        await supabase.from("projetos").delete().in("id", projectIds);
+      }
+      // Delete CRM data
+      await supabase.from("crm_itens").delete().eq("cliente_id", id);
+      await supabase.from("crm_orcamentos").delete().eq("cliente_id", id);
+      await supabase.from("crm_interacoes").delete().eq("cliente_id", id);
+      await supabase.from("crm_arquivos").delete().eq("cliente_id", id);
+      await supabase.from("financeiro_receber").delete().eq("cliente_id", id);
+      await supabase.from("contratos").delete().eq("cliente_id", id);
+      // Audit log
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("audit_logs").insert({
+          tabela: "clientes", registro_id: id, acao: "exclusao",
+          usuario_id: authUser.id, empresa_id: empresaId,
+          dados_anteriores: { cliente_id: id, projetos_excluidos: projectIds.length },
+        });
+      }
+      const { error } = await supabase.from("clientes").delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); toast.success("Cliente excluído"); },
     onError: (err: any) => toast.error(err.message),
   });
@@ -1351,7 +1391,7 @@ const CRM = () => {
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openDetail(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Eye size={13} /></button>
                       <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                      <button onClick={() => { if (window.confirm("Excluir cliente?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                      <button onClick={() => setDeleteClientTarget({ id: c.id, nome: c.nome })} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
@@ -1361,6 +1401,23 @@ const CRM = () => {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!deleteClientTarget} onOpenChange={open => { if (!open) setDeleteClientTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Excluir Cliente Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação irá excluir permanentemente o cliente <strong>"{deleteClientTarget?.nome}"</strong> e todos os dados vinculados (orçamentos, projetos, financeiro, documentos, interações). Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteClientTarget) { remove.mutate(deleteClientTarget.id); setDeleteClientTarget(null); } }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
