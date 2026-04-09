@@ -367,7 +367,7 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[260px] overflow-y-auto pr-1">
             {stats!.inadimplentes.slice(0, 9).map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+              <div key={i} className="list-item-hover flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-foreground truncate">{item.clienteNome}</p>
                   <p className="text-[11px] text-muted-foreground truncate">{item.projetoNome}</p>
