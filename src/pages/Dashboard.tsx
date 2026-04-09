@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-  AlertTriangle, Clock
+  AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
