@@ -27,32 +27,6 @@ export const logAtividade = async (
   });
 };
 
-export const useLogAtividade = () => {
-  const { user } = useAuth();
-  const empresaId = useEmpresa();
-
-  const logAtividade = async (
-    tabela: string,
-    acao: AcaoAudit,
-    registroId: string | null,
-    dadosAnteriores?: Record<string, any> | null,
-    dadosNovos?: Record<string, any> | null
-  ) => {
-    if (!empresaId) return;
-    await supabase.from("audit_logs").insert({
-      tabela,
-      acao,
-      registro_id: registroId,
-      empresa_id: empresaId,
-      usuario_id: user?.id ?? null,
-      dados_anteriores: dadosAnteriores ?? null,
-      dados_novos: dadosNovos ?? null,
-    });
-  };
-
-  return logAtividade;
-};
-
 export const useAuditLogsProjeto = (projetoId: string | null) => {
   return useQuery({
     queryKey: ["audit_logs_projeto", projetoId],
