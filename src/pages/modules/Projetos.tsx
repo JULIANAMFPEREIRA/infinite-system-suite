@@ -1711,4 +1711,93 @@ const ProjetoContratosSection = ({ projetoId }: { projetoId: string }) => {
   );
 };
 
+// ======== ANOTAÇÕES DO PROJETO (via CRM) ========
+const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) => {
+  const { data: interacoes, isLoading } = useQuery({
+    queryKey: ["crm_interacoes", clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", clienteId!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clienteId,
+  });
+
+  if (!clienteId) return <p className="text-xs text-muted-foreground">Projeto sem cliente vinculado.</p>;
+
+  const tipoLabels: Record<string, string> = { ligacao: "📞 Ligação", reuniao: "🤝 Reunião", email: "📧 E-mail", visita: "🏠 Visita", whatsapp: "💬 WhatsApp", outro: "📝 Outro" };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
+        <p className="text-[10px] text-muted-foreground">Sincronizado com o CRM</p>
+      </div>
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : interacoes && interacoes.length > 0 ? (
+        <div className="space-y-2">
+          {interacoes.map(i => (
+            <div key={i.id} className="bg-secondary/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium">{tipoLabels[i.tipo ?? "outro"] ?? i.tipo}</span>
+                <span className="text-[10px] text-muted-foreground">{new Date(i.created_at).toLocaleDateString("pt-BR")} {new Date(i.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+              <p className="text-xs text-foreground whitespace-pre-wrap">{i.descricao ?? "—"}</p>
+            </div>
+          ))}
+        </div>
+      ) : <p className="text-xs text-muted-foreground text-center py-4">Nenhuma anotação encontrada.</p>}
+    </div>
+  );
+};
+
+// ======== ARQUIVOS DO PROJETO (via CRM) ========
+const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null; tipo: "imagem" | "documento" }) => {
+  const { data: arquivos, isLoading } = useQuery({
+    queryKey: ["crm_arquivos", clienteId, tipo],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_arquivos").select("*").eq("cliente_id", clienteId!).eq("tipo", tipo).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clienteId,
+  });
+
+  if (!clienteId) return <p className="text-xs text-muted-foreground">Projeto sem cliente vinculado.</p>;
+
+  const label = tipo === "imagem" ? "Imagens" : "Documentos";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <p className="text-[10px] text-muted-foreground">Sincronizado com o CRM</p>
+      </div>
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : arquivos && arquivos.length > 0 ? (
+        tipo === "imagem" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {arquivos.map(img => (
+              <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary/50 transition">
+                <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end p-2">
+                  <span className="text-[10px] text-white truncate">{img.nome_arquivo}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {arquivos.map(doc => (
+              <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded hover:bg-secondary/40 transition text-xs">
+                <FileText size={14} className="text-primary shrink-0" />
+                <span className="truncate text-foreground">{doc.nome_arquivo}</span>
+                <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{doc.tamanho ? `${(doc.tamanho / 1024).toFixed(0)} KB` : ""}</span>
+              </a>
+            ))}
+          </div>
+        )
+      ) : <p className="text-xs text-muted-foreground text-center py-4">Nenhum {tipo === "imagem" ? "imagem" : "documento"} encontrado.</p>}
+    </div>
+  );
+};
+
 export default Projetos;
