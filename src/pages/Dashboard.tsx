@@ -22,7 +22,7 @@ const Dashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
-      const [receber, pagar, projetos, clientes, necessidades, visitas, projetoItens] = await Promise.all([
+      const [receber, pagar, projetos, clientes, necessidades, visitas, projetoItens, compras] = await Promise.all([
         supabase.from("financeiro_receber").select("valor, status, data_vencimento, cliente_id, projeto_id, descricao").then(r => r.data ?? []),
         supabase.from("financeiro_pagar").select("valor, status, data_vencimento").then(r => r.data ?? []),
         supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").then(r => r.data ?? []),
@@ -30,6 +30,7 @@ const Dashboard = () => {
         supabase.from("necessidades_compra").select("id, descricao, quantidade, status, projeto_id, produto_id, projeto_item_id").then(r => r.data ?? []),
         supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id").then(r => r.data ?? []),
         supabase.from("projeto_itens").select("id, preco_custo, quantidade").then(r => r.data ?? []),
+        supabase.from("compras").select("id, valor_total, data_compra, status").then(r => r.data ?? []),
       ]);
 
       const [produtosRes] = await Promise.all([
