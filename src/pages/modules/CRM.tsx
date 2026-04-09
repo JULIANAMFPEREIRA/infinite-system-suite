@@ -1029,7 +1029,7 @@ const CRM = () => {
             <ArrowLeft size={14} /> Voltar
           </button>
           <h1 className="text-lg font-bold text-foreground">{detailClient.nome}</h1>
-          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[detailClient.status_crm as StatusCRM]}`}>{statusLabels[detailClient.status_crm as StatusCRM]}</span>
+          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[detailClient.status_crm as StatusCRM]}`}>{statusCrmLabels[detailClient.status_crm as StatusCRM]}</span>
         </div>
 
         <Tabs defaultValue="dados" className="w-full">
@@ -1060,7 +1060,7 @@ const CRM = () => {
                 </div>
                 <div className="bg-card border border-border rounded p-3 space-y-1">
                   <div className="flex items-center gap-1.5 text-muted-foreground"><FileText size={12} /><span className="text-[10px] uppercase tracking-wider font-semibold">Status</span></div>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${statusColors[detailClient.status_crm as StatusCRM]}`}>{statusLabels[detailClient.status_crm as StatusCRM]}</span>
+                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[detailClient.status_crm as StatusCRM]}`}>{statusCrmLabels[detailClient.status_crm as StatusCRM]}</span>
                 </div>
               </div>
 
@@ -1816,7 +1816,7 @@ const CRM = () => {
                           <select
                             value={c.status_crm ?? "lead"}
                             onChange={e => { e.stopPropagation(); changeStatusInline.mutate({ id: c.id, newStatus: e.target.value as StatusCRM, old: c }); }}
-                            className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusColors[c.status_crm as StatusCRM]} bg-transparent`}
+                            className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer appearance-none text-center ${statusCrmColors[c.status_crm as StatusCRM]} bg-transparent`}
                             style={{ backgroundImage: "none" }}
                           >
                             <option value="lead">Lead</option>
