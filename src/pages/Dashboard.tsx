@@ -303,6 +303,14 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* GRÁFICO RECEITAS vs DESPESAS */}
+      {stats?.receberRaw && stats?.pagarRaw && (
+        <RevenueExpensesChart
+          receber={stats.receberRaw}
+          pagar={stats.pagarRaw}
+        />
+      )}
+
       {/* 2. AÇÕES RÁPIDAS */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
