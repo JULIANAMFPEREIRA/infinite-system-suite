@@ -81,6 +81,14 @@ const Dashboard = () => {
         .filter(c => c.data_compra && new Date(c.data_compra) >= inicioMes && new Date(c.data_compra) <= fimMes && c.status !== "cancelada")
         .reduce((a, c) => a + (Number(c.valor_total) || 0), 0);
 
+      // Contas a Pagar
+      const pagarMes = pagar
+        .filter(p => (p.status === "pendente" || p.status === "vencido") && p.data_vencimento && new Date(p.data_vencimento) >= inicioMes && new Date(p.data_vencimento) <= fimMes)
+        .reduce((a, p) => a + (Number(p.valor) || 0), 0);
+      const pagarGeral = pagar
+        .filter(p => p.status === "pendente" || p.status === "vencido")
+        .reduce((a, p) => a + (Number(p.valor) || 0), 0);
+
       const receberMes = receber
         .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes)
         .reduce((a, r) => a + (r.valor ?? 0), 0);
@@ -133,6 +141,8 @@ const Dashboard = () => {
         receberMes,
         totalReceberGeral,
         comprasMesValor,
+        pagarMes,
+        pagarGeral,
         projetosAtivosCount: projetosAtivos.length,
         statusCounts,
         proximasVisitas,
@@ -153,106 +163,138 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* 1. INDICADORES PRINCIPAIS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Total a Receber (Geral) */}
-        <div
-          onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 rounded-xl border border-[hsl(210,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(210,70%,50%)]/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total a Receber</p>
-              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.totalReceberGeral ?? 0)}</p>
-              <p className="text-[11px] text-[hsl(210,70%,50%)] mt-1">Todas as pendentes</p>
+      {/* LINHA 1 – FINANCEIRO RECEITAS */}
+      <div>
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Receitas</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Total a Receber (Geral) */}
+          <div
+            onClick={() => navigate("/financeiro/receber")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 rounded-xl border border-[hsl(210,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(210,70%,50%)]/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total a Receber</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.totalReceberGeral ?? 0)}</p>
+                <p className="text-[11px] text-[hsl(210,70%,50%)] mt-1">Todas as pendentes</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[hsl(210,70%,50%)]/20 text-[hsl(210,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
+                <TrendingUp size={20} />
+              </div>
             </div>
-            <div className="p-2.5 rounded-xl bg-[hsl(210,70%,50%)]/20 text-[hsl(210,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
-              <TrendingUp size={20} />
+          </div>
+
+          {/* A Receber (Mês) */}
+          <div
+            onClick={() => navigate("/financeiro/receber")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">A Receber (Mês)</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.receberMes ?? 0)}</p>
+                <p className="text-[11px] text-[hsl(152,69%,40%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[hsl(152,69%,40%)]/20 text-[hsl(152,69%,40%)] group-hover:scale-110 transition-transform shrink-0">
+                <DollarSign size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Inadimplentes */}
+          <div
+            onClick={() => navigate("/financeiro/receber")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Inadimplentes</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
+                <p className="text-[11px] text-destructive mt-1">{stats?.clientesInadimplentesUnicos ?? 0} cliente(s) · {stats?.inadimplentesCount ?? 0} parcela(s)</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive group-hover:scale-110 transition-transform shrink-0">
+                <UserX size={20} />
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* A Receber (Mês) */}
-        <div
-          onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">A Receber (Mês)</p>
-              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.receberMes ?? 0)}</p>
-              <p className="text-[11px] text-[hsl(152,69%,40%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
+      {/* LINHA 2 – CUSTOS E OPERAÇÃO */}
+      <div>
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Custos & Operação</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Itens a Comprar (Total) */}
+          <div
+            onClick={() => navigate("/itens-comprar")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Itens a Comprar</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
+                <p className="text-[11px] text-[hsl(38,92%,50%)] mt-1">{stats?.itensPendentesCount ?? 0} itens pendentes</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[hsl(38,92%,50%)]/20 text-[hsl(38,92%,50%)] group-hover:scale-110 transition-transform shrink-0">
+                <ClipboardList size={20} />
+              </div>
             </div>
-            <div className="p-2.5 rounded-xl bg-[hsl(152,69%,40%)]/20 text-[hsl(152,69%,40%)] group-hover:scale-110 transition-transform shrink-0">
-              <DollarSign size={20} />
+          </div>
+
+          {/* Compras do Mês */}
+          <div
+            onClick={() => navigate("/itens-comprar")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(280,60%,50%)]/15 to-[hsl(280,60%,50%)]/5 rounded-xl border border-[hsl(280,60%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(280,60%,50%)]/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">A Comprar (Mês)</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.comprasMesValor ?? 0)}</p>
+                <p className="text-[11px] text-[hsl(280,60%,50%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[hsl(280,60%,50%)]/20 text-[hsl(280,60%,50%)] group-hover:scale-110 transition-transform shrink-0">
+                <Receipt size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Total de Projetos */}
+          <div
+            onClick={() => navigate("/projetos")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total de Projetos</p>
+                <p className="text-3xl font-bold text-foreground mt-2">{stats?.projetosAtivosCount ?? 0}</p>
+                <p className="text-[11px] text-primary mt-1">ativos (excl. cancelados)</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-primary/20 text-primary group-hover:scale-110 transition-transform shrink-0">
+                <FolderKanban size={20} />
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Inadimplentes */}
-        <div
-          onClick={() => navigate("/financeiro/receber")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Inadimplentes</p>
-              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
-              <p className="text-[11px] text-destructive mt-1">{stats?.clientesInadimplentesUnicos ?? 0} cliente(s) · {stats?.inadimplentesCount ?? 0} parcela(s)</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive group-hover:scale-110 transition-transform shrink-0">
-              <UserX size={20} />
-            </div>
-          </div>
-        </div>
-
-        {/* Compras do Mês */}
-        <div
-          onClick={() => navigate("/itens-comprar")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(280,60%,50%)]/15 to-[hsl(280,60%,50%)]/5 rounded-xl border border-[hsl(280,60%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(280,60%,50%)]/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Compras do Mês</p>
-              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.comprasMesValor ?? 0)}</p>
-              <p className="text-[11px] text-[hsl(280,60%,50%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-[hsl(280,60%,50%)]/20 text-[hsl(280,60%,50%)] group-hover:scale-110 transition-transform shrink-0">
-              <Receipt size={20} />
-            </div>
-          </div>
-        </div>
-
-        {/* Itens a Comprar */}
-        <div
-          onClick={() => navigate("/itens-comprar")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Itens a Comprar</p>
-              <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
-              <p className="text-[11px] text-[hsl(38,92%,50%)] mt-1">{stats?.itensPendentesCount ?? 0} itens pendentes</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-[hsl(38,92%,50%)]/20 text-[hsl(38,92%,50%)] group-hover:scale-110 transition-transform shrink-0">
-              <ClipboardList size={20} />
-            </div>
-          </div>
-        </div>
-
-        {/* Total de Projetos */}
-        <div
-          onClick={() => navigate("/projetos")}
-          className="cursor-pointer group card-interactive bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40"
-        >
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total de Projetos</p>
-              <p className="text-3xl font-bold text-foreground mt-2">{stats?.projetosAtivosCount ?? 0}</p>
-              <p className="text-[11px] text-primary mt-1">ativos (excl. cancelados)</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-primary/20 text-primary group-hover:scale-110 transition-transform shrink-0">
-              <FolderKanban size={20} />
+      {/* LINHA 3 – DESPESAS */}
+      <div>
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Despesas</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Contas a Pagar */}
+          <div
+            onClick={() => navigate("/financeiro/pagar")}
+            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(0,70%,50%)]/15 to-[hsl(0,70%,50%)]/5 rounded-xl border border-[hsl(0,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(0,70%,50%)]/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Contas a Pagar</p>
+                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.pagarMes ?? 0)}</p>
+                <p className="text-[11px] text-[hsl(0,70%,50%)] mt-1">Mês · Total: {fmt(stats?.pagarGeral ?? 0)}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[hsl(0,70%,50%)]/20 text-[hsl(0,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
+                <ShoppingCart size={20} />
+              </div>
             </div>
           </div>
         </div>
