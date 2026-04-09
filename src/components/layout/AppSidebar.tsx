@@ -6,7 +6,7 @@ import {
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
   ChevronLeft, ChevronRight, ChevronDown, Wrench, UserCheck, Truck, ClipboardList, X
 } from "lucide-react";
-import logoGold from "@/assets/logo-infinit.png";
+
 
 interface NavItem {
   label: string;
@@ -71,16 +71,11 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
       ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
       md:translate-x-0
     `}>
-      {/* Logo + Close on mobile */}
-      <div className="flex items-center justify-between border-b border-border px-2 py-3">
-        {!collapsed ? (
-          <img src={logoGold} alt="INFINIT NETWORK" className="w-full object-contain" />
-        ) : (
-          <img src={logoGold} alt="INFINIT NETWORK" className="w-10 object-contain" />
-        )}
+      {/* Close on mobile */}
+      <div className="flex items-center justify-end border-b border-border px-2 py-3 md:hidden">
         <button
           onClick={onClose}
-          className="md:hidden p-1 rounded-md hover:bg-secondary text-muted-foreground"
+          className="p-1 rounded-md hover:bg-secondary text-muted-foreground"
         >
           <X size={18} />
         </button>
