@@ -131,6 +131,8 @@ const Dashboard = () => {
         inadimplentesValorTotal,
         clientesInadimplentesUnicos,
         receberMes,
+        totalReceberGeral,
+        comprasMesValor,
         projetosAtivosCount: projetosAtivos.length,
         statusCounts,
         proximasVisitas,
