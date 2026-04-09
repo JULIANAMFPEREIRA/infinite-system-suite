@@ -4,6 +4,7 @@ import {
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
   AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
+import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,8 +149,8 @@ const Dashboard = () => {
         statusCounts,
         proximasVisitas,
         itensComprarDetalhados,
-
-
+        receber,
+        pagar,
       };
     },
     enabled: !!empresaId,
@@ -280,10 +281,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* LINHA 3 – DESPESAS */}
+      {/* LINHA 3 – DESPESAS + GRÁFICO */}
       <div>
         <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Despesas</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
           {/* Contas a Pagar */}
           <div
             onClick={() => navigate("/financeiro/pagar")}
@@ -299,6 +300,14 @@ const Dashboard = () => {
                 <ShoppingCart size={20} />
               </div>
             </div>
+          </div>
+
+          {/* Gráfico Receitas vs Despesas */}
+          <div className="max-h-[260px]">
+            <RevenueExpensesChart
+              receber={stats?.receber ?? []}
+              pagar={stats?.pagar ?? []}
+            />
           </div>
         </div>
       </div>
