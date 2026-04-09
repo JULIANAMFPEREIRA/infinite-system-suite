@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,7 +278,7 @@ const CRM = () => {
         numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
         forma_pagamento: simFormaPgto || null,
         descricao: descParts.join(" | "),
-        status: "aprovado",
+        status: "infraestrutura",
         observacoes_pagamento: `Sincronizado em ${new Date().toLocaleString("pt-BR")}`,
       }).eq("id", projId);
     } else {
@@ -284,7 +286,7 @@ const CRM = () => {
         nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
         descricao: descParts.join(" | "),
         cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
-        arquiteto_id: detailClient.arquiteto_id || null, status: "aprovado",
+        arquiteto_id: detailClient.arquiteto_id || null, status: "infraestrutura",
         venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
         numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
         forma_pagamento: simFormaPgto || null,
@@ -463,7 +465,7 @@ const CRM = () => {
       nome: `${clienteNome} — ${approvedOrc?.nome ?? ""}`.trim(),
       descricao: descParts.join(" | "),
       cliente_id: clienteId, endereco_obra: endObra || endCli || null,
-      arquiteto_id: arqId || null, status: "aprovado",
+      arquiteto_id: arqId || null, status: "infraestrutura",
       venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
       numero_parcelas: simParcCount > 0 ? simParcCount : 1,
       forma_pagamento: simFormaPgto || null,
@@ -492,7 +494,7 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
-      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
+      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
@@ -751,6 +753,151 @@ const CRM = () => {
     }
   };
 
+  const gerarPropostaPDF = () => {
+    if (!detailClient || !crmItens || crmItens.length === 0) {
+      toast.error("Adicione itens antes de gerar a proposta.");
+      return;
+    }
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(30, 58, 95);
+    doc.rect(0, 0, pageW, 38, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("PROPOSTA COMERCIAL", pageW / 2, 18, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(activeOrc?.nome ?? "Orçamento", pageW / 2, 28, { align: "center" });
+    doc.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, pageW / 2, 34, { align: "center" });
+
+    // Client info
+    doc.setTextColor(30, 58, 95);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DO CLIENTE", 14, 50);
+    doc.setDrawColor(30, 58, 95);
+    doc.line(14, 52, pageW - 14, 52);
+
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    let y = 58;
+    const addLine = (label: string, value: string) => {
+      if (!value || value === "—") return;
+      doc.setFont("helvetica", "bold");
+      doc.text(`${label}: `, 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(value, 14 + doc.getTextWidth(`${label}: `), y);
+      y += 6;
+    };
+    addLine("Cliente", detailClient.nome);
+    addLine("E-mail", detailClient.email ?? "");
+    addLine("Telefone", detailClient.telefone ?? "");
+    addLine("Endereço da Obra", detailClient.endereco_obra ?? detailClient.endereco ?? "");
+
+    // Items table
+    y += 4;
+    doc.setTextColor(30, 58, 95);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ITENS DA PROPOSTA", 14, y);
+    doc.line(14, y + 2, pageW - 14, y + 2);
+    y += 6;
+
+    const tableBody = crmItens.map((item: any) => [
+      item.descricao,
+      String(item.quantidade),
+      `R$ ${Number(item.preco_venda).toFixed(2)}`,
+      `R$ ${(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Descrição", "Qtd", "Valor Unit.", "Subtotal"]],
+      body: tableBody,
+      theme: "striped",
+      headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: "bold", fontSize: 9 },
+      bodyStyles: { fontSize: 9, textColor: [60, 60, 60] },
+      alternateRowStyles: { fillColor: [240, 244, 248] },
+      columnStyles: { 0: { cellWidth: "auto" }, 1: { halign: "center", cellWidth: 20 }, 2: { halign: "right", cellWidth: 30 }, 3: { halign: "right", cellWidth: 30 } },
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 8;
+
+    // Totals
+    doc.setFillColor(240, 244, 248);
+    doc.roundedRect(pageW - 80, y, 66, 18, 2, 2, "F");
+    doc.setTextColor(30, 58, 95);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL:", pageW - 76, y + 7);
+    doc.setFontSize(13);
+    doc.text(`R$ ${totalCrmVenda.toFixed(2)}`, pageW - 76, y + 15);
+
+    y += 26;
+
+    // Payment simulation
+    if (activeOrc?.simulacao_pagamento) {
+      const sim = activeOrc.simulacao_pagamento as any;
+      const parcelas = sim.parcelas ?? [];
+      if (parcelas.length > 0) {
+        doc.setTextColor(30, 58, 95);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("CONDIÇÕES DE PAGAMENTO", 14, y);
+        doc.line(14, y + 2, pageW - 14, y + 2);
+        y += 6;
+
+        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        if (sim.formaPagamento) {
+          doc.text(`Forma: ${sim.formaPagamento}`, 14, y);
+          y += 6;
+        }
+        if (sim.entrada > 0) {
+          doc.text(`Entrada: R$ ${Number(sim.entrada).toFixed(2)}`, 14, y);
+          y += 6;
+        }
+        doc.text(`${parcelas.length}x parcelas:`, 14, y);
+        y += 6;
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Parcela", "Valor", "Vencimento"]],
+          body: parcelas.map((p: any) => [
+            `${p.numero}/${parcelas.length}`,
+            `R$ ${Number(p.valor).toFixed(2)}`,
+            p.data,
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 9 },
+          bodyStyles: { fontSize: 9, textColor: [60, 60, 60] },
+          margin: { left: 14, right: 14 },
+          tableWidth: 120,
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+      }
+    }
+
+    // Footer
+    const footerY = doc.internal.pageSize.getHeight() - 20;
+    doc.setDrawColor(30, 58, 95);
+    doc.line(14, footerY, pageW - 14, footerY);
+    doc.setTextColor(140, 140, 140);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("Proposta válida por 30 dias. Valores sujeitos a alteração.", pageW / 2, footerY + 6, { align: "center" });
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, pageW / 2, footerY + 11, { align: "center" });
+
+    doc.save(`Proposta_${detailClient.nome.replace(/\s+/g, "_")}_${activeOrc?.nome?.replace(/\s+/g, "_") ?? "Orcamento"}.pdf`);
+    toast.success("Proposta PDF gerada com sucesso!");
+  };
+
   // Status counts
   const statusCounts = {
     lead: clientes?.filter(c => c.status_crm === "lead").length ?? 0,
@@ -998,6 +1145,9 @@ const CRM = () => {
                       createOrcamento.mutate();
                     }} disabled={createOrcamento.isPending} className="flex items-center gap-1 h-7 px-2 rounded bg-primary text-primary-foreground text-[11px] font-medium disabled:opacity-50">
                       <Plus size={11} /> Salvar e Novo Orçamento
+                    </button>
+                    <button onClick={gerarPropostaPDF} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80">
+                      <Printer size={11} /> Gerar Proposta (PDF)
                     </button>
                   </div>
                 </div>
