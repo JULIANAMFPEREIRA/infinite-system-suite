@@ -20,8 +20,8 @@ const PortalArquiteto = () => {
       const { data: forn } = await supabase.from("fornecedores").select("id").eq("email", user!.email!).single();
       if (!forn) return { projetos: [], comissoes: [] };
       const [projRes, comRes] = await Promise.all([
-        supabase.from("projetos").select("id, nome, status, endereco_obra").eq("arquiteto_id", forn.id).order("created_at", { ascending: false }),
-        supabase.from("comissoes").select("*, projetos(nome)").eq("fornecedor_id", forn.id).order("created_at", { ascending: false }),
+        supabase.from("projetos").select("id, nome, status, endereco_obra").eq("arquiteto_id", forn.id).eq("deletado", false).order("created_at", { ascending: false }),
+        supabase.from("comissoes").select("*, projetos(nome)").eq("fornecedor_id", forn.id).eq("deletado", false).order("created_at", { ascending: false }),
       ]);
       return { projetos: projRes.data ?? [], comissoes: comRes.data ?? [] };
     },
