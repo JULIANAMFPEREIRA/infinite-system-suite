@@ -1730,7 +1730,7 @@ const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) =>
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["crm_interacoes", clienteId] });
+      qc.invalidateQueries({ queryKey: ["crm_interacoes"] });
       setDescricao(""); setTipo("outro"); setShowForm(false);
       toast.success("Anotação salva!");
     },
@@ -1742,7 +1742,7 @@ const ProjetoAnotacoesSection = ({ clienteId }: { clienteId: string | null }) =>
       const { error } = await supabase.from("crm_interacoes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm_interacoes", clienteId] }); toast.success("Anotação excluída"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm_interacoes"] }); toast.success("Anotação excluída"); },
     onError: (err: any) => toast.error(err.message),
   });
 

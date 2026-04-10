@@ -648,13 +648,13 @@ const CRM = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => { refetchInteracoes(); resetIntForm(); toast.success(editIntId ? "Interação atualizada" : "Interação registrada"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm_interacoes"] }); resetIntForm(); toast.success(editIntId ? "Interação atualizada" : "Interação registrada"); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const deleteInteracao = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("crm_interacoes").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { refetchInteracoes(); toast.success("Interação excluída"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm_interacoes"] }); toast.success("Interação excluída"); },
   });
 
   const saveCrmItem = useMutation({
