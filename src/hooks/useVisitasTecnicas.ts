@@ -10,6 +10,7 @@ export const useVisitasTecnicas = (projetoId: string | null) => {
         .from("visitas_tecnicas")
         .select("*, fornecedores(nome)")
         .eq("projeto_id", projetoId!)
+        .eq("deletado", false)
         .order("data", { ascending: false });
       if (error) throw error;
       return data;

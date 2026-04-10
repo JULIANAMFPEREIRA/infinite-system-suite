@@ -198,16 +198,13 @@ const Projetos = () => {
 
   const removeProjeto = useMutation({
     mutationFn: async (id: string) => {
-      // Cascade delete all linked data
-      await supabase.from("visitas_tecnicas").delete().eq("projeto_id", id);
-      await supabase.from("comissoes").delete().eq("projeto_id", id);
-      await supabase.from("financeiro_receber").delete().eq("projeto_id", id);
-      await supabase.from("financeiro_pagar").delete().eq("projeto_id", id);
-      await supabase.from("necessidades_compra").delete().eq("projeto_id", id);
-      await supabase.from("compras").delete().eq("projeto_id", id);
-      await supabase.from("contratos").delete().eq("projeto_id", id);
-      await supabase.from("estoque_itens").delete().eq("projeto_id", id);
-      await supabase.from("projeto_itens").delete().eq("projeto_id", id);
+      // Cascade soft delete all linked data
+      await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("comissoes").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("compras").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("contratos").update({ deletado: true } as any).eq("projeto_id", id);
       // Audit log
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -218,7 +215,7 @@ const Projetos = () => {
           dados_anteriores: projeto ? JSON.parse(JSON.stringify(projeto)) : null,
         });
       }
-      const { error } = await supabase.from("projetos").delete().eq("id", id);
+      const { error } = await supabase.from("projetos").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto e dados vinculados excluídos"); resetForm(); setDeleteTarget(null); },
@@ -566,9 +563,9 @@ const FinanceiroGlobalSection = ({ projetos, empresaId }: { projetos: any[]; emp
   const [filtroAno, setFiltroAno] = useState(new Date().getFullYear().toString());
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const { data: clientes } = useClientes();
-  const { data: receber } = useQuery({ queryKey: ["financeiro_receber_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_receber").select("*, clientes(nome), projetos(nome)").order("data_vencimento"); if (error) throw error; return data; } });
-  const { data: pagar } = useQuery({ queryKey: ["financeiro_pagar_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome), projetos(nome)").order("data_vencimento"); if (error) throw error; return data; } });
-  const { data: compras } = useQuery({ queryKey: ["compras_all_global"], queryFn: async () => { const { data, error } = await supabase.from("compras").select("*, projetos(nome)").order("created_at", { ascending: false }); if (error) throw error; return data; } });
+  const { data: receber } = useQuery({ queryKey: ["financeiro_receber_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_receber").select("*, clientes(nome), projetos(nome)").eq("deletado", false).order("data_vencimento"); if (error) throw error; return data; } });
+  const { data: pagar } = useQuery({ queryKey: ["financeiro_pagar_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome), projetos(nome)").eq("deletado", false).order("data_vencimento"); if (error) throw error; return data; } });
+  const { data: compras } = useQuery({ queryKey: ["compras_all_global"], queryFn: async () => { const { data, error } = await supabase.from("compras").select("*, projetos(nome)").eq("deletado", false).order("created_at", { ascending: false }); if (error) throw error; return data; } });
 
   const filterByDate = (items: any[], dateField: string) => (items ?? []).filter(item => { const d = item[dateField]; if (!d) return true; if (filtroMes && new Date(d).getMonth() + 1 !== Number(filtroMes)) return false; if (filtroAno && new Date(d).getFullYear() !== Number(filtroAno)) return false; return true; });
   const filteredReceber = filterByDate(receber ?? [], "data_vencimento").filter(r => { if (filtroCliente && r.cliente_id !== filtroCliente) return false; if (filtroStatus !== "todos" && r.status !== filtroStatus) return false; return true; });
@@ -687,7 +684,7 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
   const { data: produtos } = useQuery({
     queryKey: ["produtos_autocomplete", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda").order("nome");
+      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -887,7 +884,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const { data: tecnicos } = useQuery({
     queryKey: ["tecnicos_select", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome").order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -957,7 +954,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("visitas_tecnicas").delete().eq("id", id);
+      const { error } = await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["visitas_tecnicas", projetoId] });
       toast.success("Visita excluída");
@@ -1095,7 +1092,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
   const { data: parcelas, isLoading } = useQuery({
     queryKey: ["financeiro_receber_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_receber").select("*").eq("projeto_id", projetoId).order("parcela");
+      const { data, error } = await supabase.from("financeiro_receber").select("*").eq("projeto_id", projetoId).eq("deletado", false).order("parcela");
       if (error) throw error;
       return data;
     },
@@ -1105,7 +1102,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
   const { data: contasPagar } = useQuery({
     queryKey: ["financeiro_pagar_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("data_vencimento");
+      const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome)").eq("projeto_id", projetoId).eq("deletado", false).order("data_vencimento");
       if (error) throw error;
       return data;
     },
@@ -1147,7 +1144,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
 
   const handleDeleteParcela = async (id: string) => {
     try {
-      const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
+      const { error } = await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
       toast.success("Parcela excluída");
@@ -1454,7 +1451,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   const { data: comissoes, isLoading } = useQuery({
     queryKey: ["comissoes_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("comissoes").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("comissoes").select("*, fornecedores(nome)").eq("projeto_id", projetoId).eq("deletado", false).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -1527,7 +1524,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("comissoes").delete().eq("id", id);
+      const { error } = await supabase.from("comissoes").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
       toast.success("Comissão excluída");

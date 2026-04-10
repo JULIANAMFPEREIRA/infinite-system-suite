@@ -25,7 +25,7 @@ const Fornecedores = () => {
   const { data: fornecedores, isLoading } = useQuery({
     queryKey: ["fornecedores", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("*").order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("*").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -57,7 +57,7 @@ const Fornecedores = () => {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("fornecedores").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("fornecedores").update({ deletado: true } as any).eq("id", id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["fornecedores"] }); toast.success("Excluído"); },
     onError: (err: any) => toast.error(err.message),
   });

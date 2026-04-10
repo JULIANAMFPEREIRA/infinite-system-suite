@@ -11,6 +11,7 @@ export const useContratos = () => {
       const { data, error } = await supabase
         .from("contratos")
         .select("*, projetos(nome), clientes(nome)")
+        .eq("deletado", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -48,7 +49,7 @@ export const useDeleteContrato = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("contratos").delete().eq("id", id);
+      const { error } = await supabase.from("contratos").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       await logAtividade("contratos", "exclusao", id, null);
     },

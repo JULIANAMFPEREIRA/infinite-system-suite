@@ -16,7 +16,7 @@ const Cronograma = () => {
   const { data: projetos, isLoading } = useQuery({
     queryKey: ["projetos_cronograma", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("id, nome, status, data_inicio, data_previsao, clientes(nome)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, data_inicio, data_previsao, clientes(nome)").eq("deletado", false).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },

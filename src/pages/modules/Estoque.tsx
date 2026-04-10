@@ -34,7 +34,7 @@ const Estoque = () => {
 
   const { data: produtos, isLoading: loadingProd } = useQuery({
     queryKey: ["produtos", empresaId],
-    queryFn: async () => { const { data, error } = await supabase.from("produtos").select("*").order("nome"); if (error) throw error; return data; },
+    queryFn: async () => { const { data, error } = await supabase.from("produtos").select("*").eq("deletado", false).order("nome"); if (error) throw error; return data; },
     enabled: !!empresaId,
   });
 
@@ -59,7 +59,7 @@ const Estoque = () => {
   });
 
   const removeProd = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("produtos").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("produtos").update({ deletado: true } as any).eq("id", id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["produtos"] }); toast.success("Produto excluído"); },
     onError: (err: any) => toast.error(err.message),
   });

@@ -34,12 +34,12 @@ const FinanceiroReceber = () => {
 
   const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
   const { data: projetos } = useQuery({
     queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
 
