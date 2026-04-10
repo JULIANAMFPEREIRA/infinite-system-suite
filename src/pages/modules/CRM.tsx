@@ -546,42 +546,48 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
-      if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
-      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
-      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null });
+      console.log("[CRM] saveNewClient chamado", { nome, email, empresaId });
+      if (!empresaId) { toast.error("Empresa não identificada. Faça login novamente."); throw new Error("empresaId ausente"); }
+      if (!nome.trim()) { toast.error("Nome é obrigatório"); throw new Error("Nome é obrigatório"); }
+      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); throw new Error("E-mail inválido"); }
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId, notas: novoClienteObs || null });
+      console.log("[CRM] payload:", payload);
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
-      if (error) throw error;
+      if (error) { console.error("[CRM] Erro ao salvar cliente:", error); throw error; }
+      console.log("[CRM] Cliente salvo com sucesso:", data);
       return data;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["clientes"] });
-      toast.success("Cliente cadastrado!");
+      toast.success("Cliente cadastrado com sucesso!");
       resetForm();
       setDetailClient(data);
       setViewMode("detail");
     },
-    onError: () => {},
+    onError: (err: any) => { console.error("[CRM] Erro na mutation saveNewClient:", err); if (err?.message && !err.message.includes("obrigatório") && !err.message.includes("inválido") && !err.message.includes("ausente")) { toast.error("Erro ao salvar: " + err.message); } },
   });
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
-      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
+      console.log("[CRM] save chamado", { nome, email, editId, empresaId });
+      if (!empresaId) { toast.error("Empresa não identificada. Faça login novamente."); throw new Error("empresaId ausente"); }
+      if (!nome.trim()) { toast.error("Nome é obrigatório"); throw new Error("Nome é obrigatório"); }
+      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); throw new Error("E-mail inválido"); }
       const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null });
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
-        if (error) throw error;
+        if (error) { console.error("[CRM] Erro ao atualizar:", error); throw error; }
         if (statusCrm === "projeto" && oldCliente?.status_crm !== "projeto") {
           await autoCreateProject(editId, nome, enderecoObra || null, endereco || null, payload.arquiteto_id, oldCliente?.notas);
         }
       } else {
-        const { error } = await supabase.from("clientes").insert({ ...payload, empresa_id: empresaId! });
-        if (error) throw error;
+        const { error } = await supabase.from("clientes").insert({ ...payload, empresa_id: empresaId });
+        if (error) { console.error("[CRM] Erro ao inserir:", error); throw error; }
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success(editId ? "Cliente atualizado!" : "Cliente cadastrado!"); resetForm(); },
-    onError: () => {},
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success(editId ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!"); resetForm(); },
+    onError: (err: any) => { console.error("[CRM] Erro na mutation save:", err); if (err?.message && !err.message.includes("obrigatório") && !err.message.includes("inválido") && !err.message.includes("ausente")) { toast.error("Erro ao salvar: " + err.message); } },
   });
 
   const [deleteClientTarget, setDeleteClientTarget] = useState<{ id: string; nome: string } | null>(null);
@@ -1886,9 +1892,17 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!nome.trim()) { toast.error("Nome obrigatório"); return; }
+    if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); return; }
     setSaving(true);
-    await onSave({ nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, notas: obsOrigem || null });
+    try {
+      console.log("[CRM] ClienteForm handleSave chamado", { nome, email });
+      await onSave(sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, notas: obsOrigem || null }));
+      toast.success("Cliente atualizado com sucesso!");
+    } catch (err: any) {
+      console.error("[CRM] Erro ao salvar alterações:", err);
+      toast.error("Erro ao salvar: " + (err?.message ?? "erro desconhecido"));
+    }
     setSaving(false);
   };
 
