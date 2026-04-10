@@ -320,17 +320,19 @@ const CRM = () => {
       projId = newProjeto.id;
     }
 
-    // ── Sync itens ──
+    // ── Sync itens (delete + bulk insert to avoid duplication) ──
     await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
-    for (const item of items) {
-      await createProjetoItem.mutateAsync({
+    if (items.length > 0) {
+      const itemInserts = items.map(item => ({
         projeto_id: projId, descricao: item.descricao,
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: "produto", produto_id: item.produto_id || null,
+        tipo: "produto" as const, produto_id: item.produto_id || null,
         rt_percentual: Number((item as any).rt_comissao) || 0,
-      });
+      }));
+      const { error: itemsError } = await supabase.from("projeto_itens").insert(itemInserts);
+      if (itemsError) console.error("[CRM] Erro ao inserir itens do projeto:", itemsError);
     }
 
     // ── Sync financeiro_receber ──
@@ -379,7 +381,7 @@ const CRM = () => {
         ? "Projeto atualizado com dados do orçamento!"
         : "Projeto criado a partir do orçamento aprovado!");
     }
-  }, [detailClient, empresaId, clientes, createProjeto, createProjetoItem]);
+  }, [detailClient, empresaId, clientes, createProjeto]);
 
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
@@ -388,7 +390,7 @@ const CRM = () => {
       if (error) throw error;
       await syncOrcamentoToProject(orcId);
     },
-    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); },
+    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -523,8 +525,16 @@ const CRM = () => {
       forma_pagamento: simFormaPgto || null,
       observacoes_pagamento: notas || cliente?.notas || null,
     });
-    for (const item of items) {
-      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number(item.rt_comissao) || 0 });
+    if (items.length > 0) {
+      const itemInserts = items.map(item => ({
+        projeto_id: newProjeto.id, descricao: item.descricao,
+        quantidade: Number(item.quantidade) || 1,
+        preco_custo: Number(item.preco_custo) || 0,
+        preco_venda: Number(item.preco_venda) || 0,
+        tipo: "produto" as const, produto_id: item.produto_id || null,
+        rt_percentual: Number(item.rt_comissao) || 0,
+      }));
+      await supabase.from("projeto_itens").insert(itemInserts);
     }
     // Generate financial parcels from simulation
     if (simParcelas.length > 0 && totalVenda > 0) {
