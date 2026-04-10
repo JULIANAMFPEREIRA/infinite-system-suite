@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { isNotEmpty, isPositiveNumber, isGreaterThanZero } from "@/lib/validations";
 
 type StatusCompra = Database["public"]["Enums"]["status_compra"];
 const statusOptions: StatusCompra[] = ["pendente", "aprovada", "entregue", "cancelada"];
@@ -59,6 +60,9 @@ const Compras = () => {
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!isNotEmpty(desc, "Descrição")) throw new Error("Validação falhou");
+      if (!isGreaterThanZero(qtd, "Quantidade")) throw new Error("Validação falhou");
+      if (!isPositiveNumber(valorUnit, "Valor unitário")) throw new Error("Validação falhou");
       const payload = { descricao: desc, quantidade: qtd, valor_unitario: valorUnit, valor_total: qtd * valorUnit, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, produto_id: produtoId || null };
       if (editId) {
         const { error } = await supabase.from("compras").update(payload).eq("id", editId);
