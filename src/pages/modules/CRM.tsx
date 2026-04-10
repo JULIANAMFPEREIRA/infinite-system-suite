@@ -1892,9 +1892,17 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!nome.trim()) { toast.error("Nome obrigatório"); return; }
+    if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); return; }
     setSaving(true);
-    await onSave({ nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, notas: obsOrigem || null });
+    try {
+      console.log("[CRM] ClienteForm handleSave chamado", { nome, email });
+      await onSave(sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, notas: obsOrigem || null }));
+      toast.success("Cliente atualizado com sucesso!");
+    } catch (err: any) {
+      console.error("[CRM] Erro ao salvar alterações:", err);
+      toast.error("Erro ao salvar: " + (err?.message ?? "erro desconhecido"));
+    }
     setSaving(false);
   };
 
