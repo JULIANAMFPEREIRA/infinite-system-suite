@@ -105,7 +105,7 @@ const CRM = () => {
   const { data: allProjetos } = useQuery({
     queryKey: ["all_projetos_kanban", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").neq("status", "cancelado").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").eq("deletado", false).neq("status", "cancelado").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
