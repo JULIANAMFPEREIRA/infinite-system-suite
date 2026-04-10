@@ -10,8 +10,10 @@ export const useNecessidadesCompra = (projetoId?: string) => {
     queryFn: async () => {
       let q = supabase
         .from("necessidades_compra" as any)
-        .select("*, projetos(nome, cliente_id, clientes(nome)), produtos(nome), projeto_itens(preco_custo)")
+        .select("*, projetos!inner(nome, deletado, cliente_id, clientes!inner(nome, deletado)), produtos(nome), projeto_itens(preco_custo)")
         .eq("empresa_id", empresaId!)
+        .eq("projetos.deletado", false)
+        .eq("projetos.clientes.deletado", false)
         .order("created_at", { ascending: false });
       if (projetoId) q = q.eq("projeto_id", projetoId);
       const { data, error } = await q;
