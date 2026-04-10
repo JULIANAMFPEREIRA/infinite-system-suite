@@ -563,9 +563,9 @@ const FinanceiroGlobalSection = ({ projetos, empresaId }: { projetos: any[]; emp
   const [filtroAno, setFiltroAno] = useState(new Date().getFullYear().toString());
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const { data: clientes } = useClientes();
-  const { data: receber } = useQuery({ queryKey: ["financeiro_receber_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_receber").select("*, clientes(nome), projetos(nome)").order("data_vencimento"); if (error) throw error; return data; } });
-  const { data: pagar } = useQuery({ queryKey: ["financeiro_pagar_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome), projetos(nome)").order("data_vencimento"); if (error) throw error; return data; } });
-  const { data: compras } = useQuery({ queryKey: ["compras_all_global"], queryFn: async () => { const { data, error } = await supabase.from("compras").select("*, projetos(nome)").order("created_at", { ascending: false }); if (error) throw error; return data; } });
+  const { data: receber } = useQuery({ queryKey: ["financeiro_receber_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_receber").select("*, clientes(nome), projetos(nome)").eq("deletado", false).order("data_vencimento"); if (error) throw error; return data; } });
+  const { data: pagar } = useQuery({ queryKey: ["financeiro_pagar_all"], queryFn: async () => { const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome), projetos(nome)").eq("deletado", false).order("data_vencimento"); if (error) throw error; return data; } });
+  const { data: compras } = useQuery({ queryKey: ["compras_all_global"], queryFn: async () => { const { data, error } = await supabase.from("compras").select("*, projetos(nome)").eq("deletado", false).order("created_at", { ascending: false }); if (error) throw error; return data; } });
 
   const filterByDate = (items: any[], dateField: string) => (items ?? []).filter(item => { const d = item[dateField]; if (!d) return true; if (filtroMes && new Date(d).getMonth() + 1 !== Number(filtroMes)) return false; if (filtroAno && new Date(d).getFullYear() !== Number(filtroAno)) return false; return true; });
   const filteredReceber = filterByDate(receber ?? [], "data_vencimento").filter(r => { if (filtroCliente && r.cliente_id !== filtroCliente) return false; if (filtroStatus !== "todos" && r.status !== filtroStatus) return false; return true; });
@@ -1092,7 +1092,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
   const { data: parcelas, isLoading } = useQuery({
     queryKey: ["financeiro_receber_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_receber").select("*").eq("projeto_id", projetoId).order("parcela");
+      const { data, error } = await supabase.from("financeiro_receber").select("*").eq("projeto_id", projetoId).eq("deletado", false).order("parcela");
       if (error) throw error;
       return data;
     },
@@ -1102,7 +1102,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
   const { data: contasPagar } = useQuery({
     queryKey: ["financeiro_pagar_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("data_vencimento");
+      const { data, error } = await supabase.from("financeiro_pagar").select("*, fornecedores(nome)").eq("projeto_id", projetoId).eq("deletado", false).order("data_vencimento");
       if (error) throw error;
       return data;
     },
@@ -1451,7 +1451,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   const { data: comissoes, isLoading } = useQuery({
     queryKey: ["comissoes_projeto", projetoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("comissoes").select("*, fornecedores(nome)").eq("projeto_id", projetoId).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("comissoes").select("*, fornecedores(nome)").eq("projeto_id", projetoId).eq("deletado", false).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
