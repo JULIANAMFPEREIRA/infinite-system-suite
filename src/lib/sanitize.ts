@@ -11,7 +11,7 @@ export function sanitizePayload<T extends Record<string, any>>(
   const result = { ...payload };
   for (const key in result) {
     const val = result[key];
-    if (typeof val === "string" && !emailKeys.includes(key)) {
+    if (typeof val === "string" && !emailKeys.includes(key) && !ENUM_KEYS.includes(key)) {
       (result as any)[key] = val.toUpperCase();
     }
   }
