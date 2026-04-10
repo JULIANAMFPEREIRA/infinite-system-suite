@@ -13,6 +13,7 @@ export const useProjetos = () => {
       const { data, error } = await supabase
         .from("projetos")
         .select("*, clientes(nome), fornecedores(nome)")
+        .eq("deletado", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
