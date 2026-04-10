@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
 import { logAtividade } from "./useAuditLog";
+import { sanitizePayload } from "@/lib/sanitize";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export const useFinanceiroPagar = () => {
