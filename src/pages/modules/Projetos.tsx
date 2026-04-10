@@ -1458,6 +1458,17 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
     enabled: !!projetoId,
   });
 
+  // Fetch projeto_itens with RT to show summary
+  const { data: itensRT } = useQuery({
+    queryKey: ["projeto_itens_rt", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projeto_itens").select("id, descricao, preco_venda, quantidade, rt_percentual").eq("projeto_id", projetoId);
+      if (error) throw error;
+      return data?.filter(i => (i.rt_percentual ?? 0) > 0) ?? [];
+    },
+    enabled: !!projetoId,
+  });
+
   const { data: fornecedores } = useQuery({
     queryKey: ["arquitetos_comissao", empresaId],
     queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("tipo", "arquiteto").order("nome"); return data ?? []; },
@@ -1476,6 +1487,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const resetForm = () => { setEditId(null); setFornecedorId(arquitetoId); setPercentual(0); setValor(0); setVencimento(""); setShowForm(false); };
 
@@ -1498,6 +1510,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
       }
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
       qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       resetForm();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -1518,6 +1531,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
       await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("comissao_id", baixaId);
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
       qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       toast.success("Comissão paga"); setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -1527,19 +1541,89 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
       const { error } = await supabase.from("comissoes").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       toast.success("Comissão excluída");
     } catch (err: any) { toast.error(err.message); }
   };
 
+  // Recalculate: sync comissoes with current projeto_itens RT values
+  const handleRecalculate = async () => {
+    if (!empresaId || !arquitetoId || !itensRT) return;
+    setIsRecalculating(true);
+    try {
+      // Soft-delete existing pending comissoes for this project (keep paid ones)
+      const existingPending = comissoes?.filter(c => c.status === "pendente") ?? [];
+      for (const c of existingPending) {
+        await supabase.from("comissoes").update({ deletado: true } as any).eq("id", c.id);
+        await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("comissao_id", c.id);
+      }
+      // Create new comissoes from current items
+      const newComissoes = itensRT.map(i => ({
+        empresa_id: empresaId,
+        projeto_id: projetoId,
+        fornecedor_id: arquitetoId,
+        projeto_item_id: i.id,
+        percentual: i.rt_percentual,
+        valor: ((i.preco_venda ?? 0) * (i.quantidade ?? 1) * (i.rt_percentual ?? 0)) / 100,
+        status: "pendente" as const,
+      }));
+      if (newComissoes.length > 0) {
+        const { error } = await supabase.from("comissoes").insert(newComissoes);
+        if (error) throw error;
+      }
+      qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar_projeto", projetoId] });
+      toast.success(`Comissões recalculadas! ${newComissoes.length} item(ns) com RT.`);
+    } catch (err: any) { toast.error(err.message); }
+    setIsRecalculating(false);
+  };
+
   const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning";
+
+  // RT summary from items
+  const totalBaseRT = itensRT?.reduce((a, i) => a + (i.preco_venda ?? 0) * (i.quantidade ?? 1), 0) ?? 0;
+  const totalValorRT = itensRT?.reduce((a, i) => a + ((i.preco_venda ?? 0) * (i.quantidade ?? 1) * (i.rt_percentual ?? 0)) / 100, 0) ?? 0;
+  const totalComissoes = comissoes?.reduce((a, c) => a + (c.valor ?? 0), 0) ?? 0;
+  const totalPago = comissoes?.filter(c => c.status === "pago").reduce((a, c) => a + (c.valor ?? 0), 0) ?? 0;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Comissões (RT)</h3>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
-          <Plus size={12} className="inline mr-1" />Nova Comissão
-        </button>
+        <div className="flex items-center gap-2">
+          {arquitetoId && itensRT && itensRT.length > 0 && (
+            <button onClick={handleRecalculate} disabled={isRecalculating} className="text-[11px] px-2 py-1 rounded bg-accent text-accent-foreground hover:brightness-110 disabled:opacity-50">
+              {isRecalculating ? "Recalculando..." : "↻ Recalcular RT"}
+            </button>
+          )}
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+            <Plus size={12} className="inline mr-1" />Nova Comissão
+          </button>
+        </div>
+      </div>
+
+      {/* RT Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="bg-secondary/40 rounded-lg p-2.5">
+          <p className="text-[10px] text-muted-foreground">Base de Cálculo</p>
+          <p className="text-sm font-bold text-foreground">R$ {totalBaseRT.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+          <p className="text-[10px] text-muted-foreground">{itensRT?.length ?? 0} item(ns) com RT</p>
+        </div>
+        <div className="bg-secondary/40 rounded-lg p-2.5">
+          <p className="text-[10px] text-muted-foreground">RT Calculado (Itens)</p>
+          <p className="text-sm font-bold text-foreground">R$ {totalValorRT.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-secondary/40 rounded-lg p-2.5">
+          <p className="text-[10px] text-muted-foreground">Comissões Registradas</p>
+          <p className="text-sm font-bold text-foreground">R$ {totalComissoes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+          <p className="text-[10px] text-muted-foreground">{comissoes?.length ?? 0} registro(s)</p>
+        </div>
+        <div className="bg-secondary/40 rounded-lg p-2.5">
+          <p className="text-[10px] text-muted-foreground">Pago</p>
+          <p className="text-sm font-bold text-success">R$ {totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+          <p className="text-[10px] text-muted-foreground">Pendente: R$ {(totalComissoes - totalPago).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+        </div>
       </div>
 
       {showForm && (
@@ -1603,7 +1687,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground">Nenhuma comissão encontrada.</p>}
+      ) : <p className="text-xs text-muted-foreground">Nenhuma comissão registrada. {itensRT && itensRT.length > 0 && arquitetoId ? 'Clique em "Recalcular RT" para gerar comissões a partir dos itens do projeto.' : ""}</p>}
 
       <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
         <DialogContent className="max-w-sm">
