@@ -615,6 +615,7 @@ const CRM = () => {
           await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("projeto_id", pid);
           await supabase.from("compras").update({ deletado: true } as any).eq("projeto_id", pid);
           await supabase.from("contratos").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("necessidades_compra" as any).update({ status: "cancelado" } as any).eq("projeto_id", pid).eq("status", "pendente");
         }
         await supabase.from("projetos").update({ deletado: true } as any).in("id", projectIds);
       }
@@ -633,7 +634,7 @@ const CRM = () => {
       const { error } = await supabase.from("clientes").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); toast.success("Cliente excluído"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra_counts"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["compras"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); toast.success("Cliente excluído"); },
     onError: (err: any) => toast.error(err.message),
   });
 
