@@ -724,10 +724,14 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
       await updateProjeto.mutateAsync({ id: projetoId, custo_previsto: newCusto, venda_total: newVenda, margem_prevista: newMargem });
 
       if (tipo === "produto" && empresaId) {
-        const hasStock = await checkEstoque(newItem.produto_id, qtd);
-        if (!hasStock) {
-          await createNecessidade.mutateAsync({ empresa_id: empresaId, projeto_id: projetoId, projeto_item_id: newItem.id, produto_id: newItem.produto_id ?? undefined, descricao: desc, quantidade: qtd });
-          toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada");
+        // Check if necessidade already exists for this item (avoid duplicates)
+        const { data: existingNec } = await supabase.from("necessidades_compra").select("id").eq("projeto_item_id", newItem.id).eq("status", "pendente").limit(1);
+        if (!existingNec || existingNec.length === 0) {
+          const hasStock = await checkEstoque(newItem.produto_id, qtd);
+          if (!hasStock) {
+            await createNecessidade.mutateAsync({ empresa_id: empresaId, projeto_id: projetoId, projeto_item_id: newItem.id, produto_id: newItem.produto_id ?? undefined, descricao: desc, quantidade: qtd });
+            toast.info("⚠️ Estoque insuficiente — necessidade de compra gerada");
+          }
         }
       }
       setDesc(""); setQtd(1); setCusto(0); setVenda(0); setRt(0); setProdutoId(null);
