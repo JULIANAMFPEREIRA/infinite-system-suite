@@ -1384,7 +1384,7 @@ const CRM = () => {
               {/* BLOCO 3 — FINANCEIRO / SIMULAÇÃO DE PAGAMENTO          */}
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
-                <section className="bg-secondary/20 border border-border rounded-xl p-5 space-y-4">
+                <section className="mt-8 pt-6 border-t border-border/50 bg-secondary/20 border border-border rounded-xl p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <Calculator size={15} className="text-primary" />
                     <h3 className="text-sm font-bold text-foreground tracking-tight">Simulação de Pagamento</h3>
