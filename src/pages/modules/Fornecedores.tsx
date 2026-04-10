@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { isNotEmpty, validateEmail, isPositiveNumber } from "@/lib/validations";
 
 type TipoFornecedor = Database["public"]["Enums"]["tipo_fornecedor"];
 
@@ -39,6 +40,9 @@ const Fornecedores = () => {
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
+      if (!validateEmail(email)) throw new Error("Validação falhou");
+      if (tipo === "arquiteto" && !isPositiveNumber(rt, "RT (%)")) throw new Error("Validação falhou");
       const payload = { nome, tipo, cnpj_cpf: cnpj || null, telefone: tel || null, email: email || null, rt_percentual: tipo === "arquiteto" ? rt : 0, cidade: cidade || null };
       if (editId) {
         const { error } = await supabase.from("fornecedores").update(payload).eq("id", editId);

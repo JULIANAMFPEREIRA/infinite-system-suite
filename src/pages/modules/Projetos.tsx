@@ -10,6 +10,7 @@ import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/us
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isNotEmpty, isGreaterThanZero } from "@/lib/validations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
@@ -127,7 +128,8 @@ const Projetos = () => {
   };
 
   const handleSave = async () => {
-    if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (!isNotEmpty(nome, "Nome do projeto")) return;
+    if (numeroParcelas < 1) { toast.error("Número de parcelas deve ser pelo menos 1"); return; }
     try {
       const payload = {
         nome, descricao: descricao || null, cliente_id: clienteId || null,

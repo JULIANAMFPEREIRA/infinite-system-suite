@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento } from "@/hooks/useCategorias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -48,7 +49,8 @@ const FinanceiroPagar = () => {
   };
 
   const handleSave = async () => {
-    if (!desc.trim()) { toast.error("Descrição obrigatória"); return; }
+    if (!isNotEmpty(desc, "Descrição")) return;
+    if (!isPositiveNumber(valor, "Valor")) return;
     try {
       if (editId) {
         await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null });
