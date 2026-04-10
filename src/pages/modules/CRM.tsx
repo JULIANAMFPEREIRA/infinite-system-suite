@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCreateProjeto, useCreateProjetoItem, useArquitetos } from "@/hooks/useProjetos";
 import { toast } from "sonner";
+import { isNotEmpty, validateEmail } from "@/lib/validations";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -544,6 +545,8 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
+      if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
+      if (!validateEmail(email)) throw new Error("Validação falhou");
       const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
@@ -561,6 +564,8 @@ const CRM = () => {
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
+      if (!validateEmail(email)) throw new Error("Validação falhou");
       const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null };
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
