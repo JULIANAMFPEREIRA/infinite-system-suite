@@ -767,6 +767,10 @@ const CRM = () => {
     setEditingParcelas(sim.parcelas ?? null);
   }, []);
 
+  // Auto-reset edited parcelas when item totals change so simulation recalculates
+  useEffect(() => {
+    setEditingParcelas(null);
+  }, [totalCrmVenda]);
   const simulacao = useMemo(() => {
     const total = totalCrmVenda;
     if (simCondicao === "avista") {
