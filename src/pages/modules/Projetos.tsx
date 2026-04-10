@@ -198,16 +198,13 @@ const Projetos = () => {
 
   const removeProjeto = useMutation({
     mutationFn: async (id: string) => {
-      // Cascade delete all linked data
-      await supabase.from("visitas_tecnicas").delete().eq("projeto_id", id);
-      await supabase.from("comissoes").delete().eq("projeto_id", id);
-      await supabase.from("financeiro_receber").delete().eq("projeto_id", id);
-      await supabase.from("financeiro_pagar").delete().eq("projeto_id", id);
-      await supabase.from("necessidades_compra").delete().eq("projeto_id", id);
-      await supabase.from("compras").delete().eq("projeto_id", id);
-      await supabase.from("contratos").delete().eq("projeto_id", id);
-      await supabase.from("estoque_itens").delete().eq("projeto_id", id);
-      await supabase.from("projeto_itens").delete().eq("projeto_id", id);
+      // Cascade soft delete all linked data
+      await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("comissoes").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("compras").update({ deletado: true } as any).eq("projeto_id", id);
+      await supabase.from("contratos").update({ deletado: true } as any).eq("projeto_id", id);
       // Audit log
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -218,7 +215,7 @@ const Projetos = () => {
           dados_anteriores: projeto ? JSON.parse(JSON.stringify(projeto)) : null,
         });
       }
-      const { error } = await supabase.from("projetos").delete().eq("id", id);
+      const { error } = await supabase.from("projetos").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Projeto e dados vinculados excluídos"); resetForm(); setDeleteTarget(null); },
