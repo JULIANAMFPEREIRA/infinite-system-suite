@@ -525,8 +525,16 @@ const CRM = () => {
       forma_pagamento: simFormaPgto || null,
       observacoes_pagamento: notas || cliente?.notas || null,
     });
-    for (const item of items) {
-      await createProjetoItem.mutateAsync({ projeto_id: newProjeto.id, descricao: item.descricao, quantidade: Number(item.quantidade) || 1, preco_custo: Number(item.preco_custo) || 0, preco_venda: Number(item.preco_venda) || 0, tipo: "produto", produto_id: item.produto_id || null, rt_percentual: Number(item.rt_comissao) || 0 });
+    if (items.length > 0) {
+      const itemInserts = items.map(item => ({
+        projeto_id: newProjeto.id, descricao: item.descricao,
+        quantidade: Number(item.quantidade) || 1,
+        preco_custo: Number(item.preco_custo) || 0,
+        preco_venda: Number(item.preco_venda) || 0,
+        tipo: "produto" as const, produto_id: item.produto_id || null,
+        rt_percentual: Number(item.rt_comissao) || 0,
+      }));
+      await supabase.from("projeto_itens").insert(itemInserts);
     }
     // Generate financial parcels from simulation
     if (simParcelas.length > 0 && totalVenda > 0) {
