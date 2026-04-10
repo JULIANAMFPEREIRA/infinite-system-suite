@@ -75,7 +75,11 @@ export const useCreateProjetoItem = () => {
 
   return useMutation({
     mutationFn: async (item: TablesInsert<"projeto_itens">) => {
-      const { data, error } = await supabase.from("projeto_itens").insert(item).select().single();
+      const { data, error } = await supabase
+        .from("projeto_itens")
+        .upsert(item, { onConflict: "projeto_id,descricao,tipo", ignoreDuplicates: false })
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
