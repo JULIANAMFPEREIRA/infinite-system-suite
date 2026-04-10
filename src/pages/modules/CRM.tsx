@@ -386,6 +386,16 @@ const CRM = () => {
     }
   }, [detailClient, empresaId, clientes, createProjeto]);
 
+  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    try {
+      await _syncOrcamentoToProjectInner(orcId, opts);
+    } finally {
+      syncingRef.current = false;
+    }
+  }, [_syncOrcamentoToProjectInner]);
+
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
       if (!detailClient?.id || !empresaId) return;
