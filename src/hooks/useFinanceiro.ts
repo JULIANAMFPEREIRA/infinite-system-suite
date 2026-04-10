@@ -11,6 +11,7 @@ export const useFinanceiroPagar = () => {
       const { data, error } = await supabase
         .from("financeiro_pagar")
         .select("*, fornecedores(nome), projetos(nome)")
+        .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
       if (error) throw error;
       return data;
@@ -25,6 +26,7 @@ export const useFinanceiroReceber = () => {
       const { data, error } = await supabase
         .from("financeiro_receber")
         .select("*, clientes(nome), projetos(nome)")
+        .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
       if (error) throw error;
       return data;
@@ -86,7 +88,7 @@ export const useDeleteContaPagar = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("financeiro_pagar").delete().eq("id", id);
+      const { error } = await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       await logAtividade("financeiro_pagar", "exclusao", id, null);
     },
@@ -98,7 +100,7 @@ export const useDeleteContaReceber = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
+      const { error } = await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       await logAtividade("financeiro_receber", "exclusao", id, null);
     },
@@ -113,6 +115,7 @@ export const useComissoes = () => {
       const { data, error } = await supabase
         .from("comissoes")
         .select("*, fornecedores(nome), projetos(nome, cliente_id, clientes(nome), orcamento_id)")
+        .eq("deletado", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

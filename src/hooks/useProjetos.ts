@@ -100,7 +100,7 @@ export const useClientes = () => {
   return useQuery({
     queryKey: ["clientes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("id, nome").order("nome");
+      const { data, error } = await supabase.from("clientes").select("id, nome").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -111,7 +111,7 @@ export const useArquitetos = () => {
   return useQuery({
     queryKey: ["arquitetos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome, rt_percentual").eq("tipo", "arquiteto").order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id, nome, rt_percentual").eq("tipo", "arquiteto").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },

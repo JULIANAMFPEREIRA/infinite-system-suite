@@ -7,7 +7,7 @@ export const useCategorias = () => {
   return useQuery({
     queryKey: ["categorias", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categorias").select("*").order("nome");
+      const { data, error } = await supabase.from("categorias").select("*").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -31,7 +31,7 @@ export const useDeleteCategoria = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("categorias").delete().eq("id", id);
+      const { error } = await supabase.from("categorias").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] }),
