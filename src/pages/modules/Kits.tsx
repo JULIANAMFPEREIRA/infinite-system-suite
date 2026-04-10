@@ -8,7 +8,7 @@ const Kits = () => {
   const { data: produtos, isLoading } = useQuery({
     queryKey: ["produtos_kits", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("*").order("categoria", { ascending: true });
+      const { data, error } = await supabase.from("produtos").select("*").eq("deletado", false).order("categoria", { ascending: true });
       if (error) throw error;
       return data;
     },
