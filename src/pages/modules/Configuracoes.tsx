@@ -52,7 +52,7 @@ const Configuracoes = () => {
   const { data: equipe, refetch: refetchEquipe } = useQuery({
     queryKey: ["equipe", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).order("nome");
+      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -74,7 +74,7 @@ const Configuracoes = () => {
 
   const deleteEquipeMember = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("equipe").delete().eq("id", id);
+      const { error } = await supabase.from("equipe").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { refetchEquipe(); toast.success("Membro removido"); },

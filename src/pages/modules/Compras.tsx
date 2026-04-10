@@ -26,7 +26,7 @@ const Compras = () => {
   const { data: compras, isLoading } = useQuery({
     queryKey: ["compras", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("compras").select("*, fornecedores(nome), projetos(nome)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("compras").select("*, fornecedores(nome), projetos(nome)").eq("deletado", false).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -35,19 +35,19 @@ const Compras = () => {
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
 
   const { data: projetos } = useQuery({
     queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
 
   const { data: produtos } = useQuery({
     queryKey: ["produtos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("produtos").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("produtos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
 
@@ -90,7 +90,7 @@ const Compras = () => {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("compras").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("compras").update({ deletado: true } as any).eq("id", id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); toast.success("Compra excluída"); },
     onError: (err: any) => toast.error(err.message),
   });
