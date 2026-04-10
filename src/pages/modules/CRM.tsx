@@ -266,15 +266,7 @@ const CRM = () => {
   });
   // ─── Reusable sync function (guarded against concurrent calls) ───
   const syncingRef = useRef(false);
-  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
-    if (syncingRef.current) return; // prevent concurrent syncs
-    syncingRef.current = true;
-    try {
-      await _syncOrcamentoToProjectInner(orcId, opts);
-    } finally {
-      syncingRef.current = false;
-    }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
     if (!detailClient?.id || !empresaId) return;
 
