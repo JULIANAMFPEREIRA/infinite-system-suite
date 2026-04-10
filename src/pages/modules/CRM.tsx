@@ -1,3 +1,4 @@
+import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical } from "lucide-react";
@@ -547,7 +548,7 @@ const CRM = () => {
     mutationFn: async () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
-      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null });
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
@@ -566,7 +567,7 @@ const CRM = () => {
     mutationFn: async () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
-      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null };
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null });
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
@@ -640,10 +641,10 @@ const CRM = () => {
         ? `[Equipe: ${equipeMembers?.find(m => m.id === intMembroEquipe)?.nome ?? intMembroEquipe}] ${intDesc}`
         : intDesc;
       if (editIntId) {
-        const { error } = await supabase.from("crm_interacoes").update({ tipo: intTipo, descricao: descFull }).eq("id", editIntId);
+        const { error } = await supabase.from("crm_interacoes").update(sanitizePayload({ tipo: intTipo, descricao: descFull })).eq("id", editIntId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_interacoes").insert({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null });
+        const { error } = await supabase.from("crm_interacoes").insert(sanitizePayload({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null }));
         if (error) throw error;
       }
     },
@@ -660,10 +661,10 @@ const CRM = () => {
     mutationFn: async () => {
       if (!itemDesc.trim() || !detailClient?.id) return;
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any)).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId } as any);
+        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId } as any));
         if (error) throw error;
       }
     },

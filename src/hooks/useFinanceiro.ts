@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
 import { logAtividade } from "./useAuditLog";
+import { sanitizePayload } from "@/lib/sanitize";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export const useFinanceiroPagar = () => {
@@ -39,7 +40,7 @@ export const useCreateContaPagar = () => {
   const empresaId = useEmpresa();
   return useMutation({
     mutationFn: async (conta: Omit<TablesInsert<"financeiro_pagar">, "empresa_id">) => {
-      const { data, error } = await supabase.from("financeiro_pagar").insert({ ...conta, empresa_id: empresaId! }).select().single();
+      const { data, error } = await supabase.from("financeiro_pagar").insert(sanitizePayload({ ...conta, empresa_id: empresaId! })).select().single();
       if (error) throw error;
       await logAtividade("financeiro_pagar", "criacao", data.id, empresaId, null, { ...conta, projeto_id: conta.projeto_id });
     },
@@ -52,7 +53,7 @@ export const useCreateContaReceber = () => {
   const empresaId = useEmpresa();
   return useMutation({
     mutationFn: async (conta: Omit<TablesInsert<"financeiro_receber">, "empresa_id">) => {
-      const { data, error } = await supabase.from("financeiro_receber").insert({ ...conta, empresa_id: empresaId! }).select().single();
+      const { data, error } = await supabase.from("financeiro_receber").insert(sanitizePayload({ ...conta, empresa_id: empresaId! })).select().single();
       if (error) throw error;
       await logAtividade("financeiro_receber", "criacao", data.id, empresaId, null, { ...conta, projeto_id: conta.projeto_id });
     },
@@ -64,7 +65,7 @@ export const useUpdateContaPagar = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: TablesUpdate<"financeiro_pagar"> & { id: string }) => {
-      const { error } = await supabase.from("financeiro_pagar").update(updates).eq("id", id);
+      const { error } = await supabase.from("financeiro_pagar").update(sanitizePayload(updates as any)).eq("id", id);
       if (error) throw error;
       await logAtividade("financeiro_pagar", "edicao", id, null, null, updates as any);
     },
@@ -76,7 +77,7 @@ export const useUpdateContaReceber = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: TablesUpdate<"financeiro_receber"> & { id: string }) => {
-      const { error } = await supabase.from("financeiro_receber").update(updates).eq("id", id);
+      const { error } = await supabase.from("financeiro_receber").update(sanitizePayload(updates as any)).eq("id", id);
       if (error) throw error;
       await logAtividade("financeiro_receber", "edicao", id, null, null, updates as any);
     },
