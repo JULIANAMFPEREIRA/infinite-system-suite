@@ -81,9 +81,12 @@ const Compras = () => {
     mutationFn: async ({ id, status, produto_id, projeto_id }: { id: string; status: StatusCompra; produto_id?: string | null; projeto_id?: string | null }) => {
       const { error } = await supabase.from("compras").update({ status }).eq("id", id);
       if (error) throw error;
-      // Auto-insert estoque when entregue
+      // Auto-insert estoque when entregue (check for existing to avoid duplicates)
       if (status === "entregue" && produto_id && empresaId) {
-        await supabase.from("estoque_itens").insert({ empresa_id: empresaId, produto_id, compra_id: id, projeto_id: projeto_id || null, status: "disponivel", localizacao: "Depósito" });
+        const { data: existing } = await supabase.from("estoque_itens").select("id").eq("compra_id", id).limit(1);
+        if (!existing || existing.length === 0) {
+          await supabase.from("estoque_itens").insert({ empresa_id: empresaId, produto_id, compra_id: id, projeto_id: projeto_id || null, status: "disponivel", localizacao: "Depósito" });
+        }
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); qc.invalidateQueries({ queryKey: ["estoque_itens"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Status atualizado"); },

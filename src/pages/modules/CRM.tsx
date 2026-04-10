@@ -264,9 +264,18 @@ const CRM = () => {
     },
     onError: (err: any) => toast.error(err.message),
   });
-
-  // ─── Reusable sync function ───
+  // ─── Reusable sync function (guarded against concurrent calls) ───
+  const syncingRef = useRef(false);
   const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
+    if (syncingRef.current) return; // prevent concurrent syncs
+    syncingRef.current = true;
+    try {
+      await _syncOrcamentoToProjectInner(orcId, opts);
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
+  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
     if (!detailClient?.id || !empresaId) return;
 
     const { data: orcData } = await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single();
@@ -322,6 +331,7 @@ const CRM = () => {
 
     // ── Sync itens (delete + bulk insert to avoid duplication) ──
     await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
+    let insertedItens: any[] = [];
     if (items.length > 0) {
       const itemInserts = items.map(item => ({
         projeto_id: projId, descricao: item.descricao,
@@ -331,8 +341,9 @@ const CRM = () => {
         tipo: "produto" as const, produto_id: item.produto_id || null,
         rt_percentual: Number((item as any).rt_comissao) || 0,
       }));
-      const { error: itemsError } = await supabase.from("projeto_itens").insert(itemInserts);
+      const { data: insertedData, error: itemsError } = await supabase.from("projeto_itens").insert(itemInserts).select();
       if (itemsError) console.error("[CRM] Erro ao inserir itens do projeto:", itemsError);
+      insertedItens = insertedData ?? [];
     }
 
     // ── Sync financeiro_receber ──
@@ -348,32 +359,32 @@ const CRM = () => {
 
     // ── Sync comissões (RT) ──
     await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
+    // Also delete financeiro_pagar linked to old comissões for this project
+    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null);
     const arquitetoId = detailClient.arquiteto_id;
-    if (arquitetoId) {
-      const { data: projItens } = await supabase.from("projeto_itens").select("id, descricao, rt_percentual, preco_venda, quantidade, produto_id").eq("projeto_id", projId);
-      for (const pi of (projItens ?? [])) {
-        const rtVal = Number(pi.rt_percentual) || 0;
-        if (rtVal > 0) {
-          await supabase.from("comissoes").insert({
-            empresa_id: empresaId, projeto_id: projId, fornecedor_id: arquitetoId,
-            projeto_item_id: pi.id, valor: rtVal,
-            percentual: Number(pi.preco_venda) > 0 ? (rtVal / (Number(pi.preco_venda) * Number(pi.quantidade))) * 100 : 0,
-            status: "pendente",
-          });
-        }
+    if (arquitetoId && insertedItens.length > 0) {
+      const comissaoInserts = insertedItens
+        .filter(pi => (Number(pi.rt_percentual) || 0) > 0)
+        .map(pi => ({
+          empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
+          projeto_item_id: pi.id, valor: Number(pi.rt_percentual) || 0,
+          percentual: Number(pi.preco_venda) > 0 ? ((Number(pi.rt_percentual) || 0) / (Number(pi.preco_venda) * Number(pi.quantidade))) * 100 : 0,
+          status: "pendente" as const,
+        }));
+      if (comissaoInserts.length > 0) {
+        await supabase.from("comissoes").insert(comissaoInserts);
       }
-
     }
 
     // ── Sync necessidades de compra (ALL items, not just with arquiteto) ──
     await supabase.from("necessidades_compra").delete().eq("projeto_id", projId).eq("status", "pendente");
-    const { data: projItensCompra } = await supabase.from("projeto_itens").select("id, descricao, preco_custo, quantidade, produto_id").eq("projeto_id", projId);
-    for (const pi of (projItensCompra ?? [])) {
-      await supabase.from("necessidades_compra").insert({
+    if (insertedItens.length > 0) {
+      const necInserts = insertedItens.map(pi => ({
         empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
         produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
         quantidade: Number(pi.quantidade) || 1, status: "pendente",
-      });
+      }));
+      await supabase.from("necessidades_compra").insert(necInserts);
     }
 
     if (opts?.showToast !== false) {
