@@ -176,3 +176,16 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(222, 12%, 35%);
 }
+
+/* Global uppercase for text inputs (except email) */
+input:not([type="email"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]):not([type="color"]):not([type="range"]):not([type="hidden"]):not([type="file"]),
+textarea {
+  text-transform: uppercase;
+}
+input:not([type="email"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]):not([type="color"]):not([type="range"]):not([type="hidden"]):not([type="file"])::placeholder,
+textarea::placeholder {
+  text-transform: none;
+}
+input[type="email"] {
+  text-transform: lowercase;
+}
