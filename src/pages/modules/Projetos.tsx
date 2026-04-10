@@ -954,7 +954,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("visitas_tecnicas").delete().eq("id", id);
+      const { error } = await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["visitas_tecnicas", projetoId] });
       toast.success("Visita excluída");
@@ -1144,7 +1144,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
 
   const handleDeleteParcela = async (id: string) => {
     try {
-      const { error } = await supabase.from("financeiro_receber").delete().eq("id", id);
+      const { error } = await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
       toast.success("Parcela excluída");
@@ -1524,7 +1524,7 @@ const ProjetoComissoesSection = ({ projetoId, arquitetoId }: { projetoId: string
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("comissoes").delete().eq("id", id);
+      const { error } = await supabase.from("comissoes").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["comissoes_projeto", projetoId] });
       toast.success("Comissão excluída");
