@@ -13,7 +13,7 @@ const Automacoes = () => {
 
   const { data: projetos } = useQuery({
     queryKey: ["projetos_alertas", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome, custo_previsto, custo_real").gt("custo_real", 0); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome, custo_previsto, custo_real").eq("deletado", false).gt("custo_real", 0); return data ?? []; },
     enabled: !!empresaId,
   });
 
