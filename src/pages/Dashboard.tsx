@@ -25,18 +25,18 @@ const Dashboard = () => {
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
       const [receber, pagar, projetos, clientes, necessidades, visitas, projetoItens, compras] = await Promise.all([
-        supabase.from("financeiro_receber").select("valor, status, data_vencimento, cliente_id, projeto_id, descricao").then(r => r.data ?? []),
-        supabase.from("financeiro_pagar").select("valor, status, data_vencimento").then(r => r.data ?? []),
-        supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").then(r => r.data ?? []),
-        supabase.from("clientes").select("id, nome").then(r => r.data ?? []),
+        supabase.from("financeiro_receber").select("valor, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("financeiro_pagar").select("valor, status, data_vencimento").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("clientes").select("id, nome").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("necessidades_compra").select("id, descricao, quantidade, status, projeto_id, produto_id, projeto_item_id").then(r => r.data ?? []),
-        supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id").then(r => r.data ?? []),
+        supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projeto_itens").select("id, preco_custo, quantidade").then(r => r.data ?? []),
-        supabase.from("compras").select("id, valor_total, data_compra, status").then(r => r.data ?? []),
+        supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
       const [produtosRes] = await Promise.all([
-        supabase.from("produtos").select("id, nome, preco_custo").then(r => r.data ?? []),
+        supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));

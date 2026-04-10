@@ -21,6 +21,7 @@ const PortalCliente = () => {
       const { data, error } = await supabase.from("projetos")
         .select("id, nome, status, endereco_obra, data_inicio, data_previsao, descricao")
         .eq("cliente_id", cliente.id)
+        .eq("deletado", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];

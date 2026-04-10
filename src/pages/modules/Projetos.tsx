@@ -684,7 +684,7 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
   const { data: produtos } = useQuery({
     queryKey: ["produtos_autocomplete", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda").order("nome");
+      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda").eq("deletado", false).order("nome");
       if (error) throw error;
       return data;
     },
@@ -884,7 +884,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const { data: tecnicos } = useQuery({
     queryKey: ["tecnicos_select", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome").order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome");
       if (error) throw error;
       return data ?? [];
     },
