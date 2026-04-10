@@ -545,9 +545,9 @@ const CRM = () => {
   /* ─── Save new client and open detail ─── */
   const saveNewClient = useMutation({
     mutationFn: async () => {
-      if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
-      if (!validateEmail(email)) throw new Error("Validação falhou");
-      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
+      if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
+      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
+      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
@@ -559,14 +559,14 @@ const CRM = () => {
       setDetailClient(data);
       setViewMode("detail");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: () => {},
   });
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
-      if (!validateEmail(email)) throw new Error("Validação falhou");
-      const payload: any = { nome, email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null };
+      if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
+      if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
+      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null };
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
@@ -580,7 +580,7 @@ const CRM = () => {
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success(editId ? "Cliente atualizado!" : "Cliente cadastrado!"); resetForm(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: () => {},
   });
 
   const [deleteClientTarget, setDeleteClientTarget] = useState<{ id: string; nome: string } | null>(null);
