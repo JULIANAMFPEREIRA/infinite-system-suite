@@ -35,12 +35,12 @@ const Comissoes = () => {
 
   const { data: projetos } = useQuery({
     queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
   const { data: fornecedores } = useQuery({
     queryKey: ["arquitetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("tipo", "arquiteto").order("nome"); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("tipo", "arquiteto").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
 
