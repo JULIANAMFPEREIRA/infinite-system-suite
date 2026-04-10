@@ -83,7 +83,7 @@ const CRM = () => {
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").eq("deletado", false).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -587,31 +587,23 @@ const CRM = () => {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      // Get all projects for this client
+      // Soft delete all projects for this client
       const { data: clientProjects } = await supabase.from("projetos").select("id").eq("cliente_id", id);
       const projectIds = (clientProjects ?? []).map(p => p.id);
-      // Cascade delete project-linked data
       if (projectIds.length > 0) {
         for (const pid of projectIds) {
-          await supabase.from("visitas_tecnicas").delete().eq("projeto_id", pid);
-          await supabase.from("comissoes").delete().eq("projeto_id", pid);
-          await supabase.from("financeiro_receber").delete().eq("projeto_id", pid);
-          await supabase.from("financeiro_pagar").delete().eq("projeto_id", pid);
-          await supabase.from("necessidades_compra").delete().eq("projeto_id", pid);
-          await supabase.from("compras").delete().eq("projeto_id", pid);
-          await supabase.from("contratos").delete().eq("projeto_id", pid);
-          await supabase.from("estoque_itens").delete().eq("projeto_id", pid);
-          await supabase.from("projeto_itens").delete().eq("projeto_id", pid);
+          await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("comissoes").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("financeiro_pagar").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("compras").update({ deletado: true } as any).eq("projeto_id", pid);
+          await supabase.from("contratos").update({ deletado: true } as any).eq("projeto_id", pid);
         }
-        await supabase.from("projetos").delete().in("id", projectIds);
+        await supabase.from("projetos").update({ deletado: true } as any).in("id", projectIds);
       }
-      // Delete CRM data
-      await supabase.from("crm_itens").delete().eq("cliente_id", id);
-      await supabase.from("crm_orcamentos").delete().eq("cliente_id", id);
-      await supabase.from("crm_interacoes").delete().eq("cliente_id", id);
-      await supabase.from("crm_arquivos").delete().eq("cliente_id", id);
-      await supabase.from("financeiro_receber").delete().eq("cliente_id", id);
-      await supabase.from("contratos").delete().eq("cliente_id", id);
+      // Soft delete financeiro_receber and contratos by client
+      await supabase.from("financeiro_receber").update({ deletado: true } as any).eq("cliente_id", id);
+      await supabase.from("contratos").update({ deletado: true } as any).eq("cliente_id", id);
       // Audit log
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
@@ -621,7 +613,7 @@ const CRM = () => {
           dados_anteriores: { cliente_id: id, projetos_excluidos: projectIds.length },
         });
       }
-      const { error } = await supabase.from("clientes").delete().eq("id", id);
+      const { error } = await supabase.from("clientes").update({ deletado: true } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clientes"] }); toast.success("Cliente excluído"); },
