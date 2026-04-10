@@ -381,7 +381,7 @@ const CRM = () => {
         ? "Projeto atualizado com dados do orçamento!"
         : "Projeto criado a partir do orçamento aprovado!");
     }
-  }, [detailClient, empresaId, clientes, createProjeto, createProjetoItem]);
+  }, [detailClient, empresaId, clientes, createProjeto]);
 
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
