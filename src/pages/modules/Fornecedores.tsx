@@ -43,7 +43,7 @@ const Fornecedores = () => {
       if (!isNotEmpty(nome, "Nome")) throw new Error("Validação falhou");
       if (!validateEmail(email)) throw new Error("Validação falhou");
       if (tipo === "arquiteto" && !isPositiveNumber(rt, "RT (%)")) throw new Error("Validação falhou");
-      const payload = { nome, tipo, cnpj_cpf: cnpj || null, telefone: tel || null, email: email || null, rt_percentual: tipo === "arquiteto" ? rt : 0, cidade: cidade || null };
+      const payload = sanitizePayload({ nome, tipo, cnpj_cpf: cnpj || null, telefone: tel || null, email: email || null, rt_percentual: tipo === "arquiteto" ? rt : 0, cidade: cidade || null });
       if (editId) {
         const { error } = await supabase.from("fornecedores").update(payload).eq("id", editId);
         if (error) throw error;

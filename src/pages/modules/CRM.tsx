@@ -547,7 +547,7 @@ const CRM = () => {
     mutationFn: async () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
-      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null };
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId!, notas: novoClienteObs || null });
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) throw error;
       return data;
@@ -566,7 +566,7 @@ const CRM = () => {
     mutationFn: async () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); console.warn("[CRM] Validação: campo 'nome' está vazio"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); console.warn("[CRM] Validação: email inválido:", email); throw new Error("E-mail inválido"); }
-      const payload: any = { nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null };
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null });
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);

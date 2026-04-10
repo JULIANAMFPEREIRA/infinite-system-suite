@@ -63,7 +63,7 @@ const Compras = () => {
       if (!isNotEmpty(desc, "Descrição")) throw new Error("Validação falhou");
       if (!isGreaterThanZero(qtd, "Quantidade")) throw new Error("Validação falhou");
       if (!isPositiveNumber(valorUnit, "Valor unitário")) throw new Error("Validação falhou");
-      const payload = { descricao: desc, quantidade: qtd, valor_unitario: valorUnit, valor_total: qtd * valorUnit, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, produto_id: produtoId || null };
+      const payload = sanitizePayload({ descricao: desc, quantidade: qtd, valor_unitario: valorUnit, valor_total: qtd * valorUnit, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, produto_id: produtoId || null });
       if (editId) {
         const { error } = await supabase.from("compras").update(payload).eq("id", editId);
         if (error) throw error;
