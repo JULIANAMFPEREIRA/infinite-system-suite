@@ -52,6 +52,7 @@ export const statusProjetoLabels: Record<StatusProjeto, string> = {
   concluido: "CONCLUÍDO",
   pos_venda: "PÓS-VENDA",
   cancelado: "CANCELADO",
+  em_pausa: "EM PAUSA",
 };
 
 export const statusProjetoColors: Record<StatusProjeto, string> = {
@@ -69,12 +70,13 @@ export const statusProjetoColors: Record<StatusProjeto, string> = {
   concluido: "bg-info/15 text-info",
   pos_venda: "bg-accent text-accent-foreground",
   cancelado: "bg-destructive/15 text-destructive",
+  em_pausa: "bg-orange-500/15 text-orange-600",
 };
 
-/** Status operacionais exibidos na listagem de projetos */
+/** Status operacionais exibidos na listagem de projetos (nova ordem) */
 export const statusProjetoOperacionais: StatusProjeto[] = [
-  "infraestrutura", "instalacao", "cabeamento", "programacao",
-  "personalizacao", "concluido", "pos_venda", "cancelado",
+  "infraestrutura", "cabeamento", "instalacao", "programacao",
+  "concluido", "pos_venda", "em_pausa", "cancelado",
 ];
 
 /** Status do dropdown de alteração dentro do projeto */

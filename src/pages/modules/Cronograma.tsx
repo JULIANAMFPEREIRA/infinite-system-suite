@@ -7,8 +7,9 @@ import { statusProjetoLabels, type StatusProjeto } from "@/lib/statusConfig";
 const statusLabels = statusProjetoLabels;
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
-  em_andamento: 35, infraestrutura: 45, instalacao: 55, cabeamento: 65,
-  programacao: 75, personalizacao: 85, concluido: 100, pos_venda: 100, cancelado: 0
+  em_andamento: 35, infraestrutura: 45, cabeamento: 55, instalacao: 65,
+  programacao: 75, personalizacao: 85, concluido: 100, pos_venda: 100,
+  cancelado: 0, em_pausa: 0
 };
 
 const Cronograma = () => {
