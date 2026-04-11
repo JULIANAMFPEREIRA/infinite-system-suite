@@ -1415,6 +1415,20 @@ const CRM = () => {
                       </table>
                     </div>
 
+                    {/* Frete & Imposto */}
+                    {activeOrcamentoId && (
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="space-y-0.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                          <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
+                          <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Totais como cards */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
@@ -1423,7 +1437,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
-                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCusto.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
+                        {(orcFrete > 0 || orcImposto > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)} + frete: {orcFrete.toFixed(2)} + imp: {orcImposto.toFixed(2)})</p>}
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
@@ -1435,8 +1450,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
-                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras - totalCrmRt).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
                       </div>
                     </div>
                   </>
