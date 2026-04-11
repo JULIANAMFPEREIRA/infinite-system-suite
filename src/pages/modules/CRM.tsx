@@ -66,6 +66,28 @@ const CRM = () => {
   const [itemRt, setItemRt] = useState(0);
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
+  // Auto-calc RT based on architect %
+  const arquitetoRtPercentual = useMemo(() => {
+    if (!detailClient?.arquiteto_id || !arquitetos) return 0;
+    const arq = arquitetos.find(a => a.id === detailClient.arquiteto_id);
+    return arq?.rt_percentual ?? 0;
+  }, [detailClient?.arquiteto_id, arquitetos]);
+
+  const handleItemVendaChange = (value: number) => {
+    setItemVenda(value);
+    // Auto-calc RT only if not editing and architect has RT %
+    if (!editItemId && arquitetoRtPercentual > 0) {
+      setItemRt(Number(((value * itemQtd * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
+
+  const handleItemQtdChange = (value: number) => {
+    setItemQtd(value);
+    if (!editItemId && arquitetoRtPercentual > 0) {
+      setItemRt(Number(((itemVenda * value * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
+
   // Lightbox & preview state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [lightboxZoom, setLightboxZoom] = useState(1);
