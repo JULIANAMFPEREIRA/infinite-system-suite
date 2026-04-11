@@ -98,6 +98,7 @@ export type Database = {
           arquiteto_id: string | null
           cpf_cnpj: string | null
           created_at: string
+          data_aniversario: string | null
           deletado: boolean
           email: string | null
           empresa_id: string
@@ -115,6 +116,7 @@ export type Database = {
           arquiteto_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          data_aniversario?: string | null
           deletado?: boolean
           email?: string | null
           empresa_id: string
@@ -132,6 +134,7 @@ export type Database = {
           arquiteto_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          data_aniversario?: string | null
           deletado?: boolean
           email?: string | null
           empresa_id?: string
@@ -549,6 +552,8 @@ export type Database = {
           aprovado: boolean
           cliente_id: string
           created_at: string
+          data_envio_proposta: string | null
+          data_pagamento_avista: string | null
           empresa_id: string
           id: string
           nome: string
@@ -558,6 +563,8 @@ export type Database = {
           aprovado?: boolean
           cliente_id: string
           created_at?: string
+          data_envio_proposta?: string | null
+          data_pagamento_avista?: string | null
           empresa_id: string
           id?: string
           nome?: string
@@ -567,6 +574,8 @@ export type Database = {
           aprovado?: boolean
           cliente_id?: string
           created_at?: string
+          data_envio_proposta?: string | null
+          data_pagamento_avista?: string | null
           empresa_id?: string
           id?: string
           nome?: string
@@ -941,6 +950,7 @@ export type Database = {
           cidade: string | null
           cnpj_cpf: string | null
           created_at: string
+          data_aniversario: string | null
           deletado: boolean
           email: string | null
           empresa_id: string
@@ -955,6 +965,7 @@ export type Database = {
           cidade?: string | null
           cnpj_cpf?: string | null
           created_at?: string
+          data_aniversario?: string | null
           deletado?: boolean
           email?: string | null
           empresa_id: string
@@ -969,6 +980,7 @@ export type Database = {
           cidade?: string | null
           cnpj_cpf?: string | null
           created_at?: string
+          data_aniversario?: string | null
           deletado?: boolean
           email?: string | null
           empresa_id?: string
@@ -1477,6 +1489,7 @@ export type Database = {
         | "cabeamento"
         | "programacao"
         | "personalizacao"
+        | "em_pausa"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
       tipo_fornecedor: "fornecedor" | "arquiteto"
       tipo_projeto_item: "produto" | "servico" | "mao_de_obra"
@@ -1638,6 +1651,7 @@ export const Constants = {
         "cabeamento",
         "programacao",
         "personalizacao",
+        "em_pausa",
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
       tipo_fornecedor: ["fornecedor", "arquiteto"],
