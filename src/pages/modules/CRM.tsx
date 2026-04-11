@@ -500,10 +500,10 @@ const CRM = () => {
     },
   });
 
-  // Save orcamento simulation
+  // Save orcamento simulation + frete/imposto
   const saveOrcamentoSimulacao = async (simData: any) => {
     if (!activeOrcamentoId) return;
-    await supabase.from("crm_orcamentos").update({ simulacao_pagamento: simData }).eq("id", activeOrcamentoId);
+    await supabase.from("crm_orcamentos").update({ simulacao_pagamento: simData, frete: orcFrete, imposto: orcImposto } as any).eq("id", activeOrcamentoId);
     refetchOrcamentos();
   };
 
