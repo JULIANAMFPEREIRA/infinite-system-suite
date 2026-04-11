@@ -28,6 +28,7 @@ import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
 import ItensComprar from "./pages/modules/ItensComprar";
+import Orcamentos from "./pages/modules/Orcamentos";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
