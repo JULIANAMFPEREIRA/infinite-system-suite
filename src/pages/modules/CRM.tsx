@@ -1310,6 +1310,11 @@ const CRM = () => {
                           </div>
                           {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
                         </div>
+                        {orc.data_envio_proposta && (
+                          <p className="text-[10px] text-muted-foreground italic mt-1">
+                            Proposta enviada {formatDistanceToNow(new Date(orc.data_envio_proposta), { addSuffix: true, locale: ptBR })}
+                          </p>
+                        )}
 
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {!orc.aprovado ? (
