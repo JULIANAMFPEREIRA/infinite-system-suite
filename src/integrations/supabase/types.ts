@@ -1097,6 +1097,7 @@ export type Database = {
           deletado: boolean
           empresa_id: string
           estoque_minimo: number | null
+          fornecedor_id: string | null
           id: string
           marca: string | null
           nome: string
@@ -1113,6 +1114,7 @@ export type Database = {
           deletado?: boolean
           empresa_id: string
           estoque_minimo?: number | null
+          fornecedor_id?: string | null
           id?: string
           marca?: string | null
           nome: string
@@ -1129,6 +1131,7 @@ export type Database = {
           deletado?: boolean
           empresa_id?: string
           estoque_minimo?: number | null
+          fornecedor_id?: string | null
           id?: string
           marca?: string | null
           nome?: string
@@ -1143,6 +1146,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
             referencedColumns: ["id"]
           },
         ]
