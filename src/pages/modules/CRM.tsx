@@ -1352,7 +1352,7 @@ const CRM = () => {
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Quantidade</label>
-                      <input type="number" value={itemQtd} onChange={e => setItemQtd(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
+                      <input type="number" value={itemQtd} onChange={e => handleItemQtdChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Custo (R$)</label>
@@ -1360,10 +1360,10 @@ const CRM = () => {
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
-                      <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                      <input type="number" value={itemVenda} onChange={e => handleItemVendaChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$) {arquitetoRtPercentual > 0 ? `(${arquitetoRtPercentual}%)` : ""}</label>
                       <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="flex gap-1 items-end">
