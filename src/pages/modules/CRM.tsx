@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { statusCrmLabels, statusCrmColors, statusCrmKanban, statusCrmOptions, type StatusCRM } from "@/lib/statusConfig";
@@ -65,6 +65,28 @@ const CRM = () => {
   const [itemVenda, setItemVenda] = useState(0);
   const [itemRt, setItemRt] = useState(0);
   const [editItemId, setEditItemId] = useState<string | null>(null);
+
+  // Auto-calc RT based on architect %
+  const arquitetoRtPercentual = useMemo(() => {
+    if (!detailClient?.arquiteto_id || !arquitetos) return 0;
+    const arq = arquitetos.find(a => a.id === detailClient.arquiteto_id);
+    return arq?.rt_percentual ?? 0;
+  }, [detailClient?.arquiteto_id, arquitetos]);
+
+  const handleItemVendaChange = (value: number) => {
+    setItemVenda(value);
+    // Auto-calc RT only if not editing and architect has RT %
+    if (!editItemId && arquitetoRtPercentual > 0) {
+      setItemRt(Number(((value * itemQtd * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
+
+  const handleItemQtdChange = (value: number) => {
+    setItemQtd(value);
+    if (!editItemId && arquitetoRtPercentual > 0) {
+      setItemRt(Number(((itemVenda * value * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
 
   // Lightbox & preview state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -478,10 +500,10 @@ const CRM = () => {
     },
   });
 
-  // Save orcamento simulation
+  // Save orcamento simulation + frete/imposto
   const saveOrcamentoSimulacao = async (simData: any) => {
     if (!activeOrcamentoId) return;
-    await supabase.from("crm_orcamentos").update({ simulacao_pagamento: simData }).eq("id", activeOrcamentoId);
+    await supabase.from("crm_orcamentos").update({ simulacao_pagamento: simData, frete: orcFrete, imposto: orcImposto } as any).eq("id", activeOrcamentoId);
     refetchOrcamentos();
   };
 
@@ -690,6 +712,27 @@ const CRM = () => {
   const saveCrmItem = useMutation({
     mutationFn: async () => {
       if (!itemDesc.trim() || !detailClient?.id) return;
+
+      // Auto-create product if it doesn't exist in catalog
+      if (!editItemId && empresaId) {
+        const { data: existingProduct } = await supabase
+          .from("produtos")
+          .select("id")
+          .eq("empresa_id", empresaId)
+          .eq("nome", itemDesc.trim())
+          .eq("deletado", false)
+          .maybeSingle();
+
+        if (!existingProduct) {
+          await supabase.from("produtos").insert({
+            empresa_id: empresaId,
+            nome: itemDesc.trim(),
+            preco_custo: itemCusto,
+            preco_venda: itemVenda,
+          } as any);
+        }
+      }
+
       if (editItemId) {
         const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any)).eq("id", editItemId);
         if (error) throw error;
@@ -769,6 +812,11 @@ const CRM = () => {
   const [simJuros, setSimJuros] = useState(savedSim.juros ?? 0);
   const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(savedSim.parcelas ?? null);
 
+  // Frete & Imposto state
+  const [orcFrete, setOrcFrete] = useState(Number((activeOrc as any)?.frete) || 0);
+  const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
+  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto;
+
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
     const sim = (orc?.simulacao_pagamento as any) ?? {};
@@ -779,6 +827,8 @@ const CRM = () => {
     setSimIntervalo(sim.intervalo ?? 30);
     setSimJuros(sim.juros ?? 0);
     setEditingParcelas(sim.parcelas ?? null);
+    setOrcFrete(Number(orc?.frete) || 0);
+    setOrcImposto(Number(orc?.imposto) || 0);
   }, []);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
@@ -1260,6 +1310,11 @@ const CRM = () => {
                           </div>
                           {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
                         </div>
+                        {orc.data_envio_proposta && (
+                          <p className="text-[10px] text-muted-foreground italic mt-1">
+                            Proposta enviada {formatDistanceToNow(new Date(orc.data_envio_proposta), { addSuffix: true, locale: ptBR })}
+                          </p>
+                        )}
 
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {!orc.aprovado ? (
@@ -1309,7 +1364,7 @@ const CRM = () => {
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Quantidade</label>
-                      <input type="number" value={itemQtd} onChange={e => setItemQtd(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
+                      <input type="number" value={itemQtd} onChange={e => handleItemQtdChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" min={1} />
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Custo (R$)</label>
@@ -1317,10 +1372,10 @@ const CRM = () => {
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venda (R$)</label>
-                      <input type="number" value={itemVenda} onChange={e => setItemVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                      <input type="number" value={itemVenda} onChange={e => handleItemVendaChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$)</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$) {arquitetoRtPercentual > 0 ? `(${arquitetoRtPercentual}%)` : ""}</label>
                       <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="flex gap-1 items-end">
@@ -1365,6 +1420,20 @@ const CRM = () => {
                       </table>
                     </div>
 
+                    {/* Frete & Imposto */}
+                    {activeOrcamentoId && (
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="space-y-0.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                          <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
+                          <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Totais como cards */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
@@ -1373,7 +1442,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
-                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCusto.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
+                        {(orcFrete > 0 || orcImposto > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)} + frete: {orcFrete.toFixed(2)} + imp: {orcImposto.toFixed(2)})</p>}
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
@@ -1385,8 +1455,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
-                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCusto - totalCrmRt).toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCusto - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras - totalCrmRt).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
                       </div>
                     </div>
                   </>

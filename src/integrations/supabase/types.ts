@@ -555,7 +555,9 @@ export type Database = {
           data_envio_proposta: string | null
           data_pagamento_avista: string | null
           empresa_id: string
+          frete: number | null
           id: string
+          imposto: number | null
           nome: string
           simulacao_pagamento: Json | null
         }
@@ -566,7 +568,9 @@ export type Database = {
           data_envio_proposta?: string | null
           data_pagamento_avista?: string | null
           empresa_id: string
+          frete?: number | null
           id?: string
+          imposto?: number | null
           nome?: string
           simulacao_pagamento?: Json | null
         }
@@ -577,7 +581,9 @@ export type Database = {
           data_envio_proposta?: string | null
           data_pagamento_avista?: string | null
           empresa_id?: string
+          frete?: number | null
           id?: string
+          imposto?: number | null
           nome?: string
           simulacao_pagamento?: Json | null
         }
@@ -1080,6 +1086,7 @@ export type Database = {
         Row: {
           categoria: string | null
           codigo: string | null
+          cor: string | null
           created_at: string
           deletado: boolean
           empresa_id: string
@@ -1095,6 +1102,7 @@ export type Database = {
         Insert: {
           categoria?: string | null
           codigo?: string | null
+          cor?: string | null
           created_at?: string
           deletado?: boolean
           empresa_id: string
@@ -1110,6 +1118,7 @@ export type Database = {
         Update: {
           categoria?: string | null
           codigo?: string | null
+          cor?: string | null
           created_at?: string
           deletado?: boolean
           empresa_id?: string
