@@ -1436,14 +1436,41 @@ const CRM = () => {
 
                     {/* Frete & Imposto */}
                     {activeOrcamentoId && (
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div className="space-y-0.5">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
-                          <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                      <div className="space-y-3 mb-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo Frete</label>
+                            <select value={orcFreteTipo} onChange={e => { setOrcFreteTipo(e.target.value); if (e.target.value !== "outro") setOrcFreteOutro(""); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                              <option value="">Selecione...</option>
+                              <option value="transportadora">Transportadora</option>
+                              <option value="correios">Correios</option>
+                              <option value="outro">Outro</option>
+                            </select>
+                          </div>
+                          {orcFreteTipo === "outro" && (
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Qual?</label>
+                              <input type="text" value={orcFreteOutro} onChange={e => setOrcFreteOutro(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder="Digite..." />
+                            </div>
+                          )}
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                            <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
+                            <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
-                          <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Envio Proposta</label>
+                            <input type="date" value={orcDataEnvio} onChange={e => setOrcDataEnvio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Pagamento à Vista</label>
+                            <input type="date" value={orcDataPgtoAvista} onChange={e => setOrcDataPgtoAvista(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                          </div>
                         </div>
                       </div>
                     )}
