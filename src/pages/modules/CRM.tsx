@@ -814,7 +814,11 @@ const CRM = () => {
 
   // Frete & Imposto state
   const [orcFrete, setOrcFrete] = useState(Number((activeOrc as any)?.frete) || 0);
+  const [orcFreteTipo, setOrcFreteTipo] = useState<string>((activeOrc as any)?.frete_tipo ?? "");
+  const [orcFreteOutro, setOrcFreteOutro] = useState<string>((activeOrc as any)?.frete_outro ?? "");
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
+  const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
+  const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
   const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto;
 
   // Reset simulation when orcamento changes
@@ -828,7 +832,11 @@ const CRM = () => {
     setSimJuros(sim.juros ?? 0);
     setEditingParcelas(sim.parcelas ?? null);
     setOrcFrete(Number(orc?.frete) || 0);
+    setOrcFreteTipo(orc?.frete_tipo ?? "");
+    setOrcFreteOutro(orc?.frete_outro ?? "");
     setOrcImposto(Number(orc?.imposto) || 0);
+    setOrcDataEnvio(orc?.data_envio_proposta ?? "");
+    setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
   }, []);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
