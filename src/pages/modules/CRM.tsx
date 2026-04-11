@@ -1486,7 +1486,7 @@ const CRM = () => {
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
                         <p className="text-lg font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
-                        {(orcFrete > 0 || orcImposto > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)} + frete: {orcFrete.toFixed(2)} + imp: {orcImposto.toFixed(2)})</p>}
+                        {(orcFrete > 0 || orcImposto > 0 || totalCrmRt > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)}{orcFrete > 0 ? ` + frete: ${orcFrete.toFixed(2)}` : ""}{orcImposto > 0 ? ` + imp: ${orcImposto.toFixed(2)}` : ""}{totalCrmRt > 0 ? ` + RT: ${totalCrmRt.toFixed(2)}` : ""})</p>}
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
