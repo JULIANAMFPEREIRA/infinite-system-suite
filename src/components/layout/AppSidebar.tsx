@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FolderKanban, Package,
   DollarSign, BarChart3, Bell, PenTool,
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
-  ChevronLeft, ChevronRight, ChevronDown, Wrench, Truck, X
+  ChevronLeft, ChevronRight, ChevronDown, Wrench, Truck, X, FileText
 } from "lucide-react";
 
 interface NavItem {
