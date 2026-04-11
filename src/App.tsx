@@ -65,6 +65,7 @@ const App = () => (
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<CRM />} />
+              <Route path="/orcamentos" element={<Orcamentos />} />
               <Route path="/projetos" element={<Projetos />} />
               <Route path="/projetos/:id" element={<Projetos />} />
               <Route path="/kits" element={<Kits />} />
