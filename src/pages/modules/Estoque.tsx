@@ -23,6 +23,7 @@ const Estoque = () => {
   const [pCusto, setPCusto] = useState(0);
   const [pVenda, setPVenda] = useState(0);
   const [pEstMin, setPEstMin] = useState(0);
+  const [pFornecedorId, setPFornecedorId] = useState("");
 
   // Estoque item form
   const [showEstForm, setShowEstForm] = useState(false);
@@ -34,25 +35,78 @@ const Estoque = () => {
 
   const { data: produtos, isLoading: loadingProd } = useQuery({
     queryKey: ["produtos", empresaId],
-    queryFn: async () => { const { data, error } = await supabase.from("produtos").select("*").eq("deletado", false).order("nome"); if (error) throw error; return data; },
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("produtos")
+        .select("*, fornecedores(nome)")
+        .eq("deletado", false)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  const { data: fornecedores } = useQuery({
+    queryKey: ["fornecedores", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fornecedores")
+        .select("id, nome, tipo")
+        .eq("deletado", false)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
     enabled: !!empresaId,
   });
 
   const { data: estoqueItens, isLoading: loadingEst } = useQuery({
     queryKey: ["estoque_itens", empresaId],
-    queryFn: async () => { const { data, error } = await supabase.from("estoque_itens").select("*, produtos(nome), projetos(nome)").order("created_at", { ascending: false }); if (error) throw error; return data; },
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("estoque_itens")
+        .select("*, produtos(nome), projetos(nome)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
     enabled: !!empresaId,
   });
 
   // Product CRUD
-  const resetProdForm = () => { setPNome(""); setPCodigo(""); setPCategoria(""); setPMarca(""); setPCusto(0); setPVenda(0); setPEstMin(0); setEditProdId(null); setShowProdForm(false); };
-  const openEditProd = (p: any) => { setEditProdId(p.id); setPNome(p.nome); setPCodigo(p.codigo ?? ""); setPCategoria(p.categoria ?? ""); setPMarca(p.marca ?? ""); setPCusto(p.preco_custo ?? 0); setPVenda(p.preco_venda ?? 0); setPEstMin(p.estoque_minimo ?? 0); setShowProdForm(true); };
+  const resetProdForm = () => {
+    setPNome(""); setPCodigo(""); setPCategoria(""); setPMarca("");
+    setPCusto(0); setPVenda(0); setPEstMin(0); setPFornecedorId("");
+    setEditProdId(null); setShowProdForm(false);
+  };
+  const openEditProd = (p: any) => {
+    setEditProdId(p.id); setPNome(p.nome); setPCodigo(p.codigo ?? "");
+    setPCategoria(p.categoria ?? ""); setPMarca(p.marca ?? "");
+    setPCusto(p.preco_custo ?? 0); setPVenda(p.preco_venda ?? 0);
+    setPEstMin(p.estoque_minimo ?? 0); setPFornecedorId(p.fornecedor_id ?? "");
+    setShowProdForm(true);
+  };
 
   const saveProd = useMutation({
     mutationFn: async () => {
-      const payload = { nome: pNome, codigo: pCodigo || null, categoria: pCategoria || null, marca: pMarca || null, preco_custo: pCusto, preco_venda: pVenda, estoque_minimo: pEstMin };
-      if (editProdId) { const { error } = await supabase.from("produtos").update(payload).eq("id", editProdId); if (error) throw error; }
-      else { const { error } = await supabase.from("produtos").insert({ ...payload, empresa_id: empresaId! }); if (error) throw error; }
+      const payload = {
+        nome: pNome,
+        codigo: pCodigo || null,
+        categoria: pCategoria || null,
+        marca: pMarca || null,
+        preco_custo: pCusto,
+        preco_venda: pVenda,
+        estoque_minimo: pEstMin,
+        fornecedor_id: pFornecedorId || null,
+      };
+      if (editProdId) {
+        const { error } = await supabase.from("produtos").update(payload).eq("id", editProdId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("produtos").insert({ ...payload, empresa_id: empresaId! });
+        if (error) throw error;
+      }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["produtos"] }); toast.success(editProdId ? "Produto atualizado" : "Produto criado"); resetProdForm(); },
     onError: (err: any) => toast.error(err.message),
@@ -117,6 +171,13 @@ const Estoque = () => {
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Código</label><input value={pCodigo} onChange={e => setPCodigo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Categoria</label><input value={pCategoria} onChange={e => setPCategoria(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Marca</label><input value={pMarca} onChange={e => setPMarca(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">Fornecedor</label>
+                  <select value={pFornecedorId} onChange={e => setPFornecedorId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                    <option value="">Selecionar...</option>
+                    {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                  </select>
+                </div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Preço Custo</label><input type="number" value={pCusto} onChange={e => setPCusto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Preço Venda</label><input type="number" value={pVenda} onChange={e => setPVenda(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
                 <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Est. Mín.</label><input type="number" value={pEstMin} onChange={e => setPEstMin(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
@@ -136,6 +197,7 @@ const Estoque = () => {
                     <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Produto</th>
                     <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Categoria</th>
                     <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Marca</th>
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Fornecedor</th>
                     <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Custo</th>
                     <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Venda</th>
                     <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
@@ -148,6 +210,7 @@ const Estoque = () => {
                       <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
                       <td className="px-2.5 py-1.5">{p.categoria ?? "—"}</td>
                       <td className="px-2.5 py-1.5">{p.marca ?? "—"}</td>
+                      <td className="px-2.5 py-1.5">{(p.fornecedores as any)?.nome ?? "—"}</td>
                       <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")}</td>
                       <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_venda ?? 0).toLocaleString("pt-BR")}</td>
                       <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
@@ -158,7 +221,7 @@ const Estoque = () => {
                       </td>
                     </tr>
                   ))}
-                  {(!produtos || produtos.length === 0) && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum produto cadastrado.</td></tr>}
+                  {(!produtos || produtos.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhum produto cadastrado.</td></tr>}
                 </tbody>
               </table>
             </div>
