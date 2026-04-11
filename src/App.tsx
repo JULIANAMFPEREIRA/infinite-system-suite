@@ -28,6 +28,7 @@ import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
 import ItensComprar from "./pages/modules/ItensComprar";
+import Orcamentos from "./pages/modules/Orcamentos";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ const App = () => (
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<CRM />} />
+              <Route path="/orcamentos" element={<Orcamentos />} />
               <Route path="/projetos" element={<Projetos />} />
               <Route path="/projetos/:id" element={<Projetos />} />
               <Route path="/kits" element={<Kits />} />
