@@ -556,6 +556,8 @@ export type Database = {
           data_pagamento_avista: string | null
           empresa_id: string
           frete: number | null
+          frete_outro: string | null
+          frete_tipo: string | null
           id: string
           imposto: number | null
           nome: string
@@ -569,6 +571,8 @@ export type Database = {
           data_pagamento_avista?: string | null
           empresa_id: string
           frete?: number | null
+          frete_outro?: string | null
+          frete_tipo?: string | null
           id?: string
           imposto?: number | null
           nome?: string
@@ -582,6 +586,8 @@ export type Database = {
           data_pagamento_avista?: string | null
           empresa_id?: string
           frete?: number | null
+          frete_outro?: string | null
+          frete_tipo?: string | null
           id?: string
           imposto?: number | null
           nome?: string
