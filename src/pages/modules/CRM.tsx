@@ -1498,8 +1498,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
-                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras - totalCrmRt).toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
                       </div>
                     </div>
                   </>
