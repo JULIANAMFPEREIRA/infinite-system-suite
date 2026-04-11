@@ -827,7 +827,7 @@ const CRM = () => {
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
-  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto;
+  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
@@ -1486,7 +1486,7 @@ const CRM = () => {
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
                         <p className="text-lg font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
-                        {(orcFrete > 0 || orcImposto > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)} + frete: {orcFrete.toFixed(2)} + imp: {orcImposto.toFixed(2)})</p>}
+                        {(orcFrete > 0 || orcImposto > 0 || totalCrmRt > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)}{orcFrete > 0 ? ` + frete: ${orcFrete.toFixed(2)}` : ""}{orcImposto > 0 ? ` + imp: ${orcImposto.toFixed(2)}` : ""}{totalCrmRt > 0 ? ` + RT: ${totalCrmRt.toFixed(2)}` : ""})</p>}
                       </div>
                       <div className="bg-card border border-border rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
@@ -1498,8 +1498,8 @@ const CRM = () => {
                       </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
-                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras - totalCrmRt).toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras - totalCrmRt) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
                       </div>
                     </div>
                   </>
