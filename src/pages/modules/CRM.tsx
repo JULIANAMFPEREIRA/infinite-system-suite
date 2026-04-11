@@ -827,7 +827,7 @@ const CRM = () => {
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
-  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto;
+  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
