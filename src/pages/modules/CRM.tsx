@@ -812,6 +812,11 @@ const CRM = () => {
   const [simJuros, setSimJuros] = useState(savedSim.juros ?? 0);
   const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(savedSim.parcelas ?? null);
 
+  // Frete & Imposto state
+  const [orcFrete, setOrcFrete] = useState(Number((activeOrc as any)?.frete) || 0);
+  const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
+  const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto;
+
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
     const sim = (orc?.simulacao_pagamento as any) ?? {};
@@ -822,6 +827,8 @@ const CRM = () => {
     setSimIntervalo(sim.intervalo ?? 30);
     setSimJuros(sim.juros ?? 0);
     setEditingParcelas(sim.parcelas ?? null);
+    setOrcFrete(Number(orc?.frete) || 0);
+    setOrcImposto(Number(orc?.imposto) || 0);
   }, []);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
