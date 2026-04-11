@@ -506,6 +506,8 @@ const CRM = () => {
     await supabase.from("crm_orcamentos").update({
       simulacao_pagamento: simData,
       frete: orcFrete,
+      frete_tipo: orcFreteTipo || null,
+      frete_outro: orcFreteOutro || null,
       imposto: orcImposto,
       data_envio_proposta: orcDataEnvio || null,
       data_pagamento_avista: orcDataPgtoAvista || null,
