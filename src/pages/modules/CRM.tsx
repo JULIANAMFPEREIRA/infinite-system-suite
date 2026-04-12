@@ -392,24 +392,27 @@ const CRM = () => {
         valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
       }));
       await supabase.from("financeiro_receber").insert(inserts);
+    } else if (totalVenda > 0) {
+      // No payment simulation — generate a single receivable with the full amount
+      await supabase.from("financeiro_receber").insert({
+        empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
+        descricao: `Conta a receber — ${detailClient.nome}`,
+        valor: totalVenda, parcela: 1, status: "pendente" as const,
+      });
     }
 
-    // ── Sync comissões (RT) ──
+    // ── Sync comissões (RT) — single consolidated entry ──
     await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
-    // Also delete financeiro_pagar linked to old comissões for this project
     await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null);
     const arquitetoId = detailClient.arquiteto_id;
     if (arquitetoId && insertedItens.length > 0) {
-      const comissaoInserts = insertedItens
-        .filter(pi => (Number(pi.rt_percentual) || 0) > 0)
-        .map(pi => ({
+      const totalRt = insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0);
+      if (totalRt > 0) {
+        const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
+        await supabase.from("comissoes").insert({
           empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
-          projeto_item_id: pi.id, valor: Number(pi.rt_percentual) || 0,
-          percentual: Number(pi.preco_venda) > 0 ? ((Number(pi.rt_percentual) || 0) / (Number(pi.preco_venda) * Number(pi.quantidade))) * 100 : 0,
-          status: "pendente" as const,
-        }));
-      if (comissaoInserts.length > 0) {
-        await supabase.from("comissoes").insert(comissaoInserts);
+          valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
+        });
       }
     }
 
