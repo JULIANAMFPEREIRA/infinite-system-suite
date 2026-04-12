@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 
-type PermissionModule =
+export type PermissionModule =
   | "dashboard"
   | "crm"
   | "projetos"
