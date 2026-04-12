@@ -171,6 +171,7 @@ const Configuracoes = () => {
   });
 
   const [showNewUser, setShowNewUser] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [nuNome, setNuNome] = useState("");
   const [nuEmail, setNuEmail] = useState("");
   const [nuSenha, setNuSenha] = useState("");
