@@ -2,7 +2,9 @@ import { useState } from "react";
 import {
   Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil,
   CreditCard, Tag, ListChecks, Building2, UserCog, Wallet, FolderKanban, PackageCheck,
+  ChevronDown, ChevronRight, Shield,
 } from "lucide-react";
+import UserPermissionsEditor from "@/components/settings/UserPermissionsEditor";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
