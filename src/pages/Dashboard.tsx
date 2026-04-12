@@ -10,7 +10,7 @@ import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isToday as isTodayFn, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
@@ -352,8 +352,8 @@ const Dashboard = () => {
 
       {/* 3. CONTEÚDO PRINCIPAL – 3 blocos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* BLOCO 1 – Agenda de Visitas (Apple-style) */}
-        <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-[0_2px_16px_-4px_hsl(var(--foreground)/0.06)] backdrop-blur-sm">
+        {/* BLOCO 1 – Agenda Semanal (Calendar-style) */}
+        <div className="lg:col-span-3 bg-card rounded-2xl border border-border/60 p-6 shadow-[0_2px_16px_-4px_hsl(var(--foreground)/0.06)] backdrop-blur-sm">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-primary/10">
@@ -361,86 +361,122 @@ const Dashboard = () => {
               </div>
               Agenda da Semana
             </h3>
-            <button
-              onClick={() => navigate("/cronograma")}
-              className="text-[11px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
-            >
-              Ver Agenda Completa <ArrowRight size={10} />
-            </button>
-          </div>
-
-          {/* Status de conexão */}
-          <div className="flex items-center gap-2 mb-4 mt-2">
-            {googleStatus?.connected ? (
-              <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/8 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)] animate-pulse" /> Google Agenda conectada
-              </span>
-            ) : (
+            <div className="flex items-center gap-2">
+              {googleStatus?.connected ? (
+                <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/8 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)] animate-pulse" /> Google Agenda
+                </span>
+              ) : (
+                <button
+                  onClick={() => navigate("/integracoes")}
+                  className="text-[10px] text-primary bg-primary/8 px-3 py-1 rounded-full hover:bg-primary/15 transition-all cursor-pointer font-medium"
+                >
+                  Conectar Google Agenda →
+                </button>
+              )}
               <button
-                onClick={() => navigate("/integracoes")}
-                className="text-[10px] text-primary bg-primary/8 px-3 py-1 rounded-full hover:bg-primary/15 transition-all cursor-pointer font-medium"
+                onClick={() => navigate("/cronograma")}
+                className="text-[11px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
               >
-                Conectar Google Agenda →
+                Ver Completa <ArrowRight size={10} />
               </button>
-            )}
+            </div>
           </div>
 
-          {/* Lista de visitas */}
-          {(stats?.proximasVisitas?.length ?? 0) > 0 ? (
-            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
-              {stats!.proximasVisitas.map((v, i) => {
-                const visitDate = v.data ? new Date(v.data + "T00:00:00") : null;
-                const todayStr = format(hoje, "yyyy-MM-dd");
-                const tomorrowStr = format(new Date(hoje.getTime() + 86400000), "yyyy-MM-dd");
-                const isToday = v.data === todayStr;
-                const isTomorrow = v.data === tomorrowStr;
-                const isPast = visitDate ? visitDate < new Date(todayStr) : false;
+          {/* Weekly calendar grid */}
+          {(() => {
+            const weekStart = startOfWeek(hoje, { weekStartsOn: 1 });
+            const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+            const visitas = stats?.proximasVisitas ?? [];
 
-                const tagColor = isToday
-                  ? "bg-[hsl(152,69%,40%)]/12 text-[hsl(152,69%,40%)]"
-                  : isTomorrow
-                  ? "bg-[hsl(210,70%,50%)]/12 text-[hsl(210,70%,50%)]"
-                  : isPast
-                  ? "bg-destructive/12 text-destructive"
-                  : "bg-secondary text-muted-foreground";
-                const tagLabel = isToday ? "Hoje" : isTomorrow ? "Amanhã" : isPast ? "Atrasado" : v.status_visita;
+            const hasAny = visitas.length > 0;
 
-                return (
-                  <div
-                    key={i}
-                    onClick={() => navigate(`/projetos`)}
-                    className="group flex items-center gap-3 p-3 rounded-xl bg-secondary/20 border border-transparent hover:border-border/60 hover:bg-secondary/40 hover:shadow-sm transition-all cursor-pointer"
-                  >
-                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-xl bg-primary/10 text-primary shrink-0 group-hover:scale-105 transition-transform">
-                      <span className="text-xs font-bold leading-tight">{v.data ? format(new Date(v.data + "T00:00:00"), "dd") : "—"}</span>
-                      <span className="text-[8px] uppercase font-semibold tracking-wide">{v.data ? format(new Date(v.data + "T00:00:00"), "MMM", { locale: ptBR }) : ""}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">{v.projetoNome}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{v.hora ?? "—"} · {v.descricao ?? "Visita técnica"}</p>
-                    </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium ${tagColor}`}>
-                      {tagLabel}
-                    </span>
+            return (
+              <div className="mt-4">
+                {hasAny ? (
+                  <div className="grid grid-cols-7 gap-1.5 overflow-x-auto">
+                    {days.map((day, idx) => {
+                      const isCurrentDay = isTodayFn(day);
+                      const dayVisitas = visitas.filter(v => v.data && isSameDay(new Date(v.data + "T00:00:00"), day));
+                      const dayName = format(day, "EEE", { locale: ptBR });
+                      const dayNum = format(day, "dd");
+                      const monthName = format(day, "MMM", { locale: ptBR });
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex flex-col rounded-xl border min-h-[160px] transition-all ${
+                            isCurrentDay
+                              ? "border-primary/40 bg-primary/5 shadow-sm"
+                              : "border-border/40 bg-secondary/10 hover:bg-secondary/20"
+                          }`}
+                        >
+                          {/* Day header */}
+                          <div className={`text-center py-2 rounded-t-xl ${isCurrentDay ? "bg-primary/10" : ""}`}>
+                            <p className={`text-[10px] uppercase font-semibold tracking-wider ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}>
+                              {dayName}
+                            </p>
+                            <p className={`text-lg font-bold leading-tight ${isCurrentDay ? "text-primary" : "text-foreground"}`}>
+                              {dayNum}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground uppercase">{monthName}</p>
+                          </div>
+
+                          {/* Events */}
+                          <div className="flex-1 px-1.5 pb-1.5 space-y-1 overflow-y-auto max-h-[140px]">
+                            {dayVisitas.length > 0 ? (
+                              dayVisitas
+                                .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
+                                .map((v, vi) => {
+                                  const isPast = isBefore(new Date(v.data + "T23:59:59"), hoje) && !isTodayFn(new Date(v.data + "T00:00:00"));
+                                  const tagColor = isCurrentDay
+                                    ? "border-l-[hsl(152,69%,40%)]"
+                                    : isPast
+                                    ? "border-l-destructive"
+                                    : "border-l-[hsl(210,70%,50%)]";
+
+                                  return (
+                                    <div
+                                      key={vi}
+                                      onClick={() => navigate("/projetos")}
+                                      className={`group cursor-pointer p-1.5 rounded-lg border-l-[3px] ${tagColor} bg-card/80 hover:bg-card hover:shadow-sm transition-all`}
+                                    >
+                                      <p className="text-[10px] font-semibold text-primary/80">{v.hora ?? "—"}</p>
+                                      <p className="text-[10px] font-medium text-foreground truncate leading-tight">{v.projetoNome}</p>
+                                      {v.descricao && (
+                                        <p className="text-[9px] text-muted-foreground truncate">{v.descricao}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                            ) : (
+                              <div className="flex items-center justify-center h-full">
+                                <p className="text-[9px] text-muted-foreground/40">—</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <CalendarDays size={28} className="text-muted-foreground/30 mb-2" />
-              <p className="text-xs text-muted-foreground">Nenhuma visita agendada</p>
-            </div>
-          )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <CalendarDays size={32} className="text-muted-foreground/20 mb-3" />
+                    <p className="text-xs text-muted-foreground">Nenhuma visita nesta semana</p>
+                  </div>
+                )}
 
-          {/* Botão Nova Visita */}
-          <button
-            onClick={() => navigate("/cronograma")}
-            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/8 hover:bg-primary/15 text-primary text-xs font-medium transition-all border border-primary/10 hover:border-primary/20"
-          >
-            <Plus size={13} />
-            Nova Visita
-          </button>
+                {/* Nova Visita button */}
+                <button
+                  onClick={() => navigate("/cronograma")}
+                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/8 hover:bg-primary/15 text-primary text-xs font-medium transition-all border border-primary/10 hover:border-primary/20"
+                >
+                  <Plus size={13} />
+                  Nova Visita
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* BLOCO 2 – Itens a Comprar */}
