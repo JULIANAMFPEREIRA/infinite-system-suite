@@ -561,8 +561,7 @@ const CRM = () => {
       }
     }
 
-    // Find approved orcamento
-    const approvedOrc = orcamentos?.find(o => o.aprovado);
+    // Use the approvedOrc already found above
     
     // Get items from approved orcamento or fallback to unlinked items
     let items: any[] = [];
