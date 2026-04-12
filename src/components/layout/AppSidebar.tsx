@@ -120,7 +120,7 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 md:py-2 px-2.5 md:px-1.5 space-y-1 md:space-y-0.5">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isOpen = openMenus.includes(item.label);
           const isActive = item.path ? location.pathname === item.path : item.children?.some(c => location.pathname === c.path);
