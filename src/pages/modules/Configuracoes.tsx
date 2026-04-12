@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Settings, Plus, Trash2, UserPlus, Users, Truck } from "lucide-react";
+import { Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil, CreditCard, Tag, ListChecks } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCategorias, useCreateCategoria, useDeleteCategoria, useFormasPagamento, useCreateFormaPagamento, useDeleteFormaPagamento } from "@/hooks/useCategorias";
 import { useTransportadoras, useCreateTransportadora, useDeleteTransportadora } from "@/hooks/useTransportadoras";
+import { statusProjetoLabels, statusProjetoColors } from "@/lib/statusConfig";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const Configuracoes = () => {
   const qc = useQueryClient();
@@ -42,12 +45,32 @@ const Configuracoes = () => {
   const deleteCat = useDeleteCategoria();
   const [novaCat, setNovaCat] = useState("");
   const [tipoCat, setTipoCat] = useState("produto");
+  const [editCat, setEditCat] = useState<{ id: string; nome: string; tipo: string } | null>(null);
+
+  const updateCategoria = useMutation({
+    mutationFn: async (cat: { id: string; nome: string; tipo: string }) => {
+      const { error } = await supabase.from("categorias").update({ nome: cat.nome, tipo: cat.tipo } as any).eq("id", cat.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["categorias"] }); setEditCat(null); toast.success("Categoria atualizada"); },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   // Formas de pagamento
   const { data: formas } = useFormasPagamento();
   const createForma = useCreateFormaPagamento();
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
+  const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
+
+  const updateFormaPagamento = useMutation({
+    mutationFn: async (fp: { id: string; nome: string }) => {
+      const { error } = await supabase.from("formas_pagamento").update({ nome: fp.nome } as any).eq("id", fp.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["formas_pagamento"] }); setEditForma(null); toast.success("Forma de pagamento atualizada"); },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   // Transportadoras
   const { data: transportadoras } = useTransportadoras();
@@ -55,8 +78,18 @@ const Configuracoes = () => {
   const deleteTransp = useDeleteTransportadora();
   const [novaTranspNome, setNovaTranspNome] = useState("");
   const [novaTranspTipo, setNovaTranspTipo] = useState("transportadora");
+  const [editTransp, setEditTransp] = useState<{ id: string; nome: string; tipo: string } | null>(null);
 
+  const updateTransportadora = useMutation({
+    mutationFn: async (t: { id: string; nome: string; tipo: string }) => {
+      const { error } = await supabase.from("transportadoras").update({ nome: t.nome, tipo: t.tipo } as any).eq("id", t.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["transportadoras"] }); setEditTransp(null); toast.success("Transportadora atualizada"); },
+    onError: (err: any) => toast.error(err.message),
+  });
 
+  // Equipe
   const { data: equipe, refetch: refetchEquipe } = useQuery({
     queryKey: ["equipe", empresaId],
     queryFn: async () => {
@@ -101,8 +134,6 @@ const Configuracoes = () => {
     if (!nuNome.trim() || !nuEmail.trim() || !nuSenha.trim()) { toast.error("Preencha todos os campos"); return; }
     setNuLoading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
       const res = await supabase.functions.invoke("create-user", {
         body: { email: nuEmail, password: nuSenha, full_name: nuNome, role: nuRole },
       });
@@ -121,6 +152,14 @@ const Configuracoes = () => {
     if (error) toast.error(error.message);
     else { toast.success("Role removida"); refetchUsers(); }
   };
+
+  const tiposTransportadora = [
+    { value: "transportadora", label: "Transportadora" },
+    { value: "sedex", label: "Sedex" },
+    { value: "sedex10", label: "Sedex 10" },
+    { value: "pac", label: "PAC" },
+    { value: "outro", label: "Outro" },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -152,7 +191,10 @@ const Configuracoes = () => {
 
       {/* Categorias */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Categorias</h2>
+        <div className="flex items-center gap-2">
+          <Tag size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Categorias</h2>
+        </div>
         <div className="flex gap-2 items-end">
           <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaCat} onChange={e => setNovaCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
           <div className="space-y-1 w-28"><label className="text-[11px] text-muted-foreground">Tipo</label>
@@ -167,7 +209,8 @@ const Configuracoes = () => {
             {categorias.map(c => (
               <span key={c.id} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-secondary-foreground text-[11px]">
                 {c.nome} <span className="text-muted-foreground">({c.tipo})</span>
-                <button onClick={() => { deleteCat.mutate(c.id); toast.success("Removida"); }} className="hover:text-destructive"><Trash2 size={10} /></button>
+                <button onClick={() => setEditCat({ id: c.id, nome: c.nome, tipo: c.tipo ?? "produto" })} className="hover:text-primary"><Pencil size={10} /></button>
+                <button onClick={() => { if (window.confirm("Excluir categoria?")) { deleteCat.mutate(c.id); toast.success("Removida"); } }} className="hover:text-destructive"><Trash2 size={10} /></button>
               </span>
             ))}
           </div>
@@ -176,7 +219,10 @@ const Configuracoes = () => {
 
       {/* Formas de Pagamento */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Formas de Pagamento</h2>
+        <div className="flex items-center gap-2">
+          <CreditCard size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Formas de Pagamento</h2>
+        </div>
         <div className="flex gap-2 items-end">
           <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaForma} onChange={e => setNovaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
           <button onClick={async () => { if (!novaForma.trim()) return; await createForma.mutateAsync({ nome: novaForma }); setNovaForma(""); toast.success("Forma criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
@@ -186,7 +232,8 @@ const Configuracoes = () => {
             {formas.map(f => (
               <span key={f.id} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-secondary-foreground text-[11px]">
                 {f.nome}
-                <button onClick={() => { deleteForma.mutate(f.id); toast.success("Removida"); }} className="hover:text-destructive"><Trash2 size={10} /></button>
+                <button onClick={() => setEditForma({ id: f.id, nome: f.nome })} className="hover:text-primary"><Pencil size={10} /></button>
+                <button onClick={() => { if (window.confirm("Excluir forma de pagamento?")) { deleteForma.mutate(f.id); toast.success("Removida"); } }} className="hover:text-destructive"><Trash2 size={10} /></button>
               </span>
             ))}
           </div>
@@ -203,11 +250,7 @@ const Configuracoes = () => {
           <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={novaTranspNome} onChange={e => setNovaTranspNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Jadlog, Correios" /></div>
           <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Tipo</label>
             <select value={novaTranspTipo} onChange={e => setNovaTranspTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-              <option value="transportadora">Transportadora</option>
-              <option value="sedex">Sedex</option>
-              <option value="sedex10">Sedex 10</option>
-              <option value="pac">PAC</option>
-              <option value="outro">Outro</option>
+              {tiposTransportadora.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <button onClick={async () => { if (!novaTranspNome.trim()) return; await createTransp.mutateAsync({ nome: novaTranspNome, tipo: novaTranspTipo }); setNovaTranspNome(""); toast.success("Transportadora cadastrada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50" disabled={!novaTranspNome.trim()}><Plus size={14} /></button>
@@ -217,11 +260,28 @@ const Configuracoes = () => {
             {transportadoras.map((t: any) => (
               <span key={t.id} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-secondary-foreground text-[11px]">
                 {t.nome} <span className="text-muted-foreground">({t.tipo})</span>
-                <button onClick={() => { deleteTransp.mutate(t.id); toast.success("Removida"); }} className="hover:text-destructive"><Trash2 size={10} /></button>
+                <button onClick={() => setEditTransp({ id: t.id, nome: t.nome, tipo: t.tipo })} className="hover:text-primary"><Pencil size={10} /></button>
+                <button onClick={() => { if (window.confirm("Excluir transportadora?")) { deleteTransp.mutate(t.id); toast.success("Removida"); } }} className="hover:text-destructive"><Trash2 size={10} /></button>
               </span>
             ))}
           </div>
         ) : <p className="text-xs text-muted-foreground">Nenhuma transportadora cadastrada.</p>}
+      </div>
+
+      {/* Status de Projeto */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ListChecks size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Status de Projeto</h2>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Status disponíveis no fluxo operacional do projeto:</p>
+        <div className="flex flex-wrap gap-2 mt-1">
+          {(Object.entries(statusProjetoLabels) as [string, string][]).map(([key, label]) => (
+            <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-medium ${statusProjetoColors[key as keyof typeof statusProjetoColors]}`}>
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Gestão de Usuários */}
@@ -288,7 +348,7 @@ const Configuracoes = () => {
         )}
       </div>
 
-      {/* 📌 7. Cadastro de Equipe */}
+      {/* Equipe */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Users size={14} className="text-primary" />
@@ -325,6 +385,62 @@ const Configuracoes = () => {
           </div>
         ) : <p className="text-xs text-muted-foreground">Nenhum membro cadastrado.</p>}
       </div>
+
+      {/* Dialog Editar Categoria */}
+      <Dialog open={!!editCat} onOpenChange={open => { if (!open) setEditCat(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Categoria</DialogTitle></DialogHeader>
+          {editCat && (
+            <div className="space-y-3">
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={editCat.nome} onChange={e => setEditCat({ ...editCat, nome: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Tipo</label>
+                <select value={editCat.tipo} onChange={e => setEditCat({ ...editCat, tipo: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                  <option value="produto">Produto</option><option value="servico">Serviço</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditCat(null)}>Cancelar</Button>
+            <Button size="sm" onClick={() => editCat && updateCategoria.mutate(editCat)} disabled={!editCat?.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Forma de Pagamento */}
+      <Dialog open={!!editForma} onOpenChange={open => { if (!open) setEditForma(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Forma de Pagamento</DialogTitle></DialogHeader>
+          {editForma && (
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={editForma.nome} onChange={e => setEditForma({ ...editForma, nome: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditForma(null)}>Cancelar</Button>
+            <Button size="sm" onClick={() => editForma && updateFormaPagamento.mutate(editForma)} disabled={!editForma?.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Transportadora */}
+      <Dialog open={!!editTransp} onOpenChange={open => { if (!open) setEditTransp(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Transportadora</DialogTitle></DialogHeader>
+          {editTransp && (
+            <div className="space-y-3">
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={editTransp.nome} onChange={e => setEditTransp({ ...editTransp, nome: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Tipo</label>
+                <select value={editTransp.tipo} onChange={e => setEditTransp({ ...editTransp, tipo: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                  {tiposTransportadora.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditTransp(null)}>Cancelar</Button>
+            <Button size="sm" onClick={() => editTransp && updateTransportadora.mutate(editTransp)} disabled={!editTransp?.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
