@@ -152,6 +152,27 @@ const rolePermissions: Record<string, Record<PermissionModule, PermissionAction[
     configuracoes: [],
     financas_pessoais: ["view", "create", "edit", "delete"],
   },
+  funcionario: {
+    dashboard: ["view"],
+    crm: [],
+    projetos: ["view"],
+    kits: ["view"],
+    cronograma: ["view"],
+    estoque: ["view"],
+    compras: [],
+    fornecedores: [],
+    financeiro: [],
+    comissoes: ["view"],
+    dre: [],
+    relatorios: [],
+    automacoes: [],
+    contratos: [],
+    notas_fiscais: [],
+    integracoes: [],
+    auditoria: [],
+    configuracoes: [],
+    financas_pessoais: [],
+  },
 };
 
 const actionToField: Record<PermissionAction, "can_view" | "can_create" | "can_edit" | "can_delete"> = {
