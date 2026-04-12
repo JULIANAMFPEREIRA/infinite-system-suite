@@ -389,7 +389,63 @@ const Dashboard = () => {
             const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
             const visitas = stats?.proximasVisitas ?? [];
 
-            const hasAny = visitas.length > 0;
+            // Merge Google Calendar events into a unified list
+            type UnifiedEvent = {
+              id: string;
+              title: string;
+              date: string; // yyyy-MM-dd
+              hora: string;
+              descricao?: string;
+              source: "local" | "google";
+            };
+
+            const localEvents: UnifiedEvent[] = visitas.map(v => ({
+              id: v.id,
+              title: v.projetoNome || "Visita técnica",
+              date: v.data ?? "",
+              hora: v.hora ?? "",
+              descricao: v.descricao ?? undefined,
+              source: "local" as const,
+            }));
+
+            // Map Google events - exclude ones already linked via google_event_id
+            const linkedGoogleIds = new Set(
+              visitas.filter(v => (v as any).google_event_id).map(v => (v as any).google_event_id)
+            );
+
+            const gEvents: UnifiedEvent[] = (googleEvents ?? [])
+              .filter(e => !linkedGoogleIds.has(e.id))
+              .map(e => {
+                const startStr = e.start || "";
+                // Parse date and time from ISO or date string
+                let eventDate = "";
+                let eventTime = "";
+                if (startStr.includes("T")) {
+                  const dt = new Date(startStr);
+                  eventDate = format(dt, "yyyy-MM-dd");
+                  eventTime = format(dt, "HH:mm");
+                } else {
+                  eventDate = startStr;
+                }
+                return {
+                  id: e.id,
+                  title: e.summary || "Sem título",
+                  date: eventDate,
+                  hora: eventTime,
+                  descricao: e.description || undefined,
+                  source: "google" as const,
+                };
+              })
+              .filter(e => {
+                // Only include events within this week
+                if (!e.date) return false;
+                const d = new Date(e.date + "T00:00:00");
+                const weekEnd = endOfWeek(hoje, { weekStartsOn: 1 });
+                return d >= weekStart && d <= weekEnd;
+              });
+
+            const allEvents = [...localEvents, ...gEvents];
+            const hasAny = allEvents.length > 0;
 
             return (
               <div className="mt-4">
@@ -397,7 +453,9 @@ const Dashboard = () => {
                   <div className="grid grid-cols-7 gap-1.5 overflow-x-auto">
                     {days.map((day, idx) => {
                       const isCurrentDay = isTodayFn(day);
-                      const dayVisitas = visitas.filter(v => v.data && isSameDay(new Date(v.data + "T00:00:00"), day));
+                      const dayEvents = allEvents
+                        .filter(ev => ev.date && isSameDay(new Date(ev.date + "T00:00:00"), day))
+                        .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""));
                       const dayName = format(day, "EEE", { locale: ptBR });
                       const dayNum = format(day, "dd");
                       const monthName = format(day, "MMM", { locale: ptBR });
@@ -424,31 +482,36 @@ const Dashboard = () => {
 
                           {/* Events */}
                           <div className="flex-1 px-1.5 pb-1.5 space-y-1 overflow-y-auto max-h-[140px]">
-                            {dayVisitas.length > 0 ? (
-                              dayVisitas
-                                .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
-                                .map((v, vi) => {
-                                  const isPast = isBefore(new Date(v.data + "T23:59:59"), hoje) && !isTodayFn(new Date(v.data + "T00:00:00"));
-                                  const tagColor = isCurrentDay
-                                    ? "border-l-[hsl(152,69%,40%)]"
-                                    : isPast
-                                    ? "border-l-destructive"
-                                    : "border-l-[hsl(210,70%,50%)]";
+                            {dayEvents.length > 0 ? (
+                              dayEvents.map((ev, vi) => {
+                                const isPast = isBefore(new Date(ev.date + "T23:59:59"), hoje) && !isTodayFn(new Date(ev.date + "T00:00:00"));
+                                const tagColor = isCurrentDay
+                                  ? "border-l-[hsl(152,69%,40%)]"
+                                  : isPast
+                                  ? "border-l-destructive"
+                                  : "border-l-[hsl(210,70%,50%)]";
 
-                                  return (
-                                    <div
-                                      key={vi}
-                                      onClick={() => navigate("/projetos")}
-                                      className={`group cursor-pointer p-1.5 rounded-lg border-l-[3px] ${tagColor} bg-card/80 hover:bg-card hover:shadow-sm transition-all`}
-                                    >
-                                      <p className="text-[10px] font-semibold text-primary/80">{v.hora ?? "—"}</p>
-                                      <p className="text-[10px] font-medium text-foreground truncate leading-tight">{v.projetoNome}</p>
-                                      {v.descricao && (
-                                        <p className="text-[9px] text-muted-foreground truncate">{v.descricao}</p>
+                                const isGoogle = ev.source === "google";
+
+                                return (
+                                  <div
+                                    key={`${ev.source}-${ev.id}-${vi}`}
+                                    onClick={() => isGoogle ? undefined : navigate("/projetos")}
+                                    className={`group ${isGoogle ? "" : "cursor-pointer"} p-1.5 rounded-lg border-l-[3px] ${tagColor} bg-card/80 hover:bg-card hover:shadow-sm transition-all`}
+                                  >
+                                    <div className="flex items-center gap-1">
+                                      <p className="text-[10px] font-semibold text-primary/80">{ev.hora || "—"}</p>
+                                      {isGoogle && (
+                                        <span className="text-[8px] px-1 py-px rounded bg-[hsl(210,70%,50%)]/15 text-[hsl(210,70%,50%)] font-medium leading-none">G</span>
                                       )}
                                     </div>
-                                  );
-                                })
+                                    <p className="text-[10px] font-medium text-foreground truncate leading-tight">{ev.title}</p>
+                                    {ev.descricao && (
+                                      <p className="text-[9px] text-muted-foreground truncate">{ev.descricao}</p>
+                                    )}
+                                  </div>
+                                );
+                              })
                             ) : (
                               <div className="flex items-center justify-center h-full">
                                 <p className="text-[9px] text-muted-foreground/40">—</p>
