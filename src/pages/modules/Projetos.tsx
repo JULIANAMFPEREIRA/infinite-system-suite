@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
 import AtividadeLog from "@/components/projeto/AtividadeLog";
+import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
