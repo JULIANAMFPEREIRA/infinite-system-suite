@@ -1,9 +1,23 @@
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, ShieldAlert } from "lucide-react";
 import { useFinanceiroPagar, useFinanceiroReceber, useComissoes } from "@/hooks/useFinanceiro";
+import { useFieldVisibility } from "@/hooks/useFieldVisibility";
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const DRE = () => {
+  const { canSeeFinancials } = useFieldVisibility();
+
+  if (!canSeeFinancials) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <ShieldAlert size={18} className="text-destructive" />
+          <h1 className="text-lg font-bold text-foreground">Acesso Restrito</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">Você não tem permissão para visualizar o DRE.</p>
+      </div>
+    );
+  }
   const { data: receber, isLoading: lr } = useFinanceiroReceber();
   const { data: pagar, isLoading: lp } = useFinanceiroPagar();
   const { data: comissoes, isLoading: lc } = useComissoes();
