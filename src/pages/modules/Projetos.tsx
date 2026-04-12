@@ -281,6 +281,7 @@ const Projetos = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
+            <TabsTrigger value="historico" className="text-xs">Linha do Tempo</TabsTrigger>
             <TabsTrigger value="atividades" className="text-xs">Atividades</TabsTrigger>
           </TabsList>
 
