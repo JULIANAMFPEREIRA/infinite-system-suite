@@ -56,6 +56,23 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const location = useLocation();
+  const { canView } = usePermissions();
+
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      if (item.module && !canView(item.module)) return false;
+      return true;
+    }).map(item => {
+      if (item.children) {
+        const filteredChildren = item.children.filter(child =>
+          !child.module || canView(child.module)
+        );
+        if (filteredChildren.length === 0) return null;
+        return { ...item, children: filteredChildren };
+      }
+      return item;
+    }).filter(Boolean) as NavItem[];
+  }, [canView]);
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev =>
