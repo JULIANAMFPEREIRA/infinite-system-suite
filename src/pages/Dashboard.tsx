@@ -4,18 +4,17 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-  AlertTriangle, Clock, TrendingUp, Receipt, ChevronLeft, ChevronRight
+  AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
+import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isToday as isTodayFn, isBefore, subWeeks, addWeeks } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
