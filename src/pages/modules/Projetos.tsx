@@ -17,6 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 import AtividadeLog from "@/components/projeto/AtividadeLog";
 import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
+import { useFieldVisibility } from "@/hooks/useFieldVisibility";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
@@ -49,6 +50,7 @@ const Projetos = () => {
   const navigate = useNavigate();
   const { id: routeProjetoId } = useParams<{ id?: string }>();
   const empresaId = useEmpresa();
+  const { canSeeFinancials, canSeePrices, isRestrictedRole } = useFieldVisibility();
   const qc = useQueryClient();
   const { data: projetos, isLoading, error: projetosError } = useProjetos();
   const { data: pendenciaCounts } = useNecessidadesPendentesCount();
