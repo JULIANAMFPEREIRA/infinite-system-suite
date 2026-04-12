@@ -359,7 +359,7 @@ const Dashboard = () => {
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <CalendarDays size={15} className="text-primary" />
               </div>
-              Agenda de Visitas
+              Agenda da Semana
             </h3>
             <button
               onClick={() => navigate("/cronograma")}
