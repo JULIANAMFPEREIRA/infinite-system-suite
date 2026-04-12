@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useMyPermissions } from "@/hooks/useUserPermissions";
 
 export type PermissionModule =
   | "dashboard"
@@ -88,7 +89,6 @@ const rolePermissions: Record<string, Record<PermissionModule, PermissionAction[
     configuracoes: [],
     financas_pessoais: ["view", "create", "edit", "delete"],
   },
-  // Legacy roles mapped for backward compatibility
   administrativo: {
     dashboard: ["view"],
     crm: ["view", "create", "edit"],
@@ -154,10 +154,30 @@ const rolePermissions: Record<string, Record<PermissionModule, PermissionAction[
   },
 };
 
+const actionToField: Record<PermissionAction, "can_view" | "can_create" | "can_edit" | "can_delete"> = {
+  view: "can_view",
+  create: "can_create",
+  edit: "can_edit",
+  delete: "can_delete",
+};
+
 export const usePermissions = () => {
   const { roles } = useAuth();
+  const { myPermissions } = useMyPermissions();
+
+  const isAdmin = roles.includes("admin");
 
   const hasPermission = (module: PermissionModule, action: PermissionAction): boolean => {
+    // Admin always has full access
+    if (isAdmin) return true;
+
+    // Check user-specific permissions first (override role defaults)
+    const userPerm = myPermissions.find(p => p.module === module);
+    if (userPerm) {
+      return userPerm[actionToField[action]];
+    }
+
+    // Fall back to role-based permissions
     return roles.some((role) => {
       const perms = rolePermissions[role];
       return perms?.[module]?.includes(action) ?? false;
@@ -168,8 +188,6 @@ export const usePermissions = () => {
   const canCreate = (module: PermissionModule) => hasPermission(module, "create");
   const canEdit = (module: PermissionModule) => hasPermission(module, "edit");
   const canDelete = (module: PermissionModule) => hasPermission(module, "delete");
-
-  const isAdmin = roles.includes("admin");
 
   return { hasPermission, canView, canCreate, canEdit, canDelete, isAdmin };
 };
