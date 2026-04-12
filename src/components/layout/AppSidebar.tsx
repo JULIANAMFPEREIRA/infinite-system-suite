@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionModule } from "@/hooks/usePermissions";
 import {
   LayoutDashboard, Users, FolderKanban, Package,
   DollarSign, BarChart3, Bell, PenTool,

@@ -131,6 +131,27 @@ const rolePermissions: Record<string, Record<PermissionModule, PermissionAction[
     configuracoes: [],
     financas_pessoais: ["view", "create", "edit", "delete"],
   },
+  comercial: {
+    dashboard: ["view"],
+    crm: ["view", "create", "edit", "delete"],
+    projetos: ["view", "create", "edit"],
+    kits: ["view"],
+    cronograma: ["view"],
+    estoque: ["view"],
+    compras: [],
+    fornecedores: ["view"],
+    financeiro: [],
+    comissoes: [],
+    dre: [],
+    relatorios: ["view"],
+    automacoes: [],
+    contratos: ["view"],
+    notas_fiscais: [],
+    integracoes: [],
+    auditoria: [],
+    configuracoes: [],
+    financas_pessoais: ["view", "create", "edit", "delete"],
+  },
 };
 
 export const usePermissions = () => {
