@@ -119,14 +119,11 @@ const Dashboard = () => {
         .map(s => ({ ...s, count: projetos.filter(p => p.status === s.key).length }))
         .filter(s => s.count > 0);
 
-      // Visitas próximas
-      const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 });
-      const fimSemana = endOfWeek(hoje, { weekStartsOn: 1 });
+      // Visitas próximas (fetch broader range for week navigation)
       const proximasVisitas = visitas
         .filter(v => {
           if (!v.data || v.status_visita === "cancelada") return false;
-          const d = new Date(v.data + "T00:00:00");
-          return d >= inicioSemana && d <= fimSemana;
+          return true;
         })
         .sort((a, b) => new Date(a.data!).getTime() - new Date(b.data!).getTime())
         .map(v => ({ ...v, projetoNome: v.projeto_id ? projetoMap[v.projeto_id] ?? "—" : "—" }));
