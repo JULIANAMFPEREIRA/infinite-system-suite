@@ -1618,6 +1618,7 @@ export type Database = {
     }
     Functions: {
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
+      get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
