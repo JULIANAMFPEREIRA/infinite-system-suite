@@ -19,6 +19,8 @@ const Dashboard = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
   const hoje = new Date();
+  const { data: googleStatus } = useGoogleCalendarStatus();
+  const { data: googleEvents } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
 
