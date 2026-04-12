@@ -13,6 +13,15 @@ const REDIRECT_URI = "https://infinite-system-suite.lovable.app/integracoes";
 
 const SCOPES = "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events";
 
+async function getUserId(authHeader: string): Promise<string | null> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
+  return user.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -22,23 +31,16 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // Step 1: Generate auth URL
     if (action === "auth-url") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-      if (claimsErr || !claims?.claims?.sub) {
+      const userId = await getUserId(authHeader);
+      if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const state = claims.claims.sub;
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
         `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
@@ -46,29 +48,22 @@ Deno.serve(async (req) => {
         `&scope=${encodeURIComponent(SCOPES)}` +
         `&access_type=offline` +
         `&prompt=consent` +
-        `&state=${state}`;
+        `&state=${userId}`;
 
       return new Response(JSON.stringify({ url: authUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 2: Exchange code for tokens
     if (action === "callback") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-      if (claimsErr || !claims?.claims?.sub) {
+      const userId = await getUserId(authHeader);
+      if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const userId = claims.claims.sub;
 
       const body = await req.json();
       const code = body.code;
@@ -76,7 +71,6 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Missing code" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Exchange code for tokens
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -98,7 +92,6 @@ Deno.serve(async (req) => {
 
       const expiryDate = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-      // Use service role to upsert
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { error: upsertErr } = await serviceClient
         .from("google_integrations")
@@ -118,26 +111,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 3: Check status
     if (action === "status") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-      if (claimsErr || !claims?.claims?.sub) {
+      const userId = await getUserId(authHeader);
+      if (!userId) {
         return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const { data: integration } = await supabase
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: integration } = await serviceClient
         .from("google_integrations")
         .select("id, expiry_date")
-        .eq("user_id", claims.claims.sub)
+        .eq("user_id", userId)
         .maybeSingle();
 
       return new Response(JSON.stringify({ connected: !!integration }), {
@@ -145,47 +133,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 4: Disconnect
     if (action === "disconnect") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-      if (claimsErr || !claims?.claims?.sub) {
+      const userId = await getUserId(authHeader);
+      if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      await serviceClient.from("google_integrations").delete().eq("user_id", claims.claims.sub);
+      await serviceClient.from("google_integrations").delete().eq("user_id", userId);
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 5: Get upcoming events
     if (action === "events") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-      if (claimsErr || !claims?.claims?.sub) {
+      const userId = await getUserId(authHeader);
+      if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const accessToken = await getValidAccessToken(claims.claims.sub);
+      const accessToken = await getValidAccessToken(userId);
       if (!accessToken) {
         return new Response(JSON.stringify({ error: "Not connected", events: [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -243,9 +219,7 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
 
   if (!integration) return null;
 
-  // Check if token is expired
   if (integration.expiry_date && new Date(integration.expiry_date) < new Date()) {
-    // Refresh token
     if (!integration.refresh_token) return null;
 
     const res = await fetch("https://oauth2.googleapis.com/token", {
