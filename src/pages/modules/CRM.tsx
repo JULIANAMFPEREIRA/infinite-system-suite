@@ -1519,6 +1519,10 @@ const CRM = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
                       <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
+                    {simCondicao === "avista" && (
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Pagamento à Vista</label>
+                        <input type="date" value={orcDataPgtoAvista} onChange={e => setOrcDataPgtoAvista(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                    )}
                     <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
                       <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
                     {simCondicao === "parcelado" && (<>
