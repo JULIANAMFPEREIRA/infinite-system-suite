@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Database } from "@/integrations/supabase/types";
 import AtividadeLog from "@/components/projeto/AtividadeLog";
+import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
@@ -281,6 +282,7 @@ const Projetos = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
+            <TabsTrigger value="historico" className="text-xs">Linha do Tempo</TabsTrigger>
             <TabsTrigger value="atividades" className="text-xs">Atividades</TabsTrigger>
           </TabsList>
 
@@ -374,6 +376,12 @@ const Projetos = () => {
           <TabsContent value="documentos">
             <div className="bg-card border border-border rounded-lg p-4">
               <ProjetoArquivosSection clienteId={currentProjeto.cliente_id} tipo="documento" />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="historico">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <HistoricoProjeto projetoId={detailProjetoId} dataCriacao={currentProjeto.created_at} />
             </div>
           </TabsContent>
 

@@ -1046,6 +1046,44 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_projeto: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          observacao: string | null
+          projeto_id: string
+          status: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          id?: string
+          observacao?: string | null
+          projeto_id: string
+          status: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          observacao?: string | null
+          projeto_id?: string
+          status?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_projeto_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       necessidades_compra: {
         Row: {
           compra_id: string | null
