@@ -346,59 +346,95 @@ const Dashboard = () => {
 
       {/* 3. CONTEÚDO PRINCIPAL – 3 blocos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* BLOCO 1 – Agenda de Visitas */}
-        <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        {/* BLOCO 1 – Agenda de Visitas (Apple-style) */}
+        <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-[0_2px_16px_-4px_hsl(var(--foreground)/0.06)] backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <CalendarDays size={16} className="text-primary" />
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <CalendarDays size={15} className="text-primary" />
+              </div>
               Agenda de Visitas
             </h3>
             <button
               onClick={() => navigate("/cronograma")}
-              className="text-[11px] text-primary hover:underline flex items-center gap-1"
+              className="text-[11px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
             >
-              Ver todos <ExternalLink size={10} />
+              Ver Agenda Completa <ArrowRight size={10} />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 mb-3">
+
+          {/* Status de conexão */}
+          <div className="flex items-center gap-2 mb-4 mt-2">
             {googleStatus?.connected ? (
-              <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)]" /> Google Agenda conectado
+              <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/8 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)] animate-pulse" /> Google Agenda conectada
               </span>
             ) : (
               <button
                 onClick={() => navigate("/integracoes")}
-                className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer"
+                className="text-[10px] text-primary bg-primary/8 px-3 py-1 rounded-full hover:bg-primary/15 transition-all cursor-pointer font-medium"
               >
                 Conectar Google Agenda →
               </button>
             )}
           </div>
+
+          {/* Lista de visitas */}
           {(stats?.proximasVisitas?.length ?? 0) > 0 ? (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-              {stats!.proximasVisitas.map((v, i) => (
-                <div key={i} className="list-item-hover flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
-                  <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/15 text-primary shrink-0">
-                    <span className="text-xs font-bold leading-tight">{v.data ? format(new Date(v.data), "dd") : "—"}</span>
-                    <span className="text-[9px] uppercase">{v.data ? format(new Date(v.data), "MMM", { locale: ptBR }) : ""}</span>
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+              {stats!.proximasVisitas.map((v, i) => {
+                const visitDate = v.data ? new Date(v.data + "T00:00:00") : null;
+                const todayStr = format(hoje, "yyyy-MM-dd");
+                const tomorrowStr = format(new Date(hoje.getTime() + 86400000), "yyyy-MM-dd");
+                const isToday = v.data === todayStr;
+                const isTomorrow = v.data === tomorrowStr;
+                const isPast = visitDate ? visitDate < new Date(todayStr) : false;
+
+                const tagColor = isToday
+                  ? "bg-[hsl(152,69%,40%)]/12 text-[hsl(152,69%,40%)]"
+                  : isTomorrow
+                  ? "bg-[hsl(210,70%,50%)]/12 text-[hsl(210,70%,50%)]"
+                  : isPast
+                  ? "bg-destructive/12 text-destructive"
+                  : "bg-secondary text-muted-foreground";
+                const tagLabel = isToday ? "Hoje" : isTomorrow ? "Amanhã" : isPast ? "Atrasado" : v.status_visita;
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => navigate(`/projetos`)}
+                    className="group flex items-center gap-3 p-3 rounded-xl bg-secondary/20 border border-transparent hover:border-border/60 hover:bg-secondary/40 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-xl bg-primary/10 text-primary shrink-0 group-hover:scale-105 transition-transform">
+                      <span className="text-xs font-bold leading-tight">{v.data ? format(new Date(v.data + "T00:00:00"), "dd") : "—"}</span>
+                      <span className="text-[8px] uppercase font-semibold tracking-wide">{v.data ? format(new Date(v.data + "T00:00:00"), "MMM", { locale: ptBR }) : ""}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-foreground truncate">{v.projetoNome}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{v.hora ?? "—"} · {v.descricao ?? "Visita técnica"}</p>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium ${tagColor}`}>
+                      {tagLabel}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground truncate">{v.projetoNome}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{v.hora ?? "—"} · {v.descricao ?? "Visita técnica"}</p>
-                  </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
-                    v.status_visita === "agendada" ? "bg-primary/15 text-primary" :
-                    v.status_visita === "realizada" ? "bg-[hsl(152,69%,40%)]/15 text-[hsl(152,69%,40%)]" :
-                    "bg-secondary text-muted-foreground"
-                  }`}>
-                    {v.status_visita}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground text-center py-8">Nenhuma visita agendada.</p>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CalendarDays size={28} className="text-muted-foreground/30 mb-2" />
+              <p className="text-xs text-muted-foreground">Nenhuma visita agendada</p>
+            </div>
           )}
+
+          {/* Botão Nova Visita */}
+          <button
+            onClick={() => navigate("/cronograma")}
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/8 hover:bg-primary/15 text-primary text-xs font-medium transition-all border border-primary/10 hover:border-primary/20"
+          >
+            <Plus size={13} />
+            Nova Visita
+          </button>
         </div>
 
         {/* BLOCO 2 – Itens a Comprar */}
