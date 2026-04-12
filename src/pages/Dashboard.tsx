@@ -10,7 +10,7 @@ import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
@@ -115,10 +115,15 @@ const Dashboard = () => {
         .filter(s => s.count > 0);
 
       // Visitas próximas
+      const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 });
+      const fimSemana = endOfWeek(hoje, { weekStartsOn: 1 });
       const proximasVisitas = visitas
-        .filter(v => v.data && new Date(v.data) >= hoje && v.status_visita !== "cancelada")
+        .filter(v => {
+          if (!v.data || v.status_visita === "cancelada") return false;
+          const d = new Date(v.data + "T00:00:00");
+          return d >= inicioSemana && d <= fimSemana;
+        })
         .sort((a, b) => new Date(a.data!).getTime() - new Date(b.data!).getTime())
-        .slice(0, 5)
         .map(v => ({ ...v, projetoNome: v.projeto_id ? projetoMap[v.projeto_id] ?? "—" : "—" }));
 
       // Itens a comprar detalhados
