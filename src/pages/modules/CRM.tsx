@@ -446,9 +446,13 @@ const CRM = () => {
       if (!detailClient?.id || !empresaId) return;
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
       if (error) throw error;
+      // Auto-update CRM status to "projeto" to avoid manual change and duplicity
+      if (detailClient.status_crm !== "projeto") {
+        await supabase.from("clientes").update({ status_crm: "projeto" }).eq("id", detailClient.id);
+      }
       await syncOrcamentoToProject(orcId);
     },
-    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); },
+    onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); qc.invalidateQueries({ queryKey: ["clientes"] }); },
     onError: (err: any) => toast.error(err.message),
   });
 
