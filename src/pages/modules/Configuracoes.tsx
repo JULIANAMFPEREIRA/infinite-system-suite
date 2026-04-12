@@ -49,7 +49,14 @@ const Configuracoes = () => {
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
 
-  // Equipe
+  // Transportadoras
+  const { data: transportadoras } = useTransportadoras();
+  const createTransp = useCreateTransportadora();
+  const deleteTransp = useDeleteTransportadora();
+  const [novaTranspNome, setNovaTranspNome] = useState("");
+  const [novaTranspTipo, setNovaTranspTipo] = useState("transportadora");
+
+
   const { data: equipe, refetch: refetchEquipe } = useQuery({
     queryKey: ["equipe", empresaId],
     queryFn: async () => {
