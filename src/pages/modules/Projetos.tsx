@@ -17,6 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 import AtividadeLog from "@/components/projeto/AtividadeLog";
 import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
+import { useFieldVisibility } from "@/hooks/useFieldVisibility";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
@@ -49,6 +50,7 @@ const Projetos = () => {
   const navigate = useNavigate();
   const { id: routeProjetoId } = useParams<{ id?: string }>();
   const empresaId = useEmpresa();
+  const { canSeeFinancials, canSeePrices, isRestrictedRole } = useFieldVisibility();
   const qc = useQueryClient();
   const { data: projetos, isLoading, error: projetosError } = useProjetos();
   const { data: pendenciaCounts } = useNecessidadesPendentesCount();
@@ -270,15 +272,15 @@ const Projetos = () => {
         </div>
 
         <Tabs defaultValue="resumo" className="w-full">
-          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
+           <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
             <TabsTrigger value="resumo" className="text-xs">Dados do Projeto</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens do Projeto</TabsTrigger>
-            <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
-            <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>
-            <TabsTrigger value="comissoes" className="text-xs">Comissões (RT)</TabsTrigger>
+            {canSeeFinancials && <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>}
+            {canSeeFinancials && <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>}
+            {canSeeFinancials && <TabsTrigger value="comissoes" className="text-xs">Comissões (RT)</TabsTrigger>}
             <TabsTrigger value="visitas" className="text-xs">Visitas Técnicas</TabsTrigger>
             <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
-            <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>
+            {canSeeFinancials && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
@@ -410,7 +412,7 @@ const Projetos = () => {
       </div>
 
       {/* Status counters - same pattern as CRM */}
-      <div className="grid grid-cols-11 gap-1.5">
+      <div className={`grid gap-1.5 ${canSeeFinancials ? 'grid-cols-11' : 'grid-cols-10'}`}>
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
           { key: "infraestrutura" as const, label: "Infra", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
@@ -434,6 +436,7 @@ const Projetos = () => {
           <div className="text-lg font-bold leading-none">{pendenciasCount}</div>
           <div className="text-[9px] font-medium mt-0.5 truncate">Pendências</div>
         </button>
+        {canSeeFinancials && (
         <button
           onClick={() => setMainTab(mainTab === "financeiro_global" ? "lista" : "financeiro_global")}
           className={`rounded px-1 py-2 text-center transition ${mainTab === "financeiro_global" ? "ring-2 ring-primary" : "hover:opacity-80"} bg-success/15 text-success`}
@@ -441,6 +444,7 @@ const Projetos = () => {
           <div className="text-lg font-bold leading-none"><DollarSign size={18} className="mx-auto" /></div>
           <div className="text-[9px] font-medium mt-0.5 truncate">Financeiro</div>
         </button>
+        )}
       </div>
 
       {mainTab === "financeiro_global" && (
@@ -494,9 +498,9 @@ const Projetos = () => {
                       <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Cliente</th>
                       <th className="text-left px-2.5 py-2 font-semibold text-foreground border-b border-border">Arquiteto</th>
                       <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Status</th>
-                      <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo</th>
-                      <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>
-                      <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>
+                      {canSeeFinancials && <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Custo</th>}
+                      {canSeeFinancials && <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Venda</th>}
+                      {canSeeFinancials && <th className="text-right px-2.5 py-2 font-semibold text-foreground border-b border-border">Margem</th>}
                       <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Pend.</th>
                       <th className="text-center px-2.5 py-2 font-semibold text-foreground border-b border-border">Ações</th>
                     </tr>
@@ -516,11 +520,11 @@ const Projetos = () => {
                             {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
                           </select>
                         </td>
-                        <td className="px-2.5 py-1.5 text-right text-foreground">{fmt(p.custo_previsto)}</td>
-                        <td className="px-2.5 py-1.5 text-right text-foreground font-medium">{fmt(p.venda_total)}</td>
-                        <td className="px-2.5 py-1.5 text-right">
+                        {canSeeFinancials && <td className="px-2.5 py-1.5 text-right text-foreground">{fmt(p.custo_previsto)}</td>}
+                        {canSeeFinancials && <td className="px-2.5 py-1.5 text-right text-foreground font-medium">{fmt(p.venda_total)}</td>}
+                        {canSeeFinancials && <td className="px-2.5 py-1.5 text-right">
                           <span className={(p.margem_prevista ?? 0) > 0 ? "text-success" : "text-destructive"}>{(p.margem_prevista ?? 0).toFixed(1)}%</span>
-                        </td>
+                        </td>}
                         <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
                           {(pendenciaCounts?.[p.id] ?? 0) > 0 ? (
                             <button onClick={() => navigate(`/itens-comprar?projeto=${p.id}`)} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive text-[11px] font-medium hover:bg-destructive/25 transition">

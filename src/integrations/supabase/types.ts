@@ -1618,6 +1618,7 @@ export type Database = {
     }
     Functions: {
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
+      get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1637,6 +1638,7 @@ export type Database = {
         | "cliente"
         | "operacional"
         | "comercial"
+        | "funcionario"
       origem_lead:
         | "whatsapp"
         | "instagram"
@@ -1804,6 +1806,7 @@ export const Constants = {
         "cliente",
         "operacional",
         "comercial",
+        "funcionario",
       ],
       origem_lead: ["whatsapp", "instagram", "indicacao", "outro", "arquiteto"],
       status_comissao: ["pendente", "pago"],
