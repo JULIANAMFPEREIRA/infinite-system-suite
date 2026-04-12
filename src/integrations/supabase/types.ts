@@ -1013,6 +1013,39 @@ export type Database = {
           },
         ]
       }
+      google_integrations: {
+        Row: {
+          access_token: string
+          created_at: string
+          expiry_date: string | null
+          google_calendar_id: string | null
+          id: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expiry_date?: string | null
+          google_calendar_id?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expiry_date?: string | null
+          google_calendar_id?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       necessidades_compra: {
         Row: {
           compra_id: string | null
@@ -1396,6 +1429,7 @@ export type Database = {
           deletado: boolean
           descricao: string | null
           empresa_id: string
+          google_event_id: string | null
           hora: string | null
           id: string
           produtos_levados: Json | null
@@ -1413,6 +1447,7 @@ export type Database = {
           deletado?: boolean
           descricao?: string | null
           empresa_id: string
+          google_event_id?: string | null
           hora?: string | null
           id?: string
           produtos_levados?: Json | null
@@ -1430,6 +1465,7 @@ export type Database = {
           deletado?: boolean
           descricao?: string | null
           empresa_id?: string
+          google_event_id?: string | null
           hora?: string | null
           id?: string
           produtos_levados?: Json | null

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -18,6 +19,8 @@ const Dashboard = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
   const hoje = new Date();
+  const { data: googleStatus } = useGoogleCalendarStatus();
+  const { data: googleEvents } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
 
@@ -358,9 +361,18 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="flex items-center gap-1.5 mb-3">
-            <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-              Google Workspace (em breve)
-            </span>
+            {googleStatus?.connected ? (
+              <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)]" /> Google Agenda conectado
+              </span>
+            ) : (
+              <button
+                onClick={() => navigate("/integracoes")}
+                className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer"
+              >
+                Conectar Google Agenda →
+              </button>
+            )}
           </div>
           {(stats?.proximasVisitas?.length ?? 0) > 0 ? (
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
