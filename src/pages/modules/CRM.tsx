@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { isNotEmpty, validateEmail } from "@/lib/validations";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTransportadoras } from "@/hooks/useTransportadoras";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,6 +33,7 @@ const CRM = () => {
   const createProjeto = useCreateProjeto();
   const createProjetoItem = useCreateProjetoItem();
   const { data: arquitetos } = useArquitetos();
+  const { data: transportadoras } = useTransportadoras();
 
   const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
   const [listViewType, setListViewType] = useState<"kanban" | "table">("kanban");
@@ -1441,11 +1443,12 @@ const CRM = () => {
                       <div className="space-y-3 mb-3">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo Frete</label>
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Transportadora</label>
                             <select value={orcFreteTipo} onChange={e => { setOrcFreteTipo(e.target.value); if (e.target.value !== "outro") setOrcFreteOutro(""); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                               <option value="">Selecione...</option>
-                              <option value="transportadora">Transportadora</option>
-                              <option value="correios">Correios</option>
+                              {(transportadoras ?? []).map((t: any) => (
+                                <option key={t.id} value={`${t.nome} (${t.tipo})`}>{t.nome} ({t.tipo})</option>
+                              ))}
                               <option value="outro">Outro</option>
                             </select>
                           </div>

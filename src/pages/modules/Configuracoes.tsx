@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Settings, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { Settings, Plus, Trash2, UserPlus, Users, Truck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCategorias, useCreateCategoria, useDeleteCategoria, useFormasPagamento, useCreateFormaPagamento, useDeleteFormaPagamento } from "@/hooks/useCategorias";
+import { useTransportadoras, useCreateTransportadora, useDeleteTransportadora } from "@/hooks/useTransportadoras";
 import { toast } from "sonner";
 
 const Configuracoes = () => {
@@ -48,7 +49,14 @@ const Configuracoes = () => {
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
 
-  // Equipe
+  // Transportadoras
+  const { data: transportadoras } = useTransportadoras();
+  const createTransp = useCreateTransportadora();
+  const deleteTransp = useDeleteTransportadora();
+  const [novaTranspNome, setNovaTranspNome] = useState("");
+  const [novaTranspTipo, setNovaTranspTipo] = useState("transportadora");
+
+
   const { data: equipe, refetch: refetchEquipe } = useQuery({
     queryKey: ["equipe", empresaId],
     queryFn: async () => {
@@ -183,6 +191,37 @@ const Configuracoes = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Transportadoras */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Truck size={14} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Transportadoras / Tipos de Envio</h2>
+        </div>
+        <div className="flex gap-2 items-end flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={novaTranspNome} onChange={e => setNovaTranspNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Jadlog, Correios" /></div>
+          <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Tipo</label>
+            <select value={novaTranspTipo} onChange={e => setNovaTranspTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+              <option value="transportadora">Transportadora</option>
+              <option value="sedex">Sedex</option>
+              <option value="sedex10">Sedex 10</option>
+              <option value="pac">PAC</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <button onClick={async () => { if (!novaTranspNome.trim()) return; await createTransp.mutateAsync({ nome: novaTranspNome, tipo: novaTranspTipo }); setNovaTranspNome(""); toast.success("Transportadora cadastrada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50" disabled={!novaTranspNome.trim()}><Plus size={14} /></button>
+        </div>
+        {transportadoras && transportadoras.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {transportadoras.map((t: any) => (
+              <span key={t.id} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-secondary-foreground text-[11px]">
+                {t.nome} <span className="text-muted-foreground">({t.tipo})</span>
+                <button onClick={() => { deleteTransp.mutate(t.id); toast.success("Removida"); }} className="hover:text-destructive"><Trash2 size={10} /></button>
+              </span>
+            ))}
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Nenhuma transportadora cadastrada.</p>}
       </div>
 
       {/* Gestão de Usuários */}

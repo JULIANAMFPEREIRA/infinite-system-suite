@@ -3,6 +3,7 @@ import { FileText, Search, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
+import { useTransportadoras } from "@/hooks/useTransportadoras";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 
 const Orcamentos = () => {
   const empresaId = useEmpresa();
+  const { data: transportadoras } = useTransportadoras();
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
   const [editOrc, setEditOrc] = useState<any>(null);
@@ -271,11 +273,12 @@ const Orcamentos = () => {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Tipo de Frete</Label>
+              <Label className="text-xs">Transportadora</Label>
               <select value={editFreteTipo} onChange={(e) => setEditFreteTipo(e.target.value)} className="w-full h-8 text-xs rounded-md border border-input bg-background px-3">
                 <option value="">Nenhum</option>
-                <option value="transportadora">Transportadora</option>
-                <option value="correios">Correios</option>
+                {(transportadoras ?? []).map((t: any) => (
+                  <option key={t.id} value={`${t.nome} (${t.tipo})`}>{t.nome} ({t.tipo})</option>
+                ))}
                 <option value="outro">Outro</option>
               </select>
             </div>
