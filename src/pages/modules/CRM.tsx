@@ -608,6 +608,7 @@ const CRM = () => {
       numero_parcelas: simParcCount > 0 ? simParcCount : 1,
       forma_pagamento: simFormaPgto || null,
       observacoes_pagamento: notas || cliente?.notas || null,
+      orcamento_id: approvedOrc?.id || null,
     });
     if (items.length > 0) {
       const itemInserts = items.map(item => ({
