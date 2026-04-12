@@ -23,8 +23,10 @@ const Dashboard = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
   const hoje = new Date();
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(hoje, { weekStartsOn: 1 }));
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
   const { data: googleStatus } = useGoogleCalendarStatus();
-  const { data: googleEvents } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
+  const { data: googleEvents, isLoading: isLoadingGoogle } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
 
