@@ -13,37 +13,38 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   path?: string;
-  children?: { label: string; path: string }[];
+  module?: PermissionModule;
+  children?: { label: string; path: string; module?: PermissionModule }[];
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "CRM", icon: Users, path: "/crm" },
-  { label: "Orçamentos", icon: FileText, path: "/orcamentos" },
-  { label: "Projetos", icon: FolderKanban, path: "/projetos" },
-  { label: "Cronograma", icon: Wrench, path: "/cronograma" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/", module: "dashboard" },
+  { label: "CRM", icon: Users, path: "/crm", module: "crm" },
+  { label: "Orçamentos", icon: FileText, path: "/orcamentos", module: "crm" },
+  { label: "Projetos", icon: FolderKanban, path: "/projetos", module: "projetos" },
+  { label: "Cronograma", icon: Wrench, path: "/cronograma", module: "cronograma" },
   {
-    label: "Financeiro", icon: DollarSign, children: [
-      { label: "Contas a Receber", path: "/financeiro/receber" },
-      { label: "Contas a Pagar", path: "/financeiro/pagar" },
-      { label: "Fluxo de Caixa", path: "/financeiro/fluxo" },
-      { label: "Finanças Pessoais", path: "/financas-pessoais" },
-      { label: "Comissões (RT)", path: "/comissoes" },
-      { label: "Compras", path: "/compras" },
-      { label: "Itens a Comprar", path: "/itens-comprar" },
+    label: "Financeiro", icon: DollarSign, module: "financeiro", children: [
+      { label: "Contas a Receber", path: "/financeiro/receber", module: "financeiro" },
+      { label: "Contas a Pagar", path: "/financeiro/pagar", module: "financeiro" },
+      { label: "Fluxo de Caixa", path: "/financeiro/fluxo", module: "financeiro" },
+      { label: "Finanças Pessoais", path: "/financas-pessoais", module: "financas_pessoais" },
+      { label: "Comissões (RT)", path: "/comissoes", module: "comissoes" },
+      { label: "Compras", path: "/compras", module: "compras" },
+      { label: "Itens a Comprar", path: "/itens-comprar", module: "compras" },
     ]
   },
-  { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores" },
-  { label: "Estoque", icon: Package, path: "/estoque" },
-  { label: "Kits", icon: Boxes, path: "/kits" },
-  { label: "DRE", icon: TrendingUp, path: "/dre" },
-  { label: "Relatórios", icon: BarChart3, path: "/relatorios" },
-  { label: "Automações", icon: Bell, path: "/automacoes" },
-  { label: "Contratos", icon: PenTool, path: "/contratos" },
-  { label: "Nota Fiscal", icon: Receipt, path: "/notas-fiscais" },
-  { label: "Integrações", icon: Building2, path: "/integracoes" },
-  { label: "Auditoria", icon: Shield, path: "/auditoria" },
-  { label: "Configurações", icon: Settings, path: "/configuracoes" },
+  { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores", module: "fornecedores" },
+  { label: "Estoque", icon: Package, path: "/estoque", module: "estoque" },
+  { label: "Kits", icon: Boxes, path: "/kits", module: "kits" },
+  { label: "DRE", icon: TrendingUp, path: "/dre", module: "dre" },
+  { label: "Relatórios", icon: BarChart3, path: "/relatorios", module: "relatorios" },
+  { label: "Automações", icon: Bell, path: "/automacoes", module: "automacoes" },
+  { label: "Contratos", icon: PenTool, path: "/contratos", module: "contratos" },
+  { label: "Nota Fiscal", icon: Receipt, path: "/notas-fiscais", module: "notas_fiscais" },
+  { label: "Integrações", icon: Building2, path: "/integracoes", module: "integracoes" },
+  { label: "Auditoria", icon: Shield, path: "/auditoria", module: "auditoria" },
+  { label: "Configurações", icon: Settings, path: "/configuracoes", module: "configuracoes" },
 ];
 
 interface AppSidebarProps {
