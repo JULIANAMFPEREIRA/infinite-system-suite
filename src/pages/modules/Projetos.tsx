@@ -272,15 +272,15 @@ const Projetos = () => {
         </div>
 
         <Tabs defaultValue="resumo" className="w-full">
-          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
+           <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
             <TabsTrigger value="resumo" className="text-xs">Dados do Projeto</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens do Projeto</TabsTrigger>
-            <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
-            <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>
-            <TabsTrigger value="comissoes" className="text-xs">Comissões (RT)</TabsTrigger>
+            {canSeeFinancials && <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>}
+            {canSeeFinancials && <TabsTrigger value="compras" className="text-xs">Compras</TabsTrigger>}
+            {canSeeFinancials && <TabsTrigger value="comissoes" className="text-xs">Comissões (RT)</TabsTrigger>}
             <TabsTrigger value="visitas" className="text-xs">Visitas Técnicas</TabsTrigger>
             <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
-            <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>
+            {canSeeFinancials && <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>}
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
