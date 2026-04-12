@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FileText, Search, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,7 @@ import { ptBR } from "date-fns/locale";
 
 const Orcamentos = () => {
   const empresaId = useEmpresa();
+  const navigate = useNavigate();
   const { data: transportadoras } = useTransportadoras();
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
@@ -237,7 +239,7 @@ const Orcamentos = () => {
                           size="sm"
                           variant="ghost"
                           className="h-7 text-xs gap-1"
-                          onClick={() => { window.location.href = `/crm`; }}
+                          onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
                         >
                           <ExternalLink size={12} /> Abrir
                         </Button>
