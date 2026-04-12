@@ -10,7 +10,7 @@ import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isToday as isTodayFn, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
