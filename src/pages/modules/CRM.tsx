@@ -97,7 +97,8 @@ const CRM = () => {
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [previewDoc, setPreviewDoc] = useState<{ url: string; nome: string } | null>(null);
 
-  // Active orcamento
+  // Active tab & orcamento
+  const [activeTab, setActiveTab] = useState("dados");
   const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
   const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
   const [orcNomeInput, setOrcNomeInput] = useState("");
@@ -216,8 +217,8 @@ const CRM = () => {
     setStatusCrm(c.status_crm ?? "lead"); setShowForm(true);
   };
 
-  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); };
-  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setSearchParams({}); };
+  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); setActiveTab("dados"); };
+  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setActiveTab("dados"); setSearchParams({}); };
 
   // Auto-open client/budget from URL params (e.g. from Orcamentos page)
   useEffect(() => {
@@ -230,6 +231,7 @@ const CRM = () => {
         setViewMode("detail");
         if (orcamentoId) {
           setActiveOrcamentoId(orcamentoId);
+          setActiveTab("itens");
         }
         setSearchParams({});
       }
@@ -1151,7 +1153,7 @@ const CRM = () => {
           <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[detailClient.status_crm as StatusCRM]}`}>{statusCrmLabels[detailClient.status_crm as StatusCRM]}</span>
         </div>
 
-        <Tabs defaultValue="dados" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-secondary/40 p-1">
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
