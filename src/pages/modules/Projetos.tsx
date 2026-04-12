@@ -412,7 +412,7 @@ const Projetos = () => {
       </div>
 
       {/* Status counters - same pattern as CRM */}
-      <div className="grid grid-cols-11 gap-1.5">
+      <div className={`grid gap-1.5 ${canSeeFinancials ? 'grid-cols-11' : 'grid-cols-10'}`}>
         {([
           { key: "todos" as const, label: "Todos", count: statusCounts.todos - statusCounts.cancelado, color: "bg-secondary text-secondary-foreground" },
           { key: "infraestrutura" as const, label: "Infra", count: statusCounts.infraestrutura, color: "bg-amber-500/15 text-amber-600" },
