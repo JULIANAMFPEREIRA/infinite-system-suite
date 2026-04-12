@@ -378,6 +378,12 @@ const Projetos = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="historico">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <HistoricoProjeto projetoId={detailProjetoId} dataCriacao={currentProjeto.created_at} />
+            </div>
+          </TabsContent>
+
           <TabsContent value="atividades">
             <div className="bg-card border border-border rounded-lg p-4">
               <AtividadeLog projetoId={currentProjeto.id} />
