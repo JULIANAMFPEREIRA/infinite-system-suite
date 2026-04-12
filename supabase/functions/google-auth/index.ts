@@ -169,10 +169,10 @@ Deno.serve(async (req) => {
       }
 
       const now = new Date();
-      const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const maxDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const timeMin = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const maxDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const calRes = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(maxDate)}&maxResults=50&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`,
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(maxDate)}&maxResults=250&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
