@@ -72,29 +72,29 @@ const App = () => (
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/crm" element={<CRM />} />
-              <Route path="/orcamentos" element={<Orcamentos />} />
-              <Route path="/projetos" element={<Projetos />} />
-              <Route path="/projetos/:id" element={<Projetos />} />
-              <Route path="/kits" element={<Kits />} />
-              <Route path="/cronograma" element={<Cronograma />} />
-              <Route path="/estoque" element={<Estoque />} />
-              <Route path="/compras" element={<Compras />} />
-              <Route path="/fornecedores" element={<Fornecedores />} />
-              <Route path="/itens-comprar" element={<ItensComprar />} />
-              <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
-              <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
-              <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
-              <Route path="/financas-pessoais" element={<FinancasPessoais />} />
-              <Route path="/comissoes" element={<Comissoes />} />
-              <Route path="/dre" element={<DRE />} />
-              <Route path="/relatorios" element={<Relatorios />} />
-              <Route path="/automacoes" element={<Automacoes />} />
-              <Route path="/contratos" element={<Contratos />} />
-              <Route path="/notas-fiscais" element={<NotasFiscais />} />
-              <Route path="/integracoes" element={<Integracoes />} />
-              <Route path="/auditoria" element={<Auditoria />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/crm" element={<ModuleRoute module="crm"><CRM /></ModuleRoute>} />
+              <Route path="/orcamentos" element={<ModuleRoute module="crm"><Orcamentos /></ModuleRoute>} />
+              <Route path="/projetos" element={<ModuleRoute module="projetos"><Projetos /></ModuleRoute>} />
+              <Route path="/projetos/:id" element={<ModuleRoute module="projetos"><Projetos /></ModuleRoute>} />
+              <Route path="/kits" element={<ModuleRoute module="kits"><Kits /></ModuleRoute>} />
+              <Route path="/cronograma" element={<ModuleRoute module="cronograma"><Cronograma /></ModuleRoute>} />
+              <Route path="/estoque" element={<ModuleRoute module="estoque"><Estoque /></ModuleRoute>} />
+              <Route path="/compras" element={<ModuleRoute module="compras"><Compras /></ModuleRoute>} />
+              <Route path="/fornecedores" element={<ModuleRoute module="fornecedores"><Fornecedores /></ModuleRoute>} />
+              <Route path="/itens-comprar" element={<ModuleRoute module="compras"><ItensComprar /></ModuleRoute>} />
+              <Route path="/financeiro/receber" element={<ModuleRoute module="financeiro"><FinanceiroReceber /></ModuleRoute>} />
+              <Route path="/financeiro/pagar" element={<ModuleRoute module="financeiro"><FinanceiroPagar /></ModuleRoute>} />
+              <Route path="/financeiro/fluxo" element={<ModuleRoute module="financeiro"><FluxoCaixa /></ModuleRoute>} />
+              <Route path="/financas-pessoais" element={<ModuleRoute module="financas_pessoais"><FinancasPessoais /></ModuleRoute>} />
+              <Route path="/comissoes" element={<ModuleRoute module="comissoes"><Comissoes /></ModuleRoute>} />
+              <Route path="/dre" element={<ModuleRoute module="dre"><DRE /></ModuleRoute>} />
+              <Route path="/relatorios" element={<ModuleRoute module="relatorios"><Relatorios /></ModuleRoute>} />
+              <Route path="/automacoes" element={<ModuleRoute module="automacoes"><Automacoes /></ModuleRoute>} />
+              <Route path="/contratos" element={<ModuleRoute module="contratos"><Contratos /></ModuleRoute>} />
+              <Route path="/notas-fiscais" element={<ModuleRoute module="notas_fiscais"><NotasFiscais /></ModuleRoute>} />
+              <Route path="/integracoes" element={<ModuleRoute module="integracoes"><Integracoes /></ModuleRoute>} />
+              <Route path="/auditoria" element={<ModuleRoute module="auditoria"><Auditoria /></ModuleRoute>} />
+              <Route path="/configuracoes" element={<ModuleRoute module="configuracoes"><Configuracoes /></ModuleRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
