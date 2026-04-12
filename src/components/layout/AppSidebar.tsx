@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionModule } from "@/hooks/usePermissions";
 import {
   LayoutDashboard, Users, FolderKanban, Package,
   DollarSign, BarChart3, Bell, PenTool,
@@ -11,37 +13,38 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   path?: string;
-  children?: { label: string; path: string }[];
+  module?: PermissionModule;
+  children?: { label: string; path: string; module?: PermissionModule }[];
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "CRM", icon: Users, path: "/crm" },
-  { label: "Orçamentos", icon: FileText, path: "/orcamentos" },
-  { label: "Projetos", icon: FolderKanban, path: "/projetos" },
-  { label: "Cronograma", icon: Wrench, path: "/cronograma" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/", module: "dashboard" },
+  { label: "CRM", icon: Users, path: "/crm", module: "crm" },
+  { label: "Orçamentos", icon: FileText, path: "/orcamentos", module: "crm" },
+  { label: "Projetos", icon: FolderKanban, path: "/projetos", module: "projetos" },
+  { label: "Cronograma", icon: Wrench, path: "/cronograma", module: "cronograma" },
   {
-    label: "Financeiro", icon: DollarSign, children: [
-      { label: "Contas a Receber", path: "/financeiro/receber" },
-      { label: "Contas a Pagar", path: "/financeiro/pagar" },
-      { label: "Fluxo de Caixa", path: "/financeiro/fluxo" },
-      { label: "Finanças Pessoais", path: "/financas-pessoais" },
-      { label: "Comissões (RT)", path: "/comissoes" },
-      { label: "Compras", path: "/compras" },
-      { label: "Itens a Comprar", path: "/itens-comprar" },
+    label: "Financeiro", icon: DollarSign, module: "financeiro", children: [
+      { label: "Contas a Receber", path: "/financeiro/receber", module: "financeiro" },
+      { label: "Contas a Pagar", path: "/financeiro/pagar", module: "financeiro" },
+      { label: "Fluxo de Caixa", path: "/financeiro/fluxo", module: "financeiro" },
+      { label: "Finanças Pessoais", path: "/financas-pessoais", module: "financas_pessoais" },
+      { label: "Comissões (RT)", path: "/comissoes", module: "comissoes" },
+      { label: "Compras", path: "/compras", module: "compras" },
+      { label: "Itens a Comprar", path: "/itens-comprar", module: "compras" },
     ]
   },
-  { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores" },
-  { label: "Estoque", icon: Package, path: "/estoque" },
-  { label: "Kits", icon: Boxes, path: "/kits" },
-  { label: "DRE", icon: TrendingUp, path: "/dre" },
-  { label: "Relatórios", icon: BarChart3, path: "/relatorios" },
-  { label: "Automações", icon: Bell, path: "/automacoes" },
-  { label: "Contratos", icon: PenTool, path: "/contratos" },
-  { label: "Nota Fiscal", icon: Receipt, path: "/notas-fiscais" },
-  { label: "Integrações", icon: Building2, path: "/integracoes" },
-  { label: "Auditoria", icon: Shield, path: "/auditoria" },
-  { label: "Configurações", icon: Settings, path: "/configuracoes" },
+  { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores", module: "fornecedores" },
+  { label: "Estoque", icon: Package, path: "/estoque", module: "estoque" },
+  { label: "Kits", icon: Boxes, path: "/kits", module: "kits" },
+  { label: "DRE", icon: TrendingUp, path: "/dre", module: "dre" },
+  { label: "Relatórios", icon: BarChart3, path: "/relatorios", module: "relatorios" },
+  { label: "Automações", icon: Bell, path: "/automacoes", module: "automacoes" },
+  { label: "Contratos", icon: PenTool, path: "/contratos", module: "contratos" },
+  { label: "Nota Fiscal", icon: Receipt, path: "/notas-fiscais", module: "notas_fiscais" },
+  { label: "Integrações", icon: Building2, path: "/integracoes", module: "integracoes" },
+  { label: "Auditoria", icon: Shield, path: "/auditoria", module: "auditoria" },
+  { label: "Configurações", icon: Settings, path: "/configuracoes", module: "configuracoes" },
 ];
 
 interface AppSidebarProps {
@@ -53,6 +56,23 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const location = useLocation();
+  const { canView } = usePermissions();
+
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      if (item.module && !canView(item.module)) return false;
+      return true;
+    }).map(item => {
+      if (item.children) {
+        const filteredChildren = item.children.filter(child =>
+          !child.module || canView(child.module)
+        );
+        if (filteredChildren.length === 0) return null;
+        return { ...item, children: filteredChildren };
+      }
+      return item;
+    }).filter(Boolean) as NavItem[];
+  }, [canView]);
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev =>
@@ -100,7 +120,7 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 md:py-2 px-2.5 md:px-1.5 space-y-1 md:space-y-0.5">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isOpen = openMenus.includes(item.label);
           const isActive = item.path ? location.pathname === item.path : item.children?.some(c => location.pathname === c.path);

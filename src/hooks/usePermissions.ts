@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 
-type PermissionModule =
+export type PermissionModule =
   | "dashboard"
   | "crm"
   | "projetos"
@@ -125,6 +125,27 @@ const rolePermissions: Record<string, Record<PermissionModule, PermissionAction[
     relatorios: [],
     automacoes: [],
     contratos: [],
+    notas_fiscais: [],
+    integracoes: [],
+    auditoria: [],
+    configuracoes: [],
+    financas_pessoais: ["view", "create", "edit", "delete"],
+  },
+  comercial: {
+    dashboard: ["view"],
+    crm: ["view", "create", "edit", "delete"],
+    projetos: ["view", "create", "edit"],
+    kits: ["view"],
+    cronograma: ["view"],
+    estoque: ["view"],
+    compras: [],
+    fornecedores: ["view"],
+    financeiro: [],
+    comissoes: [],
+    dre: [],
+    relatorios: ["view"],
+    automacoes: [],
+    contratos: ["view"],
     notas_fiscais: [],
     integracoes: [],
     auditoria: [],
