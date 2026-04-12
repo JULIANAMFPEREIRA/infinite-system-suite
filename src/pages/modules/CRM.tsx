@@ -1464,14 +1464,10 @@ const CRM = () => {
                             <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div>
                           <div className="space-y-0.5">
                             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Envio Proposta</label>
                             <input type="date" value={orcDataEnvio} onChange={e => setOrcDataEnvio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Pagamento à Vista</label>
-                            <input type="date" value={orcDataPgtoAvista} onChange={e => setOrcDataPgtoAvista(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
                           </div>
                         </div>
                       </div>
