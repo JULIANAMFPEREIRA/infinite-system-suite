@@ -217,7 +217,24 @@ const CRM = () => {
   };
 
   const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); };
-  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); };
+  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setSearchParams({}); };
+
+  // Auto-open client/budget from URL params (e.g. from Orcamentos page)
+  useEffect(() => {
+    const clienteId = searchParams.get("cliente_id");
+    const orcamentoId = searchParams.get("orcamento_id");
+    if (clienteId && clientes && clientes.length > 0 && viewMode === "list") {
+      const cliente = clientes.find((c: any) => c.id === clienteId);
+      if (cliente) {
+        setDetailClient(cliente);
+        setViewMode("detail");
+        if (orcamentoId) {
+          setActiveOrcamentoId(orcamentoId);
+        }
+        setSearchParams({});
+      }
+    }
+  }, [clientes, searchParams]);
 
   // ─── Orcamento management ───
   const createOrcamento = useMutation({
