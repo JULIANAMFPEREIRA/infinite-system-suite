@@ -1,5 +1,6 @@
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical } from "lucide-react";
 import jsPDF from "jspdf";
@@ -30,6 +31,7 @@ const CRM = () => {
   const empresaId = useEmpresa();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const createProjeto = useCreateProjeto();
   const createProjetoItem = useCreateProjetoItem();
   const { data: arquitetos } = useArquitetos();
@@ -215,7 +217,24 @@ const CRM = () => {
   };
 
   const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); };
-  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); };
+  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setSearchParams({}); };
+
+  // Auto-open client/budget from URL params (e.g. from Orcamentos page)
+  useEffect(() => {
+    const clienteId = searchParams.get("cliente_id");
+    const orcamentoId = searchParams.get("orcamento_id");
+    if (clienteId && clientes && clientes.length > 0 && viewMode === "list") {
+      const cliente = clientes.find((c: any) => c.id === clienteId);
+      if (cliente) {
+        setDetailClient(cliente);
+        setViewMode("detail");
+        if (orcamentoId) {
+          setActiveOrcamentoId(orcamentoId);
+        }
+        setSearchParams({});
+      }
+    }
+  }, [clientes, searchParams]);
 
   // ─── Orcamento management ───
   const createOrcamento = useMutation({
