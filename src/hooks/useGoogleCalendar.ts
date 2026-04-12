@@ -99,6 +99,42 @@ export const useGoogleCalendarEvents = (enabled: boolean) => {
   });
 };
 
+export const useCreateGoogleEvent = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (event: { summary: string; description?: string; startDateTime: string; endDateTime: string }) => {
+      return await invokeGoogle("create-event", event);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+};
+
+export const useUpdateGoogleEvent = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (event: { eventId: string; summary: string; description?: string; startDateTime: string; endDateTime: string }) => {
+      return await invokeGoogle("update-event", event);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+};
+
+export const useDeleteGoogleEvent = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      return await invokeGoogle("delete-event", { eventId });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+};
+
 export const useSyncVisitaToCalendar = () => {
   return useMutation({
     mutationFn: async ({ action, visita }: { action: "create" | "update" | "delete"; visita: any }) => {

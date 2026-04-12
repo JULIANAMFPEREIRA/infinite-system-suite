@@ -169,10 +169,10 @@ Deno.serve(async (req) => {
       }
 
       const now = new Date();
-      const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const maxDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const timeMin = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const maxDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const calRes = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(maxDate)}&maxResults=50&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`,
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(maxDate)}&maxResults=250&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
@@ -194,6 +194,99 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ events }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (action === "create-event") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const userId = await getUserId(authHeader);
+      if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const accessToken = await getValidAccessToken(userId);
+      if (!accessToken) return new Response(JSON.stringify({ error: "Not connected" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const body = await req.json();
+      const { summary, description, startDateTime, endDateTime } = body;
+
+      const event = {
+        summary: summary || "Sem título",
+        description: description || "",
+        start: { dateTime: startDateTime, timeZone: "America/Sao_Paulo" },
+        end: { dateTime: endDateTime, timeZone: "America/Sao_Paulo" },
+      };
+
+      const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Google Calendar create error:", errText);
+        return new Response(JSON.stringify({ error: "Failed to create event" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const created = await res.json();
+      return new Response(JSON.stringify({ success: true, event: { id: created.id, summary: created.summary, start: created.start?.dateTime || created.start?.date, end: created.end?.dateTime || created.end?.date, description: created.description || "" } }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "update-event") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const userId = await getUserId(authHeader);
+      if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const accessToken = await getValidAccessToken(userId);
+      if (!accessToken) return new Response(JSON.stringify({ error: "Not connected" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const body = await req.json();
+      const { eventId, summary, description, startDateTime, endDateTime } = body;
+
+      if (!eventId) return new Response(JSON.stringify({ error: "Missing eventId" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const event = {
+        summary: summary || "Sem título",
+        description: description || "",
+        start: { dateTime: startDateTime, timeZone: "America/Sao_Paulo" },
+        end: { dateTime: endDateTime, timeZone: "America/Sao_Paulo" },
+      };
+
+      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      });
+
+      if (!res.ok) {
+        console.error("Google Calendar update error:", await res.text());
+        return new Response(JSON.stringify({ error: "Failed to update event" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "delete-event") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const userId = await getUserId(authHeader);
+      if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const accessToken = await getValidAccessToken(userId);
+      if (!accessToken) return new Response(JSON.stringify({ error: "Not connected" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const body = await req.json();
+      const { eventId } = body;
+      if (!eventId) return new Response(JSON.stringify({ error: "Missing eventId" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      return new Response(JSON.stringify({ success: res.ok || res.status === 404 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {

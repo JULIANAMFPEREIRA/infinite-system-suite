@@ -4,18 +4,17 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-  AlertTriangle, Clock, TrendingUp, Receipt, ChevronLeft, ChevronRight
+  AlertTriangle, Clock, TrendingUp, Receipt
 } from "lucide-react";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
+import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
-import { format, differenceInDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isToday as isTodayFn, isBefore, subWeeks, addWeeks } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -23,10 +22,6 @@ const Dashboard = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
   const hoje = new Date();
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(hoje, { weekStartsOn: 1 }));
-  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
-  const { data: googleStatus } = useGoogleCalendarStatus();
-  const { data: googleEvents, isLoading: isLoadingGoogle } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
 
@@ -354,311 +349,19 @@ const Dashboard = () => {
 
       {/* 3. CONTEÚDO PRINCIPAL – 3 blocos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* BLOCO 1 – Agenda Semanal Navegável */}
-        <div className="lg:col-span-3 bg-card rounded-2xl border border-border/60 p-6 shadow-[0_2px_16px_-4px_hsl(var(--foreground)/0.06)] backdrop-blur-sm">
-          {/* Header with navigation */}
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <CalendarDays size={15} className="text-primary" />
-              </div>
-              Agenda da Semana
-            </h3>
-            <div className="flex items-center gap-2">
-              {googleStatus?.connected ? (
-                <span className="text-[10px] text-[hsl(152,69%,40%)] bg-[hsl(152,69%,40%)]/8 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,69%,40%)] animate-pulse" /> Google Agenda
-                </span>
-              ) : (
-                <button
-                  onClick={() => navigate("/integracoes")}
-                  className="text-[10px] text-primary bg-primary/8 px-3 py-1 rounded-full hover:bg-primary/15 transition-all cursor-pointer font-medium"
-                >
-                  Conectar Google Agenda →
-                </button>
-              )}
-              <button
-                onClick={() => setAgendaModalOpen(true)}
-                className="text-[11px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
-              >
-                Ver Completa <ArrowRight size={10} />
-              </button>
-            </div>
-          </div>
-
-          {/* Week navigation */}
-          <div className="flex items-center justify-between mt-3 mb-4">
-            <button
-              onClick={() => setCurrentWeekStart(prev => subWeeks(prev, 1))}
-              className="p-2 rounded-lg bg-secondary/40 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-all"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-foreground">
-                {format(currentWeekStart, "dd MMM", { locale: ptBR })} — {format(addDays(currentWeekStart, 6), "dd MMM yyyy", { locale: ptBR })}
-              </span>
-              {!isSameDay(currentWeekStart, startOfWeek(hoje, { weekStartsOn: 1 })) && (
-                <button
-                  onClick={() => setCurrentWeekStart(startOfWeek(hoje, { weekStartsOn: 1 }))}
-                  className="text-[10px] px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-all"
-                >
-                  Hoje
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => setCurrentWeekStart(prev => addWeeks(prev, 1))}
-              className="p-2 rounded-lg bg-secondary/40 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-all"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* Weekly calendar grid */}
-          {(() => {
-            const days = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
-            const visitas = stats?.proximasVisitas ?? [];
-
-            type UnifiedEvent = {
-              id: string;
-              title: string;
-              date: string;
-              hora: string;
-              descricao?: string;
-              source: "local" | "google";
-            };
-
-            // Filter local visitas to current week
-            const weekEnd = addDays(currentWeekStart, 6);
-            const localEvents: UnifiedEvent[] = (stats?.proximasVisitas ?? [])
-              .filter(v => {
-                if (!v.data) return false;
-                const d = new Date(v.data + "T00:00:00");
-                return d >= currentWeekStart && d <= weekEnd;
-              })
-              .map(v => ({
-                id: v.id,
-                title: v.projetoNome || "Visita técnica",
-                date: v.data ?? "",
-                hora: v.hora ?? "",
-                descricao: v.descricao ?? undefined,
-                source: "local" as const,
-              }));
-
-            const linkedGoogleIds = new Set(
-              visitas.filter(v => (v as any).google_event_id).map(v => (v as any).google_event_id)
-            );
-
-            const gEvents: UnifiedEvent[] = (googleEvents ?? [])
-              .filter(e => !linkedGoogleIds.has(e.id))
-              .map(e => {
-                const startStr = e.start || "";
-                let eventDate = "";
-                let eventTime = "";
-                if (startStr.includes("T")) {
-                  const dt = new Date(startStr);
-                  eventDate = format(dt, "yyyy-MM-dd");
-                  eventTime = format(dt, "HH:mm");
-                } else {
-                  eventDate = startStr;
-                }
-                return {
-                  id: e.id,
-                  title: e.summary || "Sem título",
-                  date: eventDate,
-                  hora: eventTime,
-                  descricao: e.description || undefined,
-                  source: "google" as const,
-                };
-              })
-              .filter(e => {
-                if (!e.date) return false;
-                const d = new Date(e.date + "T00:00:00");
-                return d >= currentWeekStart && d <= weekEnd;
-              });
-
-            const allEvents = [...localEvents, ...gEvents];
-            const isLoading = isLoadingGoogle && googleStatus?.connected;
-
-            return (
-              <div>
-                {isLoading ? (
-                  <div className="grid grid-cols-7 gap-1.5">
-                    {Array.from({ length: 7 }).map((_, i) => (
-                      <Skeleton key={i} className="h-[180px] rounded-xl" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-7 gap-1.5 overflow-x-auto">
-                    {days.map((day, idx) => {
-                      const isCurrentDay = isTodayFn(day);
-                      const dayEvents = allEvents
-                        .filter(ev => ev.date && isSameDay(new Date(ev.date + "T00:00:00"), day))
-                        .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""));
-                      const dayName = format(day, "EEE", { locale: ptBR });
-                      const dayNum = format(day, "dd");
-                      const monthName = format(day, "MMM", { locale: ptBR });
-
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex flex-col rounded-xl border min-h-[160px] transition-all ${
-                            isCurrentDay
-                              ? "border-primary/40 bg-primary/5 shadow-sm"
-                              : "border-border/40 bg-secondary/10 hover:bg-secondary/20"
-                          }`}
-                        >
-                          <div className={`text-center py-2 rounded-t-xl ${isCurrentDay ? "bg-primary/10" : ""}`}>
-                            <p className={`text-[10px] uppercase font-semibold tracking-wider ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}>
-                              {dayName}
-                            </p>
-                            <p className={`text-lg font-bold leading-tight ${isCurrentDay ? "text-primary" : "text-foreground"}`}>
-                              {dayNum}
-                            </p>
-                            <p className="text-[9px] text-muted-foreground uppercase">{monthName}</p>
-                          </div>
-
-                          <div className="flex-1 px-1.5 pb-1.5 space-y-1 overflow-y-auto max-h-[140px]">
-                            {dayEvents.length > 0 ? (
-                              dayEvents.map((ev, vi) => {
-                                const isPast = isBefore(new Date(ev.date + "T23:59:59"), hoje) && !isTodayFn(new Date(ev.date + "T00:00:00"));
-                                const tagColor = isCurrentDay
-                                  ? "border-l-[hsl(152,69%,40%)]"
-                                  : isPast
-                                  ? "border-l-destructive"
-                                  : "border-l-[hsl(210,70%,50%)]";
-                                const isGoogle = ev.source === "google";
-
-                                return (
-                                  <div
-                                    key={`${ev.source}-${ev.id}-${vi}`}
-                                    onClick={() => isGoogle ? undefined : navigate("/projetos")}
-                                    className={`group ${isGoogle ? "" : "cursor-pointer"} p-1.5 rounded-lg border-l-[3px] ${tagColor} bg-card/80 hover:bg-card hover:shadow-sm transition-all`}
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      <p className="text-[10px] font-semibold text-primary/80">{ev.hora || "—"}</p>
-                                      {isGoogle && (
-                                        <span className="text-[8px] px-1 py-px rounded bg-[hsl(210,70%,50%)]/15 text-[hsl(210,70%,50%)] font-medium leading-none">G</span>
-                                      )}
-                                    </div>
-                                    <p className="text-[10px] font-medium text-foreground truncate leading-tight">{ev.title}</p>
-                                    {ev.descricao && (
-                                      <p className="text-[9px] text-muted-foreground truncate">{ev.descricao}</p>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                <p className="text-[9px] text-muted-foreground/40">—</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => navigate("/cronograma")}
-                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/8 hover:bg-primary/15 text-primary text-xs font-medium transition-all border border-primary/10 hover:border-primary/20"
-                >
-                  <Plus size={13} />
-                  Nova Visita
-                </button>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Agenda Modal */}
-        <Dialog open={agendaModalOpen} onOpenChange={setAgendaModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CalendarDays size={18} className="text-primary" />
-                Agenda Completa
-              </DialogTitle>
-            </DialogHeader>
-            {(() => {
-              // Show 4 weeks in modal
-              const modalWeekStart = startOfWeek(hoje, { weekStartsOn: 1 });
-              const weeks = Array.from({ length: 4 }, (_, w) => {
-                const ws = addDays(modalWeekStart, w * 7);
-                return Array.from({ length: 7 }, (_, d) => addDays(ws, d));
-              });
-
-              const visitas = stats?.proximasVisitas ?? [];
-              const linkedGoogleIds = new Set(
-                visitas.filter(v => (v as any).google_event_id).map(v => (v as any).google_event_id)
-              );
-
-              const allGoogleEvents = (googleEvents ?? [])
-                .filter(e => !linkedGoogleIds.has(e.id))
-                .map(e => {
-                  const startStr = e.start || "";
-                  let eventDate = "";
-                  let eventTime = "";
-                  if (startStr.includes("T")) {
-                    const dt = new Date(startStr);
-                    eventDate = format(dt, "yyyy-MM-dd");
-                    eventTime = format(dt, "HH:mm");
-                  } else {
-                    eventDate = startStr;
-                  }
-                  return { id: e.id, title: e.summary || "Sem título", date: eventDate, hora: eventTime, descricao: e.description || undefined, source: "google" as const };
-                });
-
-              const allLocalEvents = visitas.map(v => ({
-                id: v.id,
-                title: v.projetoNome || "Visita técnica",
-                date: v.data ?? "",
-                hora: v.hora ?? "",
-                descricao: v.descricao ?? undefined,
-                source: "local" as const,
-              }));
-
-              const mergedEvents = [...allLocalEvents, ...allGoogleEvents];
-
-              return (
-                <div className="space-y-4">
-                  {weeks.map((week, wi) => (
-                    <div key={wi}>
-                      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
-                        {format(week[0], "dd MMM", { locale: ptBR })} — {format(week[6], "dd MMM", { locale: ptBR })}
-                      </p>
-                      <div className="grid grid-cols-7 gap-1">
-                        {week.map((day, di) => {
-                          const isCurrentDay = isTodayFn(day);
-                          const dayEvents = mergedEvents
-                            .filter(ev => ev.date && isSameDay(new Date(ev.date + "T00:00:00"), day))
-                            .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""));
-
-                          return (
-                            <div key={di} className={`rounded-lg border min-h-[80px] p-1 ${isCurrentDay ? "border-primary/40 bg-primary/5" : "border-border/30 bg-secondary/5"}`}>
-                              <p className={`text-[9px] text-center font-semibold ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}>
-                                {format(day, "EEE dd", { locale: ptBR })}
-                              </p>
-                              <div className="space-y-0.5 mt-1">
-                                {dayEvents.map((ev, ei) => (
-                                  <div key={ei} className="px-1 py-0.5 rounded bg-card/80 border-l-2 border-l-primary/40">
-                                    <p className="text-[8px] font-medium text-foreground truncate">{ev.hora} {ev.title}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </DialogContent>
-        </Dialog>
+        {/* BLOCO 1 – Agenda Interativa */}
+        <InteractiveCalendar
+          localVisitas={(stats?.proximasVisitas ?? []).map(v => ({
+            id: v.id,
+            data: v.data ?? null,
+            hora: v.hora ?? null,
+            descricao: v.descricao ?? null,
+            status_visita: v.status_visita,
+            projeto_id: v.projeto_id,
+            google_event_id: (v as any).google_event_id ?? null,
+            projetoNome: v.projetoNome,
+          }))}
+        />
 
         {/* BLOCO 2 – Itens a Comprar */}
         <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
