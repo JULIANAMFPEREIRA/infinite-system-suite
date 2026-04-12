@@ -352,6 +352,7 @@ const CRM = () => {
         observacoes_pagamento: `Sincronizado em ${new Date().toLocaleString("pt-BR")}`,
       }).eq("id", projId);
     } else {
+      const hoje = new Date().toISOString().split("T")[0];
       const newProjeto = await createProjeto.mutateAsync({
         nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
         descricao: descParts.join(" | "),
@@ -362,6 +363,7 @@ const CRM = () => {
         forma_pagamento: simFormaPgto || null,
         observacoes_pagamento: `Criado em ${new Date().toLocaleString("pt-BR")}`,
         orcamento_id: orcId,
+        data_inicio: hoje,
       } as any);
       projId = newProjeto.id;
     }
