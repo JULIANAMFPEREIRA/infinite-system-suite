@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionModule } from "@/hooks/usePermissions";
 import AppLayout from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -47,6 +49,12 @@ const RoleRoute = ({ children, allowedRoles }: { children: React.ReactNode; allo
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!roles.some(r => allowedRoles.includes(r))) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const ModuleRoute = ({ children, module }: { children: React.ReactNode; module: PermissionModule }) => {
+  const { canView } = usePermissions();
+  if (!canView(module)) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
