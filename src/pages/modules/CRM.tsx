@@ -542,6 +542,25 @@ const CRM = () => {
   const autoCreateProject = async (clienteId: string, clienteNome: string, endObra: string | null, endCli: string | null, arqId: string | null, notas?: string | null) => {
     if (!empresaId) return;
 
+    // Find approved orcamento first to check for existing project
+    const approvedOrc = orcamentos?.find(o => o.aprovado);
+
+    // Check if a project already exists for this client's approved orcamento
+    if (approvedOrc) {
+      const { data: existingProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", approvedOrc.id).eq("deletado", false);
+      if (existingProjects && existingProjects.length > 0) {
+        toast.info("Já existe um projeto vinculado a este orçamento.");
+        return;
+      }
+    } else {
+      // No approved orcamento — check if any project exists for this client
+      const { data: existingClientProjects } = await supabase.from("projetos").select("id").eq("cliente_id", clienteId).eq("deletado", false);
+      if (existingClientProjects && existingClientProjects.length > 0) {
+        toast.info("Já existe um projeto vinculado a este cliente.");
+        return;
+      }
+    }
+
     // Find approved orcamento
     const approvedOrc = orcamentos?.find(o => o.aprovado);
     
