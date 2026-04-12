@@ -217,8 +217,8 @@ const CRM = () => {
     setStatusCrm(c.status_crm ?? "lead"); setShowForm(true);
   };
 
-  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); };
-  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setSearchParams({}); };
+  const openDetail = (c: any) => { setDetailClient(c); setViewMode("detail"); setActiveOrcamentoId(null); setActiveTab("dados"); };
+  const backToList = () => { setViewMode("list"); setDetailClient(null); setActiveOrcamentoId(null); setActiveTab("dados"); setSearchParams({}); };
 
   // Auto-open client/budget from URL params (e.g. from Orcamentos page)
   useEffect(() => {
