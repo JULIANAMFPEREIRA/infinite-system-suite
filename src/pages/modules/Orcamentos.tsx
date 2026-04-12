@@ -1,21 +1,41 @@
 import { useState } from "react";
-import { FileText, Search, ExternalLink } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { FileText, Search, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import {
   Table, TableHeader, TableBody, TableRow,
   TableHead, TableCell,
 } from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Orcamentos = () => {
   const empresaId = useEmpresa();
+  const qc = useQueryClient();
   const [busca, setBusca] = useState("");
+  const [editOrc, setEditOrc] = useState<any>(null);
+  const [deleteOrcId, setDeleteOrcId] = useState<string | null>(null);
+
+  // Edit form state
+  const [editNome, setEditNome] = useState("");
+  const [editFrete, setEditFrete] = useState(0);
+  const [editImposto, setEditImposto] = useState(0);
+  const [editFreteTipo, setEditFreteTipo] = useState("");
+  const [editDataEnvio, setEditDataEnvio] = useState("");
+  const [editDataPagAvista, setEditDataPagAvista] = useState("");
 
   const { data: orcamentos, isLoading } = useQuery({
     queryKey: ["orcamentos_listagem", empresaId],
@@ -29,6 +49,75 @@ const Orcamentos = () => {
     },
     enabled: !!empresaId,
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: { id: string; nome: string; frete: number; imposto: number; frete_tipo: string | null; data_envio_proposta: string | null; data_pagamento_avista: string | null }) => {
+      const { id, ...rest } = payload;
+      const { error } = await supabase.from("crm_orcamentos").update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+      qc.invalidateQueries({ queryKey: ["crm_orcamentos"] });
+      toast.success("Orçamento atualizado!");
+      setEditOrc(null);
+    },
+    onError: () => toast.error("Erro ao atualizar orçamento."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete linked items first
+      const { error: itemsErr } = await supabase.from("crm_itens").delete().eq("orcamento_id", id);
+      if (itemsErr) throw itemsErr;
+      // Delete linked project if exists
+      const { data: proj } = await supabase.from("projetos").select("id").eq("orcamento_id", id);
+      if (proj && proj.length > 0) {
+        for (const p of proj) {
+          await supabase.from("financeiro_receber").delete().eq("projeto_id", p.id);
+          await supabase.from("financeiro_pagar").delete().eq("projeto_id", p.id);
+          await supabase.from("comissoes").delete().eq("projeto_id", p.id);
+          await supabase.from("necessidades_compra").delete().eq("projeto_id", p.id);
+          await supabase.from("projeto_itens").delete().eq("projeto_id", p.id);
+          await supabase.from("projetos").delete().eq("id", p.id);
+        }
+      }
+      const { error } = await supabase.from("crm_orcamentos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+      qc.invalidateQueries({ queryKey: ["crm_orcamentos"] });
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+      qc.invalidateQueries({ queryKey: ["financeiro"] });
+      toast.success("Orçamento excluído com sucesso!");
+      setDeleteOrcId(null);
+    },
+    onError: () => toast.error("Erro ao excluir orçamento."),
+  });
+
+  const openEdit = (orc: any) => {
+    setEditNome(orc.nome ?? "");
+    setEditFrete(orc.frete ?? 0);
+    setEditImposto(orc.imposto ?? 0);
+    setEditFreteTipo(orc.frete_tipo ?? "");
+    setEditDataEnvio(orc.data_envio_proposta ?? "");
+    setEditDataPagAvista(orc.data_pagamento_avista ?? "");
+    setEditOrc(orc);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editOrc) return;
+    updateMutation.mutate({
+      id: editOrc.id,
+      nome: editNome,
+      frete: editFrete,
+      imposto: editImposto,
+      frete_tipo: editFreteTipo || null,
+      data_envio_proposta: editDataEnvio || null,
+      data_pagamento_avista: editDataPagAvista || null,
+    });
+  };
 
   const filtered = (orcamentos ?? []).filter((o) => {
     const term = busca.toLowerCase();
@@ -123,17 +212,34 @@ const Orcamentos = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => {
-                          // Navigate to client CRM view with this budget
-                          window.location.href = `/crm`;
-                        }}
-                      >
-                        <ExternalLink size={12} /> Abrir
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          title="Editar"
+                          onClick={() => openEdit(orc)}
+                        >
+                          <Pencil size={13} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          title="Excluir"
+                          onClick={() => setDeleteOrcId(orc.id)}
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => { window.location.href = `/crm`; }}
+                        >
+                          <ExternalLink size={12} /> Abrir
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -142,6 +248,77 @@ const Orcamentos = () => {
           </Table>
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editOrc} onOpenChange={(open) => { if (!open) setEditOrc(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Editar Orçamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Nome do Orçamento</Label>
+              <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Frete (R$)</Label>
+                <Input type="number" value={editFrete} onChange={(e) => setEditFrete(Number(e.target.value))} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Imposto (R$)</Label>
+                <Input type="number" value={editImposto} onChange={(e) => setEditImposto(Number(e.target.value))} className="h-8 text-xs" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo de Frete</Label>
+              <select value={editFreteTipo} onChange={(e) => setEditFreteTipo(e.target.value)} className="w-full h-8 text-xs rounded-md border border-input bg-background px-3">
+                <option value="">Nenhum</option>
+                <option value="transportadora">Transportadora</option>
+                <option value="correios">Correios</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Data Envio Proposta</Label>
+                <Input type="date" value={editDataEnvio} onChange={(e) => setEditDataEnvio(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Data Pgto. à Vista</Label>
+                <Input type="date" value={editDataPagAvista} onChange={(e) => setEditDataPagAvista(e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditOrc(null)} className="text-xs">Cancelar</Button>
+            <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending} className="text-xs">
+              {updateMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteOrcId} onOpenChange={(open) => { if (!open) setDeleteOrcId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm">Excluir Orçamento</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Esta ação excluirá o orçamento, seus itens vinculados, e quaisquer projetos, financeiros e comissões gerados a partir dele. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (deleteOrcId) deleteMutation.mutate(deleteOrcId); }}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
