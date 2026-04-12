@@ -265,28 +265,49 @@ const Configuracoes = () => {
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-8"></th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Roles</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
             </tr></thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
-                  <td className="px-2.5 py-1.5 font-medium">{u.full_name ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">
-                    <div className="flex flex-wrap gap-1">
-                      {u.roles.map(r => (
-                        <span key={r} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium">
-                          {r}
-                          <button onClick={() => handleRemoveRole(u.id, r)} className="hover:text-destructive"><Trash2 size={9} /></button>
-                        </span>
-                      ))}
-                      {u.roles.length === 0 && <span className="text-muted-foreground">—</span>}
-                    </div>
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center text-muted-foreground font-mono text-[10px]">{u.id.slice(0, 8)}...</td>
-                </tr>
-              ))}
+              {users.map(u => {
+                const isUserAdmin = u.roles.includes("admin");
+                const isExpanded = expandedUserId === u.id;
+                return (
+                  <>
+                    <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => setExpandedUserId(isExpanded ? null : u.id)}>
+                      <td className="px-2 py-1.5 text-muted-foreground">
+                        {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                      </td>
+                      <td className="px-2.5 py-1.5 font-medium">{u.full_name ?? "—"}</td>
+                      <td className="px-2.5 py-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {u.roles.map(r => (
+                            <span key={r} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium">
+                              {r}
+                              <button onClick={(e) => { e.stopPropagation(); handleRemoveRole(u.id, r); }} className="hover:text-destructive"><Trash2 size={9} /></button>
+                            </span>
+                          ))}
+                          {u.roles.length === 0 && <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-2.5 py-1.5 text-center">
+                        <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
+                          <Shield size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${u.id}-perms`} className="border-b border-border">
+                        <td colSpan={4} className="px-3 py-3 bg-muted/30">
+                          <UserPermissionsEditor userId={u.id} userName={u.full_name ?? "Usuário"} isAdmin={isUserAdmin} />
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
