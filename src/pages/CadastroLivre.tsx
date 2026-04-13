@@ -68,6 +68,7 @@ const CadastroLivre = () => {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
+  const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [responsavel, setResponsavel] = useState("");
