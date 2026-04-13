@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, CheckCircle2, Loader2 } from "lucide-react";
+import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, Copy, Check } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
 import { ViewToggle } from "@/components/kanban/ViewToggle";
@@ -47,8 +47,11 @@ const Orcamentos = () => {
   const [convertNome, setConvertNome] = useState("");
   const [convertTelefone, setConvertTelefone] = useState("");
   const [convertEmail, setConvertEmail] = useState("");
-  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
+  // Form link modal state
+  const [formLinkOrc, setFormLinkOrc] = useState<any>(null);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
@@ -206,47 +209,6 @@ const Orcamentos = () => {
     setConvertOrc(orc);
   };
 
-  const generateFormLink = async (orcId: string) => {
-    if (!empresaId) return;
-    setGeneratingLink(orcId);
-    try {
-      // Check if token already exists
-      const { data: existing } = await supabase
-        .from("formulario_tokens")
-        .select("token, status")
-        .eq("orcamento_id", orcId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      let tokenValue: string;
-
-      if (existing && existing.length > 0 && (existing[0] as any).status === "pendente") {
-        tokenValue = (existing[0] as any).token;
-      } else {
-        const { data: newToken, error } = await supabase
-          .from("formulario_tokens")
-          .insert({
-            orcamento_id: orcId,
-            empresa_id: empresaId,
-          } as any)
-          .select("token")
-          .single();
-        if (error) throw error;
-        tokenValue = (newToken as any).token;
-      }
-
-      const link = `${window.location.origin}/formulario?token=${tokenValue}`;
-      await navigator.clipboard.writeText(link);
-      setCopiedLink(orcId);
-      toast.success("Link copiado! Envie ao cliente para preenchimento dos dados.");
-      setTimeout(() => setCopiedLink(null), 3000);
-    } catch (err) {
-      toast.error("Erro ao gerar link do formulário");
-    } finally {
-      setGeneratingLink(null);
-    }
-  };
-
   const openEdit = (orc: any) => {
     setEditNome(orc.nome ?? "");
     setEditFrete(orc.frete ?? 0);
@@ -255,6 +217,46 @@ const Orcamentos = () => {
     setEditDataEnvio(orc.data_envio_proposta ?? "");
     setEditDataPagAvista(orc.data_pagamento_avista ?? "");
     setEditOrc(orc);
+  };
+
+  const generateFormLink = async (orc: any) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/formulario-cliente`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            orcamento_id: orc.id,
+            empresa_id: empresaId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao gerar link");
+      }
+
+      const data = await response.json();
+      const baseUrl = window.location.origin;
+      const fullLink = `${baseUrl}/formulario?token=${data.token}`;
+      setGeneratedLink(fullLink);
+      setFormLinkOrc(orc);
+      toast.success("Link gerado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar link do formulário");
+    }
+  };
+
+  const copyLinkToClipboard = () => {
+    navigator.clipboard.writeText(generatedLink);
+    setLinkCopied(true);
+    toast.success("Link copiado para a área de transferência!");
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const handleSaveEdit = () => {
@@ -482,16 +484,6 @@ const Orcamentos = () => {
                           size="sm"
                           variant="ghost"
                           className="h-7 w-7 p-0"
-                          title="Solicitar dados do cliente"
-                          disabled={generatingLink === orc.id}
-                          onClick={() => generateFormLink(orc.id)}
-                        >
-                          {copiedLink === orc.id ? <CheckCircle2 size={13} className="text-success" /> : generatingLink === orc.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0"
                           title="Editar"
                           onClick={() => openEdit(orc)}
                         >
@@ -507,14 +499,25 @@ const Orcamentos = () => {
                           <Trash2 size={13} />
                         </Button>
                         {!isAvulso && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs gap-1"
-                            onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
-                          >
-                            <ExternalLink size={12} /> Abrir
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
+                            >
+                              <ExternalLink size={12} /> Abrir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                              title="Solicitar dados do cliente"
+                              onClick={() => generateFormLink(orc)}
+                            >
+                              <Link2 size={12} /> Solicitar Dados
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -706,6 +709,46 @@ const Orcamentos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Form Link Modal */}
+      <Dialog open={!!formLinkOrc} onOpenChange={(open) => { if (!open) { setFormLinkOrc(null); setGeneratedLink(""); setLinkCopied(false); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Link2 size={16} className="text-primary" /> Link de Cadastro Gerado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Envie este link ao cliente para que ele preencha seus dados de cadastro:
+          </p>
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                value={generatedLink}
+                readOnly
+                className="h-10 text-xs pr-24 font-mono bg-muted"
+              />
+              <Button
+                size="sm"
+                variant={linkCopied ? "outline" : "default"}
+                className="absolute right-1 top-1 h-8 text-xs gap-1"
+                onClick={copyLinkToClipboard}
+              >
+                {linkCopied ? <Check size={14} /> : <Copy size={14} />}
+                {linkCopied ? "Copiado!" : "Copiar"}
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              O link é único e expira após ser usado. Compartilhe apenas com o cliente deste orçamento.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setFormLinkOrc(null); setGeneratedLink(""); setLinkCopied(false); }} className="text-xs">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

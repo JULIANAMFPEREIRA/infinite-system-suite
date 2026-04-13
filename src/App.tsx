@@ -34,7 +34,6 @@ import Orcamentos from "./pages/modules/Orcamentos";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
-import FormularioCliente from "./pages/FormularioCliente";
 
 const queryClient = new QueryClient();
 
@@ -68,7 +67,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/formulario" element={<FormularioCliente />} />
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />

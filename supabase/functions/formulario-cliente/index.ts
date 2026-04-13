@@ -1,174 +1,233 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-  const url = new URL(req.url);
-
-  // GET: validate token and return form info
-  if (req.method === "GET") {
-    const token = url.searchParams.get("token");
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Token obrigatório" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error("Missing Supabase credentials");
     }
 
-    const { data, error } = await supabase
-      .from("formulario_tokens")
-      .select("id, token, status, orcamento_id, crm_orcamentos(nome, cliente_nome_avulso), empresas(nome, nome_fantasia)")
-      .eq("token", token)
-      .single();
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    if (error || !data) {
-      return new Response(JSON.stringify({ error: "Link inválido ou expirado" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // GET - Validate token and return form context
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      const token = url.searchParams.get("token");
 
-    if (data.status === "preenchido") {
-      return new Response(JSON.stringify({ error: "Este formulário já foi preenchido", already_filled: true }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({
-      token_id: data.id,
-      empresa: (data as any).empresas?.nome_fantasia || (data as any).empresas?.nome || "",
-      orcamento: (data as any).crm_orcamentos?.nome || "",
-      cliente_nome: (data as any).crm_orcamentos?.cliente_nome_avulso || "",
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // POST: submit form data
-  if (req.method === "POST") {
-    const body = await req.json();
-    const { token, nome, cpf_cnpj, email, telefone, endereco } = body;
-
-    if (!token || !nome?.trim()) {
-      return new Response(JSON.stringify({ error: "Token e nome são obrigatórios" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Validate token
-    const { data: tokenData, error: tokenErr } = await supabase
-      .from("formulario_tokens")
-      .select("*, crm_orcamentos(cliente_id, empresa_id)")
-      .eq("token", token)
-      .single();
-
-    if (tokenErr || !tokenData) {
-      return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (tokenData.status === "preenchido") {
-      return new Response(JSON.stringify({ error: "Formulário já preenchido" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const empresaId = tokenData.empresa_id;
-    const orcamento = (tokenData as any).crm_orcamentos;
-    const clienteId = orcamento?.cliente_id || tokenData.cliente_id;
-
-    const dadosCliente = {
-      nome: nome.trim().toUpperCase(),
-      cpf_cnpj: cpf_cnpj?.trim() || null,
-      email: email?.trim()?.toLowerCase() || null,
-      telefone: telefone?.trim() || null,
-      endereco: endereco?.trim()?.toUpperCase() || null,
-    };
-
-    if (clienteId) {
-      // Update existing client
-      const { error: updateErr } = await supabase
-        .from("clientes")
-        .update(dadosCliente)
-        .eq("id", clienteId);
-      if (updateErr) {
-        return new Response(JSON.stringify({ error: "Erro ao atualizar cliente" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: "Token is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    } else {
-      // Create new client and link to orcamento
-      const { data: newClient, error: createErr } = await supabase
-        .from("clientes")
+
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("formulario_tokens")
+        .select("*, crm_orcamentos(nome)")
+        .eq("token", token)
+        .eq("status", "pendente")
+        .single();
+
+      if (tokenError || !tokenData) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido ou expirado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          token: tokenData.token,
+          orcamento_nome: tokenData.crm_orcamentos?.nome,
+          status: tokenData.status,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // POST - Generate new token for an orcamento
+    if (req.method === "POST") {
+      const { orcamento_id, empresa_id } = await req.json();
+
+      if (!orcamento_id || !empresa_id) {
+        return new Response(
+          JSON.stringify({ error: "Orcamento ID and Empresa ID are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Generate unique token
+      const token = crypto.randomUUID();
+
+      const { data, error } = await supabase
+        .from("formulario_tokens")
         .insert({
-          ...dadosCliente,
-          empresa_id: empresaId,
-          status_crm: "proposta",
+          token,
+          orcamento_id,
+          empresa_id,
+          status: "pendente",
         })
         .select()
         .single();
 
-      if (createErr) {
-        return new Response(JSON.stringify({ error: "Erro ao criar cliente" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (error) {
+        console.error("Error creating token:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to create token" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // Link orcamento to new client
-      if (tokenData.orcamento_id) {
-        await supabase
-          .from("crm_orcamentos")
-          .update({ cliente_id: newClient.id, is_avulso: false })
-          .eq("id", tokenData.orcamento_id);
-
-        await supabase
-          .from("crm_itens")
-          .update({ cliente_id: newClient.id })
-          .eq("orcamento_id", tokenData.orcamento_id);
-      }
-
-      // Update token with client id
-      await supabase
-        .from("formulario_tokens")
-        .update({ cliente_id: newClient.id })
-        .eq("id", tokenData.id);
+      return new Response(
+        JSON.stringify({ token: data.token }),
+        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Mark token as filled
-    await supabase
-      .from("formulario_tokens")
-      .update({
-        status: "preenchido",
-        dados_preenchidos: dadosCliente,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", tokenData.id);
+    // PUT - Submit form data
+    if (req.method === "PUT") {
+      const { token, nome, cpf_cnpj, email, telefone, endereco } = await req.json();
 
-    return new Response(JSON.stringify({ success: true, message: "Dados enviados com sucesso!" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      if (!token || !nome) {
+        return new Response(
+          JSON.stringify({ error: "Token and nome are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate token
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("formulario_tokens")
+        .select("*, crm_orcamentos(cliente_id, cliente_nome_avulso, is_avulso)")
+        .eq("token", token)
+        .eq("status", "pendente")
+        .single();
+
+      if (tokenError || !tokenData) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido ou já utilizado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { orcamento_id, empresa_id } = tokenData;
+
+      // Check if client already exists (for avulso orçamentos)
+      let cliente_id = tokenData.crm_orcamentos?.cliente_id;
+
+      if (!cliente_id) {
+        // Create new cliente
+        const { data: newClient, error: clientError } = await supabase
+          .from("clientes")
+          .insert({
+            empresa_id,
+            nome: nome.toUpperCase(),
+            cpf_cnpj: cpf_cnpj || null,
+            email: email || null,
+            telefone: telefone || null,
+            endereco: endereco || null,
+            status_crm: "proposta",
+          })
+          .select()
+          .single();
+
+        if (clientError) {
+          console.error("Error creating client:", clientError);
+          return new Response(
+            JSON.stringify({ error: "Failed to create client" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        cliente_id = newClient.id;
+      } else {
+        // Update existing cliente
+        const { error: updateError } = await supabase
+          .from("clientes")
+          .update({
+            nome: nome.toUpperCase(),
+            cpf_cnpj: cpf_cnpj || null,
+            email: email || null,
+            telefone: telefone || null,
+            endereco: endereco || null,
+          })
+          .eq("id", cliente_id);
+
+        if (updateError) {
+          console.error("Error updating client:", updateError);
+          return new Response(
+            JSON.stringify({ error: "Failed to update client" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Update orçamento to link to cliente and remove avulso flag
+      const { error: orcError } = await supabase
+        .from("crm_orcamentos")
+        .update({
+          cliente_id,
+          is_avulso: false,
+          cliente_nome_avulso: null,
+          cliente_telefone_avulso: null,
+        })
+        .eq("id", orcamento_id);
+
+      if (orcError) {
+        console.error("Error updating orçamento:", orcError);
+      }
+
+      // Update crm_itens to link to the new cliente
+      const { error: itensError } = await supabase
+        .from("crm_itens")
+        .update({ cliente_id })
+        .eq("orcamento_id", orcamento_id);
+
+      if (itensError) {
+        console.error("Error updating itens:", itensError);
+      }
+
+      // Mark token as completed
+      const { error: tokenUpdateError } = await supabase
+        .from("formulario_tokens")
+        .update({
+          status: "preenchido",
+          dados_preenchidos: { nome, cpf_cnpj, email, telefone, endereco },
+        })
+        .eq("token", token);
+
+      if (tokenUpdateError) {
+        console.error("Error updating token:", tokenUpdateError);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, cliente_id }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("Error processing request:", err);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
-
-  return new Response(JSON.stringify({ error: "Método não permitido" }), {
-    status: 405,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
 });
