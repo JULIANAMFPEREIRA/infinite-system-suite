@@ -74,6 +74,14 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
       </div>
       <GlobalSearch />
       <div className="flex items-center gap-2 md:gap-4">
+        <button
+          onClick={() => setShowLinkModal(true)}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+          title="Gerar link de cadastro"
+        >
+          <Link2 size={14} />
+          <span className="hidden md:inline">Link Cadastro</span>
+        </button>
         <div className="relative">
           <button onClick={() => setShowNotif(!showNotif)} className="relative p-2 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <Bell size={16} />
