@@ -207,6 +207,23 @@ const Orcamentos = () => {
         <p className="text-muted-foreground text-sm">Carregando...</p>
       ) : filtered.length === 0 ? (
         <p className="text-muted-foreground text-sm">Nenhum orçamento encontrado.</p>
+      ) : viewType === "kanban" ? (
+        <KanbanBoard
+          columns={orcKanbanColumns}
+          items={kanbanItems}
+          onMove={handleKanbanMove}
+          onCardClick={(item) => navigate(`/crm?cliente_id=${item.orc.cliente_id}&orcamento_id=${item.orc.id}`)}
+          renderCard={(item) => (
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-foreground truncate">{(item.orc.clientes as any)?.nome ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{item.orc.nome}</p>
+              <p className="text-xs font-bold text-foreground">{formatCurrency(item.total)}</p>
+              {item.orc.data_envio_proposta && (
+                <p className="text-[10px] text-muted-foreground">{new Date(item.orc.data_envio_proposta).toLocaleDateString("pt-BR")}</p>
+              )}
+            </div>
+          )}
+        />
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
