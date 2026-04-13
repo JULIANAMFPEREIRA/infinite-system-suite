@@ -381,7 +381,7 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: (item as any).tipo === "servico" ? "servico" : "produto",
+        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
         produto_id: item.produto_id || null,
         rt_percentual: Number((item as any).rt_comissao) || 0,
       }));
