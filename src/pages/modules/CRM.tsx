@@ -820,8 +820,8 @@ const CRM = () => {
     mutationFn: async () => {
       if (!itemDesc.trim() || !detailClient?.id) return;
 
-      // Auto-create product if it doesn't exist in catalog
-      if (!editItemId && empresaId) {
+      // Auto-create product if it doesn't exist in catalog (only for produto type)
+      if (!editItemId && empresaId && itemTipo === "produto") {
         const { data: existingProduct } = await supabase
           .from("produtos")
           .select("id")
@@ -841,10 +841,10 @@ const CRM = () => {
       }
 
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any)).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, tipo: itemTipo } as any)).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId } as any));
+        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
         if (error) throw error;
       }
     },
