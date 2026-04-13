@@ -68,6 +68,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/formulario" element={<FormularioCliente />} />
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />
