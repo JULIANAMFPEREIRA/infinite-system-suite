@@ -1,6 +1,6 @@
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState } from "react";
-import { ShoppingCart, Plus, Pencil, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Pencil, Trash2, Filter } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -9,8 +9,24 @@ import type { Database } from "@/integrations/supabase/types";
 import { isNotEmpty, isPositiveNumber, isGreaterThanZero } from "@/lib/validations";
 
 type StatusCompra = Database["public"]["Enums"]["status_compra"];
-const statusOptions: StatusCompra[] = ["pendente", "aprovada", "entregue", "cancelada"];
-const statusColor = (s: string) => s === "aprovada" ? "bg-success/15 text-success" : s === "pendente" ? "bg-warning/15 text-warning" : s === "entregue" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive";
+const statusOptions: StatusCompra[] = ["pendente", "em_compra", "comprado", "instalado", "cancelada"];
+const statusLabels: Record<string, string> = {
+  pendente: "PENDENTE",
+  em_compra: "EM COMPRA",
+  comprado: "COMPRADO",
+  instalado: "INSTALADO",
+  aprovada: "APROVADA",
+  entregue: "ENTREGUE",
+  cancelada: "CANCELADA",
+};
+const statusColor = (s: string) =>
+  s === "pendente" ? "bg-warning/15 text-warning" :
+  s === "em_compra" ? "bg-blue-500/15 text-blue-600" :
+  s === "comprado" || s === "aprovada" ? "bg-success/15 text-success" :
+  s === "instalado" || s === "entregue" ? "bg-primary/15 text-primary" :
+  "bg-destructive/15 text-destructive";
+
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const Compras = () => {
   const empresaId = useEmpresa();
@@ -23,11 +39,17 @@ const Compras = () => {
   const [fornecedorId, setFornecedorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
   const [produtoId, setProdutoId] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
+  const [filterProjeto, setFilterProjeto] = useState<string>("todos");
 
   const { data: compras, isLoading } = useQuery({
     queryKey: ["compras", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("compras").select("*, fornecedores(nome), projetos(nome)").eq("deletado", false).order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("compras")
+        .select("*, fornecedores(nome), projetos(nome, cliente_id, clientes(nome)), produtos(nome)")
+        .eq("deletado", false)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -81,15 +103,32 @@ const Compras = () => {
     mutationFn: async ({ id, status, produto_id, projeto_id }: { id: string; status: StatusCompra; produto_id?: string | null; projeto_id?: string | null }) => {
       const { error } = await supabase.from("compras").update({ status }).eq("id", id);
       if (error) throw error;
-      // Auto-insert estoque when entregue (check for existing to avoid duplicates)
-      if (status === "entregue" && produto_id && empresaId) {
+      // Auto-insert estoque when instalado or entregue
+      if ((status === "instalado" || status === "entregue") && produto_id && empresaId) {
         const { data: existing } = await supabase.from("estoque_itens").select("id").eq("compra_id", id).limit(1);
         if (!existing || existing.length === 0) {
-          await supabase.from("estoque_itens").insert({ empresa_id: empresaId, produto_id, compra_id: id, projeto_id: projeto_id || null, status: "disponivel", localizacao: "Depósito" });
+          await supabase.from("estoque_itens").insert({
+            empresa_id: empresaId, produto_id, compra_id: id,
+            projeto_id: projeto_id || null,
+            status: status === "instalado" ? "instalado" : "disponivel",
+            localizacao: status === "instalado" ? "Instalado no projeto" : "Depósito",
+          });
         }
       }
+      // Sync necessidades_compra status if linked
+      if (status === "comprado" || status === "em_compra" || status === "instalado") {
+        await supabase.from("necessidades_compra" as any)
+          .update({ status: status === "instalado" ? "comprado" : status === "comprado" ? "comprado" : "pendente" } as any)
+          .eq("compra_id", id);
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); qc.invalidateQueries({ queryKey: ["estoque_itens"] }); qc.invalidateQueries({ queryKey: ["projetos"] }); toast.success("Status atualizado"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["compras"] });
+      qc.invalidateQueries({ queryKey: ["estoque_itens"] });
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+      qc.invalidateQueries({ queryKey: ["necessidades_compra"] });
+      toast.success("Status atualizado");
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -98,6 +137,29 @@ const Compras = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); toast.success("Compra excluída"); },
     onError: (err: any) => toast.error(err.message),
   });
+
+  // Filtered data
+  const filtered = compras?.filter(c => {
+    if (filterStatus !== "todos" && c.status !== filterStatus) return false;
+    if (filterProjeto !== "todos" && c.projeto_id !== filterProjeto) return false;
+    return true;
+  }) ?? [];
+
+  // Unique projects from compras for filter
+  const projetosComCompras = compras?.reduce((acc: { id: string; nome: string }[], c) => {
+    if (c.projeto_id && !(acc.find(p => p.id === c.projeto_id))) {
+      acc.push({ id: c.projeto_id, nome: (c.projetos as any)?.nome ?? "—" });
+    }
+    return acc;
+  }, []) ?? [];
+
+  // Summary counts
+  const counts = {
+    pendente: compras?.filter(c => c.status === "pendente").length ?? 0,
+    em_compra: compras?.filter(c => c.status === "em_compra").length ?? 0,
+    comprado: compras?.filter(c => c.status === "comprado" || c.status === "aprovada").length ?? 0,
+    instalado: compras?.filter(c => c.status === "instalado" || c.status === "entregue").length ?? 0,
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -109,6 +171,36 @@ const Compras = () => {
         <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
           <Plus size={14} /> Nova Compra
         </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {[
+          { label: "Pendentes", value: counts.pendente, color: "text-warning" },
+          { label: "Em compra", value: counts.em_compra, color: "text-blue-600" },
+          { label: "Comprados", value: counts.comprado, color: "text-success" },
+          { label: "Instalados", value: counts.instalado, color: "text-primary" },
+        ].map(card => (
+          <div key={card.label} className="bg-card border border-border rounded p-2.5 text-center">
+            <div className={`text-lg font-bold ${card.color}`}>{card.value}</div>
+            <div className="text-[11px] text-muted-foreground">{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Filter size={14} className="text-muted-foreground" />
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+          <option value="todos">Todos os status</option>
+          {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+          <option value="aprovada">APROVADA (legado)</option>
+          <option value="entregue">ENTREGUE (legado)</option>
+        </select>
+        <select value={filterProjeto} onChange={e => setFilterProjeto(e.target.value)} className="h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+          <option value="todos">Todos os projetos</option>
+          {projetosComCompras.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+        </select>
       </div>
 
       {showForm && (
@@ -158,48 +250,56 @@ const Compras = () => {
 
       {isLoading ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
         <div className="border border-border rounded overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-secondary/60">
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Data</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Fornecedor</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
-                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Qtd</th>
-                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Total</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {compras?.map(c => (
-                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEdit(c)}>
-                  <td className="px-2.5 py-1.5">{c.data_compra ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{c.descricao ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-right">{c.quantidade}</td>
-                  <td className="px-2.5 py-1.5 text-right font-medium">R$ {(c.valor_total ?? 0).toLocaleString("pt-BR")}</td>
-                  <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                    <select
-                      value={c.status ?? "pendente"}
-                      onChange={e => changeStatus.mutate({ id: c.id, status: e.target.value as StatusCompra, produto_id: c.produto_id, projeto_id: c.projeto_id })}
-                      className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}
-                    >
-                      {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                      <button onClick={() => { if (window.confirm("Excluir compra?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-secondary/60">
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Produto</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Cliente</th>
+                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Fornecedor</th>
+                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Qtd</th>
+                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Total</th>
+                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
+                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
                 </tr>
-              ))}
-              {(!compras || compras.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhuma compra registrada.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(c => {
+                  const clienteNome = (c.projetos as any)?.clientes?.nome ?? "—";
+                  const produtoNome = (c.produtos as any)?.nome ?? "—";
+                  return (
+                    <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEdit(c)}>
+                      <td className="px-2.5 py-1.5">{c.descricao ?? "—"}</td>
+                      <td className="px-2.5 py-1.5">{produtoNome}</td>
+                      <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
+                      <td className="px-2.5 py-1.5">{clienteNome}</td>
+                      <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-right">{c.quantidade}</td>
+                      <td className="px-2.5 py-1.5 text-right font-medium">{fmt(c.valor_total ?? 0)}</td>
+                      <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                        <select
+                          value={c.status ?? "pendente"}
+                          onChange={e => changeStatus.mutate({ id: c.id, status: e.target.value as StatusCompra, produto_id: c.produto_id, projeto_id: c.projeto_id })}
+                          className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}
+                        >
+                          {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
+                          <button onClick={() => { if (window.confirm("Excluir compra?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-4 text-muted-foreground">Nenhuma compra encontrada.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
