@@ -1724,6 +1724,12 @@ const CRM = () => {
                       <FileText size={14} className="text-blue-500" />,
                       "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                     )}
+                    {renderItemTable(
+                      adicionais as any,
+                      "Adicionais",
+                      <PlusCircle size={14} className="text-amber-500" />,
+                      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    )}
                   </>
                 );
               })()}
