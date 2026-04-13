@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
 import logoInfinit from "@/assets/logo-infinit.png";
+import GlobalSearch from "./GlobalSearch";
 
 interface TopBarProps {
   onToggleMobileMenu?: () => void;
