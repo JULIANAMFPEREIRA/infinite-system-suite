@@ -447,9 +447,12 @@ const Projetos = () => {
           <h1 className="text-lg font-bold text-foreground">Projetos</h1>
           <span className="text-xs text-muted-foreground">({statusCounts.todos})</span>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); setMainTab("lista"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
-          <Plus size={14} /> Novo Projeto
-        </button>
+        <div className="flex items-center gap-2">
+          <ViewToggle view={listViewType} onChange={setListViewType} />
+          <button onClick={() => { resetForm(); setShowForm(true); setMainTab("lista"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+            <Plus size={14} /> Novo Projeto
+          </button>
+        </div>
       </div>
 
       {/* Status counters - same pattern as CRM */}
