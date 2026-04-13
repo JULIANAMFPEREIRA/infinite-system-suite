@@ -957,7 +957,7 @@ const CRM = () => {
     onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
   });
 
-  const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
+  const filtered = filteredSorted;
 
   const filteredSorted = useMemo(() => {
     const list = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
