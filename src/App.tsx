@@ -34,6 +34,7 @@ import Orcamentos from "./pages/modules/Orcamentos";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
+import FormularioCliente from "./pages/FormularioCliente";
 
 const queryClient = new QueryClient();
 
