@@ -107,7 +107,6 @@ const CadastroLivre = () => {
       const notasExtra = tipo === "pj"
         ? `NOME FANTASIA: ${nomeFantasia}\nINSCRIÇÃO ESTADUAL: ${inscricaoEstadual}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
         : `SERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`;
-        : `SERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`;
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/cadastro-livre`, {
         method: "POST",
