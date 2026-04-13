@@ -489,6 +489,7 @@ export type Database = {
           produto_id: string | null
           quantidade: number | null
           rt_comissao: number | null
+          tipo: string
         }
         Insert: {
           cliente_id: string
@@ -502,6 +503,7 @@ export type Database = {
           produto_id?: string | null
           quantidade?: number | null
           rt_comissao?: number | null
+          tipo?: string
         }
         Update: {
           cliente_id?: string
@@ -515,6 +517,7 @@ export type Database = {
           produto_id?: string | null
           quantidade?: number | null
           rt_comissao?: number | null
+          tipo?: string
         }
         Relationships: [
           {

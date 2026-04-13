@@ -68,6 +68,7 @@ const CRM = () => {
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
   const [itemRt, setItemRt] = useState(0);
+  const [itemTipo, setItemTipo] = useState<"produto" | "servico">("produto");
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
   // Auto-calc RT based on architect %
@@ -207,7 +208,7 @@ const CRM = () => {
   });
 
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
-  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setEditItemId(null); };
+  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemTipo("produto"); setEditItemId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
 
   const openEdit = (c: any) => {
@@ -297,6 +298,7 @@ const CRM = () => {
           preco_custo: i.preco_custo, preco_venda: i.preco_venda,
           rt_comissao: (i as any).rt_comissao ?? 0,
           produto_id: i.produto_id, orcamento_id: newOrc.id,
+          tipo: (i as any).tipo ?? "produto",
         }));
         await supabase.from("crm_itens").insert(copies as any);
       }
@@ -321,7 +323,9 @@ const CRM = () => {
     const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
     const items = approvedItems ?? [];
     const totalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-    const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0);
+    const frete = Number(orcData.frete) || 0;
+    const imposto = Number(orcData.imposto) || 0;
+    const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0) + frete + imposto;
     const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
 
     const sim = (orcData.simulacao_pagamento as any) ?? {};
@@ -377,7 +381,8 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: "produto" as const, produto_id: item.produto_id || null,
+        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
+        produto_id: item.produto_id || null,
         rt_percentual: Number((item as any).rt_comissao) || 0,
       }));
       const { data: insertedData, error: itemsError } = await supabase.from("projeto_itens").insert(itemInserts).select();
@@ -423,7 +428,7 @@ const CRM = () => {
     await supabase.from("compras").delete().eq("projeto_id", projId).eq("status", "pendente");
     if (insertedItens.length > 0) {
       const compraInserts = insertedItens
-        .filter((pi: any) => pi.tipo === "produto" || pi.produto_id)
+        .filter((pi: any) => pi.tipo === "produto")
         .map((pi: any) => ({
           empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
           produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
@@ -435,15 +440,41 @@ const CRM = () => {
         await supabase.from("compras").insert(compraInserts);
       }
     }
-    // Also sync necessidades_compra for backward compatibility
+    // Also sync necessidades_compra for backward compatibility (only products)
     await supabase.from("necessidades_compra" as any).delete().eq("projeto_id", projId).eq("status", "pendente");
     if (insertedItens.length > 0) {
-      const necInserts = insertedItens.map((pi: any) => ({
-        empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
-        produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
-        quantidade: Number(pi.quantidade) || 1, status: "pendente",
-      }));
-      await supabase.from("necessidades_compra" as any).insert(necInserts);
+      const necInserts = insertedItens
+        .filter((pi: any) => pi.tipo === "produto")
+        .map((pi: any) => ({
+          empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
+          produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
+          quantidade: Number(pi.quantidade) || 1, status: "pendente",
+        }));
+      if (necInserts.length > 0) {
+        await supabase.from("necessidades_compra" as any).insert(necInserts);
+      }
+    }
+
+    // ── Sync frete e imposto como contas a pagar ──
+    // Remove existing frete/imposto entries (identified by description pattern)
+    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).is("comissao_id", null).is("fornecedor_id", null);
+    const contasPagarExtras: any[] = [];
+    if (frete > 0) {
+      contasPagarExtras.push({
+        empresa_id: empresaId!, projeto_id: projId,
+        descricao: `Frete — ${detailClient.nome}`,
+        valor: frete, status: "pendente" as const,
+      });
+    }
+    if (imposto > 0) {
+      contasPagarExtras.push({
+        empresa_id: empresaId!, projeto_id: projId,
+        descricao: `Imposto — ${detailClient.nome}`,
+        valor: imposto, status: "pendente" as const,
+      });
+    }
+    if (contasPagarExtras.length > 0) {
+      await supabase.from("financeiro_pagar").insert(contasPagarExtras);
     }
 
     if (opts?.showToast !== false) {
@@ -642,7 +673,8 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: "produto" as const, produto_id: item.produto_id || null,
+        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
+        produto_id: item.produto_id || null,
         rt_percentual: Number(item.rt_comissao) || 0,
       }));
       await supabase.from("projeto_itens").insert(itemInserts);
@@ -789,8 +821,8 @@ const CRM = () => {
     mutationFn: async () => {
       if (!itemDesc.trim() || !detailClient?.id) return;
 
-      // Auto-create product if it doesn't exist in catalog
-      if (!editItemId && empresaId) {
+      // Auto-create product if it doesn't exist in catalog (only for produto type)
+      if (!editItemId && empresaId && itemTipo === "produto") {
         const { data: existingProduct } = await supabase
           .from("produtos")
           .select("id")
@@ -810,10 +842,10 @@ const CRM = () => {
       }
 
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt } as any)).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, tipo: itemTipo } as any)).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId } as any));
+        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
         if (error) throw error;
       }
     },
@@ -1441,7 +1473,14 @@ const CRM = () => {
                 {/* Form adicionar item */}
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3 mb-4">
                   <h4 className="text-xs font-semibold flex items-center gap-1.5 text-foreground"><Package size={13} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</label>
+                      <select value={itemTipo} onChange={e => setItemTipo(e.target.value as "produto" | "servico")} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none">
+                        <option value="produto">Produto</option>
+                        <option value="servico">Serviço</option>
+                      </select>
+                    </div>
                     <div className="col-span-2 md:col-span-1 space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
                       <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
@@ -1475,6 +1514,7 @@ const CRM = () => {
                     <div className="rounded-lg overflow-hidden border border-border/60 bg-card mb-4">
                       <table className="w-full text-xs">
                         <thead><tr className="bg-secondary/40">
+                          <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Tipo</th>
                           <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
                           <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
                           <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
@@ -1486,6 +1526,7 @@ const CRM = () => {
                         <tbody>
                           {crmItens.map(item => (
                             <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
+                              <td className="px-3 py-2"><span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${(item as any).tipo === "servico" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"}`}>{(item as any).tipo === "servico" ? "Serviço" : "Produto"}</span></td>
                               <td className="px-3 py-2">{item.descricao}</td>
                               <td className="px-3 py-2 text-center">{item.quantidade}</td>
                               <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
@@ -1494,7 +1535,7 @@ const CRM = () => {
                               <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                               <td className="px-3 py-2 text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                  <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
                                   <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                                 </div>
                               </td>
@@ -1636,7 +1677,7 @@ const CRM = () => {
                     </div>
                   )}
 
-                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Simulação</button>
+                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Orçamento</button>
                 </section>
               )}
             </div>
