@@ -35,6 +35,7 @@ import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import NotFound from "./pages/NotFound";
 import FormularioCliente from "./pages/FormularioCliente";
+import CadastroLivre from "./pages/CadastroLivre";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/formulario" element={<FormularioCliente />} />
+            <Route path="/cadastro" element={<CadastroLivre />} />
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />

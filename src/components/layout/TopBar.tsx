@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Bell, User, LogOut, Menu } from "lucide-react";
+import { Bell, User, LogOut, Menu, Link2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
 import logoInfinit from "@/assets/logo-infinit.png";
 import GlobalSearch from "./GlobalSearch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface TopBarProps {
   onToggleMobileMenu?: () => void;
@@ -15,6 +23,8 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
   const { profile, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const [showNotif, setShowNotif] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data: receber } = useFinanceiroReceber();
   const { data: pagar } = useFinanceiroPagar();
@@ -33,6 +43,13 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
   const totalAlerts = receberVencidas.length + pagarVencidas.length + comprasPendentes.length;
 
   const handleLogout = async () => { await signOut(); navigate("/login"); };
+
+  const publicUrl = window.location.origin + "/cadastro";
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   return (
     <header className="h-14 md:h-14 border-b border-border bg-card flex items-center justify-between px-3 md:px-6">
@@ -57,6 +74,14 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
       </div>
       <GlobalSearch />
       <div className="flex items-center gap-2 md:gap-4">
+        <button
+          onClick={() => setShowLinkModal(true)}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+          title="Gerar link de cadastro"
+        >
+          <Link2 size={14} />
+          <span className="hidden md:inline">Link Cadastro</span>
+        </button>
         <div className="relative">
           <button onClick={() => setShowNotif(!showNotif)} className="relative p-2 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <Bell size={16} />
@@ -97,6 +122,22 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
           </button>
         </div>
       </div>
+      <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link de Cadastro Público</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Compartilhe este link para captar novos clientes. Não requer orçamento prévio.
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <Input value={publicUrl} readOnly className="text-xs" />
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="shrink-0">
+              {linkCopied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
