@@ -418,15 +418,32 @@ const CRM = () => {
       }
     }
 
-    // ── Sync necessidades de compra (ALL items, not just with arquiteto) ──
-    await supabase.from("necessidades_compra").delete().eq("projeto_id", projId).eq("status", "pendente");
+    // ── Sync compras directly (skip necessidades_compra intermediate step) ──
+    // Delete only pending compras to avoid duplicates; keep compras already in progress
+    await supabase.from("compras").delete().eq("projeto_id", projId).eq("status", "pendente");
     if (insertedItens.length > 0) {
-      const necInserts = insertedItens.map(pi => ({
+      const compraInserts = insertedItens
+        .filter((pi: any) => pi.tipo === "produto" || pi.produto_id)
+        .map((pi: any) => ({
+          empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
+          produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
+          quantidade: Number(pi.quantidade) || 1, status: "pendente" as const,
+          valor_unitario: Number(pi.preco_custo) || 0,
+          valor_total: (Number(pi.preco_custo) || 0) * (Number(pi.quantidade) || 1),
+        }));
+      if (compraInserts.length > 0) {
+        await supabase.from("compras").insert(compraInserts);
+      }
+    }
+    // Also sync necessidades_compra for backward compatibility
+    await supabase.from("necessidades_compra" as any).delete().eq("projeto_id", projId).eq("status", "pendente");
+    if (insertedItens.length > 0) {
+      const necInserts = insertedItens.map((pi: any) => ({
         empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
         produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
         quantidade: Number(pi.quantidade) || 1, status: "pendente",
       }));
-      await supabase.from("necessidades_compra").insert(necInserts);
+      await supabase.from("necessidades_compra" as any).insert(necInserts);
     }
 
     if (opts?.showToast !== false) {
