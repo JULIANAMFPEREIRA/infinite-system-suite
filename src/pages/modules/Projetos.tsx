@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { differenceInDays } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter, FileText } from "lucide-react";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
@@ -540,15 +541,21 @@ const Projetos = () => {
               onCardClick={(item) => openEdit(item.projeto)}
               renderCard={(item) => {
                 const p = item.projeto;
+                const daysInStatus = p.updated_at ? differenceInDays(new Date(), new Date(p.updated_at)) : 0;
                 return (
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold text-foreground truncate">{p.nome}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{(p.clientes as any)?.nome ?? "—"}</p>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[p.status as StatusProjeto]}`}>
-                      {statusLabels[p.status as StatusProjeto]}
-                    </span>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-foreground truncate leading-tight">{(p.clientes as any)?.nome ?? "—"}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{p.nome}</p>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${statusColors[p.status as StatusProjeto]}`}>
+                        {statusLabels[p.status as StatusProjeto]}
+                      </span>
+                      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${daysInStatus > 30 ? "bg-destructive/10 text-destructive" : daysInStatus > 14 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"}`}>
+                        {daysInStatus}d
+                      </span>
+                    </div>
                     {canSeeFinancials && p.venda_total > 0 && (
-                      <p className="text-[10px] font-medium text-foreground">{fmt(p.venda_total)}</p>
+                      <p className="text-sm font-bold text-primary">{fmt(p.venda_total)}</p>
                     )}
                   </div>
                 );
