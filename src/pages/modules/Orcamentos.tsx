@@ -34,6 +34,7 @@ const Orcamentos = () => {
   const [busca, setBusca] = useState("");
   const [editOrc, setEditOrc] = useState<any>(null);
   const [deleteOrcId, setDeleteOrcId] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<"list" | "kanban">("list");
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
