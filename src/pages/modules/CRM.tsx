@@ -860,6 +860,59 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ─── Inline edit state ───
+  const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string } | null>(null);
+  const [inlineValue, setInlineValue] = useState<string>("");
+  const [inlineSaving, setInlineSaving] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+
+  const startInlineEdit = useCallback((id: string, field: string, value: any) => {
+    setInlineEdit({ id, field });
+    setInlineValue(String(value ?? ""));
+  }, []);
+
+  const saveInlineEdit = useCallback(async () => {
+    if (!inlineEdit) return;
+    const { id, field } = inlineEdit;
+    const numFields = ["quantidade", "preco_custo", "preco_venda", "rt_comissao"];
+    const val = numFields.includes(field) ? Number(inlineValue) : inlineValue;
+    if (field === "descricao" && !String(val).trim()) { setInlineEdit(null); return; }
+    setInlineSaving(true);
+    try {
+      const { error } = await supabase.from("crm_itens").update(sanitizePayload({ [field]: val } as any)).eq("id", id);
+      if (error) throw error;
+      refetchCrmItens();
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find((o: any) => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setInlineSaving(false);
+      setInlineEdit(null);
+    }
+  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos]);
+
+  const handleSortToggle = useCallback((key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) return prev.dir === "asc" ? { key, dir: "desc" } : null;
+      return { key, dir: "asc" };
+    });
+  }, []);
+
+  const sortItems = useCallback((items: any[]) => {
+    if (!sortConfig) return items;
+    const { key, dir } = sortConfig;
+    return [...items].sort((a, b) => {
+      const av = key === "descricao" ? String(a[key] ?? "").toLowerCase() : Number(a[key] ?? 0);
+      const bv = key === "descricao" ? String(b[key] ?? "").toLowerCase() : Number(b[key] ?? 0);
+      if (av < bv) return dir === "asc" ? -1 : 1;
+      if (av > bv) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [sortConfig]);
+
   const deleteCrmItem = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("crm_itens").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => {
