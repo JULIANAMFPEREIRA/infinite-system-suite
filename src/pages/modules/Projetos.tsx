@@ -532,6 +532,28 @@ const Projetos = () => {
             <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Nenhum projeto encontrado.</div>
+          ) : listViewType === "kanban" ? (
+            <KanbanBoard
+              columns={projetoKanbanColumns}
+              items={projetoKanbanItems}
+              onMove={handleProjetoKanbanMove}
+              onCardClick={(item) => openEdit(item.projeto)}
+              renderCard={(item) => {
+                const p = item.projeto;
+                return (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold text-foreground truncate">{p.nome}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{(p.clientes as any)?.nome ?? "—"}</p>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[p.status as StatusProjeto]}`}>
+                      {statusLabels[p.status as StatusProjeto]}
+                    </span>
+                    {canSeeFinancials && p.venda_total > 0 && (
+                      <p className="text-[10px] font-medium text-foreground">{fmt(p.venda_total)}</p>
+                    )}
+                  </div>
+                );
+              }}
+            />
           ) : (
             <div className="border border-border rounded overflow-hidden">
               <div className="overflow-x-auto">
