@@ -55,6 +55,7 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
           </p>
         </div>
       </div>
+      <GlobalSearch />
       <div className="flex items-center gap-2 md:gap-4">
         <div className="relative">
           <button onClick={() => setShowNotif(!showNotif)} className="relative p-2 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
