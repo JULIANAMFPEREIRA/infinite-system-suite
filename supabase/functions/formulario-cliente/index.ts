@@ -207,7 +207,7 @@ serve(async (req) => {
         .from("formulario_tokens")
         .update({
           status: "preenchido",
-          dados_preenchidos: { nome, cpf_cnpj, email, telefone, endereco },
+          dados_preenchidos: { nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa },
         })
         .eq("token", token);
 
