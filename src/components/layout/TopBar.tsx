@@ -122,6 +122,22 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
           </button>
         </div>
       </div>
+      <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link de Cadastro Público</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Compartilhe este link para captar novos clientes. Não requer orçamento prévio.
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <Input value={publicUrl} readOnly className="text-xs" />
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="shrink-0">
+              {linkCopied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
