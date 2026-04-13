@@ -72,6 +72,8 @@ const CRM = () => {
   const [itemRt, setItemRt] = useState(0);
   const [itemTipo, setItemTipo] = useState<"produto" | "servico" | "adicional">("produto");
   const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [itemProdutoId, setItemProdutoId] = useState<string | null>(null);
+  const [showItemSuggestions, setShowItemSuggestions] = useState(false);
 
   // Auto-calc RT based on architect %
   const arquitetoRtPercentual = useMemo(() => {
@@ -131,6 +133,18 @@ const CRM = () => {
     },
     enabled: !!empresaId,
   });
+
+  const { data: produtosCatalogo } = useQuery({
+    queryKey: ["produtos_autocomplete_crm", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda, cor").eq("deletado", false).order("nome");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  const filteredProdutosCrm = produtosCatalogo?.filter(p => p.nome.toLowerCase().includes(itemDesc.toLowerCase())) ?? [];
 
   // All projetos for kanban card display
   const { data: allProjetos } = useQuery({
@@ -210,7 +224,7 @@ const CRM = () => {
   });
 
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
-  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemTipo("produto"); setEditItemId(null); };
+  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
 
   const openEdit = (c: any) => {
@@ -1600,9 +1614,39 @@ const CRM = () => {
                         <option value="adicional">Adicional</option>
                       </select>
                     </div>
-                    <div className="col-span-2 md:col-span-1 space-y-0.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
-                      <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
+                    <div className="col-span-2 md:col-span-1 space-y-0.5 relative">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição * {itemTipo === "produto" && <span className="text-primary">(busca catálogo)</span>}</label>
+                      <input
+                        value={itemDesc}
+                        onChange={e => { setItemDesc(e.target.value); setItemProdutoId(null); setShowItemSuggestions(itemTipo === "produto" && e.target.value.length > 0); }}
+                        onFocus={() => { if (itemTipo === "produto" && itemDesc.length > 0) setShowItemSuggestions(true); }}
+                        onBlur={() => setTimeout(() => setShowItemSuggestions(false), 200)}
+                        placeholder={itemTipo === "produto" ? "Buscar no catálogo..." : "Descrição do item"}
+                        className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"
+                      />
+                      {showItemSuggestions && filteredProdutosCrm.length > 0 && (
+                        <div className="absolute z-20 w-full bg-card border border-border rounded shadow-lg mt-1 max-h-40 overflow-y-auto">
+                          {filteredProdutosCrm.slice(0, 10).map(p => (
+                            <button
+                              key={p.id}
+                              onMouseDown={() => {
+                                setItemDesc(p.nome);
+                                setItemCusto(p.preco_custo ?? 0);
+                                setItemVenda(p.preco_venda ?? 0);
+                                setItemProdutoId(p.id);
+                                setShowItemSuggestions(false);
+                                if (!editItemId && arquitetoRtPercentual > 0) {
+                                  setItemRt(Number((((p.preco_venda ?? 0) * itemQtd * arquitetoRtPercentual) / 100).toFixed(2)));
+                                }
+                              }}
+                              className="w-full text-left px-2 py-1.5 text-xs hover:bg-secondary/50 flex justify-between items-center border-b border-border last:border-b-0"
+                            >
+                              <span className="font-medium">{p.nome}</span>
+                              <span className="text-muted-foreground ml-2 whitespace-nowrap">C: R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")} | V: R$ {(p.preco_venda ?? 0).toLocaleString("pt-BR")}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Quantidade</label>
