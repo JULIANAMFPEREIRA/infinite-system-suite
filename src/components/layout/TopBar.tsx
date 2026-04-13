@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Bell, User, LogOut, Menu } from "lucide-react";
+import { Bell, User, LogOut, Menu, Link2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
 import logoInfinit from "@/assets/logo-infinit.png";
 import GlobalSearch from "./GlobalSearch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface TopBarProps {
   onToggleMobileMenu?: () => void;
