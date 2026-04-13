@@ -142,6 +142,47 @@ const Orcamentos = () => {
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  // Kanban columns for Orcamentos
+  const orcKanbanColumns = [
+    { key: "contato", label: "EM CONTATO", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
+    { key: "enviado", label: "ENVIADO", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
+    { key: "aprovado", label: "APROVADO", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
+    { key: "cancelado", label: "CANCELADO", color: "text-destructive", borderColor: "border-destructive/30", bgColor: "bg-destructive/5" },
+  ];
+
+  const getOrcKanbanColumn = (orc: any): string => {
+    if (orc.aprovado) return "aprovado";
+    if (orc.data_envio_proposta) return "enviado";
+    return "contato";
+  };
+
+  type OrcKanbanItem = KanbanCardData & { orc: any; total: number };
+
+  const kanbanItems: OrcKanbanItem[] = filtered.map((orc) => ({
+    id: orc.id,
+    columnKey: getOrcKanbanColumn(orc),
+    orc,
+    total: calcTotal(orc.crm_itens as any[]),
+  }));
+
+  const handleKanbanMove = async (itemId: string, _from: string, to: string) => {
+    const updates: any = {};
+    if (to === "aprovado") updates.aprovado = true;
+    else updates.aprovado = false;
+    if (to === "enviado" || to === "aprovado") {
+      const orc = orcamentos?.find((o) => o.id === itemId);
+      if (!orc?.data_envio_proposta) updates.data_envio_proposta = new Date().toISOString().split("T")[0];
+    }
+    if (to === "contato") {
+      updates.data_envio_proposta = null;
+    }
+    const { error } = await supabase.from("crm_orcamentos").update(updates).eq("id", itemId);
+    if (error) { toast.error("Erro ao mover orçamento"); return; }
+    qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+    qc.invalidateQueries({ queryKey: ["crm_orcamentos"] });
+    toast.success("Status atualizado!");
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -149,6 +190,7 @@ const Orcamentos = () => {
           <FileText size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">Orçamentos</h1>
         </div>
+        <ViewToggle view={viewType} onChange={setViewType} />
       </div>
 
       <div className="relative max-w-xs">
