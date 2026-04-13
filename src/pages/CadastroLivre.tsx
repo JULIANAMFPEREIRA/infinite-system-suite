@@ -68,6 +68,7 @@ const CadastroLivre = () => {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
+  const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [responsavel, setResponsavel] = useState("");
@@ -90,6 +91,7 @@ const CadastroLivre = () => {
     if (tipo === "pf" && cpf && !validateCPF(cpf)) e.cpf = "CPF inválido";
     if (tipo === "pj" && !razaoSocial.trim()) e.razaoSocial = "Razão social é obrigatória";
     if (tipo === "pj" && cnpj && !validateCNPJ(cnpj)) e.cnpj = "CNPJ inválido";
+    if (tipo === "pj" && !inscricaoEstadual.trim()) e.inscricaoEstadual = "Inscrição Estadual é obrigatória";
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "E-mail inválido";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -103,7 +105,7 @@ const CadastroLivre = () => {
       const nomeEnvio = tipo === "pf" ? nome : razaoSocial;
       const cpfCnpjEnvio = tipo === "pf" ? cpf : cnpj;
       const notasExtra = tipo === "pj"
-        ? `NOME FANTASIA: ${nomeFantasia}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
+        ? `NOME FANTASIA: ${nomeFantasia}\nINSCRIÇÃO ESTADUAL: ${inscricaoEstadual}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
         : `SERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`;
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/cadastro-livre`, {
@@ -179,7 +181,7 @@ const CadastroLivre = () => {
       <Card className="max-w-lg w-full border-none bg-slate-800/80 shadow-2xl backdrop-blur-sm">
         <CardHeader className="text-center space-y-2 pb-2">
           <h1 className="text-2xl font-bold text-white tracking-tight">INFINIT NETWORK</h1>
-          <p className="text-sky-400 text-sm font-medium">Cadastro de Novo Cliente</p>
+          <p className="text-sky-400 text-sm font-medium">Cadastro de Cliente</p>
         </CardHeader>
 
         <CardContent className="pt-2">
@@ -241,6 +243,10 @@ const CadastroLivre = () => {
                 </FieldGroup>
                 <FieldGroup label="CNPJ" error={errors.cnpj}>
                   <Input value={cnpj} onChange={e => setCnpj(maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500" type="text" />
+                </FieldGroup>
+                <FieldGroup label="Inscrição Estadual *" error={errors.inscricaoEstadual}>
+                  <Input value={inscricaoEstadual} onChange={e => setInscricaoEstadual(e.target.value.toUpperCase())} placeholder="Ex: 123456789 ou ISENTO"
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500" type="text" />
                 </FieldGroup>
                 <FieldGroup label="Nome do responsável">
