@@ -93,7 +93,7 @@ const FormularioCliente = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+            <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
             <h2 className="text-xl font-semibold text-foreground">Dados enviados com sucesso!</h2>
             <p className="text-muted-foreground text-sm">Obrigado por preencher seus dados. Você já pode fechar esta página.</p>
           </CardContent>
