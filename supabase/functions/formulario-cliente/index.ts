@@ -99,7 +99,7 @@ serve(async (req) => {
 
     // PUT - Submit form data
     if (req.method === "PUT") {
-      const { token, nome, cpf_cnpj, email, telefone, endereco } = await req.json();
+      const { token, nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa } = await req.json();
 
       if (!token || !nome) {
         return new Response(
@@ -136,9 +136,10 @@ serve(async (req) => {
             empresa_id,
             nome: nome.toUpperCase(),
             cpf_cnpj: cpf_cnpj || null,
-            email: email || null,
+            email: email ? email.toLowerCase() : null,
             telefone: telefone || null,
             endereco: endereco || null,
+            notas: notas || null,
             status_crm: "proposta",
           })
           .select()
@@ -160,9 +161,10 @@ serve(async (req) => {
           .update({
             nome: nome.toUpperCase(),
             cpf_cnpj: cpf_cnpj || null,
-            email: email || null,
+            email: email ? email.toLowerCase() : null,
             telefone: telefone || null,
             endereco: endereco || null,
+            notas: notas || null,
           })
           .eq("id", cliente_id);
 
@@ -205,7 +207,7 @@ serve(async (req) => {
         .from("formulario_tokens")
         .update({
           status: "preenchido",
-          dados_preenchidos: { nome, cpf_cnpj, email, telefone, endereco },
+          dados_preenchidos: { nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa },
         })
         .eq("token", token);
 

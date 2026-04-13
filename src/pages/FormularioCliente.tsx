@@ -1,13 +1,69 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, CheckCircle2, AlertTriangle, Building2, User, Phone, Copy, Check } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// ── Masks ──────────────────────────────────────────────
+const maskCPF = (v: string) =>
+  v.replace(/\D/g, "").slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+const maskCNPJ = (v: string) =>
+  v.replace(/\D/g, "").slice(0, 14)
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+
+const maskPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 10) return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+  return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+};
+
+// ── Validators ─────────────────────────────────────────
+const validateCPF = (cpf: string): boolean => {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
+  let rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  if (rest !== parseInt(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
+  rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  return rest === parseInt(d[10]);
+};
+
+const validateCNPJ = (cnpj: string): boolean => {
+  const d = cnpj.replace(/\D/g, "");
+  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += parseInt(d[i]) * w1[i];
+  let rest = sum % 11;
+  if (rest < 2 ? 0 : 11 - rest) {
+    if ((rest < 2 ? 0 : 11 - rest) !== parseInt(d[12])) return false;
+  }
+  sum = 0;
+  for (let i = 0; i < 13; i++) sum += parseInt(d[i]) * w2[i];
+  rest = sum % 11;
+  return (rest < 2 ? 0 : 11 - rest) === parseInt(d[13]);
+};
+
+type TipoPessoa = "pf" | "pj" | null;
 
 const FormularioCliente = () => {
   const [searchParams] = useSearchParams();
@@ -16,24 +72,36 @@ const FormularioCliente = () => {
   const [status, setStatus] = useState<"loading" | "valid" | "invalid" | "submitted" | "error">("loading");
   const [orcamentoNome, setOrcamentoNome] = useState("");
 
+  const [tipo, setTipo] = useState<TipoPessoa>(null);
+
+  // PF
   const [nome, setNome] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
+
+  // PJ
+  const [razaoSocial, setRazaoSocial] = useState("");
+  const [nomeFantasia, setNomeFantasia] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [responsavel, setResponsavel] = useState("");
+
+  // Common
   const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [servicoInteresse, setServicoInteresse] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setStatus("invalid");
-      return;
-    }
+    if (!token) { setStatus("invalid"); return; }
     (async () => {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/formulario-cliente?token=${token}`,
-          { headers: { apikey: SUPABASE_KEY } }
-        );
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/formulario-cliente?token=${token}`, {
+          headers: { apikey: SUPABASE_KEY },
+        });
         if (!res.ok) { setStatus("invalid"); return; }
         const data = await res.json();
         setOrcamentoNome(data.orcamento_nome || "");
@@ -44,19 +112,49 @@ const FormularioCliente = () => {
     })();
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nome.trim()) return;
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!tipo) { e.tipo = "Selecione o tipo de cadastro"; }
+
+    if (tipo === "pf") {
+      if (!nome.trim()) e.nome = "Nome é obrigatório";
+      if (cpf && !validateCPF(cpf)) e.cpf = "CPF inválido";
+    }
+    if (tipo === "pj") {
+      if (!razaoSocial.trim()) e.razaoSocial = "Razão social é obrigatória";
+      if (cnpj && !validateCNPJ(cnpj)) e.cnpj = "CNPJ inválido";
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "E-mail inválido";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (!validate()) return;
     setSubmitting(true);
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/formulario-cliente`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-          body: JSON.stringify({ token, nome, cpf_cnpj: cpfCnpj, email, telefone, endereco }),
-        }
-      );
+      const nomeEnvio = tipo === "pf" ? nome : razaoSocial;
+      const cpfCnpjEnvio = tipo === "pf" ? cpf : cnpj;
+      const notasExtra = tipo === "pj"
+        ? `NOME FANTASIA: ${nomeFantasia}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
+        : `SERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`;
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/formulario-cliente`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({
+          token,
+          nome: nomeEnvio,
+          cpf_cnpj: cpfCnpjEnvio,
+          email,
+          telefone,
+          endereco,
+          notas: notasExtra,
+          tipo_pessoa: tipo,
+        }),
+      });
       if (!res.ok) throw new Error();
       setStatus("submitted");
     } catch {
@@ -66,22 +164,29 @@ const FormularioCliente = () => {
     }
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ── Status screens ──
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+        <Loader2 className="h-10 w-10 animate-spin text-sky-400" />
       </div>
     );
   }
 
   if (status === "invalid") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-            <h2 className="text-xl font-semibold text-foreground">Link inválido ou expirado</h2>
-            <p className="text-muted-foreground text-sm">Este formulário não está mais disponível. Solicite um novo link.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+        <Card className="max-w-md w-full text-center border-none bg-slate-800/80 shadow-2xl">
+          <CardContent className="pt-10 pb-10 space-y-4">
+            <AlertTriangle className="h-14 w-14 text-amber-400 mx-auto" />
+            <h2 className="text-xl font-bold text-white">Link inválido ou expirado</h2>
+            <p className="text-slate-400 text-sm">Este formulário não está mais disponível. Solicite um novo link.</p>
           </CardContent>
         </Card>
       </div>
@@ -90,12 +195,17 @@ const FormularioCliente = () => {
 
   if (status === "submitted") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
-            <h2 className="text-xl font-semibold text-foreground">Dados enviados com sucesso!</h2>
-            <p className="text-muted-foreground text-sm">Obrigado por preencher seus dados. Você já pode fechar esta página.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+        <Card className="max-w-md w-full text-center border-none bg-slate-800/80 shadow-2xl">
+          <CardContent className="pt-10 pb-10 space-y-4">
+            <CheckCircle2 className="h-14 w-14 text-emerald-400 mx-auto" />
+            <h2 className="text-xl font-bold text-white">Cadastro enviado com sucesso!</h2>
+            <p className="text-slate-400 text-sm">Em breve entraremos em contato.</p>
+            <div className="pt-4 space-y-1 text-slate-500 text-xs">
+              <p className="font-semibold text-slate-300">INFINIT NETWORK</p>
+              <p>www.infinitnetwork.com.br</p>
+              <p>WhatsApp: (77) 99971-6415</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -104,57 +214,229 @@ const FormularioCliente = () => {
 
   if (status === "error") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-            <h2 className="text-xl font-semibold text-foreground">Erro ao enviar</h2>
-            <p className="text-muted-foreground text-sm">Ocorreu um erro. Tente novamente mais tarde.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+        <Card className="max-w-md w-full text-center border-none bg-slate-800/80 shadow-2xl">
+          <CardContent className="pt-10 pb-10 space-y-4">
+            <AlertTriangle className="h-14 w-14 text-red-400 mx-auto" />
+            <h2 className="text-xl font-bold text-white">Erro ao enviar</h2>
+            <p className="text-slate-400 text-sm">Ocorreu um erro. Tente novamente mais tarde.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const primaryName = tipo === "pf" ? nome : razaoSocial;
+  const canSubmit = !!tipo && primaryName.trim().length > 0;
+
+  // ── Main form ──
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-lg w-full">
-        <CardHeader>
-          <CardTitle className="text-lg">Cadastro de Dados</CardTitle>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-start justify-center p-4 pt-8 md:pt-16">
+      <Card className="max-w-lg w-full border-none bg-slate-800/80 shadow-2xl backdrop-blur-sm">
+        <CardHeader className="text-center space-y-2 pb-2">
+          <h1 className="text-2xl font-bold text-white tracking-tight">INFINIT NETWORK</h1>
+          <p className="text-sky-400 text-sm font-medium">Cadastro de Cliente</p>
           {orcamentoNome && (
-            <p className="text-sm text-muted-foreground">Orçamento: {orcamentoNome}</p>
+            <p className="text-xs text-slate-500">Orçamento: {orcamentoNome}</p>
           )}
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Nome completo *</Label>
-              <Input value={nome} onChange={e => setNome(e.target.value)} required placeholder="Seu nome completo" />
+
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Tipo de pessoa */}
+            <div className="space-y-2">
+              <Label className="text-slate-300 text-sm font-semibold">Tipo de cadastro *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setTipo("pf"); setErrors({}); }}
+                  className={`flex items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all font-medium text-sm ${
+                    tipo === "pf"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-400"
+                      : "border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <User className="h-5 w-5" />
+                  Pessoa Física
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTipo("pj"); setErrors({}); }}
+                  className={`flex items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all font-medium text-sm ${
+                    tipo === "pj"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-400"
+                      : "border-slate-600 bg-slate-700/50 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <Building2 className="h-5 w-5" />
+                  Pessoa Jurídica
+                </button>
+              </div>
+              {errors.tipo && <p className="text-red-400 text-xs">{errors.tipo}</p>}
             </div>
-            <div className="space-y-1.5">
-              <Label>CPF / CNPJ</Label>
-              <Input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} placeholder="000.000.000-00" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone</Label>
-              <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Endereço</Label>
-              <Input value={endereco} onChange={e => setEndereco(e.target.value)} placeholder="Rua, número, cidade" />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting || !nome.trim()}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Enviando...</> : "Enviar dados"}
-            </Button>
+
+            {/* PF Fields */}
+            {tipo === "pf" && (
+              <div className="space-y-4 animate-in fade-in-50 duration-300">
+                <FieldGroup label="Nome completo *" error={errors.nome}>
+                  <Input
+                    value={nome}
+                    onChange={e => setNome(e.target.value)}
+                    placeholder="Seu nome completo"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+                <FieldGroup label="CPF" error={errors.cpf}>
+                  <Input
+                    value={cpf}
+                    onChange={e => setCpf(maskCPF(e.target.value))}
+                    placeholder="000.000.000-00"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    type="text"
+                  />
+                </FieldGroup>
+              </div>
+            )}
+
+            {/* PJ Fields */}
+            {tipo === "pj" && (
+              <div className="space-y-4 animate-in fade-in-50 duration-300">
+                <FieldGroup label="Razão social *" error={errors.razaoSocial}>
+                  <Input
+                    value={razaoSocial}
+                    onChange={e => setRazaoSocial(e.target.value)}
+                    placeholder="Razão social da empresa"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Nome fantasia">
+                  <Input
+                    value={nomeFantasia}
+                    onChange={e => setNomeFantasia(e.target.value)}
+                    placeholder="Nome fantasia"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+                <FieldGroup label="CNPJ" error={errors.cnpj}>
+                  <Input
+                    value={cnpj}
+                    onChange={e => setCnpj(maskCNPJ(e.target.value))}
+                    placeholder="00.000.000/0000-00"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    type="text"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Nome do responsável">
+                  <Input
+                    value={responsavel}
+                    onChange={e => setResponsavel(e.target.value)}
+                    placeholder="Nome do responsável"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+              </div>
+            )}
+
+            {/* Common fields (only show after tipo selected) */}
+            {tipo && (
+              <div className="space-y-4 animate-in fade-in-50 duration-300">
+                <div className="h-px bg-slate-700 my-1" />
+
+                <FieldGroup label="Telefone (WhatsApp)">
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      value={telefone}
+                      onChange={e => setTelefone(maskPhone(e.target.value))}
+                      placeholder="(00) 00000-0000"
+                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pl-10"
+                      type="tel"
+                    />
+                  </div>
+                </FieldGroup>
+
+                <FieldGroup label="E-mail" error={errors.email}>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Endereço completo">
+                  <Input
+                    value={endereco}
+                    onChange={e => setEndereco(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade - UF"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Serviço de interesse">
+                  <Input
+                    value={servicoInteresse}
+                    onChange={e => setServicoInteresse(e.target.value)}
+                    placeholder="Ex: Automação, CFTV, Cabeamento..."
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Observações">
+                  <Textarea
+                    value={observacoes}
+                    onChange={e => setObservacoes(e.target.value)}
+                    placeholder="Informações adicionais..."
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 min-h-[80px] resize-none"
+                  />
+                </FieldGroup>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 text-base"
+                  disabled={submitting || !canSubmit}
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Enviando...</>
+                  ) : (
+                    "Enviar cadastro"
+                  )}
+                </Button>
+              </div>
+            )}
           </form>
+
+          {/* Copy link */}
+          <div className="mt-5 pt-4 border-t border-slate-700 flex justify-center">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Link copiado!" : "Copiar link do formulário"}
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-4 text-center space-y-0.5 text-slate-600 text-[11px]">
+            <p>INFINIT NETWORK</p>
+            <p>www.infinitnetwork.com.br · (77) 99971-6415</p>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
+
+// ── Reusable field wrapper ─────────────────────────────
+const FieldGroup = ({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label className="text-slate-300 text-sm">{label}</Label>
+    {children}
+    {error && <p className="text-red-400 text-xs">{error}</p>}
+  </div>
+);
 
 export default FormularioCliente;
