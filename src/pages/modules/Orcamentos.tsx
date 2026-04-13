@@ -219,6 +219,46 @@ const Orcamentos = () => {
     setEditOrc(orc);
   };
 
+  const generateFormLink = async (orc: any) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/formulario-cliente`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            orcamento_id: orc.id,
+            empresa_id: empresaId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao gerar link");
+      }
+
+      const data = await response.json();
+      const baseUrl = window.location.origin;
+      const fullLink = `${baseUrl}/formulario?token=${data.token}`;
+      setGeneratedLink(fullLink);
+      setFormLinkOrc(orc);
+      toast.success("Link gerado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar link do formulário");
+    }
+  };
+
+  const copyLinkToClipboard = () => {
+    navigator.clipboard.writeText(generatedLink);
+    setLinkCopied(true);
+    toast.success("Link copiado para a área de transferência!");
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   const handleSaveEdit = () => {
     if (!editOrc) return;
     updateMutation.mutate({
