@@ -48,6 +48,11 @@ const Orcamentos = () => {
   const [convertTelefone, setConvertTelefone] = useState("");
   const [convertEmail, setConvertEmail] = useState("");
 
+  // Form link modal state
+  const [formLinkOrc, setFormLinkOrc] = useState<any>(null);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
+
   // Edit form state
   const [editNome, setEditNome] = useState("");
   const [editFrete, setEditFrete] = useState(0);
