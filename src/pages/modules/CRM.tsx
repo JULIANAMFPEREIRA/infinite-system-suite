@@ -1513,6 +1513,7 @@ const CRM = () => {
                     <div className="rounded-lg overflow-hidden border border-border/60 bg-card mb-4">
                       <table className="w-full text-xs">
                         <thead><tr className="bg-secondary/40">
+                          <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Tipo</th>
                           <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
                           <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
                           <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
@@ -1524,6 +1525,7 @@ const CRM = () => {
                         <tbody>
                           {crmItens.map(item => (
                             <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
+                              <td className="px-3 py-2"><span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${(item as any).tipo === "servico" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"}`}>{(item as any).tipo === "servico" ? "Serviço" : "Produto"}</span></td>
                               <td className="px-3 py-2">{item.descricao}</td>
                               <td className="px-3 py-2 text-center">{item.quantidade}</td>
                               <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
