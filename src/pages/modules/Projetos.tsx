@@ -236,6 +236,44 @@ const Projetos = () => {
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
+  // Kanban config for Projetos
+  const projetoKanbanColumns = [
+    { key: "planejamento", label: "PLANEJAMENTO", color: "text-amber-600", borderColor: "border-amber-500/30", bgColor: "bg-amber-500/5" },
+    { key: "em_andamento", label: "EM ANDAMENTO", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
+    { key: "em_pausa", label: "PAUSADO", color: "text-orange-600", borderColor: "border-orange-500/30", bgColor: "bg-orange-500/5" },
+    { key: "concluido", label: "FINALIZADO", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
+  ];
+
+  const getProjetoKanbanColumn = (status: string): string => {
+    if (["infraestrutura", "cabeamento"].includes(status)) return "planejamento";
+    if (["instalacao", "programacao", "personalizacao", "em_andamento", "aprovado", "vendido"].includes(status)) return "em_andamento";
+    if (status === "em_pausa") return "em_pausa";
+    if (["concluido", "pos_venda"].includes(status)) return "concluido";
+    return "planejamento";
+  };
+
+  const kanbanStatusMap: Record<string, StatusProjeto> = {
+    planejamento: "infraestrutura",
+    em_andamento: "instalacao",
+    em_pausa: "em_pausa",
+    concluido: "concluido",
+  };
+
+  type ProjetoKanbanItem = KanbanCardData & { projeto: any };
+
+  const projetoKanbanItems: ProjetoKanbanItem[] = filtered.map((p) => ({
+    id: p.id,
+    columnKey: getProjetoKanbanColumn(p.status ?? "infraestrutura"),
+    projeto: p,
+  }));
+
+  const handleProjetoKanbanMove = (itemId: string, _from: string, to: string) => {
+    const targetStatus = kanbanStatusMap[to];
+    if (!targetStatus) return;
+    const projeto = projetos?.find((pp) => pp.id === itemId);
+    changeStatus.mutate({ id: itemId, status: targetStatus, projeto });
+  };
+
   // DETAIL VIEW
   if (shouldShowDetail) {
     if (!isValidProjetoId) {
