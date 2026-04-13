@@ -1646,7 +1646,14 @@ export type Database = {
         | "outro"
         | "arquiteto"
       status_comissao: "pendente" | "pago"
-      status_compra: "pendente" | "aprovada" | "entregue" | "cancelada"
+      status_compra:
+        | "pendente"
+        | "aprovada"
+        | "entregue"
+        | "cancelada"
+        | "em_compra"
+        | "comprado"
+        | "instalado"
       status_crm: "lead" | "contato" | "proposta" | "projeto"
       status_estoque: "disponivel" | "reservado" | "instalado"
       status_financeiro: "pendente" | "pago" | "vencido" | "cancelado"
@@ -1810,7 +1817,15 @@ export const Constants = {
       ],
       origem_lead: ["whatsapp", "instagram", "indicacao", "outro", "arquiteto"],
       status_comissao: ["pendente", "pago"],
-      status_compra: ["pendente", "aprovada", "entregue", "cancelada"],
+      status_compra: [
+        "pendente",
+        "aprovada",
+        "entregue",
+        "cancelada",
+        "em_compra",
+        "comprado",
+        "instalado",
+      ],
       status_crm: ["lead", "contato", "proposta", "projeto"],
       status_estoque: ["disponivel", "reservado", "instalado"],
       status_financeiro: ["pendente", "pago", "vencido", "cancelado"],
