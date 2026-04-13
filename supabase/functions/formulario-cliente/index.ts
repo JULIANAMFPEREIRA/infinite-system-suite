@@ -99,7 +99,7 @@ serve(async (req) => {
 
     // PUT - Submit form data
     if (req.method === "PUT") {
-      const { token, nome, cpf_cnpj, email, telefone, endereco } = await req.json();
+      const { token, nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa } = await req.json();
 
       if (!token || !nome) {
         return new Response(
