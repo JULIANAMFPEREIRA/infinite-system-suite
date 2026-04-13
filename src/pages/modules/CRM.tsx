@@ -52,6 +52,8 @@ const CRM = () => {
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
   const [novoClienteObs, setNovoClienteObs] = useState("");
   const [dragClientId, setDragClientId] = useState<string | null>(null);
+  const [tableSortKey, setTableSortKey] = useState<"nome" | "created_at" | "updated_at">("created_at");
+  const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("desc");
 
   const [detailClient, setDetailClient] = useState<any>(null);
 
