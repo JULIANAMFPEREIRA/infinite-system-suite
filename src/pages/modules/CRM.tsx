@@ -1676,7 +1676,7 @@ const CRM = () => {
                     </div>
                   )}
 
-                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Simulação</button>
+                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Orçamento</button>
                 </section>
               )}
             </div>
