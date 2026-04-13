@@ -2,7 +2,7 @@ import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -68,7 +68,7 @@ const CRM = () => {
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
   const [itemRt, setItemRt] = useState(0);
-  const [itemTipo, setItemTipo] = useState<"produto" | "servico">("produto");
+  const [itemTipo, setItemTipo] = useState<"produto" | "servico" | "adicional">("produto");
   const [editItemId, setEditItemId] = useState<string | null>(null);
 
   // Auto-calc RT based on architect %
@@ -381,7 +381,7 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
+        tipo: (["produto", "servico", "adicional"].includes((item as any).tipo) ? (item as any).tipo : "produto") as "produto" | "servico" | "adicional",
         produto_id: item.produto_id || null,
         rt_percentual: Number((item as any).rt_comissao) || 0,
       }));
@@ -673,7 +673,7 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
+        tipo: (["produto", "servico", "adicional"].includes((item as any).tipo) ? (item as any).tipo : "produto") as "produto" | "servico" | "adicional",
         produto_id: item.produto_id || null,
         rt_percentual: Number(item.rt_comissao) || 0,
       }));
@@ -1566,9 +1566,10 @@ const CRM = () => {
                   <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</label>
-                      <select value={itemTipo} onChange={e => setItemTipo(e.target.value as "produto" | "servico")} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none">
+                      <select value={itemTipo} onChange={e => setItemTipo(e.target.value as "produto" | "servico" | "adicional")} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none">
                         <option value="produto">Produto</option>
                         <option value="servico">Serviço</option>
+                        <option value="adicional">Adicional</option>
                       </select>
                     </div>
                     <div className="col-span-2 md:col-span-1 space-y-0.5">
@@ -1603,8 +1604,9 @@ const CRM = () => {
               {/* PRODUTOS                                               */}
               {/* ═══════════════════════════════════════════════════════ */}
               {(() => {
-                const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico");
+                const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico" && (i as any).tipo !== "adicional");
                 const servicos = (crmItens ?? []).filter(i => (i as any).tipo === "servico");
+                const adicionais = (crmItens ?? []).filter(i => (i as any).tipo === "adicional");
 
                 const SortIcon = ({ colKey }: { colKey: string }) => {
                   if (sortConfig?.key !== colKey) return <ArrowUpDown size={10} className="ml-0.5 opacity-40" />;
@@ -1721,6 +1723,12 @@ const CRM = () => {
                       "Serviços",
                       <FileText size={14} className="text-blue-500" />,
                       "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    )}
+                    {renderItemTable(
+                      adicionais as any,
+                      "Adicionais",
+                      <PlusCircle size={14} className="text-amber-500" />,
+                      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
                     )}
                   </>
                 );

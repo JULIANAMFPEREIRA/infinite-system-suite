@@ -923,7 +923,7 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
         </div>
         <div className="space-y-1 w-24"><label className="text-[11px] text-muted-foreground">Tipo</label>
           <select value={tipo} onChange={e => { setTipo(e.target.value as TipoItem); setShowSuggestions(false); }} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none">
-            <option value="produto">Produto</option><option value="servico">Serviço</option><option value="mao_de_obra">Mão de Obra</option>
+            <option value="produto">Produto</option><option value="servico">Serviço</option><option value="mao_de_obra">Mão de Obra</option><option value="adicional">Adicional</option>
           </select>
         </div>
         <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">Qtd</label><input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
