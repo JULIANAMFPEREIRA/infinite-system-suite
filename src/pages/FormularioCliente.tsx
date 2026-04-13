@@ -82,6 +82,7 @@ const FormularioCliente = () => {
   const [razaoSocial, setRazaoSocial] = useState("");
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
+  const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [responsavel, setResponsavel] = useState("");
 
   // Common
