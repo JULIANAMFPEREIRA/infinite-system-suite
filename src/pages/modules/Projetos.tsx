@@ -79,6 +79,7 @@ const Projetos = () => {
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
+  const [listViewType, setListViewType] = useState<"list" | "kanban">("list");
 
   const statusCounts = useMemo(() => {
     const all = projetos ?? [];
