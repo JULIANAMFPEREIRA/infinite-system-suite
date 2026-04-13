@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter, FileText } from "lucide-react";
+import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
+import { ViewToggle } from "@/components/kanban/ViewToggle";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
