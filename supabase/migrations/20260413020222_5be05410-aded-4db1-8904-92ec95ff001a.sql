@@ -1,0 +1,1 @@
+ALTER TYPE public.tipo_projeto_item ADD VALUE IF NOT EXISTS 'adicional';

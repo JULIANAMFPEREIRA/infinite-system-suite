@@ -1678,7 +1678,7 @@ export type Database = {
         | "em_pausa"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
       tipo_fornecedor: "fornecedor" | "arquiteto"
-      tipo_projeto_item: "produto" | "servico" | "mao_de_obra"
+      tipo_projeto_item: "produto" | "servico" | "mao_de_obra" | "adicional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1851,7 +1851,7 @@ export const Constants = {
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
       tipo_fornecedor: ["fornecedor", "arquiteto"],
-      tipo_projeto_item: ["produto", "servico", "mao_de_obra"],
+      tipo_projeto_item: ["produto", "servico", "mao_de_obra", "adicional"],
     },
   },
 } as const
