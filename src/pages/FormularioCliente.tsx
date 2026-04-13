@@ -94,7 +94,7 @@ const FormularioCliente = () => {
         <div className="max-w-sm w-full text-center space-y-4 p-6 rounded-xl border border-border bg-card shadow-sm">
           {alreadyFilled ? (
             <>
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+              <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
               <h1 className="text-lg font-semibold text-foreground">Formulário já preenchido</h1>
               <p className="text-sm text-muted-foreground">Os dados já foram enviados com sucesso anteriormente.</p>
             </>
@@ -115,7 +115,7 @@ const FormularioCliente = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Sonner />
         <div className="max-w-sm w-full text-center space-y-4 p-6 rounded-xl border border-border bg-card shadow-sm">
-          <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto" />
+          <CheckCircle2 className="h-14 w-14 text-success mx-auto" />
           <h1 className="text-lg font-semibold text-foreground">Dados enviados com sucesso!</h1>
           <p className="text-sm text-muted-foreground">
             Obrigado por preencher suas informações. Entraremos em contato em breve.

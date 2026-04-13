@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, Copy, CheckCircle2 } from "lucide-react";
+import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, CheckCircle2, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
 import { ViewToggle } from "@/components/kanban/ViewToggle";
@@ -486,7 +486,7 @@ const Orcamentos = () => {
                           disabled={generatingLink === orc.id}
                           onClick={() => generateFormLink(orc.id)}
                         >
-                          {copiedLink === orc.id ? <CheckCircle2 size={13} className="text-green-500" /> : generatingLink === orc.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                          {copiedLink === orc.id ? <CheckCircle2 size={13} className="text-success" /> : generatingLink === orc.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
                         </Button>
                         <Button
                           size="sm"
