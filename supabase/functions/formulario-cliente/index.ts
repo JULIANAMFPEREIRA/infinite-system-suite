@@ -136,9 +136,10 @@ serve(async (req) => {
             empresa_id,
             nome: nome.toUpperCase(),
             cpf_cnpj: cpf_cnpj || null,
-            email: email || null,
+            email: email ? email.toLowerCase() : null,
             telefone: telefone || null,
             endereco: endereco || null,
+            notas: notas || null,
             status_crm: "proposta",
           })
           .select()
