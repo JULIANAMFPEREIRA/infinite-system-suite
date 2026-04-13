@@ -23,6 +23,8 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
   const { profile, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const [showNotif, setShowNotif] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data: receber } = useFinanceiroReceber();
   const { data: pagar } = useFinanceiroPagar();
