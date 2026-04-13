@@ -1472,7 +1472,14 @@ const CRM = () => {
                 {/* Form adicionar item */}
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3 mb-4">
                   <h4 className="text-xs font-semibold flex items-center gap-1.5 text-foreground"><Package size={13} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</label>
+                      <select value={itemTipo} onChange={e => setItemTipo(e.target.value as "produto" | "servico")} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none">
+                        <option value="produto">Produto</option>
+                        <option value="servico">Serviço</option>
+                      </select>
+                    </div>
                     <div className="col-span-2 md:col-span-1 space-y-0.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
                       <input value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="Descrição do item" className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" />
