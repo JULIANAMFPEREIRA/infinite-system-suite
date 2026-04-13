@@ -428,7 +428,7 @@ const CRM = () => {
     await supabase.from("compras").delete().eq("projeto_id", projId).eq("status", "pendente");
     if (insertedItens.length > 0) {
       const compraInserts = insertedItens
-        .filter((pi: any) => pi.tipo === "produto" || pi.produto_id)
+        .filter((pi: any) => pi.tipo === "produto")
         .map((pi: any) => ({
           empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
           produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
