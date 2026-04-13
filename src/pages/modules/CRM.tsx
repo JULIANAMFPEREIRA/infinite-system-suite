@@ -1439,19 +1439,19 @@ const CRM = () => {
                             </button>
                           ) : (
                             <>
-                              <button onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }} disabled={manualSync.isPending} className="flex items-center gap-1 h-7 px-2.5 rounded bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-medium border border-primary/30 transition disabled:opacity-50">
-                                <RefreshCw size={12} className={manualSync.isPending ? "animate-spin" : ""} /> Sync
+                              <button onClick={(e) => { e.stopPropagation(); manualSync.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-primary/15 text-primary hover:bg-primary/25 text-[11px] font-medium border border-primary/30 transition" title="Sincronizar com projeto">
+                                <RefreshCw size={11} /> Sincronizar
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? O projeto vinculado será cancelado.")) unapproveOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-warning/15 text-warning hover:bg-warning/25 text-[11px] font-medium border border-warning/30 transition">
-                                <X size={12} /> Desaprovar
+                              <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Desaprovar este orçamento? Isso cancelará o projeto vinculado e removerá dados financeiros.")) unapproveOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-warning/15 text-warning hover:bg-warning/25 text-[11px] font-medium border border-warning/30 transition" title="Desaprovar">
+                                <X size={11} /> Desaprovar
                               </button>
                             </>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[11px] font-medium transition">
-                            <Copy size={12} />
+                          <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[11px] font-medium transition">
+                            <Copy size={11} /> Duplicar
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("⚠️ Excluir orçamento e seus itens?")) deleteOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 text-[11px] font-medium transition">
-                            <Trash2 size={12} />
+                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir este orçamento? Isso cancelará o projeto vinculado.")) deleteOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 text-[11px] font-medium border border-destructive/30 transition">
+                            <Trash2 size={11} /> Excluir
                           </button>
                         </div>
                       </div>
@@ -1463,15 +1463,52 @@ const CRM = () => {
               </section>
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* BLOCO 2 — ITENS DO ORÇAMENTO                          */}
+              {/* RESUMO FINANCEIRO (TOPO)                               */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {(crmItens && crmItens.length > 0) && (
+                <section>
+                  <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                    <DollarSign size={14} className="text-primary" />
+                    Resumo Financeiro
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-card border border-border rounded-lg p-4 text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
+                      <p className="text-xl font-bold text-primary">R$ {totalCrmVenda.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-card border border-border rounded-lg p-4 text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
+                      <p className="text-xl font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
+                      {(orcFrete > 0 || orcImposto > 0 || totalCrmRt > 0) && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          itens: {totalCrmCusto.toFixed(2)}
+                          {orcFrete > 0 ? ` + frete: ${orcFrete.toFixed(2)}` : ""}
+                          {orcImposto > 0 ? ` + imp: ${orcImposto.toFixed(2)}` : ""}
+                          {totalCrmRt > 0 ? ` + RT: ${totalCrmRt.toFixed(2)}` : ""}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Lucro</p>
+                      <p className="text-xl font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
+                    </div>
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem</p>
+                      <p className="text-xl font-bold text-success">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                    </div>
+                    <div className="bg-card border border-border rounded-lg p-4 text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
+                      <p className="text-xl font-bold text-warning">R$ {totalCrmRt.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* FORMULÁRIO NOVO ITEM                                   */}
               {/* ═══════════════════════════════════════════════════════ */}
               <section>
-                <h3 className="text-sm font-bold text-foreground tracking-tight mb-3">
-                  Itens do Orçamento {activeOrc ? `— ${activeOrc.nome}` : ""}
-                </h3>
-
-                {/* Form adicionar item */}
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3 mb-4">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
                   <h4 className="text-xs font-semibold flex items-center gap-1.5 text-foreground"><Package size={13} /> {editItemId ? "Editar Item" : "Novo Item"}</h4>
                   <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
                     <div className="space-y-0.5">
@@ -1507,178 +1544,233 @@ const CRM = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Tabela de itens */}
-                {(crmItens && crmItens.length > 0) && (
-                  <>
-                    <div className="rounded-lg overflow-hidden border border-border/60 bg-card mb-4">
-                      <table className="w-full text-xs">
-                        <thead><tr className="bg-secondary/40">
-                          <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Tipo</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
-                          <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
-                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
-                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Venda</th>
-                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">RT</th>
-                          <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
-                          <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
-                        </tr></thead>
-                        <tbody>
-                          {crmItens.map(item => (
-                            <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
-                              <td className="px-3 py-2"><span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${(item as any).tipo === "servico" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"}`}>{(item as any).tipo === "servico" ? "Serviço" : "Produto"}</span></td>
-                              <td className="px-3 py-2">{item.descricao}</td>
-                              <td className="px-3 py-2 text-center">{item.quantidade}</td>
-                              <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
-                                  <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Frete & Imposto */}
-                    {activeOrcamentoId && (
-                      <div className="space-y-3 mb-3">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Transportadora</label>
-                            <select value={orcFreteTipo} onChange={e => { setOrcFreteTipo(e.target.value); if (e.target.value !== "outro") setOrcFreteOutro(""); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                              <option value="">Selecione...</option>
-                              {(transportadoras ?? []).map((t: any) => (
-                                <option key={t.id} value={`${t.nome} (${t.tipo})`}>{t.nome} ({t.tipo})</option>
-                              ))}
-                              <option value="outro">Outro</option>
-                            </select>
-                          </div>
-                          {orcFreteTipo === "outro" && (
-                            <div className="space-y-0.5">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Qual?</label>
-                              <input type="text" value={orcFreteOutro} onChange={e => setOrcFreteOutro(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder="Digite..." />
-                            </div>
-                          )}
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
-                            <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
-                          </div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
-                            <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="space-y-0.5">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Envio Proposta</label>
-                            <input type="date" value={orcDataEnvio} onChange={e => setOrcDataEnvio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Totais como cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <div className="bg-card border border-border rounded-lg p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Qtd Total</p>
-                        <p className="text-lg font-bold text-foreground">{totalCrmQtd}</p>
-                      </div>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
-                        <p className="text-lg font-bold text-destructive">R$ {totalCrmCustoComExtras.toFixed(2)}</p>
-                        {(orcFrete > 0 || orcImposto > 0 || totalCrmRt > 0) && <p className="text-[10px] text-muted-foreground">(itens: {totalCrmCusto.toFixed(2)}{orcFrete > 0 ? ` + frete: ${orcFrete.toFixed(2)}` : ""}{orcImposto > 0 ? ` + imp: ${orcImposto.toFixed(2)}` : ""}{totalCrmRt > 0 ? ` + RT: ${totalCrmRt.toFixed(2)}` : ""})</p>}
-                      </div>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
-                        <p className="text-lg font-bold text-primary">R$ {totalCrmVenda.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
-                        <p className="text-lg font-bold text-warning">R$ {totalCrmRt.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem / Lucro</p>
-                        <p className="text-lg font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
-                        <p className="text-[10px] text-muted-foreground">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
               </section>
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* BLOCO 3 — FINANCEIRO / SIMULAÇÃO DE PAGAMENTO          */}
+              {/* PRODUTOS                                               */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {(() => {
+                const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico");
+                const servicos = (crmItens ?? []).filter(i => (i as any).tipo === "servico");
+
+                const renderItemTable = (items: typeof crmItens extends (infer T)[] | undefined ? T[] : never[], title: string, icon: React.ReactNode, badgeClass: string) => {
+                  if (!items || items.length === 0) return null;
+                  return (
+                    <section>
+                      <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                        {icon}
+                        {title}
+                        <span className="text-[10px] font-normal text-muted-foreground ml-1">({items.length} {items.length === 1 ? "item" : "itens"})</span>
+                      </h3>
+                      <div className="rounded-lg overflow-hidden border border-border/60 bg-card">
+                        <table className="w-full text-xs">
+                          <thead><tr className="bg-secondary/40">
+                            <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
+                            <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Venda</th>
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">RT</th>
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
+                            <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
+                          </tr></thead>
+                          <tbody>
+                            {items.map(item => (
+                              <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
+                                <td className="px-3 py-2">{item.descricao}</td>
+                                <td className="px-3 py-2 text-center">{item.quantidade}</td>
+                                <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                    <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            <tr className="border-t-2 border-border bg-secondary/20">
+                              <td className="px-3 py-2 font-semibold text-foreground/80">Subtotal</td>
+                              <td className="px-3 py-2 text-center font-semibold">{items.reduce((s, i) => s + (Number(i.quantidade) || 0), 0)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  );
+                };
+
+                return (
+                  <>
+                    {renderItemTable(
+                      produtos as any,
+                      "Produtos",
+                      <Package size={14} className="text-emerald-500" />,
+                      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    )}
+                    {renderItemTable(
+                      servicos as any,
+                      "Serviços",
+                      <FileText size={14} className="text-blue-500" />,
+                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    )}
+                  </>
+                );
+              })()}
+
+              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* CUSTOS ADICIONAIS (Frete & Imposto)                    */}
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
-                <section className="mt-8 pt-6 border-t border-border/50 bg-secondary/20 border border-border rounded-xl p-5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Calculator size={15} className="text-primary" />
-                    <h3 className="text-sm font-bold text-foreground tracking-tight">Simulação de Pagamento</h3>
-                    <span className="text-[10px] text-muted-foreground">— {activeOrc?.nome}</span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground -mt-2">Ao aprovar, as parcelas serão geradas automaticamente no financeiro.</p>
-
-                  {/* Campos em 2 linhas */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
-                      <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
-                    {simCondicao === "avista" && (
-                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Pagamento à Vista</label>
-                        <input type="date" value={orcDataPgtoAvista} onChange={e => setOrcDataPgtoAvista(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
-                    )}
-                    <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
-                      <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
-                    {simCondicao === "parcelado" && (<>
-                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
-                    </>)}
-                  </div>
-                  {simCondicao === "parcelado" && (
+                <section>
+                  <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                    <Calculator size={14} className="text-warning" />
+                    Custos Adicionais
+                  </h3>
+                  <div className="bg-warning/5 border border-warning/20 rounded-lg p-4 space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
-                    </div>
-                  )}
-
-                  {/* Resumo financeiro em cards */}
-                  <div className={`grid gap-3 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
-                    <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p><p className="text-lg font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
-                    {simCondicao === "parcelado" && (<>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entrada</p><p className="text-lg font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Valor Parcela</p><p className="text-lg font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
-                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Parcelas</p><p className="text-lg font-bold text-foreground">{simParcelas}x</p></div>
-                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Final</p><p className="text-lg font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
-                    </>)}
-                  </div>
-
-                  {/* Tabela de parcelas */}
-                  {parcelasParaExibir.length > 0 && (
-                    <div className="rounded-lg overflow-hidden border border-border/40 max-h-[220px] overflow-y-auto">
-                      <table className="w-full text-xs">
-                        <thead><tr className="bg-secondary/30"><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Parcela</th><th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Valor</th><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Data Prevista</th></tr></thead>
-                        <tbody>
-                          {simulacao.entrada > 0 && (<tr className="border-t border-border/30 bg-primary/5"><td className="px-3 py-2 text-center font-medium">Entrada</td><td className="px-3 py-2 text-right font-semibold">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-3 py-2 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
-                          {parcelasParaExibir.map((p, idx) => (
-                            <tr key={p.numero} className="border-t border-border/30">
-                              <td className="px-3 py-2 text-center">{p.numero}/{simParcelas}</td>
-                              <td className="px-3 py-2 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-7 px-1.5 text-xs text-right bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" step="0.01" /></td>
-                              <td className="px-3 py-2 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-28 h-7 px-1.5 text-xs text-center bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" placeholder="dd/mm/aaaa" /></td>
-                            </tr>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Transportadora</label>
+                        <select value={orcFreteTipo} onChange={e => { setOrcFreteTipo(e.target.value); if (e.target.value !== "outro") setOrcFreteOutro(""); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="">Selecione...</option>
+                          {(transportadoras ?? []).map((t: any) => (
+                            <option key={t.id} value={`${t.nome} (${t.tipo})`}>{t.nome} ({t.tipo})</option>
                           ))}
-                        </tbody>
-                      </table>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+                      {orcFreteTipo === "outro" && (
+                        <div className="space-y-0.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Qual?</label>
+                          <input type="text" value={orcFreteOutro} onChange={e => setOrcFreteOutro(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder="Digite..." />
+                        </div>
+                      )}
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                        <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
+                        <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                      </div>
                     </div>
-                  )}
-
-                  <button onClick={handleSaveSimulacao} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition">Salvar Orçamento</button>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Envio Proposta</label>
+                        <input type="date" value={orcDataEnvio} onChange={e => setOrcDataEnvio(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                    </div>
+                    {/* Summary inline */}
+                    {(orcFrete > 0 || orcImposto > 0) && (
+                      <div className="flex items-center gap-4 pt-2 border-t border-warning/20">
+                        {orcFrete > 0 && <span className="text-xs text-foreground"><span className="text-muted-foreground">Frete:</span> <strong>R$ {orcFrete.toFixed(2)}</strong></span>}
+                        {orcImposto > 0 && <span className="text-xs text-foreground"><span className="text-muted-foreground">Imposto:</span> <strong>R$ {orcImposto.toFixed(2)}</strong></span>}
+                        <span className="text-xs font-bold text-warning">Total extras: R$ {(orcFrete + orcImposto).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
                 </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* CONDIÇÕES DE PAGAMENTO                                  */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section>
+                  <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                    <Calculator size={14} className="text-primary" />
+                    Condições de Pagamento
+                    <span className="text-[10px] text-muted-foreground font-normal">— {activeOrc?.nome}</span>
+                  </h3>
+                  <div className="bg-secondary/20 border border-border rounded-xl p-5 space-y-4">
+                    <p className="text-[10px] text-muted-foreground">Ao aprovar, as parcelas serão geradas automaticamente no financeiro.</p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condição</label>
+                        <select value={simCondicao} onChange={e => { setSimCondicao(e.target.value as any); if (e.target.value === "avista") setSimParcelas(1); setEditingParcelas(null); }} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select></div>
+                      {simCondicao === "avista" && (
+                        <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data Pagamento à Vista</label>
+                          <input type="date" value={orcDataPgtoAvista} onChange={e => setOrcDataPgtoAvista(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" /></div>
+                      )}
+                      <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Forma de Pagamento</label>
+                        <select value={simFormaPgto} onChange={e => setSimFormaPgto(e.target.value)} className="w-full h-9 px-2 text-xs bg-background border border-border rounded"><option value="boleto">Boleto</option><option value="pix">PIX</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="cheque">Cheque</option></select></div>
+                      {simCondicao === "parcelado" && (<>
+                        <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nº de Parcelas</label><input type="number" value={simParcelas} onChange={e => { setSimParcelas(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} max={60} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Entrada (R$)</label><input type="number" value={simEntrada} onChange={e => { setSimEntrada(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                      </>)}
+                    </div>
+                    {simCondicao === "parcelado" && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Intervalo (dias)</label><input type="number" value={simIntervalo} onChange={e => { setSimIntervalo(Math.max(1, Number(e.target.value))); setEditingParcelas(null); }} min={1} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Juros % (opcional)</label><input type="number" value={simJuros} onChange={e => { setSimJuros(Math.max(0, Number(e.target.value))); setEditingParcelas(null); }} step="0.01" min={0} className="w-full h-9 px-2 text-xs bg-background border border-border rounded" /></div>
+                      </div>
+                    )}
+
+                    {/* Resumo financeiro em cards */}
+                    <div className={`grid gap-3 ${simCondicao === "parcelado" ? "grid-cols-2 md:grid-cols-5" : "grid-cols-1 md:grid-cols-2"}`}>
+                      <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p><p className="text-lg font-bold text-foreground">R$ {simulacao.total.toFixed(2)}</p></div>
+                      {simCondicao === "parcelado" && (<>
+                        <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entrada</p><p className="text-lg font-bold text-foreground">R$ {simulacao.entrada.toFixed(2)}</p></div>
+                        <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Valor Parcela</p><p className="text-lg font-bold text-primary">R$ {simulacao.valorParcela.toFixed(2)}</p></div>
+                        <div className="bg-card border border-border rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Parcelas</p><p className="text-lg font-bold text-foreground">{simParcelas}x</p></div>
+                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center"><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Final</p><p className="text-lg font-bold text-primary">R$ {simulacao.totalFinal.toFixed(2)}</p></div>
+                      </>)}
+                    </div>
+
+                    {/* Tabela de parcelas */}
+                    {parcelasParaExibir.length > 0 && (
+                      <div className="rounded-lg overflow-hidden border border-border/40 max-h-[220px] overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead><tr className="bg-secondary/30"><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Parcela</th><th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Valor</th><th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Data Prevista</th></tr></thead>
+                          <tbody>
+                            {simulacao.entrada > 0 && (<tr className="border-t border-border/30 bg-primary/5"><td className="px-3 py-2 text-center font-medium">Entrada</td><td className="px-3 py-2 text-right font-semibold">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-3 py-2 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
+                            {parcelasParaExibir.map((p, idx) => (
+                              <tr key={p.numero} className="border-t border-border/30">
+                                <td className="px-3 py-2 text-center">{p.numero}/{simParcelas}</td>
+                                <td className="px-3 py-2 text-right"><input type="number" value={p.valor.toFixed(2)} onChange={e => handleEditParcela(idx, "valor", e.target.value)} className="w-24 h-7 px-1.5 text-xs text-right bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" step="0.01" /></td>
+                                <td className="px-3 py-2 text-center"><input type="text" value={p.data} onChange={e => handleEditParcela(idx, "data", e.target.value)} className="w-28 h-7 px-1.5 text-xs text-center bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" placeholder="dd/mm/aaaa" /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* BOTÃO SALVAR FIXO (RODAPÉ)                             */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border py-3 -mx-1 px-1 z-10">
+                  <button onClick={async () => {
+                    if (activeOrcamentoId) {
+                      const simData = {
+                        condicao: simCondicao, formaPagamento: simFormaPgto,
+                        numParcelas: simParcelas, entrada: simEntrada,
+                        intervalo: simIntervalo, juros: simJuros,
+                        parcelas: parcelasParaExibir,
+                      };
+                      await saveOrcamentoSimulacao(simData);
+                      if (activeOrc?.aprovado) {
+                        await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+                        qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+                      }
+                    }
+                    toast.success("Orçamento salvo!");
+                  }} className="w-full h-10 rounded-lg bg-success text-white text-sm font-semibold hover:brightness-105 transition flex items-center justify-center gap-2">
+                    <Check size={16} /> Salvar Orçamento
+                  </button>
+                </div>
               )}
             </div>
           </TabsContent>
