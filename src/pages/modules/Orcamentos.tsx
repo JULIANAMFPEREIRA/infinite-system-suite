@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User } from "lucide-react";
+import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, CheckCircle2, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
 import { ViewToggle } from "@/components/kanban/ViewToggle";
@@ -47,6 +47,8 @@ const Orcamentos = () => {
   const [convertNome, setConvertNome] = useState("");
   const [convertTelefone, setConvertTelefone] = useState("");
   const [convertEmail, setConvertEmail] = useState("");
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
@@ -202,6 +204,47 @@ const Orcamentos = () => {
     setConvertTelefone((orc as any).cliente_telefone_avulso || "");
     setConvertEmail("");
     setConvertOrc(orc);
+  };
+
+  const generateFormLink = async (orcId: string) => {
+    if (!empresaId) return;
+    setGeneratingLink(orcId);
+    try {
+      // Check if token already exists
+      const { data: existing } = await supabase
+        .from("formulario_tokens")
+        .select("token, status")
+        .eq("orcamento_id", orcId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      let tokenValue: string;
+
+      if (existing && existing.length > 0 && (existing[0] as any).status === "pendente") {
+        tokenValue = (existing[0] as any).token;
+      } else {
+        const { data: newToken, error } = await supabase
+          .from("formulario_tokens")
+          .insert({
+            orcamento_id: orcId,
+            empresa_id: empresaId,
+          } as any)
+          .select("token")
+          .single();
+        if (error) throw error;
+        tokenValue = (newToken as any).token;
+      }
+
+      const link = `${window.location.origin}/formulario?token=${tokenValue}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(orcId);
+      toast.success("Link copiado! Envie ao cliente para preenchimento dos dados.");
+      setTimeout(() => setCopiedLink(null), 3000);
+    } catch (err) {
+      toast.error("Erro ao gerar link do formulário");
+    } finally {
+      setGeneratingLink(null);
+    }
   };
 
   const openEdit = (orc: any) => {
@@ -435,6 +478,16 @@ const Orcamentos = () => {
                             <UserPlus size={12} /> Converter
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          title="Solicitar dados do cliente"
+                          disabled={generatingLink === orc.id}
+                          onClick={() => generateFormLink(orc.id)}
+                        >
+                          {copiedLink === orc.id ? <CheckCircle2 size={13} className="text-success" /> : generatingLink === orc.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
