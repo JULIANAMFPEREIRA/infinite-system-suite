@@ -206,6 +206,47 @@ const Orcamentos = () => {
     setConvertOrc(orc);
   };
 
+  const generateFormLink = async (orcId: string) => {
+    if (!empresaId) return;
+    setGeneratingLink(orcId);
+    try {
+      // Check if token already exists
+      const { data: existing } = await supabase
+        .from("formulario_tokens")
+        .select("token, status")
+        .eq("orcamento_id", orcId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      let tokenValue: string;
+
+      if (existing && existing.length > 0 && (existing[0] as any).status === "pendente") {
+        tokenValue = (existing[0] as any).token;
+      } else {
+        const { data: newToken, error } = await supabase
+          .from("formulario_tokens")
+          .insert({
+            orcamento_id: orcId,
+            empresa_id: empresaId,
+          } as any)
+          .select("token")
+          .single();
+        if (error) throw error;
+        tokenValue = (newToken as any).token;
+      }
+
+      const link = `${window.location.origin}/formulario?token=${tokenValue}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(orcId);
+      toast.success("Link copiado! Envie ao cliente para preenchimento dos dados.");
+      setTimeout(() => setCopiedLink(null), 3000);
+    } catch (err) {
+      toast.error("Erro ao gerar link do formulário");
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
   const openEdit = (orc: any) => {
     setEditNome(orc.nome ?? "");
     setEditFrete(orc.frete ?? 0);
