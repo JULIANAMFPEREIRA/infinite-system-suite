@@ -161,9 +161,10 @@ serve(async (req) => {
           .update({
             nome: nome.toUpperCase(),
             cpf_cnpj: cpf_cnpj || null,
-            email: email || null,
+            email: email ? email.toLowerCase() : null,
             telefone: telefone || null,
             endereco: endereco || null,
+            notas: notas || null,
           })
           .eq("id", cliente_id);
 
