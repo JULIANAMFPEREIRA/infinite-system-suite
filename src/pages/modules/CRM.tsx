@@ -673,7 +673,8 @@ const CRM = () => {
         quantidade: Number(item.quantidade) || 1,
         preco_custo: Number(item.preco_custo) || 0,
         preco_venda: Number(item.preco_venda) || 0,
-        tipo: "produto" as const, produto_id: item.produto_id || null,
+        tipo: ((item as any).tipo === "servico" ? "servico" : "produto") as "produto" | "servico",
+        produto_id: item.produto_id || null,
         rt_percentual: Number(item.rt_comissao) || 0,
       }));
       await supabase.from("projeto_itens").insert(itemInserts);
