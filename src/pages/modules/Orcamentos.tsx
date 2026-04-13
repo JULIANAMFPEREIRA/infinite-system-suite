@@ -482,6 +482,16 @@ const Orcamentos = () => {
                           size="sm"
                           variant="ghost"
                           className="h-7 w-7 p-0"
+                          title="Solicitar dados do cliente"
+                          disabled={generatingLink === orc.id}
+                          onClick={() => generateFormLink(orc.id)}
+                        >
+                          {copiedLink === orc.id ? <CheckCircle2 size={13} className="text-green-500" /> : generatingLink === orc.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
                           title="Editar"
                           onClick={() => openEdit(orc)}
                         >
