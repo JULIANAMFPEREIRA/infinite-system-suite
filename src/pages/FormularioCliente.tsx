@@ -124,6 +124,7 @@ const FormularioCliente = () => {
     if (tipo === "pj") {
       if (!razaoSocial.trim()) e.razaoSocial = "Razão social é obrigatória";
       if (cnpj && !validateCNPJ(cnpj)) e.cnpj = "CNPJ inválido";
+      if (!inscricaoEstadual.trim()) e.inscricaoEstadual = "Inscrição Estadual é obrigatória";
     }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "E-mail inválido";
 
@@ -139,7 +140,7 @@ const FormularioCliente = () => {
       const nomeEnvio = tipo === "pf" ? nome : razaoSocial;
       const cpfCnpjEnvio = tipo === "pf" ? cpf : cnpj;
       const notasExtra = tipo === "pj"
-        ? `NOME FANTASIA: ${nomeFantasia}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
+        ? `NOME FANTASIA: ${nomeFantasia}\nINSCRIÇÃO ESTADUAL: ${inscricaoEstadual}\nRESPONSÁVEL: ${responsavel}\nSERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`
         : `SERVIÇO DE INTERESSE: ${servicoInteresse}\nOBS: ${observacoes}`;
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/formulario-cliente`, {
@@ -323,6 +324,15 @@ const FormularioCliente = () => {
                     value={cnpj}
                     onChange={e => setCnpj(maskCNPJ(e.target.value))}
                     placeholder="00.000.000/0000-00"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    type="text"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Inscrição Estadual *" error={errors.inscricaoEstadual}>
+                  <Input
+                    value={inscricaoEstadual}
+                    onChange={e => setInscricaoEstadual(e.target.value.toUpperCase())}
+                    placeholder="Ex: 123456789 ou ISENTO"
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                     type="text"
                   />
