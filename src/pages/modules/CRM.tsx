@@ -298,6 +298,7 @@ const CRM = () => {
           preco_custo: i.preco_custo, preco_venda: i.preco_venda,
           rt_comissao: (i as any).rt_comissao ?? 0,
           produto_id: i.produto_id, orcamento_id: newOrc.id,
+          tipo: (i as any).tipo ?? "produto",
         }));
         await supabase.from("crm_itens").insert(copies as any);
       }
