@@ -499,23 +499,25 @@ const Orcamentos = () => {
                           <Trash2 size={13} />
                         </Button>
                         {!isAvulso && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs gap-1"
-                          onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
-                        >
-                          <ExternalLink size={12} /> Abrir
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs gap-1 text-primary hover:text-primary"
-                          title="Solicitar dados do cliente"
-                          onClick={() => generateFormLink(orc)}
-                        >
-                          <Link2 size={12} /> Solicitar Dados
-                        </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
+                            >
+                              <ExternalLink size={12} /> Abrir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                              title="Solicitar dados do cliente"
+                              onClick={() => generateFormLink(orc)}
+                            >
+                              <Link2 size={12} /> Solicitar Dados
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
