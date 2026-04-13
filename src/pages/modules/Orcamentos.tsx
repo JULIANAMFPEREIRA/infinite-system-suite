@@ -709,6 +709,46 @@ const Orcamentos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Form Link Modal */}
+      <Dialog open={!!formLinkOrc} onOpenChange={(open) => { if (!open) { setFormLinkOrc(null); setGeneratedLink(""); setLinkCopied(false); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Link2 size={16} className="text-primary" /> Link de Cadastro Gerado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Envie este link ao cliente para que ele preencha seus dados de cadastro:
+          </p>
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                value={generatedLink}
+                readOnly
+                className="h-10 text-xs pr-24 font-mono bg-muted"
+              />
+              <Button
+                size="sm"
+                variant={linkCopied ? "outline" : "default"}
+                className="absolute right-1 top-1 h-8 text-xs gap-1"
+                onClick={copyLinkToClipboard}
+              >
+                {linkCopied ? <Check size={14} /> : <Copy size={14} />}
+                {linkCopied ? "Copiado!" : "Copiar"}
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              O link é único e expira após ser usado. Compartilhe apenas com o cliente deste orçamento.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setFormLinkOrc(null); setGeneratedLink(""); setLinkCopied(false); }} className="text-xs">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
