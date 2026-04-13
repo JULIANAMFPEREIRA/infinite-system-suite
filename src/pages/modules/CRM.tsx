@@ -440,15 +440,41 @@ const CRM = () => {
         await supabase.from("compras").insert(compraInserts);
       }
     }
-    // Also sync necessidades_compra for backward compatibility
+    // Also sync necessidades_compra for backward compatibility (only products)
     await supabase.from("necessidades_compra" as any).delete().eq("projeto_id", projId).eq("status", "pendente");
     if (insertedItens.length > 0) {
-      const necInserts = insertedItens.map((pi: any) => ({
-        empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
-        produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
-        quantidade: Number(pi.quantidade) || 1, status: "pendente",
-      }));
-      await supabase.from("necessidades_compra" as any).insert(necInserts);
+      const necInserts = insertedItens
+        .filter((pi: any) => pi.tipo === "produto")
+        .map((pi: any) => ({
+          empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
+          produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
+          quantidade: Number(pi.quantidade) || 1, status: "pendente",
+        }));
+      if (necInserts.length > 0) {
+        await supabase.from("necessidades_compra" as any).insert(necInserts);
+      }
+    }
+
+    // ── Sync frete e imposto como contas a pagar ──
+    // Remove existing frete/imposto entries (identified by description pattern)
+    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).is("comissao_id", null).is("fornecedor_id", null);
+    const contasPagarExtras: any[] = [];
+    if (frete > 0) {
+      contasPagarExtras.push({
+        empresa_id: empresaId!, projeto_id: projId,
+        descricao: `Frete — ${detailClient.nome}`,
+        valor: frete, status: "pendente" as const,
+      });
+    }
+    if (imposto > 0) {
+      contasPagarExtras.push({
+        empresa_id: empresaId!, projeto_id: projId,
+        descricao: `Imposto — ${detailClient.nome}`,
+        valor: imposto, status: "pendente" as const,
+      });
+    }
+    if (contasPagarExtras.length > 0) {
+      await supabase.from("financeiro_pagar").insert(contasPagarExtras);
     }
 
     if (opts?.showToast !== false) {
