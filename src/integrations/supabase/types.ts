@@ -553,7 +553,9 @@ export type Database = {
       crm_orcamentos: {
         Row: {
           aprovado: boolean
-          cliente_id: string
+          cliente_id: string | null
+          cliente_nome_avulso: string | null
+          cliente_telefone_avulso: string | null
           created_at: string
           data_envio_proposta: string | null
           data_pagamento_avista: string | null
@@ -563,12 +565,15 @@ export type Database = {
           frete_tipo: string | null
           id: string
           imposto: number | null
+          is_avulso: boolean
           nome: string
           simulacao_pagamento: Json | null
         }
         Insert: {
           aprovado?: boolean
-          cliente_id: string
+          cliente_id?: string | null
+          cliente_nome_avulso?: string | null
+          cliente_telefone_avulso?: string | null
           created_at?: string
           data_envio_proposta?: string | null
           data_pagamento_avista?: string | null
@@ -578,12 +583,15 @@ export type Database = {
           frete_tipo?: string | null
           id?: string
           imposto?: number | null
+          is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
         }
         Update: {
           aprovado?: boolean
-          cliente_id?: string
+          cliente_id?: string | null
+          cliente_nome_avulso?: string | null
+          cliente_telefone_avulso?: string | null
           created_at?: string
           data_envio_proposta?: string | null
           data_pagamento_avista?: string | null
@@ -593,6 +601,7 @@ export type Database = {
           frete_tipo?: string | null
           id?: string
           imposto?: number | null
+          is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
         }

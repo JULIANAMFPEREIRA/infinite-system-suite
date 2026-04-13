@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Search, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
 import { ViewToggle } from "@/components/kanban/ViewToggle";
@@ -35,6 +35,18 @@ const Orcamentos = () => {
   const [editOrc, setEditOrc] = useState<any>(null);
   const [deleteOrcId, setDeleteOrcId] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"list" | "kanban">("list");
+
+  // Quick quote dialog state
+  const [showQuickQuote, setShowQuickQuote] = useState(false);
+  const [quickNome, setQuickNome] = useState("CONSUMIDOR");
+  const [quickTelefone, setQuickTelefone] = useState("");
+  const [quickOrcNome, setQuickOrcNome] = useState("Orçamento Rápido");
+
+  // Convert to client dialog state
+  const [convertOrc, setConvertOrc] = useState<any>(null);
+  const [convertNome, setConvertNome] = useState("");
+  const [convertTelefone, setConvertTelefone] = useState("");
+  const [convertEmail, setConvertEmail] = useState("");
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
@@ -74,10 +86,8 @@ const Orcamentos = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Delete linked items first
       const { error: itemsErr } = await supabase.from("crm_itens").delete().eq("orcamento_id", id);
       if (itemsErr) throw itemsErr;
-      // Delete linked project if exists
       const { data: proj } = await supabase.from("projetos").select("id").eq("orcamento_id", id);
       if (proj && proj.length > 0) {
         for (const p of proj) {
@@ -102,6 +112,97 @@ const Orcamentos = () => {
     },
     onError: () => toast.error("Erro ao excluir orçamento."),
   });
+
+  // Quick quote creation
+  const createQuickQuote = useMutation({
+    mutationFn: async () => {
+      if (!empresaId) throw new Error("Empresa não encontrada");
+      const nome = quickNome.trim();
+      if (!nome) throw new Error("Nome do cliente é obrigatório");
+      const { data, error } = await supabase.from("crm_orcamentos").insert({
+        empresa_id: empresaId,
+        nome: quickOrcNome.trim() || "Orçamento Rápido",
+        is_avulso: true,
+        cliente_nome_avulso: nome,
+        cliente_telefone_avulso: quickTelefone.trim() || null,
+      } as any).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+      toast.success("Orçamento rápido criado!");
+      setShowQuickQuote(false);
+      setQuickNome("CONSUMIDOR");
+      setQuickTelefone("");
+      setQuickOrcNome("Orçamento Rápido");
+      // Navigate to edit (open in CRM-like view or stay on list)
+      // For avulso, we stay on the list since there's no CRM client
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Convert avulso to CRM client
+  const convertToClient = useMutation({
+    mutationFn: async () => {
+      if (!empresaId || !convertOrc) throw new Error("Dados incompletos");
+      const nome = convertNome.trim();
+      if (!nome) throw new Error("Nome do cliente é obrigatório");
+
+      // Check for duplicate client
+      const { data: existing } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("empresa_id", empresaId)
+        .eq("nome", nome)
+        .eq("deletado", false)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        throw new Error(`Já existe um cliente com o nome "${nome}". Verifique antes de continuar.`);
+      }
+
+      // Create client in CRM
+      const { data: newClient, error: clientErr } = await supabase.from("clientes").insert({
+        empresa_id: empresaId,
+        nome,
+        telefone: convertTelefone.trim() || null,
+        email: convertEmail.trim() || null,
+        status_crm: "proposta" as const,
+      }).select().single();
+      if (clientErr) throw clientErr;
+
+      // Link the quote to the new client and remove avulso flag
+      const { error: updateErr } = await supabase.from("crm_orcamentos").update({
+        cliente_id: newClient.id,
+        is_avulso: false,
+      } as any).eq("id", convertOrc.id);
+      if (updateErr) throw updateErr;
+
+      // Also update any crm_itens that belong to this quote (they need a cliente_id)
+      await supabase.from("crm_itens").update({
+        cliente_id: newClient.id,
+      }).eq("orcamento_id", convertOrc.id);
+
+      return newClient;
+    },
+    onSuccess: (newClient) => {
+      qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+      toast.success("Cliente criado e orçamento vinculado com sucesso!");
+      setConvertOrc(null);
+      // Navigate to CRM with the new client
+      navigate(`/crm?cliente_id=${newClient.id}`);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const openConvert = (orc: any) => {
+    setConvertNome((orc as any).cliente_nome_avulso || "");
+    setConvertTelefone((orc as any).cliente_telefone_avulso || "");
+    setConvertEmail("");
+    setConvertOrc(orc);
+  };
 
   const openEdit = (orc: any) => {
     setEditNome(orc.nome ?? "");
@@ -129,8 +230,9 @@ const Orcamentos = () => {
   const filtered = (orcamentos ?? []).filter((o) => {
     const term = busca.toLowerCase();
     const clienteNome = (o.clientes as any)?.nome?.toLowerCase() ?? "";
+    const avulsoNome = ((o as any).cliente_nome_avulso ?? "").toLowerCase();
     const nome = o.nome?.toLowerCase() ?? "";
-    return clienteNome.includes(term) || nome.includes(term);
+    return clienteNome.includes(term) || avulsoNome.includes(term) || nome.includes(term);
   });
 
   const calcTotal = (itens: any[]) =>
@@ -141,6 +243,13 @@ const Orcamentos = () => {
 
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const getClienteDisplay = (orc: any): string => {
+    if ((orc as any).is_avulso) {
+      return (orc as any).cliente_nome_avulso || "CONSUMIDOR";
+    }
+    return (orc.clientes as any)?.nome ?? "—";
+  };
 
   // Kanban columns for Orcamentos
   const orcKanbanColumns = [
@@ -190,7 +299,17 @@ const Orcamentos = () => {
           <FileText size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">Orçamentos</h1>
         </div>
-        <ViewToggle view={viewType} onChange={setViewType} />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs gap-1.5 h-8"
+            onClick={() => setShowQuickQuote(true)}
+          >
+            <Zap size={13} className="text-warning" /> Orçamento Rápido
+          </Button>
+          <ViewToggle view={viewType} onChange={setViewType} />
+        </div>
       </div>
 
       <div className="relative max-w-xs">
@@ -212,10 +331,18 @@ const Orcamentos = () => {
           columns={orcKanbanColumns}
           items={kanbanItems}
           onMove={handleKanbanMove}
-          onCardClick={(item) => navigate(`/crm?cliente_id=${item.orc.cliente_id}&orcamento_id=${item.orc.id}`)}
+          onCardClick={(item) => {
+            if ((item.orc as any).is_avulso) { openEdit(item.orc); return; }
+            navigate(`/crm?cliente_id=${item.orc.cliente_id}&orcamento_id=${item.orc.id}`);
+          }}
           renderCard={(item) => (
             <div className="space-y-1">
-              <p className="text-[11px] font-semibold text-foreground truncate">{(item.orc.clientes as any)?.nome ?? "—"}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-[11px] font-semibold text-foreground truncate">{getClienteDisplay(item.orc)}</p>
+                {(item.orc as any).is_avulso && (
+                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-warning/40 text-warning">AVULSO</Badge>
+                )}
+              </div>
               <p className="text-[10px] text-muted-foreground truncate">{item.orc.nome}</p>
               <p className="text-xs font-bold text-foreground">{formatCurrency(item.total)}</p>
               {item.orc.data_envio_proposta && (
@@ -240,6 +367,7 @@ const Orcamentos = () => {
             <TableBody>
               {filtered.map((orc) => {
                 const total = calcTotal(orc.crm_itens as any[]);
+                const isAvulso = (orc as any).is_avulso;
                 const enviado = orc.data_envio_proposta
                   ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
                       addSuffix: true,
@@ -250,7 +378,14 @@ const Orcamentos = () => {
                 return (
                   <TableRow key={orc.id} className="hover:bg-muted/20">
                     <TableCell className="text-xs font-medium">
-                      {(orc.clientes as any)?.nome ?? "—"}
+                      <div className="flex items-center gap-1.5">
+                        {getClienteDisplay(orc)}
+                        {isAvulso && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-warning/40 text-warning font-medium">
+                            AVULSO
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs">{orc.nome}</TableCell>
                     <TableCell className="text-xs text-right font-semibold">
@@ -279,6 +414,17 @@ const Orcamentos = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {isAvulso && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1 text-success hover:text-success"
+                            title="Converter em Cliente"
+                            onClick={() => openConvert(orc)}
+                          >
+                            <UserPlus size={12} /> Converter
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -297,14 +443,16 @@ const Orcamentos = () => {
                         >
                           <Trash2 size={13} />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs gap-1"
-                          onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
-                        >
-                          <ExternalLink size={12} /> Abrir
-                        </Button>
+                        {!isAvulso && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
+                          >
+                            <ExternalLink size={12} /> Abrir
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -314,6 +462,115 @@ const Orcamentos = () => {
           </Table>
         </div>
       )}
+
+      {/* Quick Quote Dialog */}
+      <Dialog open={showQuickQuote} onOpenChange={setShowQuickQuote}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Zap size={16} className="text-warning" /> Novo Orçamento Rápido
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Crie um orçamento sem cadastrar cliente no CRM. Você poderá converter em cliente posteriormente.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs flex items-center gap-1"><User size={11} /> Nome do Cliente *</Label>
+              <Input
+                value={quickNome}
+                onChange={(e) => setQuickNome(e.target.value.toUpperCase())}
+                className="h-8 text-xs"
+                placeholder="CONSUMIDOR"
+              />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1"><Phone size={11} /> Telefone (opcional)</Label>
+              <Input
+                value={quickTelefone}
+                onChange={(e) => setQuickTelefone(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1"><FileText size={11} /> Nome do Orçamento</Label>
+              <Input
+                value={quickOrcNome}
+                onChange={(e) => setQuickOrcNome(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="Orçamento Rápido"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowQuickQuote(false)} className="text-xs">Cancelar</Button>
+            <Button
+              size="sm"
+              onClick={() => createQuickQuote.mutate()}
+              disabled={createQuickQuote.isPending || !quickNome.trim()}
+              className="text-xs gap-1"
+            >
+              <Zap size={12} />
+              {createQuickQuote.isPending ? "Criando..." : "Criar Orçamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Client Dialog */}
+      <Dialog open={!!convertOrc} onOpenChange={(open) => { if (!open) setConvertOrc(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <UserPlus size={16} className="text-success" /> Converter em Cliente
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Um novo cliente será criado no CRM e o orçamento será vinculado a ele.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Nome do Cliente *</Label>
+              <Input
+                value={convertNome}
+                onChange={(e) => setConvertNome(e.target.value.toUpperCase())}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Telefone</Label>
+              <Input
+                value={convertTelefone}
+                onChange={(e) => setConvertTelefone(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">E-mail</Label>
+              <Input
+                value={convertEmail}
+                onChange={(e) => setConvertEmail(e.target.value)}
+                className="h-8 text-xs"
+                placeholder="email@exemplo.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConvertOrc(null)} className="text-xs">Cancelar</Button>
+            <Button
+              size="sm"
+              onClick={() => convertToClient.mutate()}
+              disabled={convertToClient.isPending || !convertNome.trim()}
+              className="text-xs gap-1 bg-success hover:bg-success/90 text-white"
+            >
+              <UserPlus size={12} />
+              {convertToClient.isPending ? "Convertendo..." : "Criar Cliente e Vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editOrc} onOpenChange={(open) => { if (!open) setEditOrc(null); }}>
