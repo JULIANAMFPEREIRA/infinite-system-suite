@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Search, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
+import { ViewToggle } from "@/components/kanban/ViewToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useTransportadoras } from "@/hooks/useTransportadoras";
@@ -32,6 +34,7 @@ const Orcamentos = () => {
   const [busca, setBusca] = useState("");
   const [editOrc, setEditOrc] = useState<any>(null);
   const [deleteOrcId, setDeleteOrcId] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<"list" | "kanban">("list");
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
@@ -139,6 +142,47 @@ const Orcamentos = () => {
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  // Kanban columns for Orcamentos
+  const orcKanbanColumns = [
+    { key: "contato", label: "EM CONTATO", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
+    { key: "enviado", label: "ENVIADO", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
+    { key: "aprovado", label: "APROVADO", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
+    { key: "cancelado", label: "CANCELADO", color: "text-destructive", borderColor: "border-destructive/30", bgColor: "bg-destructive/5" },
+  ];
+
+  const getOrcKanbanColumn = (orc: any): string => {
+    if (orc.aprovado) return "aprovado";
+    if (orc.data_envio_proposta) return "enviado";
+    return "contato";
+  };
+
+  type OrcKanbanItem = KanbanCardData & { orc: any; total: number };
+
+  const kanbanItems: OrcKanbanItem[] = filtered.map((orc) => ({
+    id: orc.id,
+    columnKey: getOrcKanbanColumn(orc),
+    orc,
+    total: calcTotal(orc.crm_itens as any[]),
+  }));
+
+  const handleKanbanMove = async (itemId: string, _from: string, to: string) => {
+    const updates: any = {};
+    if (to === "aprovado") updates.aprovado = true;
+    else updates.aprovado = false;
+    if (to === "enviado" || to === "aprovado") {
+      const orc = orcamentos?.find((o) => o.id === itemId);
+      if (!orc?.data_envio_proposta) updates.data_envio_proposta = new Date().toISOString().split("T")[0];
+    }
+    if (to === "contato") {
+      updates.data_envio_proposta = null;
+    }
+    const { error } = await supabase.from("crm_orcamentos").update(updates).eq("id", itemId);
+    if (error) { toast.error("Erro ao mover orçamento"); return; }
+    qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
+    qc.invalidateQueries({ queryKey: ["crm_orcamentos"] });
+    toast.success("Status atualizado!");
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -146,6 +190,7 @@ const Orcamentos = () => {
           <FileText size={18} className="text-primary" />
           <h1 className="text-lg font-bold text-foreground">Orçamentos</h1>
         </div>
+        <ViewToggle view={viewType} onChange={setViewType} />
       </div>
 
       <div className="relative max-w-xs">
@@ -162,6 +207,23 @@ const Orcamentos = () => {
         <p className="text-muted-foreground text-sm">Carregando...</p>
       ) : filtered.length === 0 ? (
         <p className="text-muted-foreground text-sm">Nenhum orçamento encontrado.</p>
+      ) : viewType === "kanban" ? (
+        <KanbanBoard
+          columns={orcKanbanColumns}
+          items={kanbanItems}
+          onMove={handleKanbanMove}
+          onCardClick={(item) => navigate(`/crm?cliente_id=${item.orc.cliente_id}&orcamento_id=${item.orc.id}`)}
+          renderCard={(item) => (
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-foreground truncate">{(item.orc.clientes as any)?.nome ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{item.orc.nome}</p>
+              <p className="text-xs font-bold text-foreground">{formatCurrency(item.total)}</p>
+              {item.orc.data_envio_proposta && (
+                <p className="text-[10px] text-muted-foreground">{new Date(item.orc.data_envio_proposta).toLocaleDateString("pt-BR")}</p>
+              )}
+            </div>
+          )}
+        />
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>

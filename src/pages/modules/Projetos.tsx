@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FolderKanban, Plus, Pencil, Trash2, AlertTriangle, Search, ArrowLeft, Check, DollarSign, Filter, FileText } from "lucide-react";
+import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
+import { ViewToggle } from "@/components/kanban/ViewToggle";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useProjetos, useClientes, useArquitetos, useCreateProjeto, useUpdateProjeto, useProjetoItens, useCreateProjetoItem, useDeleteProjetoItem } from "@/hooks/useProjetos";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -77,6 +79,7 @@ const Projetos = () => {
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
+  const [listViewType, setListViewType] = useState<"list" | "kanban">("list");
 
   const statusCounts = useMemo(() => {
     const all = projetos ?? [];
@@ -232,6 +235,44 @@ const Projetos = () => {
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const fmt = (v: number | null) => `R$ ${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+  // Kanban config for Projetos
+  const projetoKanbanColumns = [
+    { key: "planejamento", label: "PLANEJAMENTO", color: "text-amber-600", borderColor: "border-amber-500/30", bgColor: "bg-amber-500/5" },
+    { key: "em_andamento", label: "EM ANDAMENTO", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
+    { key: "em_pausa", label: "PAUSADO", color: "text-orange-600", borderColor: "border-orange-500/30", bgColor: "bg-orange-500/5" },
+    { key: "concluido", label: "FINALIZADO", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
+  ];
+
+  const getProjetoKanbanColumn = (status: string): string => {
+    if (["infraestrutura", "cabeamento"].includes(status)) return "planejamento";
+    if (["instalacao", "programacao", "personalizacao", "em_andamento", "aprovado", "vendido"].includes(status)) return "em_andamento";
+    if (status === "em_pausa") return "em_pausa";
+    if (["concluido", "pos_venda"].includes(status)) return "concluido";
+    return "planejamento";
+  };
+
+  const kanbanStatusMap: Record<string, StatusProjeto> = {
+    planejamento: "infraestrutura",
+    em_andamento: "instalacao",
+    em_pausa: "em_pausa",
+    concluido: "concluido",
+  };
+
+  type ProjetoKanbanItem = KanbanCardData & { projeto: any };
+
+  const projetoKanbanItems: ProjetoKanbanItem[] = filtered.map((p) => ({
+    id: p.id,
+    columnKey: getProjetoKanbanColumn(p.status ?? "infraestrutura"),
+    projeto: p,
+  }));
+
+  const handleProjetoKanbanMove = (itemId: string, _from: string, to: string) => {
+    const targetStatus = kanbanStatusMap[to];
+    if (!targetStatus) return;
+    const projeto = projetos?.find((pp) => pp.id === itemId);
+    changeStatus.mutate({ id: itemId, status: targetStatus, projeto });
+  };
 
   // DETAIL VIEW
   if (shouldShowDetail) {
@@ -406,9 +447,12 @@ const Projetos = () => {
           <h1 className="text-lg font-bold text-foreground">Projetos</h1>
           <span className="text-xs text-muted-foreground">({statusCounts.todos})</span>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); setMainTab("lista"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
-          <Plus size={14} /> Novo Projeto
-        </button>
+        <div className="flex items-center gap-2">
+          <ViewToggle view={listViewType} onChange={setListViewType} />
+          <button onClick={() => { resetForm(); setShowForm(true); setMainTab("lista"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+            <Plus size={14} /> Novo Projeto
+          </button>
+        </div>
       </div>
 
       {/* Status counters - same pattern as CRM */}
@@ -488,6 +532,28 @@ const Projetos = () => {
             <div className="text-center py-8 text-muted-foreground text-xs">Carregando...</div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-xs">Nenhum projeto encontrado.</div>
+          ) : listViewType === "kanban" ? (
+            <KanbanBoard
+              columns={projetoKanbanColumns}
+              items={projetoKanbanItems}
+              onMove={handleProjetoKanbanMove}
+              onCardClick={(item) => openEdit(item.projeto)}
+              renderCard={(item) => {
+                const p = item.projeto;
+                return (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold text-foreground truncate">{p.nome}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{(p.clientes as any)?.nome ?? "—"}</p>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[p.status as StatusProjeto]}`}>
+                      {statusLabels[p.status as StatusProjeto]}
+                    </span>
+                    {canSeeFinancials && p.venda_total > 0 && (
+                      <p className="text-[10px] font-medium text-foreground">{fmt(p.venda_total)}</p>
+                    )}
+                  </div>
+                );
+              }}
+            />
           ) : (
             <div className="border border-border rounded overflow-hidden">
               <div className="overflow-x-auto">
