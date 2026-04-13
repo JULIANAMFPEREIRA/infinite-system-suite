@@ -23,7 +23,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Orcamentos = () => {
@@ -335,21 +335,31 @@ const Orcamentos = () => {
             if ((item.orc as any).is_avulso) { openEdit(item.orc); return; }
             navigate(`/crm?cliente_id=${item.orc.cliente_id}&orcamento_id=${item.orc.id}`);
           }}
-          renderCard={(item) => (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <p className="text-[11px] font-semibold text-foreground truncate">{getClienteDisplay(item.orc)}</p>
-                {(item.orc as any).is_avulso && (
-                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-warning/40 text-warning">AVULSO</Badge>
+          renderCard={(item) => {
+            const isAvulso = (item.orc as any).is_avulso;
+            const updatedAt = item.orc.created_at;
+            const daysInStatus = updatedAt ? differenceInDays(new Date(), new Date(updatedAt)) : 0;
+            return (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-xs font-bold text-foreground truncate leading-tight">{getClienteDisplay(item.orc)}</p>
+                  {isAvulso && (
+                    <Badge variant="outline" className="text-[8px] px-1.5 py-0 h-4 border-warning/50 text-warning bg-warning/10 shrink-0">Rápido</Badge>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate">{item.orc.nome}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-primary">{formatCurrency(item.total)}</p>
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${daysInStatus > 14 ? "bg-destructive/10 text-destructive" : daysInStatus > 7 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"}`}>
+                    {daysInStatus}d
+                  </span>
+                </div>
+                {item.orc.data_envio_proposta && (
+                  <p className="text-[9px] text-muted-foreground/70">Enviado {new Date(item.orc.data_envio_proposta).toLocaleDateString("pt-BR")}</p>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground truncate">{item.orc.nome}</p>
-              <p className="text-xs font-bold text-foreground">{formatCurrency(item.total)}</p>
-              {item.orc.data_envio_proposta && (
-                <p className="text-[10px] text-muted-foreground">{new Date(item.orc.data_envio_proposta).toLocaleDateString("pt-BR")}</p>
-              )}
-            </div>
-          )}
+            );
+          }}
         />
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
