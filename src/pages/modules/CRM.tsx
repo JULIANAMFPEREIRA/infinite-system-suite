@@ -1737,13 +1737,13 @@ const CRM = () => {
               {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* CUSTOS ADICIONAIS (Frete & Imposto)                    */}
+              {/* FRETE E IMPOSTOS                                      */}
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
                 <section>
                   <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
                     <Calculator size={14} className="text-warning" />
-                    Custos Adicionais
+                    Frete e Impostos
                   </h3>
                   <div className="bg-warning/5 border border-warning/20 rounded-lg p-4 space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
