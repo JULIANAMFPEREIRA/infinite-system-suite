@@ -2,7 +2,7 @@ import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -860,6 +860,59 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ─── Inline edit state ───
+  const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string } | null>(null);
+  const [inlineValue, setInlineValue] = useState<string>("");
+  const [inlineSaving, setInlineSaving] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+
+  const startInlineEdit = useCallback((id: string, field: string, value: any) => {
+    setInlineEdit({ id, field });
+    setInlineValue(String(value ?? ""));
+  }, []);
+
+  const saveInlineEdit = useCallback(async () => {
+    if (!inlineEdit) return;
+    const { id, field } = inlineEdit;
+    const numFields = ["quantidade", "preco_custo", "preco_venda", "rt_comissao"];
+    const val = numFields.includes(field) ? Number(inlineValue) : inlineValue;
+    if (field === "descricao" && !String(val).trim()) { setInlineEdit(null); return; }
+    setInlineSaving(true);
+    try {
+      const { error } = await supabase.from("crm_itens").update(sanitizePayload({ [field]: val } as any)).eq("id", id);
+      if (error) throw error;
+      refetchCrmItens();
+      if (activeOrcamentoId) {
+        const orc = orcamentos?.find((o: any) => o.id === activeOrcamentoId);
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+      }
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setInlineSaving(false);
+      setInlineEdit(null);
+    }
+  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos]);
+
+  const handleSortToggle = useCallback((key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) return prev.dir === "asc" ? { key, dir: "desc" } : null;
+      return { key, dir: "asc" };
+    });
+  }, []);
+
+  const sortItems = useCallback((items: any[]) => {
+    if (!sortConfig) return items;
+    const { key, dir } = sortConfig;
+    return [...items].sort((a, b) => {
+      const av = key === "descricao" ? String(a[key] ?? "").toLowerCase() : Number(a[key] ?? 0);
+      const bv = key === "descricao" ? String(b[key] ?? "").toLowerCase() : Number(b[key] ?? 0);
+      if (av < bv) return dir === "asc" ? -1 : 1;
+      if (av > bv) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [sortConfig]);
+
   const deleteCrmItem = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("crm_itens").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => {
@@ -1553,8 +1606,57 @@ const CRM = () => {
                 const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico");
                 const servicos = (crmItens ?? []).filter(i => (i as any).tipo === "servico");
 
-                const renderItemTable = (items: typeof crmItens extends (infer T)[] | undefined ? T[] : never[], title: string, icon: React.ReactNode, badgeClass: string) => {
+                const SortIcon = ({ colKey }: { colKey: string }) => {
+                  if (sortConfig?.key !== colKey) return <ArrowUpDown size={10} className="ml-0.5 opacity-40" />;
+                  return sortConfig.dir === "asc" ? <ArrowUp size={10} className="ml-0.5 text-primary" /> : <ArrowDown size={10} className="ml-0.5 text-primary" />;
+                };
+
+                const SortableHeader = ({ colKey, label, className }: { colKey: string; label: string; className?: string }) => (
+                  <th className={`px-3 py-2.5 font-semibold text-foreground/80 cursor-pointer select-none hover:text-primary transition-colors ${className ?? ""}`} onClick={() => handleSortToggle(colKey)}>
+                    <span className="inline-flex items-center gap-0.5">{label}<SortIcon colKey={colKey} /></span>
+                  </th>
+                );
+
+                const InlineCell = ({ item, field, type, align }: { item: any; field: string; type: "text" | "number"; align?: string }) => {
+                  const isEditing = inlineEdit?.id === item.id && inlineEdit?.field === field;
+                  const value = field === "rt_comissao" ? (item as any).rt_comissao : item[field];
+                  if (isEditing) {
+                    return (
+                      <td className={`px-1 py-1 ${align ?? ""}`}>
+                        <div className="relative">
+                          <input
+                            type={type}
+                            value={inlineValue}
+                            onChange={e => setInlineValue(e.target.value)}
+                            onBlur={saveInlineEdit}
+                            onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEdit(null); }}
+                            autoFocus
+                            step={type === "number" ? "0.01" : undefined}
+                            min={type === "number" ? 0 : undefined}
+                            className="w-full h-7 px-1.5 text-xs bg-background border-2 border-primary rounded focus:outline-none ring-2 ring-primary/20"
+                          />
+                          {inlineSaving && <Loader2 size={12} className="absolute right-1.5 top-1.5 animate-spin text-primary" />}
+                        </div>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td
+                      className={`px-3 py-2 cursor-pointer hover:bg-primary/5 rounded transition-colors group ${align ?? ""}`}
+                      onClick={() => startInlineEdit(item.id, field, value)}
+                      title="Clique para editar"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {type === "number" ? `R$ ${Number(value ?? 0).toFixed(2)}` : (field === "quantidade" ? Number(value) : String(value ?? ""))}
+                        <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground shrink-0" />
+                      </span>
+                    </td>
+                  );
+                };
+
+                const renderItemTable = (items: any[], title: string, icon: React.ReactNode, badgeClass: string) => {
                   if (!items || items.length === 0) return null;
+                  const sorted = sortItems(items);
                   return (
                     <section>
                       <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
@@ -1565,26 +1667,26 @@ const CRM = () => {
                       <div className="rounded-lg overflow-hidden border border-border/60 bg-card">
                         <table className="w-full text-xs">
                           <thead><tr className="bg-secondary/40">
-                            <th className="text-left px-3 py-2.5 font-semibold text-foreground/80">Descrição</th>
-                            <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Qtd</th>
-                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Custo</th>
-                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Venda</th>
-                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">RT</th>
+                            <SortableHeader colKey="descricao" label="Descrição" className="text-left" />
+                            <SortableHeader colKey="quantidade" label="Qtd" className="text-center" />
+                            <SortableHeader colKey="preco_custo" label="Custo" className="text-right" />
+                            <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
+                            <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
                             <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
                           </tr></thead>
                           <tbody>
-                            {items.map(item => (
+                            {sorted.map((item: any) => (
                               <tr key={item.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
-                                <td className="px-3 py-2">{item.descricao}</td>
-                                <td className="px-3 py-2 text-center">{item.quantidade}</td>
-                                <td className="px-3 py-2 text-right">R$ {Number(item.preco_custo).toFixed(2)}</td>
-                                <td className="px-3 py-2 text-right">R$ {Number(item.preco_venda).toFixed(2)}</td>
-                                <td className="px-3 py-2 text-right">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</td>
+                                <InlineCell item={item} field="descricao" type="text" />
+                                <InlineCell item={item} field="quantidade" type="number" align="text-center" />
+                                <InlineCell item={item} field="preco_custo" type="number" align="text-right" />
+                                <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
+                                <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                                 <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
-                                    <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                    <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
                                     <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                                   </div>
                                 </td>
@@ -1592,11 +1694,11 @@ const CRM = () => {
                             ))}
                             <tr className="border-t-2 border-border bg-secondary/20">
                               <td className="px-3 py-2 font-semibold text-foreground/80">Subtotal</td>
-                              <td className="px-3 py-2 text-center font-semibold">{items.reduce((s, i) => s + (Number(i.quantidade) || 0), 0)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center font-semibold">{items.reduce((s: number, i: any) => s + (Number(i.quantidade) || 0), 0)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
                               <td></td>
                             </tr>
                           </tbody>
