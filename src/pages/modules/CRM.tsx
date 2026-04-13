@@ -52,6 +52,8 @@ const CRM = () => {
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
   const [novoClienteObs, setNovoClienteObs] = useState("");
   const [dragClientId, setDragClientId] = useState<string | null>(null);
+  const [tableSortKey, setTableSortKey] = useState<"nome" | "created_at" | "updated_at">("created_at");
+  const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("desc");
 
   const [detailClient, setDetailClient] = useState<any>(null);
 
@@ -955,7 +957,33 @@ const CRM = () => {
     onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
   });
 
-  const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
+  
+
+  const filteredSorted = useMemo(() => {
+    const list = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
+    return [...list].sort((a, b) => {
+      let av: any, bv: any;
+      if (tableSortKey === "nome") { av = (a.nome ?? "").toLowerCase(); bv = (b.nome ?? "").toLowerCase(); }
+      else if (tableSortKey === "updated_at") { av = a.updated_at; bv = b.updated_at; }
+      else { av = a.created_at; bv = b.created_at; }
+      if (av < bv) return tableSortDir === "asc" ? -1 : 1;
+      if (av > bv) return tableSortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [clientes, filterStatus, tableSortKey, tableSortDir]);
+
+  const toggleTableSort = (key: "nome" | "created_at" | "updated_at") => {
+    if (tableSortKey === key) setTableSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setTableSortKey(key); setTableSortDir(key === "nome" ? "asc" : "desc"); }
+  };
+
+  const getOrcamentoCount = (clienteId: string) => (allOrcamentos ?? []).filter(o => o.cliente_id === clienteId).length;
+
+  const getDaysInStatus = (c: any) => {
+    const ref = c.updated_at || c.created_at;
+    if (!ref) return 0;
+    return Math.floor((Date.now() - new Date(ref).getTime()) / 86400000);
+  };
 
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
   const totalCrmVenda = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
@@ -2245,26 +2273,46 @@ const CRM = () => {
                 ))}
               </div>
 
-              <div className="border border-border rounded overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <table className="w-full text-xs">
                   <thead><tr className="bg-secondary/60">
-                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
-                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">E-mail</th>
-                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Telefone</th>
-                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Origem</th>
-                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
-                    <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                    <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+                    <th className="text-left px-3 py-2.5 font-semibold border-b border-border cursor-pointer select-none group" onClick={() => toggleTableSort("nome")}>
+                      <div className="flex items-center gap-1">Nome {tableSortKey === "nome" ? (tableSortDir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30 group-hover:opacity-60" />}</div>
+                    </th>
+                    <th className="text-left px-3 py-2.5 font-semibold border-b border-border">Telefone</th>
+                    <th className="text-left px-3 py-2.5 font-semibold border-b border-border hidden md:table-cell">Origem</th>
+                    <th className="text-center px-3 py-2.5 font-semibold border-b border-border">Orçam.</th>
+                    <th className="text-center px-3 py-2.5 font-semibold border-b border-border hidden lg:table-cell">Dias no Status</th>
+                    <th className="text-center px-3 py-2.5 font-semibold border-b border-border cursor-pointer select-none group" onClick={() => toggleTableSort("updated_at")}>
+                      <div className="flex items-center justify-center gap-1">Atualização {tableSortKey === "updated_at" ? (tableSortDir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30 group-hover:opacity-60" />}</div>
+                    </th>
+                    <th className="text-center px-3 py-2.5 font-semibold border-b border-border">Status</th>
+                    <th className="text-center px-3 py-2.5 font-semibold border-b border-border">Ações</th>
                   </tr></thead>
                   <tbody>
-                    {filtered.map(c => (
-                      <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openDetail(c)}>
-                        <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
-                        <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
-                        <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
-                        <td className="px-2.5 py-1.5">{origemLabels[c.origem as OrigemLead] ?? "—"}</td>
-                        <td className="px-2.5 py-1.5">{(c as any).fornecedores?.nome ?? "—"}</td>
-                        <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                    {filteredSorted.map(c => {
+                      const orcCount = getOrcamentoCount(c.id);
+                      const daysInStatus = getDaysInStatus(c);
+                      return (
+                      <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-primary/[0.03] cursor-pointer transition-colors group" onClick={() => openDetail(c)}>
+                        <td className="px-3 py-2.5">
+                          <p className="font-semibold text-foreground text-[13px] group-hover:text-primary transition-colors">{c.nome}</p>
+                          {c.email && <p className="text-[10px] text-muted-foreground mt-0.5">{c.email}</p>}
+                        </td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{c.telefone ?? "—"}</td>
+                        <td className="px-3 py-2.5 hidden md:table-cell"><span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{origemLabels[c.origem as OrigemLead] ?? "—"}</span></td>
+                        <td className="px-3 py-2.5 text-center">
+                          {orcCount > 0 ? <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">{orcCount}</span> : <span className="text-muted-foreground/40">—</span>}
+                        </td>
+                        <td className="px-3 py-2.5 text-center hidden lg:table-cell">
+                          <span className={`text-[10px] font-medium ${daysInStatus > 30 ? "text-destructive" : daysInStatus > 14 ? "text-warning" : "text-muted-foreground"}`}>
+                            {daysInStatus}d
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(c.updated_at), { addSuffix: true, locale: ptBR })}
+                        </td>
+                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
                           <select
                             value={c.status_crm ?? "lead"}
                             onChange={e => { e.stopPropagation(); changeStatusInline.mutate({ id: c.id, newStatus: e.target.value as StatusCRM, old: c }); }}
@@ -2277,7 +2325,7 @@ const CRM = () => {
                             <option value="projeto">Projeto</option>
                           </select>
                         </td>
-                        <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => openDetail(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Eye size={13} /></button>
                             <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
@@ -2285,8 +2333,9 @@ const CRM = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
-                    {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
+                    );
+                    })}
+                    {filteredSorted.length === 0 && <tr><td colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum cliente encontrado.</td></tr>}
                   </tbody>
                 </table>
               </div>
