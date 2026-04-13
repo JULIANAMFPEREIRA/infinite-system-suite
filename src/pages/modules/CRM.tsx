@@ -959,6 +959,32 @@ const CRM = () => {
 
   const filtered = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
 
+  const filteredSorted = useMemo(() => {
+    const list = clientes?.filter(c => filterStatus === "todos" || c.status_crm === filterStatus) ?? [];
+    return [...list].sort((a, b) => {
+      let av: any, bv: any;
+      if (tableSortKey === "nome") { av = (a.nome ?? "").toLowerCase(); bv = (b.nome ?? "").toLowerCase(); }
+      else if (tableSortKey === "updated_at") { av = a.updated_at; bv = b.updated_at; }
+      else { av = a.created_at; bv = b.created_at; }
+      if (av < bv) return tableSortDir === "asc" ? -1 : 1;
+      if (av > bv) return tableSortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [clientes, filterStatus, tableSortKey, tableSortDir]);
+
+  const toggleTableSort = (key: "nome" | "created_at" | "updated_at") => {
+    if (tableSortKey === key) setTableSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setTableSortKey(key); setTableSortDir(key === "nome" ? "asc" : "desc"); }
+  };
+
+  const getOrcamentoCount = (clienteId: string) => (allOrcamentos ?? []).filter(o => o.cliente_id === clienteId).length;
+
+  const getDaysInStatus = (c: any) => {
+    const ref = c.updated_at || c.created_at;
+    if (!ref) return 0;
+    return Math.floor((Date.now() - new Date(ref).getTime()) / 86400000);
+  };
+
   const totalCrmCusto = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
   const totalCrmVenda = (crmItens ?? []).reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
   const totalCrmRt = (crmItens ?? []).reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0);
