@@ -969,6 +969,64 @@ export type Database = {
           },
         ]
       }
+      formulario_tokens: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          dados_preenchidos: Json | null
+          empresa_id: string
+          id: string
+          orcamento_id: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          dados_preenchidos?: Json | null
+          empresa_id: string
+          id?: string
+          orcamento_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          dados_preenchidos?: Json | null
+          empresa_id?: string
+          id?: string
+          orcamento_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formulario_tokens_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formulario_tokens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formulario_tokens_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           cidade: string | null
