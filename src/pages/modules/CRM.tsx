@@ -1022,6 +1022,20 @@ const CRM = () => {
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
+  // Desconto state
+  const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
+  const [orcDescontoValor, setOrcDescontoValor] = useState(Number(((activeOrc as any)?.simulacao_pagamento as any)?.descontoValor) || 0);
+
+  const subtotalOrcamento = totalCrmVenda;
+  const descontoCalculado = useMemo(() => {
+    if (orcDescontoTipo === "percentual") {
+      const pct = Math.min(Math.max(orcDescontoValor, 0), 100);
+      return (subtotalOrcamento * pct) / 100;
+    }
+    return Math.min(Math.max(orcDescontoValor, 0), subtotalOrcamento);
+  }, [orcDescontoTipo, orcDescontoValor, subtotalOrcamento]);
+  const totalCrmVendaComDesconto = subtotalOrcamento - descontoCalculado;
+
   const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
@@ -1040,6 +1054,8 @@ const CRM = () => {
     setOrcImposto(Number(orc?.imposto) || 0);
     setOrcDataEnvio(orc?.data_envio_proposta ?? "");
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
+    setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
+    setOrcDescontoValor(Number(sim.descontoValor) || 0);
   }, []);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
@@ -1047,7 +1063,7 @@ const CRM = () => {
     setEditingParcelas(null);
   }, [totalCrmVenda]);
   const simulacao = useMemo(() => {
-    const total = totalCrmVenda;
+    const total = totalCrmVendaComDesconto;
     if (simCondicao === "avista") {
       return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] as { numero: number; valor: number; data: string }[] };
     }
@@ -1065,7 +1081,7 @@ const CRM = () => {
       parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
     }
     return { total, totalFinal, entrada, restante, valorParcela, parcelas };
-  }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
+  }, [totalCrmVendaComDesconto, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
   const parcelasParaExibir = editingParcelas ?? simulacao.parcelas;
 
@@ -1082,6 +1098,7 @@ const CRM = () => {
       numParcelas: simParcelas, entrada: simEntrada,
       intervalo: simIntervalo, juros: simJuros,
       parcelas: parcelasParaExibir,
+      descontoTipo: orcDescontoTipo, descontoValor: orcDescontoValor,
     };
     await saveOrcamentoSimulacao(simData);
     toast.success("Simulação salva!");
@@ -1568,8 +1585,13 @@ const CRM = () => {
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
-                      <p className="text-xl font-bold text-primary">R$ {totalCrmVenda.toFixed(2)}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{descontoCalculado > 0 ? "Total c/ Desconto" : "Total Venda"}</p>
+                      <p className="text-xl font-bold text-primary">R$ {totalCrmVendaComDesconto.toFixed(2)}</p>
+                      {descontoCalculado > 0 && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          subtotal: {totalCrmVenda.toFixed(2)} - desc: {descontoCalculado.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
@@ -1585,11 +1607,11 @@ const CRM = () => {
                     </div>
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Lucro</p>
-                      <p className="text-xl font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
+                      <p className="text-xl font-bold text-success">R$ {(totalCrmVendaComDesconto - totalCrmCustoComExtras).toFixed(2)}</p>
                     </div>
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem</p>
-                      <p className="text-xl font-bold text-success">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                      <p className="text-xl font-bold text-success">{totalCrmVendaComDesconto > 0 ? (((totalCrmVendaComDesconto - totalCrmCustoComExtras) / totalCrmVendaComDesconto) * 100).toFixed(1) : "0.0"}%</p>
                     </div>
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
@@ -1615,13 +1637,13 @@ const CRM = () => {
                       </select>
                     </div>
                     <div className="col-span-2 md:col-span-1 space-y-0.5 relative">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição * {itemTipo === "produto" && <span className="text-primary">(busca catálogo)</span>}</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
                       <input
                         value={itemDesc}
                         onChange={e => { setItemDesc(e.target.value); setItemProdutoId(null); setShowItemSuggestions(itemTipo === "produto" && e.target.value.length > 0); }}
                         onFocus={() => { if (itemTipo === "produto" && itemDesc.length > 0) setShowItemSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowItemSuggestions(false), 200)}
-                        placeholder={itemTipo === "produto" ? "Buscar no catálogo..." : "Descrição do item"}
+                        placeholder={itemTipo === "produto" ? "Digite ou busque um produto" : "Descrição do item"}
                         className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"
                       />
                       {showItemSuggestions && filteredProdutosCrm.length > 0 && (
@@ -1863,7 +1885,39 @@ const CRM = () => {
               )}
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* CONDIÇÕES DE PAGAMENTO                                  */}
+              {/* DESCONTO                                                */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section>
+                  <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                    <DollarSign size={14} className="text-destructive" />
+                    Desconto
+                  </h3>
+                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</label>
+                        <select value={orcDescontoTipo} onChange={e => { setOrcDescontoTipo(e.target.value as any); setOrcDescontoValor(0); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="fixo">Valor Fixo (R$)</option>
+                          <option value="percentual">Percentual (%)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{orcDescontoTipo === "percentual" ? "Percentual (%)" : "Valor (R$)"}</label>
+                        <input type="number" value={orcDescontoValor || ""} onChange={e => { let v = Number(e.target.value) || 0; if (orcDescontoTipo === "percentual") v = Math.min(Math.max(v, 0), 100); else v = Math.min(Math.max(v, 0), subtotalOrcamento); setOrcDescontoValor(v); }} step="0.01" min={0} max={orcDescontoTipo === "percentual" ? 100 : subtotalOrcamento} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder={orcDescontoTipo === "percentual" ? "0 a 100" : "0.00"} />
+                      </div>
+                    </div>
+                    {descontoCalculado > 0 && (
+                      <div className="flex items-center gap-4 pt-2 border-t border-destructive/20">
+                        <span className="text-xs text-foreground"><span className="text-muted-foreground">Subtotal:</span> <strong>R$ {subtotalOrcamento.toFixed(2)}</strong></span>
+                        <span className="text-xs text-destructive"><span className="text-muted-foreground">Desconto:</span> <strong>- R$ {descontoCalculado.toFixed(2)}</strong>{orcDescontoTipo === "percentual" && ` (${orcDescontoValor}%)`}</span>
+                        <span className="text-xs font-bold text-primary">Total Final: R$ {totalCrmVendaComDesconto.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
                 <section>
@@ -1941,6 +1995,7 @@ const CRM = () => {
                         numParcelas: simParcelas, entrada: simEntrada,
                         intervalo: simIntervalo, juros: simJuros,
                         parcelas: parcelasParaExibir,
+                        descontoTipo: orcDescontoTipo, descontoValor: orcDescontoValor,
                       };
                       await saveOrcamentoSimulacao(simData);
                       if (activeOrc?.aprovado) {
