@@ -1063,7 +1063,7 @@ const CRM = () => {
     setEditingParcelas(null);
   }, [totalCrmVenda]);
   const simulacao = useMemo(() => {
-    const total = totalCrmVenda;
+    const total = totalCrmVendaComDesconto;
     if (simCondicao === "avista") {
       return { total, totalFinal: total, entrada: 0, restante: 0, valorParcela: 0, parcelas: [] as { numero: number; valor: number; data: string }[] };
     }
@@ -1081,7 +1081,7 @@ const CRM = () => {
       parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
     }
     return { total, totalFinal, entrada, restante, valorParcela, parcelas };
-  }, [totalCrmVenda, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
+  }, [totalCrmVendaComDesconto, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
 
   const parcelasParaExibir = editingParcelas ?? simulacao.parcelas;
 
