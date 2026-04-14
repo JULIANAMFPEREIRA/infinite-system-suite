@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, Plus, Check, Pencil, Trash2, ArrowUpCircle } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento } from "@/hooks/useCategorias";
@@ -8,81 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-const FinanceiroPagar = () => {
-  const empresaId = useEmpresa();
-  const qc = useQueryClient();
-  const { data: contas, isLoading } = useFinanceiroPagar();
-  const createConta = useCreateContaPagar();
-  const updateConta = useUpdateContaPagar();
-  const { data: formasPgto } = useFormasPagamento();
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [desc, setDesc] = useState("");
-  const [valor, setValor] = useState(0);
-  const [vencimento, setVencimento] = useState("");
-  const [fornecedorId, setFornecedorId] = useState("");
-  const [projetoId, setProjetoId] = useState("");
-
-  // Modal baixa
-  const [showBaixa, setShowBaixa] = useState(false);
-  const [baixaId, setBaixaId] = useState<string | null>(null);
-  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
-  const [baixaForma, setBaixaForma] = useState("");
-  const [baixaObs, setBaixaObs] = useState("");
-
-  const { data: fornecedores } = useQuery({
-    queryKey: ["fornecedores", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
-  const { data: projetos } = useQuery({
-    queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
-
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setEditId(null); setShowForm(false); };
-
-  const openEdit = (c: any) => {
-    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    if (!isNotEmpty(desc, "Descrição")) return;
-    if (!isPositiveNumber(valor, "Valor")) return;
-    try {
-      if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null });
-        toast.success("Conta atualizada");
-      } else {
-        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null });
-        toast.success("Conta adicionada");
-      }
-      resetForm();
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const openBaixa = (id: string) => {
-    setBaixaId(id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
-  };
-
-  const handleBaixa = async () => {
-    if (!baixaId) return;
-    try {
-      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
-      toast.success("Pago!");
-      setShowBaixa(false);
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("financeiro_pagar").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); toast.success("Conta excluída"); },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : s === "vencido" ? "bg-destructive/15 text-destructive" : s === "cancelado" ? "bg-secondary text-muted-foreground" : "bg-warning/15 text-warning";
+import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 
   return (
     <div className="space-y-4 animate-fade-in">

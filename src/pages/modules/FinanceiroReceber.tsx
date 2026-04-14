@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, Plus, Check, Pencil, Trash2, ArrowDownCircle } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroReceber, useCreateContaReceber, useUpdateContaReceber } from "@/hooks/useFinanceiro";
 import { useFormasPagamento } from "@/hooks/useCategorias";
@@ -8,82 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-const FinanceiroReceber = () => {
-  const empresaId = useEmpresa();
-  const qc = useQueryClient();
-  const { data: contas, isLoading } = useFinanceiroReceber();
-  const createConta = useCreateContaReceber();
-  const updateConta = useUpdateContaReceber();
-  const { data: formasPgto } = useFormasPagamento();
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [desc, setDesc] = useState("");
-  const [valor, setValor] = useState(0);
-  const [vencimento, setVencimento] = useState("");
-  const [parcela, setParcela] = useState(1);
-  const [clienteId, setClienteId] = useState("");
-  const [projetoId, setProjetoId] = useState("");
-
-  // Modal baixa
-  const [showBaixa, setShowBaixa] = useState(false);
-  const [baixaId, setBaixaId] = useState<string | null>(null);
-  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
-  const [baixaForma, setBaixaForma] = useState("");
-  const [baixaObs, setBaixaObs] = useState("");
-
-  const { data: clientesList } = useQuery({
-    queryKey: ["clientes_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
-  const { data: projetos } = useQuery({
-    queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
-
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setParcela(1); setClienteId(""); setProjetoId(""); setEditId(null); setShowForm(false); };
-
-  const openEdit = (c: any) => {
-    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setParcela(c.parcela ?? 1); setClienteId(c.cliente_id ?? ""); setProjetoId(c.projeto_id ?? ""); setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    if (!isNotEmpty(desc, "Descrição")) return;
-    if (!isPositiveNumber(valor, "Valor")) return;
-    try {
-      if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, parcela, cliente_id: clienteId || null, projeto_id: projetoId || null });
-        toast.success("Parcela atualizada");
-      } else {
-        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, parcela, status: "pendente", cliente_id: clienteId || null, projeto_id: projetoId || null });
-        toast.success("Parcela adicionada");
-      }
-      resetForm();
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const openBaixa = (id: string) => {
-    setBaixaId(id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
-  };
-
-  const handleBaixa = async () => {
-    if (!baixaId) return;
-    try {
-      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
-      toast.success("Recebido!");
-      setShowBaixa(false);
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("financeiro_receber").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); toast.success("Parcela excluída"); },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : s === "vencido" ? "bg-destructive/15 text-destructive" : s === "cancelado" ? "bg-secondary text-muted-foreground" : "bg-warning/15 text-warning";
+import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 
   return (
     <div className="space-y-4 animate-fade-in">
