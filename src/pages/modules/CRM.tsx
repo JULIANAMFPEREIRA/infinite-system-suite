@@ -1029,6 +1029,8 @@ const CRM = () => {
   const [orcFreteOutro, setOrcFreteOutro] = useState<string>((activeOrc as any)?.frete_outro ?? "");
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
+  const [orcFreteVencimento, setOrcFreteVencimento] = useState<string>((activeOrc as any)?.frete_vencimento ?? "");
+  const [orcImpostoVencimento, setOrcImpostoVencimento] = useState<string>((activeOrc as any)?.imposto_vencimento ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
   // Desconto state
   const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
@@ -1061,6 +1063,8 @@ const CRM = () => {
     setOrcFreteOutro(orc?.frete_outro ?? "");
     setOrcImposto(Number(orc?.imposto) || 0);
     setOrcDataEnvio(orc?.data_envio_proposta ?? "");
+    setOrcFreteVencimento(orc?.frete_vencimento ?? "");
+    setOrcImpostoVencimento(orc?.imposto_vencimento ?? "");
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
     setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
@@ -1076,9 +1080,14 @@ const CRM = () => {
   }, [activeOrc, activeOrcamentoId, loadSimFromOrc]);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
+  // Only reset if parcelas were NOT manually edited (editingParcelas is null means auto-generated)
+  const prevTotalRef = useRef(totalCrmVenda);
   useEffect(() => {
-    setEditingParcelas(null);
-  }, [totalCrmVenda]);
+    if (prevTotalRef.current !== totalCrmVenda && !editingParcelas) {
+      setEditingParcelas(null);
+    }
+    prevTotalRef.current = totalCrmVenda;
+  }, [totalCrmVenda, editingParcelas]);
   const simulacao = useMemo(() => {
     const total = totalCrmVendaComDesconto;
     if (simCondicao === "avista") {
