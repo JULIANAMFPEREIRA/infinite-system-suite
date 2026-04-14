@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroReceber, useCreateContaReceber, useUpdateContaReceber } from "@/hooks/useFinanceiro";
@@ -9,6 +9,15 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
+import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
+
+const STATUS_OPTIONS = [
+  { value: "", label: "Todos status" },
+  { value: "pendente", label: "Pendente" },
+  { value: "pago", label: "Pago" },
+  { value: "vencido", label: "Vencido" },
+  { value: "cancelado", label: "Cancelado" },
+];
 
 const FinanceiroReceber = () => {
   const empresaId = useEmpresa();
@@ -31,6 +40,12 @@ const FinanceiroReceber = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState("");
+  const [mesFilter, setMesFilter] = useState("");
+  const [anoFilter, setAnoFilter] = useState("");
 
   const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
@@ -83,10 +98,18 @@ const FinanceiroReceber = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Summary
-  const totalPendente = contas?.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
-  const totalPago = contas?.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
-  const totalVencido = contas?.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
+  // Filtered data
+  const filtered = useMemo(() => {
+    let list = contas ?? [];
+    if (statusFilter) list = list.filter(c => c.status === statusFilter);
+    list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+    return list;
+  }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter]);
+
+  // Summary (on filtered)
+  const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalVencido = filtered.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -99,6 +122,19 @@ const FinanceiroReceber = () => {
           <Plus size={14} /> Nova Parcela
         </button>
       </div>
+
+      {/* Filters */}
+      <FinanceiroFilters
+        statusOptions={STATUS_OPTIONS}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        periodoFilter={periodoFilter}
+        onPeriodoChange={setPeriodoFilter}
+        mesFilter={mesFilter}
+        onMesChange={setMesFilter}
+        anoFilter={anoFilter}
+        onAnoChange={setAnoFilter}
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
@@ -150,9 +186,7 @@ const FinanceiroReceber = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/30">
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Parcela</th>
                   <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
@@ -161,41 +195,42 @@ const FinanceiroReceber = () => {
                 </tr>
               </thead>
               <tbody>
-                {contas?.map(c => (
-                  <tr
-                    key={c.id}
-                    className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
-                    onClick={() => openEdit(c)}
-                  >
-                    <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{c.descricao}</td>
-                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.clientes as any)?.nome ?? "—"}</td>
-                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
-                    <td className="px-3 py-2 text-center text-muted-foreground">{c.parcela ?? "—"}</td>
-                    <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
-                    <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
-                        {statusLabel(c.status ?? "pendente")}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-0.5">
-                        {c.status === "pendente" && (
-                          <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
-                            <Check size={14} />
+                {filtered.map(c => {
+                  const clienteNome = (c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "—";
+                  return (
+                    <tr
+                      key={c.id}
+                      className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
+                      onClick={() => openEdit(c)}
+                    >
+                      <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{clienteNome}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground">{c.parcela ?? "—"}</td>
+                      <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
+                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
+                          {statusLabel(c.status ?? "pendente")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-0.5">
+                          {c.status === "pendente" && (
+                            <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
+                              <Check size={14} />
+                            </button>
+                          )}
+                          <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
+                            <Pencil size={14} />
                           </button>
-                        )}
-                        <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                        <button onClick={() => { if (window.confirm("Excluir parcela?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {(!contas || contas.length === 0) && <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                          <button onClick={() => { if (window.confirm("Excluir parcela?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
