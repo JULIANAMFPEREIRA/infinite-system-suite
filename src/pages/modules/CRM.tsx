@@ -1880,7 +1880,39 @@ const CRM = () => {
               )}
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* CONDIÇÕES DE PAGAMENTO                                  */}
+              {/* DESCONTO                                                */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section>
+                  <h3 className="text-sm font-bold text-foreground tracking-tight mb-3 flex items-center gap-2">
+                    <DollarSign size={14} className="text-destructive" />
+                    Desconto
+                  </h3>
+                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</label>
+                        <select value={orcDescontoTipo} onChange={e => { setOrcDescontoTipo(e.target.value as any); setOrcDescontoValor(0); }} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                          <option value="fixo">Valor Fixo (R$)</option>
+                          <option value="percentual">Percentual (%)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{orcDescontoTipo === "percentual" ? "Percentual (%)" : "Valor (R$)"}</label>
+                        <input type="number" value={orcDescontoValor || ""} onChange={e => { let v = Number(e.target.value) || 0; if (orcDescontoTipo === "percentual") v = Math.min(Math.max(v, 0), 100); else v = Math.min(Math.max(v, 0), subtotalOrcamento); setOrcDescontoValor(v); }} step="0.01" min={0} max={orcDescontoTipo === "percentual" ? 100 : subtotalOrcamento} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" placeholder={orcDescontoTipo === "percentual" ? "0 a 100" : "0.00"} />
+                      </div>
+                    </div>
+                    {descontoCalculado > 0 && (
+                      <div className="flex items-center gap-4 pt-2 border-t border-destructive/20">
+                        <span className="text-xs text-foreground"><span className="text-muted-foreground">Subtotal:</span> <strong>R$ {subtotalOrcamento.toFixed(2)}</strong></span>
+                        <span className="text-xs text-destructive"><span className="text-muted-foreground">Desconto:</span> <strong>- R$ {descontoCalculado.toFixed(2)}</strong>{orcDescontoTipo === "percentual" && ` (${orcDescontoValor}%)`}</span>
+                        <span className="text-xs font-bold text-primary">Total Final: R$ {totalCrmVendaComDesconto.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
                 <section>
