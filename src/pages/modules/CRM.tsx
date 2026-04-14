@@ -1126,6 +1126,11 @@ const CRM = () => {
       if (orc?.aprovado) {
         await syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
         qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+        qc.invalidateQueries({ queryKey: ["projetos"] });
+        qc.invalidateQueries({ queryKey: ["cliente_projetos"] });
+        qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+        qc.invalidateQueries({ queryKey: ["comissoes"] });
+        qc.invalidateQueries({ queryKey: ["compras"] });
         toast.success("Financeiro do projeto atualizado!");
       }
     }
