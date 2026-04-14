@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, Plus, Check, Pencil, Trash2, Search } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento } from "@/hooks/useCategorias";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
+import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos status" },
@@ -72,6 +73,9 @@ const FinanceiroPagar = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Detail panel
+  const [detailConta, setDetailConta] = useState<any>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -266,6 +270,9 @@ const FinanceiroPagar = () => {
                             <Check size={14} />
                           </button>
                         )}
+                        <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                          <Search size={14} />
+                        </button>
                         <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
                           <Pencil size={14} />
                         </button>
@@ -282,6 +289,19 @@ const FinanceiroPagar = () => {
           </div>
         </div>
       )}
+
+      {/* Detail Panel */}
+      <FinanceiroDetailPanel
+        open={!!detailConta}
+        onOpenChange={(o) => { if (!o) setDetailConta(null); }}
+        tipo="pagar"
+        conta={detailConta}
+        fornecedorNome={(detailConta?.fornecedores as any)?.nome ?? "—"}
+        projetoNome={(detailConta?.projetos as any)?.nome ?? "—"}
+        onBaixa={() => detailConta && openBaixa(detailConta.id)}
+        onEdit={() => detailConta && openEdit(detailConta)}
+        onDelete={() => detailConta && remove.mutate(detailConta.id)}
+      />
 
       <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
         <DialogContent className="max-w-sm">
