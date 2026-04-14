@@ -488,6 +488,7 @@ const CRM = () => {
         empresa_id: empresaId!, projeto_id: projId,
         descricao: `Frete — ${detailClient.nome}`,
         valor: frete, status: "pendente" as const,
+        data_vencimento: (orcData as any).frete_vencimento || null,
       });
     }
     if (imposto > 0) {
@@ -495,6 +496,7 @@ const CRM = () => {
         empresa_id: empresaId!, projeto_id: projId,
         descricao: `Imposto — ${detailClient.nome}`,
         valor: imposto, status: "pendente" as const,
+        data_vencimento: (orcData as any).imposto_vencimento || null,
       });
     }
     if (contasPagarExtras.length > 0) {
@@ -1906,6 +1908,16 @@ const CRM = () => {
                         <span className="text-[11px] font-bold text-warning ml-auto bg-warning/10 px-2 py-0.5 rounded">Total extras: R$ {(orcFrete + orcImposto).toFixed(2)}</span>
                       </div>
                     )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Frete</label>
+                        <input type="date" value={orcFreteVencimento} onChange={e => setOrcFreteVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Imposto</label>
+                        <input type="date" value={orcImpostoVencimento} onChange={e => setOrcImpostoVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                    </div>
                   </div>
                 </section>
               )}
