@@ -1054,6 +1054,8 @@ const CRM = () => {
     setOrcImposto(Number(orc?.imposto) || 0);
     setOrcDataEnvio(orc?.data_envio_proposta ?? "");
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
+    setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
+    setOrcDescontoValor(Number(sim.descontoValor) || 0);
   }, []);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
