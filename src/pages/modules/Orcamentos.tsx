@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 
 const Orcamentos = () => {
   const empresaId = useEmpresa();
@@ -281,20 +282,13 @@ const Orcamentos = () => {
   });
 
   const calcTotal = (orc: any) => {
-    const itens = orc.crm_itens ?? [];
-    const subtotal = (itens as any[]).reduce(
-      (sum: number, i: any) => sum + (i.quantidade ?? 1) * (i.preco_venda ?? 0),
-      0
-    );
-    const frete = Number(orc.frete) || 0;
-    const imposto = Number(orc.imposto) || 0;
-    const sim = (orc.simulacao_pagamento as any) ?? {};
-    const descontoTipo = sim.descontoTipo ?? "fixo";
-    const descontoValorRaw = Number(sim.descontoValor) || 0;
-    const desconto = descontoTipo === "percentual"
-      ? (subtotal * Math.min(Math.max(descontoValorRaw, 0), 100)) / 100
-      : Math.min(Math.max(descontoValorRaw, 0), subtotal);
-    return subtotal + frete + imposto - desconto;
+    const totals = calcOrcamentoTotals({
+      itens: orc.crm_itens ?? [],
+      frete: orc.frete,
+      imposto: orc.imposto,
+      simulacao_pagamento: orc.simulacao_pagamento as any,
+    });
+    return totals.totalVenda;
   };
 
   const formatCurrency = (v: number) =>
