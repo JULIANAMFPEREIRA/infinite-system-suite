@@ -235,20 +235,20 @@ const Compras = () => {
       )}
 
       {isLoading ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
-        <div className="border border-border rounded overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-secondary/60">
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Produto</th>
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Cliente</th>
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Fornecedor</th>
-                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Qtd</th>
-                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Total</th>
-                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+                <tr className="bg-muted/30">
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Produto</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
+                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Qtd</th>
+                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Total</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-20">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,14 +256,14 @@ const Compras = () => {
                   const clienteNome = (c.projetos as any)?.clientes?.nome ?? "—";
                   const produtoNome = (c.produtos as any)?.nome ?? "—";
                   return (
-                    <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEdit(c)}>
-                      <td className="px-2.5 py-1.5">{c.descricao ?? "—"}</td>
-                      <td className="px-2.5 py-1.5">{produtoNome}</td>
-                      <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
-                      <td className="px-2.5 py-1.5">{clienteNome}</td>
-                      <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                      <td className="px-2.5 py-1.5 text-right">{c.quantidade}</td>
-                      <td className="px-2.5 py-1.5 text-right font-medium">{fmt(c.valor_total ?? 0)}</td>
+                    <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors" onClick={() => openEdit(c)}>
+                      <td className="px-3 py-2 font-medium text-foreground max-w-[180px] truncate">{c.descricao ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[140px] truncate">{produtoNome}</td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[140px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[140px] truncate">{clienteNome}</td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[140px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground tabular-nums">{c.quantidade}</td>
+                      <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmt(c.valor_total ?? 0)}</td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <select
                           value={c.status ?? "pendente"}
@@ -273,16 +273,16 @@ const Compras = () => {
                           {statusOptions.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                         </select>
                       </td>
-                      <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                          <button onClick={() => { if (window.confirm("Excluir compra?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-0.5">
+                          <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => { if (window.confirm("Excluir compra?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-4 text-muted-foreground">Nenhuma compra encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma compra encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
