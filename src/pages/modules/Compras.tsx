@@ -179,7 +179,7 @@ const Compras = () => {
         <Filter size={14} className="text-muted-foreground" />
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none">
           <option value="todos">Todos os status</option>
-          {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+          {statusOptions.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
           <option value="aprovada">APROVADA (legado)</option>
           <option value="entregue">ENTREGUE (legado)</option>
         </select>
@@ -264,13 +264,13 @@ const Compras = () => {
                       <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
                       <td className="px-2.5 py-1.5 text-right">{c.quantidade}</td>
                       <td className="px-2.5 py-1.5 text-right font-medium">{fmt(c.valor_total ?? 0)}</td>
-                      <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <select
                           value={c.status ?? "pendente"}
                           onChange={e => changeStatus.mutate({ id: c.id, status: e.target.value as StatusCompra, produto_id: c.produto_id, projeto_id: c.projeto_id })}
-                          className={`px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer ${statusColor(c.status ?? "pendente")}`}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border cursor-pointer ${statusBadgeClass(c.status ?? "pendente")}`}
                         >
-                          {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+                          {statusOptions.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                         </select>
                       </td>
                       <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
