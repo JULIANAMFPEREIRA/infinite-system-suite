@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, Copy, Check } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +26,14 @@ import {
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
+import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
+
+const STATUS_OPTIONS = [
+  { value: "", label: "Todos status" },
+  { value: "pendente", label: "Pendente" },
+  { value: "aprovado", label: "Aprovado" },
+  { value: "enviado", label: "Enviado" },
+];
 
 const Orcamentos = () => {
   const empresaId = useEmpresa();
@@ -36,6 +44,12 @@ const Orcamentos = () => {
   const [editOrc, setEditOrc] = useState<any>(null);
   const [deleteOrcId, setDeleteOrcId] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"list" | "kanban">("list");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState("");
+  const [mesFilter, setMesFilter] = useState("");
+  const [anoFilter, setAnoFilter] = useState("");
 
   // Quick quote dialog state
   const [showQuickQuote, setShowQuickQuote] = useState(false);
@@ -59,7 +73,6 @@ const Orcamentos = () => {
   const [editFrete, setEditFrete] = useState(0);
   const [editImposto, setEditImposto] = useState(0);
   const [editFreteTipo, setEditFreteTipo] = useState("");
-  const [editDataEnvio, setEditDataEnvio] = useState("");
   const [editDataPagAvista, setEditDataPagAvista] = useState("");
 
   const { data: orcamentos, isLoading } = useQuery({
@@ -76,7 +89,7 @@ const Orcamentos = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: { id: string; nome: string; frete: number; imposto: number; frete_tipo: string | null; data_envio_proposta: string | null; data_pagamento_avista: string | null }) => {
+    mutationFn: async (payload: { id: string; nome: string; frete: number; imposto: number; frete_tipo: string | null; data_pagamento_avista: string | null }) => {
       const { id, ...rest } = payload;
       const { error } = await supabase.from("crm_orcamentos").update(rest).eq("id", id);
       if (error) throw error;
@@ -135,15 +148,13 @@ const Orcamentos = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orcamentos_listagem"] });
       toast.success("Orçamento rápido criado!");
       setShowQuickQuote(false);
       setQuickNome("CONSUMIDOR");
       setQuickTelefone("");
       setQuickOrcNome("Orçamento Rápido");
-      // Navigate to edit (open in CRM-like view or stay on list)
-      // For avulso, we stay on the list since there's no CRM client
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -155,7 +166,6 @@ const Orcamentos = () => {
       const nome = convertNome.trim();
       if (!nome) throw new Error("Nome do cliente é obrigatório");
 
-      // Check for duplicate client
       const { data: existing } = await supabase
         .from("clientes")
         .select("id")
@@ -168,7 +178,6 @@ const Orcamentos = () => {
         throw new Error(`Já existe um cliente com o nome "${nome}". Verifique antes de continuar.`);
       }
 
-      // Create client in CRM
       const { data: newClient, error: clientErr } = await supabase.from("clientes").insert({
         empresa_id: empresaId,
         nome,
@@ -178,14 +187,12 @@ const Orcamentos = () => {
       }).select().single();
       if (clientErr) throw clientErr;
 
-      // Link the quote to the new client and remove avulso flag
       const { error: updateErr } = await supabase.from("crm_orcamentos").update({
         cliente_id: newClient.id,
         is_avulso: false,
       } as any).eq("id", convertOrc.id);
       if (updateErr) throw updateErr;
 
-      // Also update any crm_itens that belong to this quote (they need a cliente_id)
       await supabase.from("crm_itens").update({
         cliente_id: newClient.id,
       }).eq("orcamento_id", convertOrc.id);
@@ -197,7 +204,6 @@ const Orcamentos = () => {
       qc.invalidateQueries({ queryKey: ["clientes"] });
       toast.success("Cliente criado e orçamento vinculado com sucesso!");
       setConvertOrc(null);
-      // Navigate to CRM with the new client
       navigate(`/crm?cliente_id=${newClient.id}`);
     },
     onError: (err: any) => toast.error(err.message),
@@ -215,7 +221,6 @@ const Orcamentos = () => {
     setEditFrete(orc.frete ?? 0);
     setEditImposto(orc.imposto ?? 0);
     setEditFreteTipo(orc.frete_tipo ?? "");
-    setEditDataEnvio(orc.data_envio_proposta ?? "");
     setEditDataPagAvista(orc.data_pagamento_avista ?? "");
     setEditOrc(orc);
   };
@@ -268,18 +273,27 @@ const Orcamentos = () => {
       frete: editFrete,
       imposto: editImposto,
       frete_tipo: editFreteTipo || null,
-      data_envio_proposta: editDataEnvio || null,
       data_pagamento_avista: editDataPagAvista || null,
     });
   };
 
-  const filtered = (orcamentos ?? []).filter((o) => {
-    const term = busca.toLowerCase();
-    const clienteNome = (o.clientes as any)?.nome?.toLowerCase() ?? "";
-    const avulsoNome = ((o as any).cliente_nome_avulso ?? "").toLowerCase();
-    const nome = o.nome?.toLowerCase() ?? "";
-    return clienteNome.includes(term) || avulsoNome.includes(term) || nome.includes(term);
-  });
+  // Filtering
+  const filtered = useMemo(() => {
+    let list = (orcamentos ?? []).filter((o) => {
+      const term = busca.toLowerCase();
+      const clienteNome = (o.clientes as any)?.nome?.toLowerCase() ?? "";
+      const avulsoNome = ((o as any).cliente_nome_avulso ?? "").toLowerCase();
+      const nome = o.nome?.toLowerCase() ?? "";
+      return clienteNome.includes(term) || avulsoNome.includes(term) || nome.includes(term);
+    });
+
+    if (statusFilter === "aprovado") list = list.filter(o => o.aprovado);
+    else if (statusFilter === "pendente") list = list.filter(o => !o.aprovado && !o.data_envio_proposta);
+    else if (statusFilter === "enviado") list = list.filter(o => !o.aprovado && !!o.data_envio_proposta);
+
+    list = applyDateFilter(list, "created_at", periodoFilter, mesFilter, anoFilter);
+    return list;
+  }, [orcamentos, busca, statusFilter, periodoFilter, mesFilter, anoFilter]);
 
   const calcTotal = (orc: any) => {
     const totals = calcOrcamentoTotals({
@@ -301,7 +315,17 @@ const Orcamentos = () => {
     return (orc.clientes as any)?.nome ?? "—";
   };
 
-  // Kanban columns for Orcamentos
+  // Handle edit button click — navigate to the quote itself
+  const handleEditClick = (orc: any) => {
+    const isAvulso = (orc as any).is_avulso;
+    if (isAvulso) {
+      openEdit(orc);
+    } else {
+      navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`);
+    }
+  };
+
+  // Kanban columns
   const orcKanbanColumns = [
     { key: "contato", label: "EM CONTATO", color: "text-warning", borderColor: "border-warning/30", bgColor: "bg-warning/5" },
     { key: "enviado", label: "ENVIADO", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
@@ -362,13 +386,26 @@ const Orcamentos = () => {
         </div>
       </div>
 
-      <div className="relative max-w-xs">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por cliente ou nome..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="pl-9 h-9 text-xs"
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente ou nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-9 h-8 text-xs w-56"
+          />
+        </div>
+        <FinanceiroFilters
+          statusOptions={STATUS_OPTIONS}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          periodoFilter={periodoFilter}
+          onPeriodoChange={setPeriodoFilter}
+          mesFilter={mesFilter}
+          onMesChange={setMesFilter}
+          anoFilter={anoFilter}
+          onAnoChange={setAnoFilter}
         />
       </div>
 
@@ -488,8 +525,8 @@ const Orcamentos = () => {
                             size="sm"
                             variant="ghost"
                             className="h-7 w-7 p-0"
-                            title="Editar"
-                            onClick={() => openEdit(orc)}
+                            title="Editar orçamento"
+                            onClick={() => handleEditClick(orc)}
                           >
                             <Pencil size={13} />
                           </Button>
@@ -503,25 +540,15 @@ const Orcamentos = () => {
                             <Trash2 size={13} />
                           </Button>
                           {!isAvulso && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs gap-1"
-                                onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
-                              >
-                                <ExternalLink size={12} /> Abrir
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs gap-1 text-primary hover:text-primary"
-                                title="Solicitar dados do cliente"
-                                onClick={() => generateFormLink(orc)}
-                              >
-                                <Link2 size={12} /> Solicitar Dados
-                              </Button>
-                            </>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                              title="Solicitar dados do cliente"
+                              onClick={() => generateFormLink(orc)}
+                            >
+                              <Link2 size={12} /> Solicitar Dados
+                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -643,9 +670,9 @@ const Orcamentos = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog — compact, no "data envio proposta" */}
       <Dialog open={!!editOrc} onOpenChange={(open) => { if (!open) setEditOrc(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm">Editar Orçamento</DialogTitle>
           </DialogHeader>
@@ -674,15 +701,9 @@ const Orcamentos = () => {
                 <option value="outro">Outro</option>
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Data Envio Proposta</Label>
-                <Input type="date" value={editDataEnvio} onChange={(e) => setEditDataEnvio(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-xs">Data Pgto. à Vista</Label>
-                <Input type="date" value={editDataPagAvista} onChange={(e) => setEditDataPagAvista(e.target.value)} className="h-8 text-xs" />
-              </div>
+            <div>
+              <Label className="text-xs">Data Pgto. à Vista</Label>
+              <Input type="date" value={editDataPagAvista} onChange={(e) => setEditDataPagAvista(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>
           <DialogFooter>
