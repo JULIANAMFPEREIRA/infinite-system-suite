@@ -327,7 +327,7 @@ const Orcamentos = () => {
     id: orc.id,
     columnKey: getOrcKanbanColumn(orc),
     orc,
-    total: calcTotal(orc.crm_itens as any[]),
+    total: calcTotal(orc),
   }));
 
   const handleKanbanMove = async (itemId: string, _from: string, to: string) => {
