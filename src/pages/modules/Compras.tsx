@@ -7,26 +7,12 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { isNotEmpty, isPositiveNumber, isGreaterThanZero } from "@/lib/validations";
+import { fmtBRL, statusBadgeClass, statusLabel } from "@/lib/financeiroUtils";
 
 type StatusCompra = Database["public"]["Enums"]["status_compra"];
 const statusOptions: StatusCompra[] = ["pendente", "em_compra", "comprado", "instalado", "cancelada"];
-const statusLabels: Record<string, string> = {
-  pendente: "PENDENTE",
-  em_compra: "EM COMPRA",
-  comprado: "COMPRADO",
-  instalado: "INSTALADO",
-  aprovada: "APROVADA",
-  entregue: "ENTREGUE",
-  cancelada: "CANCELADA",
-};
-const statusColor = (s: string) =>
-  s === "pendente" ? "bg-warning/15 text-warning" :
-  s === "em_compra" ? "bg-blue-500/15 text-blue-600" :
-  s === "comprado" || s === "aprovada" ? "bg-success/15 text-success" :
-  s === "instalado" || s === "entregue" ? "bg-primary/15 text-primary" :
-  "bg-destructive/15 text-destructive";
 
-const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmt = (v: number) => fmtBRL(v);
 
 const Compras = () => {
   const empresaId = useEmpresa();
