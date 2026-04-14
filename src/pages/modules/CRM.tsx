@@ -1,3 +1,4 @@
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -338,24 +339,22 @@ const CRM = () => {
 
     const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
     const items = approvedItems ?? [];
-    const subtotalVenda = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-    const frete = Number(orcData.frete) || 0;
-    const imposto = Number(orcData.imposto) || 0;
 
-    // Apply discount from simulacao_pagamento
+    const totals = calcOrcamentoTotals({
+      itens: items,
+      frete: orcData.frete,
+      imposto: orcData.imposto,
+      simulacao_pagamento: orcData.simulacao_pagamento as any,
+    });
+    const totalVenda = totals.totalVenda;
+    const totalCusto = totals.totalCusto;
+    const margem = totals.margem;
+
     const sim = (orcData.simulacao_pagamento as any) ?? {};
-    const descontoTipo = sim.descontoTipo ?? "fixo";
-    const descontoValorRaw = Number(sim.descontoValor) || 0;
-    const descontoCalculadoSync = descontoTipo === "percentual"
-      ? (subtotalVenda * Math.min(Math.max(descontoValorRaw, 0), 100)) / 100
-      : Math.min(Math.max(descontoValorRaw, 0), subtotalVenda);
-    const totalVenda = subtotalVenda - descontoCalculadoSync;
-
-    const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0) + frete + imposto;
-    const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
-
     const simParcelas = sim.parcelas ?? [];
     const simFormaPgto = sim.formaPagamento ?? "";
+    const frete = totals.frete;
+    const imposto = totals.imposto;
 
     const cliente = clientes?.find(c => c.id === detailClient.id);
     const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";

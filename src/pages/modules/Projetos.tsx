@@ -758,6 +758,7 @@ const PendenciasSection = ({ projetos, pendenciaCounts, navigate }: { projetos: 
 
 // ======== ITENS DO PROJETO ========
 const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas, isCrmGenerated }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number; isCrmGenerated?: boolean }) => {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
@@ -906,39 +907,53 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
         </div>
       )}
 
-      <div className="flex items-end gap-2 flex-wrap">
-        <div className="space-y-1 flex-1 min-w-[120px] relative">
-          <label className="text-[11px] text-muted-foreground">Descrição {tipo === "produto" && <Search size={10} className="inline ml-1" />}</label>
-          <input
-            value={desc}
-            onChange={e => { setDesc(e.target.value); setProdutoId(null); setShowSuggestions(tipo === "produto" && e.target.value.length > 0); }}
-            onFocus={() => { if (tipo === "produto" && desc.length > 0) setShowSuggestions(true); }}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            className="w-full h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none"
-            placeholder={tipo === "produto" ? "Buscar produto..." : "Descrição"}
-          />
-          {showSuggestions && filteredProdutos.length > 0 && (
-            <div className="absolute z-10 w-full bg-card border border-border rounded shadow-lg mt-1 max-h-32 overflow-y-auto">
-              {filteredProdutos.slice(0, 8).map(p => (
-                <button key={p.id} onMouseDown={() => selectProduto(p)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-secondary/50 flex justify-between">
-                  <span>{p.nome}</span>
-                  <span className="text-muted-foreground">R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")}</span>
-                </button>
-              ))}
-            </div>
-          )}
+      {isCrmGenerated ? (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            ⚡ Itens gerenciados pelo orçamento do CRM. Edite diretamente no orçamento para manter os valores sincronizados.
+          </p>
+          <button
+            onClick={() => navigate("/crm")}
+            className="ml-3 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition whitespace-nowrap"
+          >
+            Editar Orçamento
+          </button>
         </div>
-        <div className="space-y-1 w-24"><label className="text-[11px] text-muted-foreground">Tipo</label>
-          <select value={tipo} onChange={e => { setTipo(e.target.value as TipoItem); setShowSuggestions(false); }} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none">
-            <option value="produto">Produto</option><option value="servico">Serviço</option><option value="mao_de_obra">Mão de Obra</option><option value="adicional">Adicional</option>
-          </select>
+      ) : (
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[120px] relative">
+            <label className="text-[11px] text-muted-foreground">Descrição {tipo === "produto" && <Search size={10} className="inline ml-1" />}</label>
+            <input
+              value={desc}
+              onChange={e => { setDesc(e.target.value); setProdutoId(null); setShowSuggestions(tipo === "produto" && e.target.value.length > 0); }}
+              onFocus={() => { if (tipo === "produto" && desc.length > 0) setShowSuggestions(true); }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="w-full h-7 px-2 text-xs bg-background border border-border rounded focus:outline-none"
+              placeholder={tipo === "produto" ? "Buscar produto..." : "Descrição"}
+            />
+            {showSuggestions && filteredProdutos.length > 0 && (
+              <div className="absolute z-10 w-full bg-card border border-border rounded shadow-lg mt-1 max-h-32 overflow-y-auto">
+                {filteredProdutos.slice(0, 8).map(p => (
+                  <button key={p.id} onMouseDown={() => selectProduto(p)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-secondary/50 flex justify-between">
+                    <span>{p.nome}</span>
+                    <span className="text-muted-foreground">R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="space-y-1 w-24"><label className="text-[11px] text-muted-foreground">Tipo</label>
+            <select value={tipo} onChange={e => { setTipo(e.target.value as TipoItem); setShowSuggestions(false); }} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none">
+              <option value="produto">Produto</option><option value="servico">Serviço</option><option value="mao_de_obra">Mão de Obra</option><option value="adicional">Adicional</option>
+            </select>
+          </div>
+          <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">Qtd</label><input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Custo</label><input type="number" value={custo} onChange={e => setCusto(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Venda</label><input type="number" value={venda} onChange={e => setVenda(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">RT%</label><input type="number" value={rt} onChange={e => setRt(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+          <button onClick={handleAddItem} disabled={createItem.isPending} className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50"><Plus size={12} /></button>
         </div>
-        <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">Qtd</label><input type="number" value={qtd} onChange={e => setQtd(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Custo</label><input type="number" value={custo} onChange={e => setCusto(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-20"><label className="text-[11px] text-muted-foreground">Venda</label><input type="number" value={venda} onChange={e => setVenda(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-14"><label className="text-[11px] text-muted-foreground">RT%</label><input type="number" value={rt} onChange={e => setRt(Number(e.target.value))} className="w-full h-7 px-1 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <button onClick={handleAddItem} disabled={createItem.isPending} className="h-7 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition disabled:opacity-50"><Plus size={12} /></button>
-      </div>
+      )}
 
       <Dialog open={showGerarParcelas} onOpenChange={setShowGerarParcelas}>
         <DialogContent className="max-w-sm">
