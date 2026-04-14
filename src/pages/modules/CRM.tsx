@@ -354,7 +354,6 @@ const CRM = () => {
     const totalCusto = items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number((i as any).rt_comissao) || 0), 0) + frete + imposto;
     const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
 
-    const sim = (orcData.simulacao_pagamento as any) ?? {};
     const simParcelas = sim.parcelas ?? [];
     const simFormaPgto = sim.formaPagamento ?? "";
 
