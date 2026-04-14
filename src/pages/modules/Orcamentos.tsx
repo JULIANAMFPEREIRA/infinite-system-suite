@@ -432,7 +432,7 @@ const Orcamentos = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((orc) => {
-                const total = calcTotal(orc.crm_itens as any[]);
+                const total = calcTotal(orc);
                 const isAvulso = (orc as any).is_avulso;
                 const enviado = orc.data_envio_proposta
                   ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
