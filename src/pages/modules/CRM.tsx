@@ -1958,6 +1958,7 @@ const CRM = () => {
                         numParcelas: simParcelas, entrada: simEntrada,
                         intervalo: simIntervalo, juros: simJuros,
                         parcelas: parcelasParaExibir,
+                        descontoTipo: orcDescontoTipo, descontoValor: orcDescontoValor,
                       };
                       await saveOrcamentoSimulacao(simData);
                       if (activeOrc?.aprovado) {
