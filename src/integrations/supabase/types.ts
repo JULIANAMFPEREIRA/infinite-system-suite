@@ -563,8 +563,10 @@ export type Database = {
           frete: number | null
           frete_outro: string | null
           frete_tipo: string | null
+          frete_vencimento: string | null
           id: string
           imposto: number | null
+          imposto_vencimento: string | null
           is_avulso: boolean
           nome: string
           simulacao_pagamento: Json | null
@@ -581,8 +583,10 @@ export type Database = {
           frete?: number | null
           frete_outro?: string | null
           frete_tipo?: string | null
+          frete_vencimento?: string | null
           id?: string
           imposto?: number | null
+          imposto_vencimento?: string | null
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
@@ -599,8 +603,10 @@ export type Database = {
           frete?: number | null
           frete_outro?: string | null
           frete_tipo?: string | null
+          frete_vencimento?: string | null
           id?: string
           imposto?: number | null
+          imposto_vencimento?: string | null
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
