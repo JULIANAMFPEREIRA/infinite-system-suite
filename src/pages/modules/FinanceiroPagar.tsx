@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DollarSign, Plus, Check, Pencil, Trash2 } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
@@ -9,6 +9,48 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
+import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
+
+const STATUS_OPTIONS = [
+  { value: "", label: "Todos status" },
+  { value: "pendente", label: "Pendente" },
+  { value: "pago", label: "Pago" },
+  { value: "vencido", label: "Vencido" },
+  { value: "cancelado", label: "Cancelado" },
+];
+
+const TIPO_OPTIONS = [
+  { value: "", label: "Todos tipos" },
+  { value: "imposto", label: "Imposto" },
+  { value: "frete", label: "Frete" },
+  { value: "produto", label: "Produto" },
+  { value: "servico", label: "Serviço" },
+  { value: "adicional", label: "Adicional" },
+];
+
+/** Infer the type from the description text */
+const inferTipo = (desc: string | null): string => {
+  if (!desc) return "";
+  const d = desc.toLowerCase();
+  if (d.includes("imposto") || d.includes("taxa") || d.includes("tributo")) return "imposto";
+  if (d.includes("frete") || d.includes("transporte") || d.includes("entrega")) return "frete";
+  if (d.includes("serviço") || d.includes("servico") || d.includes("mão de obra") || d.includes("mao de obra") || d.includes("instalação") || d.includes("instalacao")) return "servico";
+  if (d.includes("adicional")) return "adicional";
+  return "produto";
+};
+
+const tipoBadge = (desc: string | null) => {
+  const tipo = inferTipo(desc);
+  const map: Record<string, { label: string; cls: string }> = {
+    imposto: { label: "Imposto", cls: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
+    frete: { label: "Frete", cls: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+    servico: { label: "Serviço", cls: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+    adicional: { label: "Adicional", cls: "bg-teal-500/10 text-teal-600 border-teal-500/20" },
+    produto: { label: "Produto", cls: "bg-secondary text-muted-foreground border-border" },
+  };
+  const { label, cls } = map[tipo] ?? map.produto;
+  return <span className={`inline-flex px-1.5 py-0 rounded text-[9px] font-medium border ${cls}`}>{label}</span>;
+};
 
 const FinanceiroPagar = () => {
   const empresaId = useEmpresa();
@@ -30,6 +72,13 @@ const FinanceiroPagar = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState("");
+  const [mesFilter, setMesFilter] = useState("");
+  const [anoFilter, setAnoFilter] = useState("");
+  const [tipoFilter, setTipoFilter] = useState("");
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores", empresaId],
@@ -82,10 +131,21 @@ const FinanceiroPagar = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Filtered data
+  const filtered = useMemo(() => {
+    let list = contas ?? [];
+    if (statusFilter) list = list.filter(c => c.status === statusFilter);
+    if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
+    list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+    return list;
+  }, [contas, statusFilter, tipoFilter, periodoFilter, mesFilter, anoFilter]);
+
   // Summary
-  const totalPendente = contas?.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
-  const totalPago = contas?.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
-  const totalVencido = contas?.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
+  const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalVencido = filtered.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0);
+
+  const selectCls = "h-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary";
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -98,6 +158,24 @@ const FinanceiroPagar = () => {
           <Plus size={14} /> Nova Conta
         </button>
       </div>
+
+      {/* Filters */}
+      <FinanceiroFilters
+        statusOptions={STATUS_OPTIONS}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        periodoFilter={periodoFilter}
+        onPeriodoChange={setPeriodoFilter}
+        mesFilter={mesFilter}
+        onMesChange={setMesFilter}
+        anoFilter={anoFilter}
+        onAnoChange={setAnoFilter}
+        extraFilters={
+          <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+            {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
@@ -158,13 +236,18 @@ const FinanceiroPagar = () => {
                 </tr>
               </thead>
               <tbody>
-                {contas?.map(c => (
+                {filtered.map(c => (
                   <tr
                     key={c.id}
                     className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
                     onClick={() => openEdit(c)}
                   >
-                    <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{c.descricao}</td>
+                    <td className="px-3 py-2 max-w-[220px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground truncate">{c.descricao}</span>
+                        {tipoBadge(c.descricao)}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
                     <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
                     <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
@@ -191,7 +274,7 @@ const FinanceiroPagar = () => {
                     </td>
                   </tr>
                 ))}
-                {(!contas || contas.length === 0) && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
