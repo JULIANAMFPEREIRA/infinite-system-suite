@@ -1,3 +1,4 @@
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -349,8 +350,11 @@ const CRM = () => {
     const totalCusto = totals.totalCusto;
     const margem = totals.margem;
 
+    const sim = (orcData.simulacao_pagamento as any) ?? {};
     const simParcelas = sim.parcelas ?? [];
     const simFormaPgto = sim.formaPagamento ?? "";
+    const frete = totals.frete;
+    const imposto = totals.imposto;
 
     const cliente = clientes?.find(c => c.id === detailClient.id);
     const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
