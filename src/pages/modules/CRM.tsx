@@ -488,6 +488,7 @@ const CRM = () => {
         empresa_id: empresaId!, projeto_id: projId,
         descricao: `Frete — ${detailClient.nome}`,
         valor: frete, status: "pendente" as const,
+        data_vencimento: (orcData as any).frete_vencimento || null,
       });
     }
     if (imposto > 0) {
@@ -495,6 +496,7 @@ const CRM = () => {
         empresa_id: empresaId!, projeto_id: projId,
         descricao: `Imposto — ${detailClient.nome}`,
         valor: imposto, status: "pendente" as const,
+        data_vencimento: (orcData as any).imposto_vencimento || null,
       });
     }
     if (contasPagarExtras.length > 0) {
@@ -615,6 +617,8 @@ const CRM = () => {
       imposto: orcImposto,
       data_envio_proposta: orcDataEnvio || null,
       data_pagamento_avista: orcDataPgtoAvista || null,
+      frete_vencimento: orcFreteVencimento || null,
+      imposto_vencimento: orcImpostoVencimento || null,
     } as any).eq("id", activeOrcamentoId);
     refetchOrcamentos();
   };
@@ -1029,6 +1033,8 @@ const CRM = () => {
   const [orcFreteOutro, setOrcFreteOutro] = useState<string>((activeOrc as any)?.frete_outro ?? "");
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
+  const [orcFreteVencimento, setOrcFreteVencimento] = useState<string>((activeOrc as any)?.frete_vencimento ?? "");
+  const [orcImpostoVencimento, setOrcImpostoVencimento] = useState<string>((activeOrc as any)?.imposto_vencimento ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
   // Desconto state
   const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
@@ -1061,6 +1067,8 @@ const CRM = () => {
     setOrcFreteOutro(orc?.frete_outro ?? "");
     setOrcImposto(Number(orc?.imposto) || 0);
     setOrcDataEnvio(orc?.data_envio_proposta ?? "");
+    setOrcFreteVencimento(orc?.frete_vencimento ?? "");
+    setOrcImpostoVencimento(orc?.imposto_vencimento ?? "");
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
     setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
@@ -1076,9 +1084,14 @@ const CRM = () => {
   }, [activeOrc, activeOrcamentoId, loadSimFromOrc]);
 
   // Auto-reset edited parcelas when item totals change so simulation recalculates
+  // Only reset if parcelas were NOT manually edited (editingParcelas is null means auto-generated)
+  const prevTotalRef = useRef(totalCrmVenda);
   useEffect(() => {
-    setEditingParcelas(null);
-  }, [totalCrmVenda]);
+    if (prevTotalRef.current !== totalCrmVenda && !editingParcelas) {
+      setEditingParcelas(null);
+    }
+    prevTotalRef.current = totalCrmVenda;
+  }, [totalCrmVenda, editingParcelas]);
   const simulacao = useMemo(() => {
     const total = totalCrmVendaComDesconto;
     if (simCondicao === "avista") {
@@ -1895,6 +1908,16 @@ const CRM = () => {
                         <span className="text-[11px] font-bold text-warning ml-auto bg-warning/10 px-2 py-0.5 rounded">Total extras: R$ {(orcFrete + orcImposto).toFixed(2)}</span>
                       </div>
                     )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Frete</label>
+                        <input type="date" value={orcFreteVencimento} onChange={e => setOrcFreteVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Imposto</label>
+                        <input type="date" value={orcImpostoVencimento} onChange={e => setOrcImpostoVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                    </div>
                   </div>
                 </section>
               )}

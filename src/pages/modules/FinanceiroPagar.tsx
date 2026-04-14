@@ -231,6 +231,7 @@ const FinanceiroPagar = () => {
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
                   <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Pago</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
                 </tr>
@@ -252,6 +253,7 @@ const FinanceiroPagar = () => {
                     <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
                     <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
                     <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                    <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
                     <td className="px-3 py-2 text-center">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
                         {statusLabel(c.status ?? "pendente")}
@@ -274,7 +276,7 @@ const FinanceiroPagar = () => {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
