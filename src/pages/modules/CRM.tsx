@@ -1585,8 +1585,13 @@ const CRM = () => {
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Venda</p>
-                      <p className="text-xl font-bold text-primary">R$ {totalCrmVenda.toFixed(2)}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{descontoCalculado > 0 ? "Total c/ Desconto" : "Total Venda"}</p>
+                      <p className="text-xl font-bold text-primary">R$ {totalCrmVendaComDesconto.toFixed(2)}</p>
+                      {descontoCalculado > 0 && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          subtotal: {totalCrmVenda.toFixed(2)} - desc: {descontoCalculado.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Custo</p>
@@ -1602,11 +1607,11 @@ const CRM = () => {
                     </div>
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Lucro</p>
-                      <p className="text-xl font-bold text-success">R$ {(totalCrmVenda - totalCrmCustoComExtras).toFixed(2)}</p>
+                      <p className="text-xl font-bold text-success">R$ {(totalCrmVendaComDesconto - totalCrmCustoComExtras).toFixed(2)}</p>
                     </div>
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Margem</p>
-                      <p className="text-xl font-bold text-success">{totalCrmVenda > 0 ? (((totalCrmVenda - totalCrmCustoComExtras) / totalCrmVenda) * 100).toFixed(1) : "0.0"}%</p>
+                      <p className="text-xl font-bold text-success">{totalCrmVendaComDesconto > 0 ? (((totalCrmVendaComDesconto - totalCrmCustoComExtras) / totalCrmVendaComDesconto) * 100).toFixed(1) : "0.0"}%</p>
                     </div>
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
