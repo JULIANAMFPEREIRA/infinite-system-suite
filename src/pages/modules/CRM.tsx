@@ -1058,6 +1058,15 @@ const CRM = () => {
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
   }, []);
 
+  // Sync state when activeOrc data loads/changes (e.g. after refetch or URL-based navigation)
+  const prevActiveOrcRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeOrc && activeOrcamentoId && prevActiveOrcRef.current !== activeOrcamentoId) {
+      prevActiveOrcRef.current = activeOrcamentoId;
+      loadSimFromOrc(activeOrc);
+    }
+  }, [activeOrc, activeOrcamentoId, loadSimFromOrc]);
+
   // Auto-reset edited parcelas when item totals change so simulation recalculates
   useEffect(() => {
     setEditingParcelas(null);
