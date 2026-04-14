@@ -183,13 +183,14 @@ const FinanceiroReceber = () => {
       {isLoading ? <p className="text-xs text-muted-foreground text-center py-8">Carregando...</p> : (
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/30">
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Parcela</th>
                   <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Recebido</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
                 </tr>
@@ -197,6 +198,11 @@ const FinanceiroReceber = () => {
               <tbody>
                 {filtered.map(c => {
                   const clienteNome = (c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "—";
+                  // Calculate total parcelas for this project to display X/Y format
+                  const totalParcelas = c.projeto_id
+                    ? (contas ?? []).filter(r => r.projeto_id === c.projeto_id).length
+                    : 1;
+                  const parcelaLabel = `${c.parcela ?? 1}/${totalParcelas || 1}`;
                   return (
                     <tr
                       key={c.id}
@@ -204,9 +210,10 @@ const FinanceiroReceber = () => {
                       onClick={() => openEdit(c)}
                     >
                       <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{clienteNome}</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground">{c.parcela ?? "—"}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground font-medium">{parcelaLabel}</td>
                       <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
                       <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
                       <td className="px-3 py-2 text-center">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
                           {statusLabel(c.status ?? "pendente")}
@@ -230,7 +237,7 @@ const FinanceiroReceber = () => {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
