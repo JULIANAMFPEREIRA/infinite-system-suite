@@ -1643,7 +1643,7 @@ const CRM = () => {
                         onChange={e => { setItemDesc(e.target.value); setItemProdutoId(null); setShowItemSuggestions(itemTipo === "produto" && e.target.value.length > 0); }}
                         onFocus={() => { if (itemTipo === "produto" && itemDesc.length > 0) setShowItemSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowItemSuggestions(false), 200)}
-                        placeholder={itemTipo === "produto" ? "Buscar no catálogo..." : "Descrição do item"}
+                        placeholder={itemTipo === "produto" ? "Digite ou busque um produto" : "Descrição do item"}
                         className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none"
                       />
                       {showItemSuggestions && filteredProdutosCrm.length > 0 && (
