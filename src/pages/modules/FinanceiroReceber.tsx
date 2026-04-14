@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 
 const FinanceiroReceber = () => {
   const empresaId = useEmpresa();
@@ -25,7 +26,6 @@ const FinanceiroReceber = () => {
   const [clienteId, setClienteId] = useState("");
   const [projetoId, setProjetoId] = useState("");
 
-  // Modal baixa
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
@@ -83,22 +83,41 @@ const FinanceiroReceber = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : s === "vencido" ? "bg-destructive/15 text-destructive" : s === "cancelado" ? "bg-secondary text-muted-foreground" : "bg-warning/15 text-warning";
+  // Summary
+  const totalPendente = contas?.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
+  const totalPago = contas?.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
+  const totalVencido = contas?.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0) ?? 0;
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <DollarSign size={18} className="text-primary" />
+          <DollarSign size={18} className="text-success" />
           <h1 className="text-lg font-bold text-foreground">Contas a Receber</h1>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition btn-press">
           <Plus size={14} /> Nova Parcela
         </button>
       </div>
 
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-warning">{fmtBRL(totalPendente)}</div>
+          <div className="text-[11px] text-muted-foreground">Pendente</div>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-destructive">{fmtBRL(totalVencido)}</div>
+          <div className="text-[11px] text-muted-foreground">Vencido</div>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-success">{fmtBRL(totalPago)}</div>
+          <div className="text-[11px] text-muted-foreground">Recebido</div>
+        </div>
+      </div>
+
       {showForm && (
-        <div className="bg-card border border-border rounded p-3 space-y-3">
+        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
           <h2 className="text-xs font-semibold text-foreground">{editId ? "Editar" : "Nova"} Parcela</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
@@ -119,51 +138,67 @@ const FinanceiroReceber = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleSave} disabled={createConta.isPending || updateConta.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50">Salvar</button>
-            <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80">Cancelar</button>
+            <button onClick={handleSave} disabled={createConta.isPending || updateConta.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50 btn-press">Salvar</button>
+            <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 btn-press">Cancelar</button>
           </div>
         </div>
       )}
 
       {isLoading ? <p className="text-xs text-muted-foreground text-center py-8">Carregando...</p> : (
-        <div className="border border-border rounded overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-secondary/60">
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Cliente</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Parcela</th>
-                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contas?.map(c => (
-                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEdit(c)}>
-                  <td className="px-2.5 py-1.5">{c.descricao}</td>
-                  <td className="px-2.5 py-1.5">{(c.clientes as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-center">{c.parcela ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-right font-medium">R$ {(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                  <td className="px-2.5 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-center">
-                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span>
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
-                      {c.status === "pendente" && <button onClick={() => openBaixa(c.id)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success"><Check size={13} /></button>}
-                      <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                      <button onClick={() => { if (window.confirm("Excluir parcela?")) remove.mutate(c.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={13} /></button>
-                    </div>
-                  </td>
+        <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/30">
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Parcela</th>
+                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
                 </tr>
-              ))}
-              {(!contas || contas.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {contas?.map(c => (
+                  <tr
+                    key={c.id}
+                    className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
+                    onClick={() => openEdit(c)}
+                  >
+                    <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{c.descricao}</td>
+                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.clientes as any)?.nome ?? "—"}</td>
+                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
+                    <td className="px-3 py-2 text-center text-muted-foreground">{c.parcela ?? "—"}</td>
+                    <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
+                    <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
+                        {statusLabel(c.status ?? "pendente")}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-0.5">
+                        {c.status === "pendente" && (
+                          <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => { if (window.confirm("Excluir parcela?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {(!contas || contas.length === 0) && <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

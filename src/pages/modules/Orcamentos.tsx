@@ -413,124 +413,124 @@ const Orcamentos = () => {
         />
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="text-xs">Cliente</TableHead>
-                <TableHead className="text-xs">Orçamento</TableHead>
-                <TableHead className="text-xs text-right">Valor Total</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Envio da Proposta</TableHead>
-                <TableHead className="text-xs text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((orc) => {
-                const total = calcTotal(orc);
-                const isAvulso = (orc as any).is_avulso;
-                const enviado = orc.data_envio_proposta
-                  ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })
-                  : null;
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Cliente</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Orçamento</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Valor Total</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Envio da Proposta</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((orc) => {
+                  const total = calcTotal(orc);
+                  const isAvulso = (orc as any).is_avulso;
+                  const enviado = orc.data_envio_proposta
+                    ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
+                        addSuffix: true,
+                        locale: ptBR,
+                      })
+                    : null;
 
-                return (
-                  <TableRow key={orc.id} className="hover:bg-muted/20">
-                    <TableCell className="text-xs font-medium">
-                      <div className="flex items-center gap-1.5">
-                        {getClienteDisplay(orc)}
-                        {isAvulso && (
-                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-warning/40 text-warning font-medium">
-                            AVULSO
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs">{orc.nome}</TableCell>
-                    <TableCell className="text-xs text-right font-semibold">
-                      {formatCurrency(total)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={orc.aprovado ? "default" : "secondary"}
-                        className="text-[10px]"
-                      >
-                        {orc.aprovado ? "APROVADO" : "PENDENTE"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {orc.data_envio_proposta ? (
-                        <span className="text-muted-foreground">
-                          {new Date(orc.data_envio_proposta).toLocaleDateString("pt-BR")}
-                          <br />
-                          <span className="text-[10px] italic">
-                            Enviado {enviado}
-                          </span>
+                  return (
+                    <TableRow key={orc.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="text-xs px-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground">{getClienteDisplay(orc)}</span>
+                          {isAvulso && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-warning/40 text-warning font-medium">
+                              AVULSO
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-foreground/80 px-3">{orc.nome}</TableCell>
+                      <TableCell className="text-xs text-right font-bold text-foreground tabular-nums px-3">
+                        {formatCurrency(total)}
+                      </TableCell>
+                      <TableCell className="text-center px-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${orc.aprovado ? "bg-success/15 text-success border border-success/25" : "bg-warning/15 text-warning border border-warning/25"}`}>
+                          {orc.aprovado ? "APROVADO" : "PENDENTE"}
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {isAvulso && (
+                      </TableCell>
+                      <TableCell className="text-xs px-3">
+                        {orc.data_envio_proposta ? (
+                          <div>
+                            <span className="text-foreground/80 tabular-nums">
+                              {new Date(orc.data_envio_proposta).toLocaleDateString("pt-BR")}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground ml-1.5 italic">
+                              {enviado}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right px-3">
+                        <div className="flex items-center justify-end gap-0.5">
+                          {isAvulso && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs gap-1 text-success hover:text-success"
+                              title="Converter em Cliente"
+                              onClick={() => openConvert(orc)}
+                            >
+                              <UserPlus size={12} /> Converter
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 text-xs gap-1 text-success hover:text-success"
-                            title="Converter em Cliente"
-                            onClick={() => openConvert(orc)}
+                            className="h-7 w-7 p-0"
+                            title="Editar"
+                            onClick={() => openEdit(orc)}
                           >
-                            <UserPlus size={12} /> Converter
+                            <Pencil size={13} />
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0"
-                          title="Editar"
-                          onClick={() => openEdit(orc)}
-                        >
-                          <Pencil size={13} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                          title="Excluir"
-                          onClick={() => setDeleteOrcId(orc.id)}
-                        >
-                          <Trash2 size={13} />
-                        </Button>
-                        {!isAvulso && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs gap-1"
-                              onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
-                            >
-                              <ExternalLink size={12} /> Abrir
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs gap-1 text-primary hover:text-primary"
-                              title="Solicitar dados do cliente"
-                              onClick={() => generateFormLink(orc)}
-                            >
-                              <Link2 size={12} /> Solicitar Dados
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            title="Excluir"
+                            onClick={() => setDeleteOrcId(orc.id)}
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                          {!isAvulso && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => navigate(`/crm?cliente_id=${orc.cliente_id}&orcamento_id=${orc.id}`)}
+                              >
+                                <ExternalLink size={12} /> Abrir
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                                title="Solicitar dados do cliente"
+                                onClick={() => generateFormLink(orc)}
+                              >
+                                <Link2 size={12} /> Solicitar Dados
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
