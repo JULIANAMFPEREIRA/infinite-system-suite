@@ -104,7 +104,7 @@ const FinanceiroReceber = () => {
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <div className="text-lg font-bold text-warning">{fmtBRL(totalPendente)}</div>
-          <div className="text-[11px] text-muted-foreground">Pendente</div>
+          <div className="text-[11px] text-muted-foreground">A Receber</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <div className="text-lg font-bold text-destructive">{fmtBRL(totalVencido)}</div>
