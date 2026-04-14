@@ -1022,6 +1022,20 @@ const CRM = () => {
   const [orcImposto, setOrcImposto] = useState(Number((activeOrc as any)?.imposto) || 0);
   const [orcDataEnvio, setOrcDataEnvio] = useState<string>((activeOrc as any)?.data_envio_proposta ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
+  // Desconto state
+  const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
+  const [orcDescontoValor, setOrcDescontoValor] = useState(Number(((activeOrc as any)?.simulacao_pagamento as any)?.descontoValor) || 0);
+
+  const subtotalOrcamento = totalCrmVenda;
+  const descontoCalculado = useMemo(() => {
+    if (orcDescontoTipo === "percentual") {
+      const pct = Math.min(Math.max(orcDescontoValor, 0), 100);
+      return (subtotalOrcamento * pct) / 100;
+    }
+    return Math.min(Math.max(orcDescontoValor, 0), subtotalOrcamento);
+  }, [orcDescontoTipo, orcDescontoValor, subtotalOrcamento]);
+  const totalCrmVendaComDesconto = subtotalOrcamento - descontoCalculado;
+
   const totalCrmCustoComExtras = totalCrmCusto + orcFrete + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
@@ -1615,7 +1629,7 @@ const CRM = () => {
                       </select>
                     </div>
                     <div className="col-span-2 md:col-span-1 space-y-0.5 relative">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição * {itemTipo === "produto" && <span className="text-primary">(busca catálogo)</span>}</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Descrição *</label>
                       <input
                         value={itemDesc}
                         onChange={e => { setItemDesc(e.target.value); setItemProdutoId(null); setShowItemSuggestions(itemTipo === "produto" && e.target.value.length > 0); }}
