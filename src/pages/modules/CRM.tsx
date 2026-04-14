@@ -615,6 +615,8 @@ const CRM = () => {
       imposto: orcImposto,
       data_envio_proposta: orcDataEnvio || null,
       data_pagamento_avista: orcDataPgtoAvista || null,
+      frete_vencimento: orcFreteVencimento || null,
+      imposto_vencimento: orcImpostoVencimento || null,
     } as any).eq("id", activeOrcamentoId);
     refetchOrcamentos();
   };
