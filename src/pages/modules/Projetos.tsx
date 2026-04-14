@@ -758,6 +758,7 @@ const PendenciasSection = ({ projetos, pendenciaCounts, navigate }: { projetos: 
 
 // ======== ITENS DO PROJETO ========
 const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, numeroParcelas, isCrmGenerated }: { projetoId: string; projetoNome: string; clienteId: string; empresaId: string | null; numeroParcelas: number; isCrmGenerated?: boolean }) => {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: itens, isLoading } = useProjetoItens(projetoId);
   const createItem = useCreateProjetoItem();
