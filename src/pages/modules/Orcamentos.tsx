@@ -499,6 +499,9 @@ const Orcamentos = () => {
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Cliente</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Orçamento</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Valor Total</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Comprado</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Falta</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3"><ShoppingCart size={12} className="inline mr-1" />Compras</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3">Status</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Envio da Proposta</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Ações</TableHead>
