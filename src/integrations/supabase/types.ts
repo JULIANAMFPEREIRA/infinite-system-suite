@@ -804,6 +804,7 @@ export type Database = {
       }
       financeiro_pagar: {
         Row: {
+          categoria_id: string | null
           comissao_id: string | null
           created_at: string
           data_pagamento: string | null
@@ -818,6 +819,7 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          categoria_id?: string | null
           comissao_id?: string | null
           created_at?: string
           data_pagamento?: string | null
@@ -832,6 +834,7 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          categoria_id?: string | null
           comissao_id?: string | null
           created_at?: string
           data_pagamento?: string | null
@@ -846,6 +849,13 @@ export type Database = {
           valor?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "financeiro_pagar_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "financeiro_pagar_comissao_id_fkey"
             columns: ["comissao_id"]
