@@ -148,12 +148,13 @@ const FinanceiroPagar = () => {
   const handleSave = async () => {
     if (!isNotEmpty(desc, "Descrição")) return;
     if (!isPositiveNumber(valor, "Valor")) return;
+    const finalDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
     try {
       if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await updateConta.mutateAsync({ id: editId, descricao: finalDesc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta atualizada");
       } else {
-        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await createConta.mutateAsync({ descricao: finalDesc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta adicionada");
       }
       resetForm();
