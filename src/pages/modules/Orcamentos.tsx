@@ -343,6 +343,10 @@ const Orcamentos = () => {
     return totals.totalVenda;
   };
 
+  const calcTotalProdutos = (orc: any) => {
+    return (orc.crm_itens ?? []).reduce((sum: number, i: any) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+  };
+
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
