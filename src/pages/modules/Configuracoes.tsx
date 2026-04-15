@@ -45,6 +45,7 @@ const menuGroups = [
     label: "Financeiro",
     items: [
       { key: "formas_pagamento" as Section, label: "Formas de Pagamento", icon: CreditCard },
+      { key: "tipos_financeiros" as Section, label: "Tipos Financeiros", icon: Wallet },
       { key: "categorias" as Section, label: "Categorias", icon: Tag },
     ],
   },
