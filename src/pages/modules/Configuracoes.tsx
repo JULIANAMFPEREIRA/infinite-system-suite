@@ -22,6 +22,7 @@ type Section =
   | "usuarios"
   | "funcionarios"
   | "formas_pagamento"
+  | "tipos_financeiros"
   | "categorias"
   | "status_projeto"
   | "transportadoras";
