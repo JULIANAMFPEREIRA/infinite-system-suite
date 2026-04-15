@@ -430,29 +430,29 @@ const Configuracoes = () => {
       </div>
       <div className="flex gap-2 items-end">
         <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaCat} onChange={e => setNovaCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-28"><label className="text-[11px] text-muted-foreground">Tipo</label>
+        <div className="space-y-1 w-40"><label className="text-[11px] text-muted-foreground">Tipo *</label>
           <select value={tipoCat} onChange={e => setTipoCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-            <option value="produto">Produto</option><option value="servico">Serviço</option>
+            {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
-        <button onClick={async () => { if (!novaCat.trim()) return; await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
+        <button onClick={async () => { if (!novaCat.trim() || !tipoCat) { toast.error("Nome e Tipo são obrigatórios"); return; } await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
       </div>
       {categorias && categorias.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-24">Tipo</th>
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-36">Tipo</th>
               <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
             </tr></thead>
             <tbody>
               {categorias.map(c => (
                 <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
                   <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
-                  <td className="px-2.5 py-1.5 text-muted-foreground capitalize">{c.tipo ?? "—"}</td>
+                  <td className="px-2.5 py-1.5 text-muted-foreground">{tipoLabel(c.tipo ?? "—")}</td>
                   <td className="px-2.5 py-1.5 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => setEditCat({ id: c.id, nome: c.nome, tipo: c.tipo ?? "produto" })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
+                      <button onClick={() => setEditCat({ id: c.id, nome: c.nome, tipo: c.tipo ?? "entrada" })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
                       <button onClick={() => { if (window.confirm("Excluir categoria?")) { deleteCat.mutate(c.id); toast.success("Removida"); } }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive" title="Excluir"><Trash2 size={12} /></button>
                     </div>
                   </td>
@@ -462,6 +462,47 @@ const Configuracoes = () => {
           </table>
         </div>
       ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma categoria cadastrada.</p>}
+    </div>
+  );
+
+  const renderTiposFinanceiros = () => (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Wallet size={14} className="text-primary" />
+        <h2 className="text-sm font-semibold text-foreground">Tipos Financeiros</h2>
+      </div>
+      <p className="text-[11px] text-muted-foreground">Tipos usados para classificar as categorias financeiras. Cada categoria deve estar vinculada a um tipo.</p>
+      <div className="flex gap-2 items-end">
+        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Novo Tipo</label><input value={novoTipo} onChange={e => setNovoTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Saída Administrativa" /></div>
+        <button onClick={() => {
+          const val = novoTipo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (!val) { toast.error("Digite o nome do tipo"); return; }
+          if (allTiposSet.has(val)) { toast.error("Tipo já existe"); return; }
+          // Create a placeholder category so the type persists
+          createCat.mutateAsync({ nome: `CATEGORIA ${novoTipo.trim().toUpperCase()}`, tipo: val });
+          setNovoTipo(""); toast.success("Tipo criado com categoria inicial");
+        }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
+      </div>
+      <div className="border border-border rounded overflow-hidden mt-2">
+        <table className="w-full text-xs">
+          <thead><tr className="bg-secondary/60">
+            <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Tipo</th>
+            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-28">Categorias</th>
+            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
+          </tr></thead>
+          <tbody>
+            {allTipos.map(t => (
+              <tr key={t.value} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                <td className="px-2.5 py-1.5 font-medium">{t.label}</td>
+                <td className="px-2.5 py-1.5 text-center text-muted-foreground">{categoriasCount(t.value)}</td>
+                <td className="px-2.5 py-1.5 text-center">
+                  <button onClick={() => setEditTipo({ original: t.value, novo: t.label })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
