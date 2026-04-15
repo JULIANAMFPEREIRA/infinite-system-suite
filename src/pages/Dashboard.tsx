@@ -99,6 +99,16 @@ const Dashboard = () => {
         .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes)
         .reduce((a, r) => a + (r.valor ?? 0), 0);
 
+      // Resumo Financeiro
+      const totalRecebido = receber
+        .filter(r => r.status === "pago")
+        .reduce((a, r) => a + (r.valor ?? 0), 0);
+      const totalPagoEfetivo = pagar
+        .filter(p => p.status === "pago")
+        .reduce((a, p) => a + (Number(p.valor) || 0), 0);
+      const saldoAtual = totalRecebido - totalPagoEfetivo;
+      const saldoPrevisto = saldoAtual + totalReceberGeral - pagarGeral;
+
       // Status operacionais
       const statusOperacionais = [
         { key: "infraestrutura", label: "INFRAESTRUTURA", color: "hsl(200, 80%, 55%)" },
