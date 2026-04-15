@@ -630,7 +630,7 @@ const Configuracoes = () => {
               <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={editCat.nome} onChange={e => setEditCat({ ...editCat, nome: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
               <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Tipo</label>
                 <select value={editCat.tipo} onChange={e => setEditCat({ ...editCat, tipo: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                  <option value="produto">Produto</option><option value="servico">Serviço</option>
+                  {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
             </div>
