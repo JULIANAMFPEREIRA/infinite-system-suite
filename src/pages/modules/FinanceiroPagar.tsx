@@ -123,6 +123,12 @@ const FinanceiroPagar = () => {
     setShowForm(true);
   };
 
+  const isRetiradaSelected = useMemo(() => {
+    if (!categoriaId || !categorias) return false;
+    const cat = categorias.find(c => c.id === categoriaId);
+    return cat?.nome.toUpperCase() === RETIRADA_NOME;
+  }, [categoriaId, categorias]);
+
   // Auto-suggest when selecting "Retirada Pessoal"
   const handleCategoriaChange = (catId: string) => {
     setCategoriaId(catId);
