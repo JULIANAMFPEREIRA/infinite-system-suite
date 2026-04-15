@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-  AlertTriangle, Clock, TrendingUp, Receipt
+  AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale
 } from "lucide-react";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
