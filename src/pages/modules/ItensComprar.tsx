@@ -20,18 +20,8 @@ const ItensComprar = () => {
 
   const handleConverter = async (nec: any) => {
     try {
-      const compra = await converter.mutateAsync(nec);
-      if (empresaId && compra) {
-        await supabase.from("financeiro_pagar").insert({
-          empresa_id: empresaId,
-          projeto_id: nec.projeto_id,
-          descricao: `Compra — ${nec.descricao ?? "Sem descrição"}`,
-          valor: getValorTotal(nec),
-          data_vencimento: compra.data_compra || null,
-          status: "pendente",
-        });
-        qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
-      }
+      await converter.mutateAsync(nec);
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       toast.success("Compra gerada e conta a pagar criada!");
     } catch (err: any) {
       toast.error(err.message);
