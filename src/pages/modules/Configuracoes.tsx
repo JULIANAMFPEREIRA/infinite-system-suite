@@ -571,6 +571,7 @@ const Configuracoes = () => {
     usuarios: renderUsuarios,
     funcionarios: renderFuncionarios,
     formas_pagamento: renderFormasPagamento,
+    tipos_financeiros: renderTiposFinanceiros,
     categorias: renderCategorias,
     status_projeto: renderStatusProjeto,
     transportadoras: renderTransportadoras,
