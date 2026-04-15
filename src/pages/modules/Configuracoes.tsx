@@ -99,8 +99,35 @@ const Configuracoes = () => {
   const updateCat = useUpdateCategoria();
   const deleteCat = useDeleteCategoria();
   const [novaCat, setNovaCat] = useState("");
-  const [tipoCat, setTipoCat] = useState("produto");
+  const [tipoCat, setTipoCat] = useState("entrada");
   const [editCat, setEditCat] = useState<{ id: string; nome: string; tipo: string } | null>(null);
+
+  // Tipos Financeiros - derived from categorias + defaults
+  const [novoTipo, setNovoTipo] = useState("");
+  const [editTipo, setEditTipo] = useState<{ original: string; novo: string } | null>(null);
+
+  const defaultTipos = [
+    { value: "entrada", label: "Entrada" },
+    { value: "saida_operacional", label: "Saída Operacional" },
+    { value: "saida_financeira", label: "Saída Financeira" },
+    { value: "saida_especial", label: "Saída Especial" },
+    { value: "produto", label: "Produto" },
+    { value: "servico", label: "Serviço" },
+  ];
+
+  const tiposFromCategorias = new Set((categorias ?? []).map(c => c.tipo).filter(Boolean));
+  const allTiposSet = new Set([...defaultTipos.map(t => t.value), ...tiposFromCategorias]);
+  const allTipos = Array.from(allTiposSet).sort().map(t => {
+    const def = defaultTipos.find(d => d.value === t);
+    return { value: t, label: def?.label ?? t };
+  });
+
+  const tipoLabel = (t: string) => {
+    const def = defaultTipos.find(d => d.value === t);
+    return def?.label ?? t;
+  };
+
+  const categoriasCount = (tipo: string) => (categorias ?? []).filter(c => c.tipo === tipo).length;
 
   // Formas de pagamento
   const { data: formas } = useFormasPagamento();
