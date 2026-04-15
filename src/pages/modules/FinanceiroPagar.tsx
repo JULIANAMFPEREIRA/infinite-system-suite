@@ -73,7 +73,7 @@ const FinanceiroPagar = () => {
   const [fornecedorId, setFornecedorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
-
+  const [descRetirada, setDescRetirada] = useState("");
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
@@ -105,11 +105,29 @@ const FinanceiroPagar = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? ""); setShowForm(true);
+    setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
+    // Parse descRetirada from description if it's a retirada
+    const catName = getCatName(c.categoria_id);
+    const rawDesc = c.descricao ?? "";
+    if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
+      const parts = rawDesc.split(" — ");
+      setDesc(parts[0]);
+      setDescRetirada(parts.slice(1).join(" — "));
+    } else {
+      setDesc(rawDesc);
+      setDescRetirada("");
+    }
+    setShowForm(true);
   };
+
+  const isRetiradaSelected = useMemo(() => {
+    if (!categoriaId || !categorias) return false;
+    const cat = categorias.find(c => c.id === categoriaId);
+    return cat?.nome.toUpperCase() === RETIRADA_NOME;
+  }, [categoriaId, categorias]);
 
   // Auto-suggest when selecting "Retirada Pessoal"
   const handleCategoriaChange = (catId: string) => {
@@ -130,12 +148,13 @@ const FinanceiroPagar = () => {
   const handleSave = async () => {
     if (!isNotEmpty(desc, "Descrição")) return;
     if (!isPositiveNumber(valor, "Valor")) return;
+    const finalDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
     try {
       if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await updateConta.mutateAsync({ id: editId, descricao: finalDesc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta atualizada");
       } else {
-        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await createConta.mutateAsync({ descricao: finalDesc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta adicionada");
       }
       resetForm();
@@ -274,6 +293,12 @@ const FinanceiroPagar = () => {
               </select>
             </div>
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            {isRetiradaSelected && (
+              <div className="space-y-1 col-span-2">
+                <label className="text-[11px] text-muted-foreground">Descrição da retirada <span className="text-muted-foreground/60">(opcional — ex: mercado, gasolina, conta pessoal)</span></label>
+                <input value={descRetirada} onChange={e => setDescRetirada(e.target.value)} placeholder="No que o dinheiro foi utilizado..." className="w-full h-8 px-2 text-xs bg-background border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            )}
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Fornecedor / Pessoa</label>
