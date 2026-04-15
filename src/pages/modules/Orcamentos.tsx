@@ -80,13 +80,51 @@ const Orcamentos = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_orcamentos")
-        .select("*, clientes(nome), crm_itens(quantidade, preco_venda)")
+        .select("*, clientes(nome), crm_itens(quantidade, preco_venda, preco_custo)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!empresaId,
   });
+
+  // Fetch compras linked via projetos.orcamento_id
+  const { data: projetosCompras } = useQuery({
+    queryKey: ["orcamentos_compras", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("orcamento_id, compras(valor_total, status, deletado)")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .not("orcamento_id", "is", null);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  // Build compras map by orcamento_id
+  const comprasMap = useMemo(() => {
+    const map: Record<string, { totalComprado: number; totalItens: number }> = {};
+    (projetosCompras ?? []).forEach((p: any) => {
+      const orcId = p.orcamento_id;
+      if (!orcId) return;
+      if (!map[orcId]) map[orcId] = { totalComprado: 0, totalItens: 0 };
+      (p.compras ?? []).filter((c: any) => !c.deletado).forEach((c: any) => {
+        map[orcId].totalComprado += Number(c.valor_total) || 0;
+        map[orcId].totalItens += 1;
+      });
+    });
+    return map;
+  }, [projetosCompras]);
+
+  const getCompraStatus = (orcId: string, totalProdutos: number) => {
+    const info = comprasMap[orcId];
+    if (!info || info.totalItens === 0) return { label: "NÃO INICIADO", class: "bg-muted text-muted-foreground border border-border" };
+    if (info.totalComprado >= totalProdutos) return { label: "COMPLETO", class: "bg-success/15 text-success border border-success/25" };
+    return { label: "PARCIAL", class: "bg-warning/15 text-warning border border-warning/25" };
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string; nome: string; frete: number; imposto: number; frete_tipo: string | null; data_pagamento_avista: string | null }) => {
