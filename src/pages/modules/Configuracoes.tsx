@@ -691,6 +691,33 @@ const Configuracoes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editTipo} onOpenChange={open => { if (!open) setEditTipo(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Tipo Financeiro</DialogTitle></DialogHeader>
+          {editTipo && (
+            <div className="space-y-3">
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome do Tipo</label><input value={editTipo.novo} onChange={e => setEditTipo({ ...editTipo, novo: e.target.value })} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <p className="text-[10px] text-muted-foreground">As categorias vinculadas a este tipo serão atualizadas automaticamente.</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditTipo(null)}>Cancelar</Button>
+            <Button size="sm" onClick={async () => {
+              if (!editTipo?.novo.trim()) return;
+              const newVal = editTipo.novo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              // Update all categorias with old tipo to new tipo
+              const catsToUpdate = (categorias ?? []).filter(c => c.tipo === editTipo.original);
+              for (const c of catsToUpdate) {
+                await supabase.from("categorias").update({ tipo: newVal } as any).eq("id", c.id);
+              }
+              qc.invalidateQueries({ queryKey: ["categorias"] });
+              setEditTipo(null);
+              toast.success("Tipo atualizado");
+            }} disabled={!editTipo?.novo.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
