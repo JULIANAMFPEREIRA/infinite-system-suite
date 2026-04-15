@@ -105,10 +105,22 @@ const FinanceiroPagar = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? ""); setShowForm(true);
+    setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
+    // Parse descRetirada from description if it's a retirada
+    const catName = getCatName(c.categoria_id);
+    const rawDesc = c.descricao ?? "";
+    if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
+      const parts = rawDesc.split(" — ");
+      setDesc(parts[0]);
+      setDescRetirada(parts.slice(1).join(" — "));
+    } else {
+      setDesc(rawDesc);
+      setDescRetirada("");
+    }
+    setShowForm(true);
   };
 
   // Auto-suggest when selecting "Retirada Pessoal"
