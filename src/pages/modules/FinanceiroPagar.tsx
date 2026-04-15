@@ -299,6 +299,7 @@ const FinanceiroPagar = () => {
                 <input value={descRetirada} onChange={e => setDescRetirada(e.target.value)} placeholder="No que o dinheiro foi utilizado..." className="w-full h-8 px-2 text-xs bg-background border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
             )}
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Fornecedor / Pessoa</label>
               <select value={fornecedorId} onChange={e => setFornecedorId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
