@@ -1,0 +1,1 @@
+ALTER TABLE public.financeiro_pagar ADD COLUMN categoria_id uuid REFERENCES public.categorias(id) ON DELETE SET NULL;

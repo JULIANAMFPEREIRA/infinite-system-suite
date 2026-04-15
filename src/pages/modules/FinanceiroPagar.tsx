@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { DollarSign, Plus, Check, Pencil, Trash2, Search } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
-import { useFormasPagamento } from "@/hooks/useCategorias";
+import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
+import { useSeedCategorias } from "@/hooks/useSeedCategorias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -29,7 +30,6 @@ const TIPO_OPTIONS = [
   { value: "adicional", label: "Adicional" },
 ];
 
-/** Infer the type from the description text */
 const inferTipo = (desc: string | null): string => {
   if (!desc) return "";
   const d = desc.toLowerCase();
@@ -53,6 +53,8 @@ const tipoBadge = (desc: string | null) => {
   return <span className={`inline-flex px-1.5 py-0 rounded text-[9px] font-medium border ${cls}`}>{label}</span>;
 };
 
+const RETIRADA_NOME = "RETIRADA PESSOAL (PRÓ-LABORE)";
+
 const FinanceiroPagar = () => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
@@ -60,6 +62,9 @@ const FinanceiroPagar = () => {
   const createConta = useCreateContaPagar();
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
+  const { data: categorias } = useCategorias();
+  useSeedCategorias();
+
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
@@ -67,6 +72,7 @@ const FinanceiroPagar = () => {
   const [vencimento, setVencimento] = useState("");
   const [fornecedorId, setFornecedorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
+  const [categoriaId, setCategoriaId] = useState("");
 
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
@@ -74,15 +80,14 @@ const FinanceiroPagar = () => {
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
 
-  // Detail panel
   const [detailConta, setDetailConta] = useState<any>(null);
 
-  // Filters
   const [statusFilter, setStatusFilter] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
+  const [categoriaFilter, setCategoriaFilter] = useState("");
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores", empresaId],
@@ -94,11 +99,32 @@ const FinanceiroPagar = () => {
     queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
   });
+  const { data: clientes } = useQuery({
+    queryKey: ["clientes_select", empresaId],
+    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
+    enabled: !!empresaId,
+  });
 
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setShowForm(true);
+    setEditId(c.id); setDesc(c.descricao ?? ""); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? ""); setShowForm(true);
+  };
+
+  // Auto-suggest when selecting "Retirada Pessoal"
+  const handleCategoriaChange = (catId: string) => {
+    setCategoriaId(catId);
+    const cat = categorias?.find(c => c.id === catId);
+    if (cat && cat.nome.toUpperCase() === RETIRADA_NOME) {
+      // Suggest description if empty
+      if (!desc) setDesc("Retirada Pessoal (Pró-labore)");
+      // Suggest "Pessoal / Administrativo" project if exists
+      const pessoalProject = projetos?.find(p => p.nome.toLowerCase().includes("pessoal") || p.nome.toLowerCase().includes("administrativo"));
+      if (pessoalProject && !projetoId) setProjetoId(pessoalProject.id);
+      // Suggest "Juliana Pereira" as fornecedor if exists
+      const juliana = fornecedores?.find(f => f.nome.toUpperCase().includes("JULIANA PEREIRA"));
+      if (juliana && !fornecedorId) setFornecedorId(juliana.id);
+    }
   };
 
   const handleSave = async () => {
@@ -106,10 +132,10 @@ const FinanceiroPagar = () => {
     if (!isPositiveNumber(valor, "Valor")) return;
     try {
       if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null });
+        await updateConta.mutateAsync({ id: editId, descricao: desc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta atualizada");
       } else {
-        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null });
+        await createConta.mutateAsync({ descricao: desc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
         toast.success("Conta adicionada");
       }
       resetForm();
@@ -135,21 +161,46 @@ const FinanceiroPagar = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Filtered data
   const filtered = useMemo(() => {
     let list = contas ?? [];
     if (statusFilter) list = list.filter(c => c.status === statusFilter);
     if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
+    if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
     return list;
-  }, [contas, statusFilter, tipoFilter, periodoFilter, mesFilter, anoFilter]);
+  }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter]);
 
-  // Summary
   const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
   const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
   const totalVencido = filtered.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0);
 
   const selectCls = "h-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary";
+
+  // Group categorias by tipo for the selector
+  const categoriaGroups = useMemo(() => {
+    if (!categorias) return {};
+    const groups: Record<string, typeof categorias> = {};
+    categorias.forEach(c => {
+      const tipo = c.tipo || "outros";
+      if (!groups[tipo]) groups[tipo] = [];
+      groups[tipo].push(c);
+    });
+    return groups;
+  }, [categorias]);
+
+  const tipoLabels: Record<string, string> = {
+    entrada: "📥 Entradas",
+    saida_operacional: "📤 Saídas Operacionais",
+    saida_financeira: "💰 Saídas Financeiras",
+    saida_especial: "⭐ Saída Especial",
+    produto: "📦 Produto",
+    outros: "📋 Outros",
+  };
+
+  const getCatName = (catId: string | null) => {
+    if (!catId || !categorias) return null;
+    return categorias.find(c => c.id === catId)?.nome ?? null;
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -175,9 +226,19 @@ const FinanceiroPagar = () => {
         anoFilter={anoFilter}
         onAnoChange={setAnoFilter}
         extraFilters={
-          <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-            {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+              {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
+              <option value="">Todas categorias</option>
+              {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                  {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
         }
       />
 
@@ -201,16 +262,27 @@ const FinanceiroPagar = () => {
         <div className="bg-card border border-border rounded-lg p-4 space-y-3">
           <h2 className="text-xs font-semibold text-foreground">{editId ? "Editar" : "Nova"} Conta a Pagar</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1 col-span-2">
+              <label className="text-[11px] text-muted-foreground">Categoria</label>
+              <select value={categoriaId} onChange={e => handleCategoriaChange(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary">
+                <option value="">Selecionar categoria...</option>
+                {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                  <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                    {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
             <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Fornecedor</label>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Fornecedor / Pessoa</label>
               <select value={fornecedorId} onChange={e => setFornecedorId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
                 <option value="">Selecionar...</option>
                 {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select>
             </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto</label>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto (opcional)</label>
               <select value={projetoId} onChange={e => setProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
                 <option value="">Selecionar...</option>
                 {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -230,6 +302,7 @@ const FinanceiroPagar = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/30">
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Categoria</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
@@ -241,49 +314,59 @@ const FinanceiroPagar = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(c => (
-                  <tr
-                    key={c.id}
-                    className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
-                    onClick={() => openEdit(c)}
-                  >
-                    <td className="px-3 py-2 max-w-[220px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground truncate">{c.descricao}</span>
-                        {tipoBadge(c.descricao)}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                    <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
-                    <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
-                    <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                    <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
-                        {statusLabel(c.status ?? "pendente")}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-0.5">
-                        {c.status === "pendente" && (
-                          <button onClick={() => openBaixa(c.id)} title="Registrar pagamento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
-                            <Check size={14} />
-                          </button>
+                {filtered.map(c => {
+                  const catName = getCatName((c as any).categoria_id);
+                  return (
+                    <tr
+                      key={c.id}
+                      className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
+                      onClick={() => openEdit(c)}
+                    >
+                      <td className="px-3 py-2 max-w-[160px]">
+                        {catName ? (
+                          <span className="text-[10px] text-muted-foreground truncate block">{catName}</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/50">—</span>
                         )}
-                        <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                          <Search size={14} />
-                        </button>
-                        <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                        <button onClick={() => { if (window.confirm("Excluir conta?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                      </td>
+                      <td className="px-3 py-2 max-w-[220px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground truncate">{c.descricao}</span>
+                          {tipoBadge(c.descricao)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
+                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
+                          {statusLabel(c.status ?? "pendente")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-0.5">
+                          {c.status === "pendente" && (
+                            <button onClick={() => openBaixa(c.id)} title="Registrar pagamento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
+                              <Check size={14} />
+                            </button>
+                          )}
+                          <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                            <Search size={14} />
+                          </button>
+                          <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => { if (window.confirm("Excluir conta?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>

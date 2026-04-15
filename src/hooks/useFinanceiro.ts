@@ -11,7 +11,7 @@ export const useFinanceiroPagar = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financeiro_pagar")
-        .select("*, fornecedores(nome), projetos(nome)")
+        .select("*, fornecedores(nome), projetos(nome), categorias(id, nome, tipo)")
         .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
       if (error) throw error;
