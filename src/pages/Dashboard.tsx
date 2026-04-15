@@ -187,6 +187,56 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* RESUMO FINANCEIRO */}
+      <div>
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Resumo Financeiro</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Saldo Atual */}
+          <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet size={14} className="text-primary" />
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Saldo Atual</p>
+            </div>
+            <p className={`text-xl sm:text-2xl font-bold mt-1 ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {fmt(stats?.saldoAtual ?? 0)}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Recebido − Pago</p>
+          </div>
+
+          {/* A Receber */}
+          <div className="relative overflow-hidden rounded-xl border border-[hsl(210,70%,50%)]/25 bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <ArrowDownRight size={14} className="text-[hsl(210,70%,50%)]" />
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">A Receber</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{fmt(stats?.totalReceberGeral ?? 0)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Pendente</p>
+          </div>
+
+          {/* A Pagar */}
+          <div className="relative overflow-hidden rounded-xl border border-[hsl(0,70%,50%)]/25 bg-gradient-to-br from-[hsl(0,70%,50%)]/15 to-[hsl(0,70%,50%)]/5 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <ArrowUpRight size={14} className="text-[hsl(0,70%,50%)]" />
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">A Pagar</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{fmt(stats?.pagarGeral ?? 0)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Pendente</p>
+          </div>
+
+          {/* Saldo Previsto */}
+          <div className="relative overflow-hidden rounded-xl border border-[hsl(38,92%,50%)]/25 bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Scale size={14} className="text-[hsl(38,92%,50%)]" />
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Saldo Previsto</p>
+            </div>
+            <p className={`text-xl sm:text-2xl font-bold mt-1 ${(stats?.saldoPrevisto ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {fmt(stats?.saldoPrevisto ?? 0)}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Atual + Receber − Pagar</p>
+          </div>
+        </div>
+      </div>
+
       {/* LINHA 1 – FINANCEIRO RECEITAS */}
       <div>
         <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Receitas</p>
