@@ -113,6 +113,7 @@ const Compras = () => {
       qc.invalidateQueries({ queryKey: ["estoque_itens"] });
       qc.invalidateQueries({ queryKey: ["projetos"] });
       qc.invalidateQueries({ queryKey: ["necessidades_compra"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       toast.success("Status atualizado");
     },
     onError: (err: any) => toast.error(err.message),
