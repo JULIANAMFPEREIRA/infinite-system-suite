@@ -81,7 +81,7 @@ const Compras = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); toast.success(editId ? "Compra atualizada" : "Compra registrada"); resetForm(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); toast.success(editId ? "Compra atualizada" : "Compra registrada"); resetForm(); },
     onError: (err: any) => toast.error(err.message),
   });
 
