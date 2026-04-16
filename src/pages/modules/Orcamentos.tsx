@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, Copy, Check } from "lucide-react";
+import { FileText, Search, ExternalLink, Pencil, Trash2, Zap, UserPlus, Phone, User, Link2, Copy, Check, ShoppingCart } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { KanbanBoard, type KanbanCardData } from "@/components/kanban/KanbanBoard";
 import { ViewToggle } from "@/components/kanban/ViewToggle";
@@ -80,13 +80,51 @@ const Orcamentos = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_orcamentos")
-        .select("*, clientes(nome), crm_itens(quantidade, preco_venda)")
+        .select("*, clientes(nome), crm_itens(quantidade, preco_venda, preco_custo)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!empresaId,
   });
+
+  // Fetch compras linked via projetos.orcamento_id
+  const { data: projetosCompras } = useQuery({
+    queryKey: ["orcamentos_compras", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("orcamento_id, compras(valor_total, status, deletado)")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .not("orcamento_id", "is", null);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  // Build compras map by orcamento_id
+  const comprasMap = useMemo(() => {
+    const map: Record<string, { totalComprado: number; totalItens: number }> = {};
+    (projetosCompras ?? []).forEach((p: any) => {
+      const orcId = p.orcamento_id;
+      if (!orcId) return;
+      if (!map[orcId]) map[orcId] = { totalComprado: 0, totalItens: 0 };
+      (p.compras ?? []).filter((c: any) => !c.deletado).forEach((c: any) => {
+        map[orcId].totalComprado += Number(c.valor_total) || 0;
+        map[orcId].totalItens += 1;
+      });
+    });
+    return map;
+  }, [projetosCompras]);
+
+  const getCompraStatus = (orcId: string, totalProdutos: number) => {
+    const info = comprasMap[orcId];
+    if (!info || info.totalItens === 0) return { label: "NÃO INICIADO", class: "bg-muted text-muted-foreground border border-border" };
+    if (info.totalComprado >= totalProdutos) return { label: "COMPLETO", class: "bg-success/15 text-success border border-success/25" };
+    return { label: "PARCIAL", class: "bg-warning/15 text-warning border border-warning/25" };
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string; nome: string; frete: number; imposto: number; frete_tipo: string | null; data_pagamento_avista: string | null }) => {
@@ -305,6 +343,10 @@ const Orcamentos = () => {
     return totals.totalVenda;
   };
 
+  const calcTotalProdutos = (orc: any) => {
+    return (orc.crm_itens ?? []).reduce((sum: number, i: any) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+  };
+
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -457,6 +499,9 @@ const Orcamentos = () => {
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Cliente</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Orçamento</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Valor Total</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Comprado</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Falta</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3"><ShoppingCart size={12} className="inline mr-1" />Compras</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3">Status</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Envio da Proposta</TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Ações</TableHead>
@@ -465,6 +510,11 @@ const Orcamentos = () => {
               <TableBody>
                 {filtered.map((orc) => {
                   const total = calcTotal(orc);
+                  const totalProdutos = calcTotalProdutos(orc);
+                  const compraInfo = comprasMap[orc.id];
+                  const totalComprado = compraInfo?.totalComprado ?? 0;
+                  const faltaComprar = Math.max(0, totalProdutos - totalComprado);
+                  const compraStatus = getCompraStatus(orc.id, totalProdutos);
                   const isAvulso = (orc as any).is_avulso;
                   const enviado = orc.data_envio_proposta
                     ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
@@ -488,6 +538,17 @@ const Orcamentos = () => {
                       <TableCell className="text-xs text-foreground/80 px-3">{orc.nome}</TableCell>
                       <TableCell className="text-xs text-right font-bold text-foreground tabular-nums px-3">
                         {formatCurrency(total)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums px-3 text-foreground/80">
+                        {formatCurrency(totalComprado)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums px-3 text-foreground/80">
+                        {formatCurrency(faltaComprar)}
+                      </TableCell>
+                      <TableCell className="text-center px-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${compraStatus.class}`}>
+                          {compraStatus.label}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center px-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${orc.aprovado ? "bg-success/15 text-success border border-success/25" : "bg-warning/15 text-warning border border-warning/25"}`}>
