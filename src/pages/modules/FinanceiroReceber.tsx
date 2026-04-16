@@ -103,17 +103,35 @@ const FinanceiroReceber = () => {
   });
 
   // Filtered data
+  // Helper: check if a record is effectively overdue
+  const isVencido = (c: any) => {
+    if (c.status === "pago" || c.status === "cancelado") return false;
+    if (c.status === "vencido") return true;
+    // pendente but past due date
+    if (c.data_vencimento) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const venc = new Date(c.data_vencimento + "T00:00:00");
+      return venc < today;
+    }
+    return false;
+  };
+
   const filtered = useMemo(() => {
     let list = contas ?? [];
-    if (statusFilter) list = list.filter(c => c.status === statusFilter);
+    if (statusFilter === "vencido") {
+      list = list.filter(c => isVencido(c));
+    } else if (statusFilter) {
+      list = list.filter(c => c.status === statusFilter);
+    }
     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
     return list;
   }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter]);
 
   // Summary (on filtered)
-  const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalPendente = filtered.filter(c => c.status === "pendente" && !isVencido(c)).reduce((s, c) => s + (c.valor ?? 0), 0);
   const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
-  const totalVencido = filtered.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const totalVencido = filtered.filter(c => isVencido(c)).reduce((s, c) => s + (c.valor ?? 0), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">
