@@ -510,6 +510,11 @@ const Orcamentos = () => {
               <TableBody>
                 {filtered.map((orc) => {
                   const total = calcTotal(orc);
+                  const totalProdutos = calcTotalProdutos(orc);
+                  const compraInfo = comprasMap[orc.id];
+                  const totalComprado = compraInfo?.totalComprado ?? 0;
+                  const faltaComprar = Math.max(0, totalProdutos - totalComprado);
+                  const compraStatus = getCompraStatus(orc.id, totalProdutos);
                   const isAvulso = (orc as any).is_avulso;
                   const enviado = orc.data_envio_proposta
                     ? formatDistanceToNow(new Date(orc.data_envio_proposta), {
@@ -533,6 +538,17 @@ const Orcamentos = () => {
                       <TableCell className="text-xs text-foreground/80 px-3">{orc.nome}</TableCell>
                       <TableCell className="text-xs text-right font-bold text-foreground tabular-nums px-3">
                         {formatCurrency(total)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums px-3 text-foreground/80">
+                        {formatCurrency(totalComprado)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums px-3 text-foreground/80">
+                        {formatCurrency(faltaComprar)}
+                      </TableCell>
+                      <TableCell className="text-center px-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${compraStatus.class}`}>
+                          {compraStatus.label}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center px-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${orc.aprovado ? "bg-success/15 text-success border border-success/25" : "bg-warning/15 text-warning border border-warning/25"}`}>
