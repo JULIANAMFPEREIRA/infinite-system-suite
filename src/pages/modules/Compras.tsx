@@ -81,7 +81,7 @@ const Compras = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); toast.success(editId ? "Compra atualizada" : "Compra registrada"); resetForm(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["compras"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); toast.success(editId ? "Compra atualizada" : "Compra registrada"); resetForm(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -113,6 +113,7 @@ const Compras = () => {
       qc.invalidateQueries({ queryKey: ["estoque_itens"] });
       qc.invalidateQueries({ queryKey: ["projetos"] });
       qc.invalidateQueries({ queryKey: ["necessidades_compra"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
       toast.success("Status atualizado");
     },
     onError: (err: any) => toast.error(err.message),

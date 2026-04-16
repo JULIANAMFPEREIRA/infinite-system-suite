@@ -327,6 +327,7 @@ const FinanceiroPagar = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/30">
+                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Origem</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Categoria</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
@@ -347,6 +348,15 @@ const FinanceiroPagar = () => {
                       className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
                       onClick={() => openEdit(c)}
                     >
+                      <td className="px-3 py-2 text-center">
+                        {c.descricao?.startsWith("Compra — ") ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Compra</span>
+                        ) : c.comissao_id ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-purple-500/10 text-purple-500 border-purple-500/20">Comissão</span>
+                        ) : (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 max-w-[160px]">
                         {catName ? (
                           <span className="text-[10px] text-muted-foreground truncate block">{catName}</span>
@@ -391,7 +401,7 @@ const FinanceiroPagar = () => {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
