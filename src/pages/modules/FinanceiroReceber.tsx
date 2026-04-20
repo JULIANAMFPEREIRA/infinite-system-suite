@@ -129,9 +129,16 @@ const FinanceiroReceber = () => {
   }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter]);
 
   // Summary (on filtered)
-  const totalPendente = filtered.filter(c => c.status === "pendente" && !isVencido(c)).reduce((s, c) => s + (c.valor ?? 0), 0);
-  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
-  const totalVencido = filtered.filter(c => isVencido(c)).reduce((s, c) => s + (c.valor ?? 0), 0);
+  // "A Receber" = todos os valores ainda não recebidos (pendentes + vencidos), excluindo pagos e cancelados
+  const totalPendente = filtered
+    .filter(c => c.status !== "pago" && c.status !== "cancelado")
+    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalPago = filtered
+    .filter(c => c.status === "pago")
+    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalVencido = filtered
+    .filter(c => isVencido(c))
+    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">
