@@ -339,7 +339,7 @@ const Configuracoes = () => {
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-8"></th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Roles</th>
-              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+              <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-32">Ações</th>
             </tr></thead>
             <tbody>
               {users.map(u => {
@@ -364,9 +364,17 @@ const Configuracoes = () => {
                         </div>
                       </td>
                       <td className="px-2.5 py-1.5 text-center">
-                        <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
-                          <Shield size={13} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
+                            <Shield size={13} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openEditUser(u); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Editar usuário">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} disabled={u.id === user?.id} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" title={u.id === user?.id ? "Não é possível excluir sua própria conta" : "Excluir usuário"}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {isExpanded && (
