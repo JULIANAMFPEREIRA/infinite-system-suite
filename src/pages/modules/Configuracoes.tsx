@@ -205,6 +205,10 @@ const Configuracoes = () => {
   const [nuSenha, setNuSenha] = useState("");
   const [nuRole, setNuRole] = useState("administrativo");
   const [nuLoading, setNuLoading] = useState(false);
+  const [editUser, setEditUser] = useState<{ id: string; full_name: string } | null>(null);
+  const [editUserNome, setEditUserNome] = useState("");
+  const [editUserSenha, setEditUserSenha] = useState("");
+  const [editUserLoading, setEditUserLoading] = useState(false);
 
   const handleCreateUser = async () => {
     if (!nuNome.trim() || !nuEmail.trim() || !nuSenha.trim()) { toast.error("Preencha todos os campos"); return; }
@@ -227,6 +231,44 @@ const Configuracoes = () => {
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role as any);
     if (error) toast.error(error.message);
     else { toast.success("Role removida"); refetchUsers(); }
+  };
+
+  const openEditUser = (u: { id: string; full_name: string | null }) => {
+    setEditUser({ id: u.id, full_name: u.full_name ?? "" });
+    setEditUserNome(u.full_name ?? "");
+    setEditUserSenha("");
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editUser) return;
+    if (!editUserNome.trim()) { toast.error("Nome obrigatório"); return; }
+    if (editUserSenha && editUserSenha.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
+    setEditUserLoading(true);
+    try {
+      const res = await supabase.functions.invoke("manage-user", {
+        body: { action: "update", user_id: editUser.id, full_name: editUserNome, password: editUserSenha || undefined },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro");
+      if (res.data?.error) throw new Error(res.data.error);
+      toast.success("Usuário atualizado");
+      setEditUser(null);
+      refetchUsers();
+    } catch (err: any) { toast.error(err.message); }
+    setEditUserLoading(false);
+  };
+
+  const handleDeleteUser = async (u: { id: string; full_name: string | null }) => {
+    if (u.id === user?.id) { toast.error("Você não pode excluir sua própria conta"); return; }
+    if (!window.confirm(`Excluir permanentemente o usuário "${u.full_name ?? "—"}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const res = await supabase.functions.invoke("manage-user", {
+        body: { action: "delete", user_id: u.id },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro");
+      if (res.data?.error) throw new Error(res.data.error);
+      toast.success("Usuário excluído");
+      refetchUsers();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const tiposTransportadora = [
