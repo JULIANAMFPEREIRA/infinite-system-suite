@@ -1026,6 +1026,7 @@ const CRM = () => {
   const [simIntervalo, setSimIntervalo] = useState(savedSim.intervalo ?? 30);
   const [simJuros, setSimJuros] = useState(savedSim.juros ?? 0);
   const [editingParcelas, setEditingParcelas] = useState<{ numero: number; valor: number; data: string }[] | null>(savedSim.parcelas ?? null);
+  const [simEntradaData, setSimEntradaData] = useState<string>(savedSim.entradaData ?? new Date().toLocaleDateString("pt-BR"));
 
   // Frete & Imposto state
   const [orcFrete, setOrcFrete] = useState(Number((activeOrc as any)?.frete) || 0);
