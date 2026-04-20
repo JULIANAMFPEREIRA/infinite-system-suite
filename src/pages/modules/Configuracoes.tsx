@@ -205,6 +205,10 @@ const Configuracoes = () => {
   const [nuSenha, setNuSenha] = useState("");
   const [nuRole, setNuRole] = useState("administrativo");
   const [nuLoading, setNuLoading] = useState(false);
+  const [editUser, setEditUser] = useState<{ id: string; full_name: string } | null>(null);
+  const [editUserNome, setEditUserNome] = useState("");
+  const [editUserSenha, setEditUserSenha] = useState("");
+  const [editUserLoading, setEditUserLoading] = useState(false);
 
   const handleCreateUser = async () => {
     if (!nuNome.trim() || !nuEmail.trim() || !nuSenha.trim()) { toast.error("Preencha todos os campos"); return; }
@@ -227,6 +231,44 @@ const Configuracoes = () => {
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role as any);
     if (error) toast.error(error.message);
     else { toast.success("Role removida"); refetchUsers(); }
+  };
+
+  const openEditUser = (u: { id: string; full_name: string | null }) => {
+    setEditUser({ id: u.id, full_name: u.full_name ?? "" });
+    setEditUserNome(u.full_name ?? "");
+    setEditUserSenha("");
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editUser) return;
+    if (!editUserNome.trim()) { toast.error("Nome obrigatório"); return; }
+    if (editUserSenha && editUserSenha.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
+    setEditUserLoading(true);
+    try {
+      const res = await supabase.functions.invoke("manage-user", {
+        body: { action: "update", user_id: editUser.id, full_name: editUserNome, password: editUserSenha || undefined },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro");
+      if (res.data?.error) throw new Error(res.data.error);
+      toast.success("Usuário atualizado");
+      setEditUser(null);
+      refetchUsers();
+    } catch (err: any) { toast.error(err.message); }
+    setEditUserLoading(false);
+  };
+
+  const handleDeleteUser = async (u: { id: string; full_name: string | null }) => {
+    if (u.id === user?.id) { toast.error("Você não pode excluir sua própria conta"); return; }
+    if (!window.confirm(`Excluir permanentemente o usuário "${u.full_name ?? "—"}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const res = await supabase.functions.invoke("manage-user", {
+        body: { action: "delete", user_id: u.id },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro");
+      if (res.data?.error) throw new Error(res.data.error);
+      toast.success("Usuário excluído");
+      refetchUsers();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const tiposTransportadora = [
@@ -297,7 +339,7 @@ const Configuracoes = () => {
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-8"></th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
               <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Roles</th>
-              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+              <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-32">Ações</th>
             </tr></thead>
             <tbody>
               {users.map(u => {
@@ -322,9 +364,17 @@ const Configuracoes = () => {
                         </div>
                       </td>
                       <td className="px-2.5 py-1.5 text-center">
-                        <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
-                          <Shield size={13} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
+                            <Shield size={13} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openEditUser(u); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Editar usuário">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} disabled={u.id === user?.id} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" title={u.id === user?.id ? "Não é possível excluir sua própria conta" : "Excluir usuário"}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {isExpanded && (
@@ -715,6 +765,23 @@ const Configuracoes = () => {
               setEditTipo(null);
               toast.success("Tipo atualizado");
             }} disabled={!editTipo?.novo.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editUser} onOpenChange={open => { if (!open) setEditUser(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Usuário</DialogTitle></DialogHeader>
+          {editUser && (
+            <div className="space-y-3">
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={editUserNome} onChange={e => setEditUserNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nova Senha (opcional)</label><input type="password" value={editUserSenha} onChange={e => setEditUserSenha(e.target.value)} placeholder="Deixe em branco para manter" className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <p className="text-[10px] text-muted-foreground">Para alterar permissões/role, use o ícone de escudo na lista.</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditUser(null)}>Cancelar</Button>
+            <Button size="sm" onClick={handleUpdateUser} disabled={editUserLoading || !editUserNome.trim()}>{editUserLoading ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
