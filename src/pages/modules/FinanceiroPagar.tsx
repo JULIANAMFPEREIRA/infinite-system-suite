@@ -379,7 +379,7 @@ const FinanceiroPagar = () => {
                       <td className="px-3 py-2 max-w-[220px]">
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium text-foreground truncate">{c.descricao}</span>
-                          {tipoBadge(c.descricao)}
+                          {tipoBadge(c)}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
