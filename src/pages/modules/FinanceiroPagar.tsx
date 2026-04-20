@@ -40,8 +40,20 @@ const inferTipo = (desc: string | null): string => {
   return "produto";
 };
 
-const tipoBadge = (desc: string | null) => {
-  const tipo = inferTipo(desc);
+const tipoBadge = (conta: any) => {
+  const desc = conta?.descricao ?? null;
+  const isCompra = typeof desc === "string" && desc.startsWith("Compra — ");
+  const isComissao = !!conta?.comissao_id;
+  // Origem manual/comissão => Serviço por padrão; mantém detecção fina por descrição
+  let tipo: string;
+  if (isCompra) {
+    tipo = "produto";
+  } else if (isComissao) {
+    tipo = "servico";
+  } else {
+    const inferred = inferTipo(desc);
+    tipo = inferred === "produto" ? "servico" : inferred;
+  }
   const map: Record<string, { label: string; cls: string }> = {
     imposto: { label: "Imposto", cls: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
     frete: { label: "Frete", cls: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
@@ -49,7 +61,7 @@ const tipoBadge = (desc: string | null) => {
     adicional: { label: "Adicional", cls: "bg-teal-500/10 text-teal-600 border-teal-500/20" },
     produto: { label: "Produto", cls: "bg-secondary text-muted-foreground border-border" },
   };
-  const { label, cls } = map[tipo] ?? map.produto;
+  const { label, cls } = map[tipo] ?? map.servico;
   return <span className={`inline-flex px-1.5 py-0 rounded text-[9px] font-medium border ${cls}`}>{label}</span>;
 };
 
@@ -367,7 +379,7 @@ const FinanceiroPagar = () => {
                       <td className="px-3 py-2 max-w-[220px]">
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium text-foreground truncate">{c.descricao}</span>
-                          {tipoBadge(c.descricao)}
+                          {tipoBadge(c)}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
