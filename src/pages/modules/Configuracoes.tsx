@@ -768,6 +768,23 @@ const Configuracoes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editUser} onOpenChange={open => { if (!open) setEditUser(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Editar Usuário</DialogTitle></DialogHeader>
+          {editUser && (
+            <div className="space-y-3">
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={editUserNome} onChange={e => setEditUserNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nova Senha (opcional)</label><input type="password" value={editUserSenha} onChange={e => setEditUserSenha(e.target.value)} placeholder="Deixe em branco para manter" className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+              <p className="text-[10px] text-muted-foreground">Para alterar permissões/role, use o ícone de escudo na lista.</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditUser(null)}>Cancelar</Button>
+            <Button size="sm" onClick={handleUpdateUser} disabled={editUserLoading || !editUserNome.trim()}>{editUserLoading ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
