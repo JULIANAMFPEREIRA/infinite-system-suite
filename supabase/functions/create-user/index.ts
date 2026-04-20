@@ -3,10 +3,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Content-Type": "application/json",
 };
 
+const VALID_ROLES = ["admin","administrativo","financeiro","tecnico","arquiteto","cliente","operacional","comercial","funcionario"];
+
+function respond(ok: boolean, payload: Record<string, unknown>, _status = 200) {
+  return new Response(JSON.stringify({ ok, ...payload }), { status: 200, headers: corsHeaders });
+}
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabaseAdmin = createClient(
@@ -15,9 +22,8 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    if (!authHeader) return respond(false, { error: "Sessão expirada. Faça login novamente." });
 
     const callerClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -25,48 +31,70 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
     const { data: claimsData, error: claimsErr } = await callerClient.auth.getUser();
-    if (claimsErr || !claimsData.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    if (claimsErr || !claimsData.user) return respond(false, { error: "Sessão expirada. Faça login novamente." });
 
     const callerId = claimsData.user.id;
     const { data: callerRole } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", callerId).eq("role", "admin").single();
-    if (!callerRole) return new Response(JSON.stringify({ error: "Only admins can create users" }), { status: 403, headers: corsHeaders });
+    if (!callerRole) return respond(false, { error: "Apenas administradores podem cadastrar usuários." });
 
-    // Get caller's empresa
     const { data: callerProfile } = await supabaseAdmin.from("profiles").select("empresa_id").eq("id", callerId).single();
-    if (!callerProfile?.empresa_id) return new Response(JSON.stringify({ error: "Admin has no empresa" }), { status: 400, headers: corsHeaders });
+    if (!callerProfile?.empresa_id) return respond(false, { error: "Administrador sem empresa vinculada." });
 
-    const { email, password, full_name, role } = await req.json();
-    if (!email || !password || !full_name || !role) {
-      return new Response(JSON.stringify({ error: "Missing fields: email, password, full_name, role" }), { status: 400, headers: corsHeaders });
-    }
+    let body: any;
+    try { body = await req.json(); } catch { return respond(false, { error: "Dados inválidos." }); }
+    const email = String(body?.email ?? "").trim().toLowerCase();
+    const password = String(body?.password ?? "");
+    const full_name = String(body?.full_name ?? "").trim();
+    let role = String(body?.role ?? "").trim().toLowerCase();
 
-    // Create user
+    // Validations
+    if (!full_name) return respond(false, { error: "Nome é obrigatório." });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return respond(false, { error: "Email inválido." });
+    if (!password || password.length < 6) return respond(false, { error: "Senha deve ter no mínimo 6 caracteres." });
+    if (!role) return respond(false, { error: "Tipo de usuário é obrigatório." });
+    if (!VALID_ROLES.includes(role)) role = "funcionario"; // fallback to standard user
+
+    // Check duplicate email by listing users (admin API)
+    try {
+      const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (existing?.users?.some((u: any) => (u.email ?? "").toLowerCase() === email)) {
+        return respond(false, { error: "Email já cadastrado." });
+      }
+    } catch (_) { /* continue, createUser also reports duplicates */ }
+
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name },
     });
-    if (createErr) return new Response(JSON.stringify({ error: createErr.message }), { status: 400, headers: corsHeaders });
+    if (createErr) {
+      const msg = (createErr.message || "").toLowerCase();
+      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists") || msg.includes("duplicate")) {
+        return respond(false, { error: "Email já cadastrado." });
+      }
+      return respond(false, { error: "Erro ao cadastrar usuário. Verifique os dados e tente novamente.", detail: createErr.message });
+    }
 
     const userId = newUser.user.id;
 
-    // Update profile with empresa_id and full_name
-    await supabaseAdmin.from("profiles").upsert({
+    const { error: profErr } = await supabaseAdmin.from("profiles").upsert({
       id: userId,
       full_name,
       empresa_id: callerProfile.empresa_id,
     });
+    if (profErr) console.error("profile upsert", profErr);
 
-    // Assign role
-    await supabaseAdmin.from("user_roles").insert({
+    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
       user_id: userId,
       role,
       empresa_id: callerProfile.empresa_id,
     });
+    if (roleErr) console.error("role insert", roleErr);
 
-    return new Response(JSON.stringify({ success: true, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return respond(true, { success: true, user_id: userId });
+  } catch (err: any) {
+    console.error("create-user error", err);
+    return respond(false, { error: "Erro ao cadastrar usuário. Verifique os dados e tente novamente." });
   }
 });
