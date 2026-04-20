@@ -2017,7 +2017,7 @@ const CRM = () => {
                         <table className="w-full text-xs">
                           <thead><tr className="bg-secondary/30"><th className="text-center px-2 py-1.5 font-semibold text-foreground/80">Parcela</th><th className="text-right px-2 py-1.5 font-semibold text-foreground/80">Valor</th><th className="text-center px-2 py-1.5 font-semibold text-foreground/80">Data Prevista</th></tr></thead>
                           <tbody>
-                            {simulacao.entrada > 0 && (<tr className="border-t border-border/30 bg-primary/5"><td className="px-2 py-1.5 text-center font-medium">Entrada</td><td className="px-2 py-1.5 text-right font-semibold">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2 py-1.5 text-center">{new Date().toLocaleDateString("pt-BR")}</td></tr>)}
+                            {simulacao.entrada > 0 && (<tr className="border-t border-border/30 bg-primary/5"><td className="px-2 py-1.5 text-center font-medium">Entrada</td><td className="px-2 py-1.5 text-right font-semibold">R$ {simulacao.entrada.toFixed(2)}</td><td className="px-2 py-1.5 text-center"><input type="text" value={simEntradaData} onChange={e => setSimEntradaData(e.target.value)} className="w-28 h-6 px-1.5 text-xs text-center bg-background border border-border rounded focus:ring-1 focus:ring-primary focus:outline-none" placeholder="dd/mm/aaaa" /></td></tr>)}
                             {parcelasParaExibir.map((p, idx) => (
                               <tr key={p.numero} className="border-t border-border/30">
                                 <td className="px-2 py-1 text-center">{p.numero}/{simParcelas}</td>
