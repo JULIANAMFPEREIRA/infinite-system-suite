@@ -1127,7 +1127,7 @@ const CRM = () => {
   const handleSaveSimulacao = async () => {
     const simData = {
       condicao: simCondicao, formaPagamento: simFormaPgto,
-      numParcelas: simParcelas, entrada: simEntrada,
+      numParcelas: simParcelas, entrada: simEntrada, entradaData: simEntradaData,
       intervalo: simIntervalo, juros: simJuros,
       parcelas: parcelasParaExibir,
       descontoTipo: orcDescontoTipo, descontoValor: orcDescontoValor,
@@ -1514,7 +1514,7 @@ const CRM = () => {
                       if (activeOrcamentoId) {
                         const simData = {
                           condicao: simCondicao, formaPagamento: simFormaPgto,
-                          numParcelas: simParcelas, entrada: simEntrada,
+                          numParcelas: simParcelas, entrada: simEntrada, entradaData: simEntradaData,
                           intervalo: simIntervalo, juros: simJuros,
                           parcelas: parcelasParaExibir,
                         };
@@ -1532,7 +1532,7 @@ const CRM = () => {
                       if (activeOrcamentoId) {
                         const simData = {
                           condicao: simCondicao, formaPagamento: simFormaPgto,
-                          numParcelas: simParcelas, entrada: simEntrada,
+                          numParcelas: simParcelas, entrada: simEntrada, entradaData: simEntradaData,
                           intervalo: simIntervalo, juros: simJuros,
                           parcelas: parcelasParaExibir,
                         };
@@ -2042,7 +2042,7 @@ const CRM = () => {
                     if (activeOrcamentoId) {
                       const simData = {
                         condicao: simCondicao, formaPagamento: simFormaPgto,
-                        numParcelas: simParcelas, entrada: simEntrada,
+                        numParcelas: simParcelas, entrada: simEntrada, entradaData: simEntradaData,
                         intervalo: simIntervalo, juros: simJuros,
                         parcelas: parcelasParaExibir,
                         descontoTipo: orcDescontoTipo, descontoValor: orcDescontoValor,
