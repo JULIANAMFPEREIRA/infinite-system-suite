@@ -1063,6 +1063,7 @@ const CRM = () => {
     setSimIntervalo(sim.intervalo ?? 30);
     setSimJuros(sim.juros ?? 0);
     setEditingParcelas(sim.parcelas ?? null);
+    setSimEntradaData(sim.entradaData ?? new Date().toLocaleDateString("pt-BR"));
     setOrcFrete(Number(orc?.frete) || 0);
     setOrcFreteTipo(orc?.frete_tipo ?? "");
     setOrcFreteOutro(orc?.frete_outro ?? "");
