@@ -115,9 +115,53 @@ export const useArquitetos = () => {
   return useQuery({
     queryKey: ["arquitetos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome, rt_percentual").eq("tipo", "arquiteto").eq("deletado", false).order("nome");
+      // 1) Architects from fornecedores (canonical source used by FK arquiteto_id)
+      const { data: forn, error } = await supabase
+        .from("fornecedores")
+        .select("id, nome, rt_percentual, email")
+        .eq("tipo", "arquiteto")
+        .eq("deletado", false)
+        .order("nome");
       if (error) throw error;
-      return data;
+
+      // 2) Fallback: users with role 'arquiteto' that don't yet have a fornecedor record.
+      // We auto-create a fornecedor for them so they appear in selects without breaking
+      // the arquiteto_id foreign key. This guarantees newly registered architects show up.
+      try {
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("user_id, empresa_id")
+          .eq("role", "arquiteto");
+        const userIds = (roleRows ?? []).map((r) => r.user_id);
+        if (userIds.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, full_name, empresa_id")
+            .in("id", userIds);
+          const existingNames = new Set((forn ?? []).map((f: any) => (f.nome ?? "").toUpperCase()));
+          const missing = (profs ?? []).filter(
+            (p: any) => p.full_name && !existingNames.has((p.full_name ?? "").toUpperCase())
+          );
+          if (missing.length > 0) {
+            const inserts = missing.map((p: any) => ({
+              empresa_id: p.empresa_id,
+              nome: (p.full_name ?? "").toUpperCase(),
+              tipo: "arquiteto" as const,
+            }));
+            const { data: created } = await supabase
+              .from("fornecedores")
+              .insert(inserts)
+              .select("id, nome, rt_percentual, email");
+            if (created && created.length > 0) {
+              return [...(forn ?? []), ...created].sort((a: any, b: any) =>
+                (a.nome ?? "").localeCompare(b.nome ?? "")
+              );
+            }
+          }
+        }
+      } catch (_) { /* fallback only; ignore errors */ }
+
+      return forn ?? [];
     },
   });
 };
