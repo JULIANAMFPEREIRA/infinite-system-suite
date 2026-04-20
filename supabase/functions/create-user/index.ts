@@ -92,6 +92,26 @@ Deno.serve(async (req) => {
     });
     if (roleErr) console.error("role insert", roleErr);
 
+    // If the user is an architect, also ensure a fornecedor entry exists
+    // so they appear in the CRM "Arquiteto" selection field.
+    if (role === "arquiteto") {
+      const { data: existingForn } = await supabaseAdmin
+        .from("fornecedores")
+        .select("id")
+        .eq("empresa_id", callerProfile.empresa_id)
+        .eq("email", email)
+        .maybeSingle();
+      if (!existingForn) {
+        const { error: fornErr } = await supabaseAdmin.from("fornecedores").insert({
+          empresa_id: callerProfile.empresa_id,
+          nome: full_name.toUpperCase(),
+          email,
+          tipo: "arquiteto",
+        });
+        if (fornErr) console.error("fornecedor insert", fornErr);
+      }
+    }
+
     return respond(true, { success: true, user_id: userId });
   } catch (err: any) {
     console.error("create-user error", err);

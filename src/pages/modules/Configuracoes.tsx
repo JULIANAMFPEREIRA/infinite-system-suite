@@ -222,6 +222,8 @@ const Configuracoes = () => {
       toast.success("Usuário criado com sucesso!");
       setNuNome(""); setNuEmail(""); setNuSenha(""); setNuRole("administrativo"); setShowNewUser(false);
       refetchUsers();
+      qc.invalidateQueries({ queryKey: ["arquitetos"] });
+      qc.invalidateQueries({ queryKey: ["fornecedores"] });
     } catch (err: any) { toast.error(err.message); }
     setNuLoading(false);
   };
