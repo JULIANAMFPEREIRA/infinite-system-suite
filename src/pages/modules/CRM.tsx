@@ -646,8 +646,9 @@ const CRM = () => {
   // Save orcamento simulation + frete/imposto
   const saveOrcamentoSimulacao = async (simData: any) => {
     if (!activeOrcamentoId) return;
+    const simWithFretes = { ...(simData ?? {}), fretes_extras: fretesExtras };
     await supabase.from("crm_orcamentos").update({
-      simulacao_pagamento: simData,
+      simulacao_pagamento: simWithFretes,
       frete: orcFrete,
       frete_tipo: orcFreteTipo || null,
       frete_outro: orcFreteOutro || null,
