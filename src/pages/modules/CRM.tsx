@@ -1146,6 +1146,7 @@ const CRM = () => {
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
     setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
+    setFretesExtras(Array.isArray(sim.fretes_extras) ? sim.fretes_extras : []);
   }, []);
 
   // Sync state when activeOrc data loads/changes (e.g. after refetch or URL-based navigation)
