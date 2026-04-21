@@ -1901,7 +1901,14 @@ const CRM = () => {
                                 <InlineCell item={item} field="quantidade" type="number" align="text-center" />
                                 <InlineCell item={item} field="preco_custo" type="number" align="text-right" />
                                 <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
-                                <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
+                                {((item as any).rt_tipo ?? "valor") === "percentual" ? (
+                                  <td className="px-3 py-2 text-right" title="Calculado automaticamente — edite no formulário">
+                                    <div className="font-semibold">{Number((item as any).rt_percentual ?? 0)}%</div>
+                                    <div className="text-[10px] text-muted-foreground">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</div>
+                                  </td>
+                                ) : (
+                                  <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
+                                )}
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                                 {title === "Produtos" && (
                                   <td className="px-2 py-1.5 text-center">
