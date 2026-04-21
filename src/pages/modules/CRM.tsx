@@ -203,6 +203,24 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
+  // Contas a pagar de frete/imposto vinculadas aos projetos do cliente — para identificar o que já foi PAGO
+  const { data: contasFreteImposto } = useQuery({
+    queryKey: ["financeiro_pagar_frete_imposto", detailClient?.id],
+    queryFn: async () => {
+      const projIds = (clienteProjetos ?? []).map((p: any) => p.id);
+      if (projIds.length === 0) return [];
+      const { data } = await supabase
+        .from("financeiro_pagar")
+        .select("projeto_id, descricao, valor, status")
+        .in("projeto_id", projIds)
+        .is("comissao_id", null)
+        .is("fornecedor_id", null)
+        .eq("deletado", false);
+      return data ?? [];
+    },
+    enabled: !!detailClient?.id && (clienteProjetos?.length ?? 0) > 0,
+  });
+
   // Orcamentos query
   const { data: orcamentos, refetch: refetchOrcamentos } = useQuery({
     queryKey: ["crm_orcamentos", detailClient?.id],
@@ -2289,6 +2307,16 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
+                // Frete/Imposto efetivamente PAGOS — vindos do Contas a Pagar vinculados ao projeto deste orçamento
+                const projetoVinculadoId = (clienteProjetos ?? []).find((p: any) => p.orcamento_id === activeOrcamentoId)?.id;
+                const contasProjeto = (contasFreteImposto ?? []).filter((c: any) => c.projeto_id === projetoVinculadoId);
+                const fretesPagosValor = contasProjeto
+                  .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Frete"))
+                  .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+                const impostoPagoValor = contasProjeto
+                  .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Imposto"))
+                  .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+
                 // RT — total (custo) vs pago (realizado). Capped per item so paid never exceeds total.
                 const rtTotal = (crmItens ?? []).reduce((s: number, i: any) => s + (Number(i.rt_comissao) || 0), 0);
                 const rtPago = (crmItens ?? []).reduce((s: number, i: any) => {
@@ -2303,12 +2331,12 @@ const CRM = () => {
                   servicosCompradoCusto + servicosPendenteCusto +
                   totalFretesGeral + impostoValor + rtTotal;
 
-                // TOTAL COMPRADO = somente itens com status comprado/pago + frete + imposto + RT PAGA
+                // TOTAL COMPRADO = itens comprados/pagos + FRETE PAGO (via Contas a Pagar) + IMPOSTO PAGO + RT PAGA
                 const totalComprado =
                   produtosCompradoCusto +
                   servicosCompradoCusto +
-                  totalFretesGeral +
-                  impostoValor +
+                  fretesPagosValor +
+                  impostoPagoValor +
                   rtPago;
 
                 // FALTA COMPRAR = pendentes + RT pendente
