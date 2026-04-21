@@ -922,10 +922,10 @@ const CRM = () => {
       }
 
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, tipo: itemTipo } as any)).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, rt_tipo: itemRtTipo, rt_percentual: itemRtPercentual, tipo: itemTipo } as any)).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
+        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, rt_tipo: itemRtTipo, rt_percentual: itemRtPercentual, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
         if (error) throw error;
       }
     },
