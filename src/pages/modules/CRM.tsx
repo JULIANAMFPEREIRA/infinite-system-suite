@@ -1906,7 +1906,17 @@ const CRM = () => {
                         <span className="text-[10px] font-normal text-muted-foreground ml-1">({items.length} {items.length === 1 ? "item" : "itens"})</span>
                       </h3>
                       <div className="rounded-lg overflow-hidden border border-border/60 bg-card">
-                        <table className="w-full text-xs">
+                        <table className="w-full text-xs table-fixed">
+                          <colgroup>
+                            <col style={{ width: "32%" }} />
+                            <col style={{ width: "7%" }} />
+                            <col style={{ width: "11%" }} />
+                            <col style={{ width: "11%" }} />
+                            <col style={{ width: "11%" }} />
+                            <col style={{ width: "12%" }} />
+                            {(title === "Produtos" || title === "Serviços") && <col style={{ width: "10%" }} />}
+                            <col style={{ width: "6%" }} />
+                          </colgroup>
                           <thead><tr className="bg-secondary/40">
                             <SortableHeader colKey="descricao" label="Descrição" className="text-left" />
                             <SortableHeader colKey="quantidade" label="Qtd" className="text-center" />
