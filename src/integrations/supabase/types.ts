@@ -491,6 +491,7 @@ export type Database = {
           rt_comissao: number | null
           rt_percentual: number
           rt_tipo: string
+          rt_valor_pago: number
           status_compra: string
           tipo: string
         }
@@ -508,6 +509,7 @@ export type Database = {
           rt_comissao?: number | null
           rt_percentual?: number
           rt_tipo?: string
+          rt_valor_pago?: number
           status_compra?: string
           tipo?: string
         }
@@ -525,6 +527,7 @@ export type Database = {
           rt_comissao?: number | null
           rt_percentual?: number
           rt_tipo?: string
+          rt_valor_pago?: number
           status_compra?: string
           tipo?: string
         }

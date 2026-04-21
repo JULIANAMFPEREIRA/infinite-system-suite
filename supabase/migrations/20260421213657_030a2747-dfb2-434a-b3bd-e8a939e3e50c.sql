@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_itens ADD COLUMN IF NOT EXISTS rt_valor_pago numeric NOT NULL DEFAULT 0;
