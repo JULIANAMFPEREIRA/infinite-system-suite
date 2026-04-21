@@ -960,7 +960,27 @@ const CRM = () => {
     if (field === "descricao" && !String(val).trim()) { setInlineEdit(null); return; }
     setInlineSaving(true);
     try {
-      const { error } = await supabase.from("crm_itens").update(sanitizePayload({ [field]: val } as any)).eq("id", id);
+      let payload: any = { [field]: val };
+      if (field === "rt_comissao" || field === "rt_percentual") {
+        const item: any = (crmItens ?? []).find((i: any) => i.id === id);
+        const venda = (Number(item?.preco_venda) || 0) * (Number(item?.quantidade) || 1);
+        const tipo = (item?.rt_tipo ?? "valor") as "valor" | "percentual";
+        if (field === "rt_percentual" || tipo === "percentual") {
+          const perc = Number(inlineValue) || 0;
+          payload = {
+            rt_tipo: "percentual",
+            rt_percentual: perc,
+            rt_comissao: Number(((venda * perc) / 100).toFixed(2)),
+          };
+        } else {
+          payload = {
+            rt_tipo: "valor",
+            rt_comissao: Number(inlineValue) || 0,
+            rt_percentual: 0,
+          };
+        }
+      }
+      const { error } = await supabase.from("crm_itens").update(sanitizePayload(payload as any)).eq("id", id);
       if (error) throw error;
       refetchCrmItens();
       if (activeOrcamentoId) {
@@ -973,7 +993,7 @@ const CRM = () => {
       setInlineSaving(false);
       setInlineEdit(null);
     }
-  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos]);
+  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos, crmItens]);
 
   const handleSortToggle = useCallback((key: string) => {
     setSortConfig(prev => {
