@@ -1972,34 +1972,12 @@ const CRM = () => {
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              {title === "Produtos" && <td></td>}
+                              {(title === "Produtos" || title === "Serviços") && <td></td>}
                               <td></td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
-                      {title === "Produtos" && (() => {
-                        const totalGeral = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-                        const totalComprado = items.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-                        const totalPendente = totalGeral - totalComprado;
-                        const pct = totalGeral > 0 ? (totalComprado / totalGeral) * 100 : 0;
-                        return (
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <div className="rounded-lg border border-border/60 bg-card px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total de produtos</div>
-                              <div className="text-sm font-bold text-foreground">R$ {totalGeral.toFixed(2)}</div>
-                            </div>
-                            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Total comprado ({pct.toFixed(0)}%)</div>
-                              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">R$ {totalComprado.toFixed(2)}</div>
-                            </div>
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">Falta comprar</div>
-                              <div className="text-sm font-bold text-amber-600 dark:text-amber-400">R$ {totalPendente.toFixed(2)}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </section>
                   );
                 };
