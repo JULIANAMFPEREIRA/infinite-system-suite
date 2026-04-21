@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -10,7 +10,7 @@ import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
@@ -21,6 +21,7 @@ const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigi
 const Dashboard = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const hoje = new Date();
   const inicioMes = startOfMonth(hoje);
   const fimMes = endOfMonth(hoje);
@@ -175,7 +176,38 @@ const Dashboard = () => {
     },
     enabled: !!empresaId,
     refetchInterval: 30000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
+
+  // Realtime: refetch dashboard whenever financial/operational data changes
+  useEffect(() => {
+    if (!empresaId) return;
+    const tables = [
+      "financeiro_receber",
+      "financeiro_pagar",
+      "compras",
+      "necessidades_compra",
+      "projetos",
+      "projeto_itens",
+      "visitas_tecnicas",
+      "crm_orcamentos",
+    ];
+    const channel = supabase.channel(`dashboard-realtime-${empresaId}`);
+    tables.forEach((table) => {
+      channel.on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3"] });
+        }
+      );
+    });
+    channel.subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [empresaId, queryClient]);
 
   return (
     <div className="space-y-6 stagger-fade-in">
