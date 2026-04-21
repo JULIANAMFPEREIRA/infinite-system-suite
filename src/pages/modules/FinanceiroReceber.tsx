@@ -50,6 +50,7 @@ const FinanceiroReceber = () => {
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
+  const [clienteFilter, setClienteFilter] = useState("");
 
   const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
@@ -125,8 +126,15 @@ const FinanceiroReceber = () => {
       list = list.filter(c => c.status === statusFilter);
     }
     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+    if (clienteFilter.trim()) {
+      const q = clienteFilter.trim().toLowerCase();
+      list = list.filter(c => {
+        const nome = ((c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "").toLowerCase();
+        return nome.includes(q);
+      });
+    }
     return list;
-  }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter]);
+  }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter, clienteFilter]);
 
   // Summary (on filtered)
   // "A Receber" = todos os valores ainda não recebidos (pendentes + vencidos), excluindo pagos e cancelados
@@ -163,6 +171,15 @@ const FinanceiroReceber = () => {
         onMesChange={setMesFilter}
         anoFilter={anoFilter}
         onAnoChange={setAnoFilter}
+        extraFilters={
+          <input
+            type="text"
+            value={clienteFilter}
+            onChange={e => setClienteFilter(e.target.value)}
+            placeholder="Cliente..."
+            className="h-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary w-40"
+          />
+        }
       />
 
       {/* Summary cards */}
