@@ -227,7 +227,7 @@ const CRM = () => {
   });
 
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
-  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
+  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemRtTipo("valor"); setItemRtPercentual(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
 
   const openEdit = (c: any) => {
