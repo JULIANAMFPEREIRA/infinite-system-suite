@@ -2155,8 +2155,11 @@ const CRM = () => {
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
                 const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
                 const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
-                // Cost-based valuation only — never use sale price here
-                const custoItem = (i: any) => (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1);
+                // Cost-based valuation — RT (commission) is treated as project cost
+                // even though it is derived from the sale value.
+                const custoItem = (i: any) =>
+                  (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) +
+                  (Number(i.rt_comissao) || 0);
 
                 const produtosCompradoCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + custoItem(i), 0);
                 const produtosPendenteCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
