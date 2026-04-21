@@ -1934,14 +1934,47 @@ const CRM = () => {
                                 <InlineCell item={item} field="quantidade" type="number" align="text-center" />
                                 <InlineCell item={item} field="preco_custo" type="number" align="text-right" />
                                 <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
-                                {((item as any).rt_tipo ?? "valor") === "percentual" ? (
-                                  <td className="px-3 py-2 text-right" title="Calculado automaticamente — edite no formulário">
-                                    <div className="font-semibold">{Number((item as any).rt_percentual ?? 0)}%</div>
-                                    <div className="text-[10px] text-muted-foreground">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</div>
-                                  </td>
-                                ) : (
-                                  <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
-                                )}
+                                {(() => {
+                                  const rtTotal = Number((item as any).rt_comissao ?? 0);
+                                  const rtPago = Number((item as any).rt_valor_pago ?? 0);
+                                  const rtPendente = Math.max(rtTotal - rtPago, 0);
+                                  const isPerc = ((item as any).rt_tipo ?? "valor") === "percentual";
+                                  return (
+                                    <td className="px-3 py-2 text-right">
+                                      {isPerc ? (
+                                        <>
+                                          <div className="font-semibold">{Number((item as any).rt_percentual ?? 0)}%</div>
+                                          <div className="text-[10px] text-muted-foreground">R$ {rtTotal.toFixed(2)}</div>
+                                        </>
+                                      ) : (
+                                        <div className="font-semibold">R$ {rtTotal.toFixed(2)}</div>
+                                      )}
+                                      {rtTotal > 0 && (
+                                        <div className="flex items-center justify-end gap-1 mt-0.5">
+                                          <span className="text-[10px] text-muted-foreground">Pago</span>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min={0}
+                                            max={rtTotal}
+                                            defaultValue={rtPago}
+                                            onBlur={async (e) => {
+                                              const novo = Math.min(Math.max(Number(e.target.value) || 0, 0), rtTotal);
+                                              if (novo === rtPago) return;
+                                              const { error } = await supabase.from("crm_itens").update({ rt_valor_pago: novo } as any).eq("id", item.id);
+                                              if (error) { toast.error("Erro ao atualizar RT pago"); return; }
+                                              refetchCrmItens();
+                                            }}
+                                            className="w-16 h-5 px-1 text-[11px] text-right bg-background border border-border/60 rounded focus:outline-none focus:border-primary"
+                                          />
+                                        </div>
+                                      )}
+                                      {rtTotal > 0 && (
+                                        <div className="text-[10px] text-warning">Pend: R$ {rtPendente.toFixed(2)}</div>
+                                      )}
+                                    </td>
+                                  );
+                                })()}
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                                 {(title === "Produtos" || title === "Serviços") && (
                                   <td className="px-2 py-1.5 text-center">
@@ -2155,11 +2188,8 @@ const CRM = () => {
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
                 const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
                 const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
-                // Cost-based valuation — RT (commission) is treated as project cost
-                // even though it is derived from the sale value.
-                const custoItem = (i: any) =>
-                  (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) +
-                  (Number(i.rt_comissao) || 0);
+                // Cost-based valuation — item cost only (RT handled separately below)
+                const custoItem = (i: any) => (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1);
 
                 const produtosCompradoCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + custoItem(i), 0);
                 const produtosPendenteCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
@@ -2169,9 +2199,19 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
+                // RT split by paid / pending (across all items)
+                const rtTotal = (crmItens ?? []).reduce((s: number, i: any) => s + (Number(i.rt_comissao) || 0), 0);
+                const rtPago = (crmItens ?? []).reduce((s: number, i: any) => {
+                  const t = Number(i.rt_comissao) || 0;
+                  const p = Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
+                  return s + p;
+                }, 0);
+                const rtPendente = Math.max(rtTotal - rtPago, 0);
+
                 // Fretes + Impostos count as already realized cost
-                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor;
-                const totalPendente = produtosPendenteCusto + servicosPendenteCusto;
+                // RT paga conta como comprado; RT pendente conta como falta comprar
+                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor + rtPago;
+                const totalPendente = produtosPendenteCusto + servicosPendenteCusto + rtPendente;
                 const totalCusto = totalComprado + totalPendente;
                 const pct = totalCusto > 0 ? (totalComprado / totalCusto) * 100 : 0;
 
