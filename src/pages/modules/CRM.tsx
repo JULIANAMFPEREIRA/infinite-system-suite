@@ -2145,24 +2145,28 @@ const CRM = () => {
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
                 const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
                 const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
-                const valorItem = (i: any) => (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1);
+                // Cost-based valuation only — never use sale price here
+                const custoItem = (i: any) => (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1);
 
-                const produtosComprado = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + valorItem(i), 0);
-                const produtosPendente = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + valorItem(i), 0);
+                const produtosCompradoCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + custoItem(i), 0);
+                const produtosPendenteCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
 
-                const servicosComprado = allServicos.filter((i: any) => ["comprado", "pago"].includes(i.status_compra ?? "pendente")).reduce((s, i) => s + valorItem(i), 0);
-                const servicosPendente = allServicos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + valorItem(i), 0);
+                const servicosCompradoCusto = allServicos.filter((i: any) => ["comprado", "pago"].includes(i.status_compra ?? "pendente")).reduce((s, i) => s + custoItem(i), 0);
+                const servicosPendenteCusto = allServicos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
 
-                const totalComprado = produtosComprado + servicosComprado + totalFretesGeral;
-                const totalPendente = produtosPendente + servicosPendente;
-                const totalGeral = totalComprado + totalPendente;
-                const pct = totalGeral > 0 ? (totalComprado / totalGeral) * 100 : 0;
+                const impostoValor = Number(orcImposto) || 0;
+
+                // Fretes + Impostos count as already realized cost
+                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor;
+                const totalPendente = produtosPendenteCusto + servicosPendenteCusto;
+                const totalCusto = totalComprado + totalPendente;
+                const pct = totalCusto > 0 ? (totalComprado / totalCusto) * 100 : 0;
 
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div className="rounded-lg border border-border/60 bg-card px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total geral (itens + fretes)</div>
-                      <div className="text-sm font-bold text-foreground">R$ {totalGeral.toFixed(2)}</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total custo do projeto</div>
+                      <div className="text-sm font-bold text-foreground">R$ {totalCusto.toFixed(2)}</div>
                     </div>
                     <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2">
                       <div className="text-[10px] uppercase tracking-wide text-success">Total comprado ({pct.toFixed(0)}%)</div>
