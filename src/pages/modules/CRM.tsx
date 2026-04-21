@@ -1914,7 +1914,7 @@ const CRM = () => {
                             <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
                             <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
-                            {title === "Produtos" && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Compra</th>}
+                            {(title === "Produtos" || title === "Serviços") && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Status</th>}
                             <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
                           </tr></thead>
                           <tbody>
