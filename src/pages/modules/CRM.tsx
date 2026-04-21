@@ -71,6 +71,8 @@ const CRM = () => {
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
   const [itemRt, setItemRt] = useState(0);
+  const [itemRtTipo, setItemRtTipo] = useState<"valor" | "percentual">("valor");
+  const [itemRtPercentual, setItemRtPercentual] = useState(0);
   const [itemTipo, setItemTipo] = useState<"produto" | "servico" | "adicional">("produto");
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [itemProdutoId, setItemProdutoId] = useState<string | null>(null);
