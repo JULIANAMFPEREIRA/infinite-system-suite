@@ -1832,6 +1832,7 @@ const CRM = () => {
                             <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
                             <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
+                            {title === "Produtos" && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Compra</th>}
                             <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
                           </tr></thead>
                           <tbody>
@@ -1843,6 +1844,23 @@ const CRM = () => {
                                 <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
                                 <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
+                                {title === "Produtos" && (
+                                  <td className="px-2 py-1.5 text-center">
+                                    <select
+                                      value={(item as any).status_compra ?? "pendente"}
+                                      onChange={async (e) => {
+                                        const novo = e.target.value;
+                                        const { error } = await supabase.from("crm_itens").update({ status_compra: novo } as any).eq("id", item.id);
+                                        if (error) { toast.error("Erro ao atualizar status"); return; }
+                                        refetchCrmItens();
+                                      }}
+                                      className={`h-7 px-1.5 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary ${((item as any).status_compra ?? "pendente") === "comprado" ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400" : "border-amber-500/50 text-amber-600 dark:text-amber-400"}`}
+                                    >
+                                      <option value="pendente">Pendente</option>
+                                      <option value="comprado">Comprado</option>
+                                    </select>
+                                  </td>
+                                )}
                                 <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
                                     <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
@@ -1858,11 +1876,34 @@ const CRM = () => {
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              {title === "Produtos" && <td></td>}
                               <td></td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
+                      {title === "Produtos" && (() => {
+                        const totalGeral = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+                        const totalComprado = items.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+                        const totalPendente = totalGeral - totalComprado;
+                        const pct = totalGeral > 0 ? (totalComprado / totalGeral) * 100 : 0;
+                        return (
+                          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <div className="rounded-lg border border-border/60 bg-card px-3 py-2">
+                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total de produtos</div>
+                              <div className="text-sm font-bold text-foreground">R$ {totalGeral.toFixed(2)}</div>
+                            </div>
+                            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+                              <div className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Total comprado ({pct.toFixed(0)}%)</div>
+                              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">R$ {totalComprado.toFixed(2)}</div>
+                            </div>
+                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+                              <div className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">Falta comprar</div>
+                              <div className="text-sm font-bold text-amber-600 dark:text-amber-400">R$ {totalPendente.toFixed(2)}</div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </section>
                   );
                 };
