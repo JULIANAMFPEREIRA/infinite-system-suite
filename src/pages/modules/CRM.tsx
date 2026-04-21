@@ -87,7 +87,12 @@ const CRM = () => {
 
   const handleItemVendaChange = (value: number) => {
     setItemVenda(value);
-    // Auto-calc RT only if not editing and architect has RT %
+    // Recalc when in % mode (always)
+    if (itemRtTipo === "percentual" && itemRtPercentual > 0) {
+      setItemRt(Number(((value * itemQtd * itemRtPercentual) / 100).toFixed(2)));
+      return;
+    }
+    // Auto-calc RT only if not editing and architect has RT % (legacy behavior)
     if (!editItemId && arquitetoRtPercentual > 0) {
       setItemRt(Number(((value * itemQtd * arquitetoRtPercentual) / 100).toFixed(2)));
     }
@@ -95,8 +100,27 @@ const CRM = () => {
 
   const handleItemQtdChange = (value: number) => {
     setItemQtd(value);
+    if (itemRtTipo === "percentual" && itemRtPercentual > 0) {
+      setItemRt(Number(((itemVenda * value * itemRtPercentual) / 100).toFixed(2)));
+      return;
+    }
     if (!editItemId && arquitetoRtPercentual > 0) {
       setItemRt(Number(((itemVenda * value * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
+
+  const handleItemRtPercentualChange = (value: number) => {
+    setItemRtPercentual(value);
+    setItemRt(Number(((itemVenda * itemQtd * value) / 100).toFixed(2)));
+  };
+
+  const handleItemRtTipoChange = (tipo: "valor" | "percentual") => {
+    setItemRtTipo(tipo);
+    if (tipo === "valor") {
+      setItemRtPercentual(0);
+    } else {
+      // Switching to %, recompute from current %
+      setItemRt(Number(((itemVenda * itemQtd * itemRtPercentual) / 100).toFixed(2)));
     }
   };
 
