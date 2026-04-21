@@ -489,6 +489,8 @@ export type Database = {
           produto_id: string | null
           quantidade: number | null
           rt_comissao: number | null
+          rt_percentual: number
+          rt_tipo: string
           status_compra: string
           tipo: string
         }
@@ -504,6 +506,8 @@ export type Database = {
           produto_id?: string | null
           quantidade?: number | null
           rt_comissao?: number | null
+          rt_percentual?: number
+          rt_tipo?: string
           status_compra?: string
           tipo?: string
         }
@@ -519,6 +523,8 @@ export type Database = {
           produto_id?: string | null
           quantidade?: number | null
           rt_comissao?: number | null
+          rt_percentual?: number
+          rt_tipo?: string
           status_compra?: string
           tipo?: string
         }
