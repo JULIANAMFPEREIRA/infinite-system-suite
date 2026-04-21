@@ -1772,8 +1772,41 @@ const CRM = () => {
                       <input type="number" value={itemVenda} onChange={e => handleItemVendaChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$) {arquitetoRtPercentual > 0 ? `(${arquitetoRtPercentual}%)` : ""}</label>
-                      <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão {arquitetoRtPercentual > 0 ? `(arq. ${arquitetoRtPercentual}%)` : ""}</label>
+                      <div className="flex gap-1">
+                        <select
+                          value={itemRtTipo}
+                          onChange={e => handleItemRtTipoChange(e.target.value as "valor" | "percentual")}
+                          className="h-8 px-1.5 text-xs bg-background border border-border rounded shrink-0"
+                          title="Tipo de RT"
+                        >
+                          <option value="valor">R$</option>
+                          <option value="percentual">%</option>
+                        </select>
+                        {itemRtTipo === "percentual" ? (
+                          <input
+                            type="number"
+                            value={itemRtPercentual}
+                            onChange={e => handleItemRtPercentualChange(Number(e.target.value))}
+                            className="w-full h-8 px-2 text-xs bg-background border border-border rounded"
+                            step="0.01"
+                            min={0}
+                            placeholder="%"
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            value={itemRt}
+                            onChange={e => setItemRt(Number(e.target.value))}
+                            className="w-full h-8 px-2 text-xs bg-background border border-border rounded"
+                            step="0.01"
+                            min={0}
+                          />
+                        )}
+                      </div>
+                      {itemRtTipo === "percentual" && (
+                        <div className="text-[10px] text-muted-foreground">= R$ {itemRt.toFixed(2)}</div>
+                      )}
                     </div>
                     <div className="flex gap-1 items-end">
                       <button onClick={() => saveCrmItem.mutate()} disabled={!itemDesc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editItemId ? "Salvar" : "Adicionar"}</button>
