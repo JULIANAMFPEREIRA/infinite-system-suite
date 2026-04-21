@@ -2188,11 +2188,8 @@ const CRM = () => {
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
                 const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
                 const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
-                // Cost-based valuation — RT (commission) is treated as project cost
-                // even though it is derived from the sale value.
-                const custoItem = (i: any) =>
-                  (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) +
-                  (Number(i.rt_comissao) || 0);
+                // Cost-based valuation — item cost only (RT handled separately below)
+                const custoItem = (i: any) => (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1);
 
                 const produtosCompradoCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + custoItem(i), 0);
                 const produtosPendenteCusto = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
@@ -2202,9 +2199,19 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
+                // RT split by paid / pending (across all items)
+                const rtTotal = (crmItens ?? []).reduce((s: number, i: any) => s + (Number(i.rt_comissao) || 0), 0);
+                const rtPago = (crmItens ?? []).reduce((s: number, i: any) => {
+                  const t = Number(i.rt_comissao) || 0;
+                  const p = Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
+                  return s + p;
+                }, 0);
+                const rtPendente = Math.max(rtTotal - rtPago, 0);
+
                 // Fretes + Impostos count as already realized cost
-                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor;
-                const totalPendente = produtosPendenteCusto + servicosPendenteCusto;
+                // RT paga conta como comprado; RT pendente conta como falta comprar
+                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor + rtPago;
+                const totalPendente = produtosPendenteCusto + servicosPendenteCusto + rtPendente;
                 const totalCusto = totalComprado + totalPendente;
                 const pct = totalCusto > 0 ? (totalComprado / totalCusto) * 100 : 0;
 
