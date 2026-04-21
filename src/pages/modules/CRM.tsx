@@ -203,6 +203,24 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
+  // Contas a pagar de frete/imposto vinculadas aos projetos do cliente — para identificar o que já foi PAGO
+  const { data: contasFreteImposto } = useQuery({
+    queryKey: ["financeiro_pagar_frete_imposto", detailClient?.id],
+    queryFn: async () => {
+      const projIds = (clienteProjetos ?? []).map((p: any) => p.id);
+      if (projIds.length === 0) return [];
+      const { data } = await supabase
+        .from("financeiro_pagar")
+        .select("projeto_id, descricao, valor, status")
+        .in("projeto_id", projIds)
+        .is("comissao_id", null)
+        .is("fornecedor_id", null)
+        .eq("deletado", false);
+      return data ?? [];
+    },
+    enabled: !!detailClient?.id && (clienteProjetos?.length ?? 0) > 0,
+  });
+
   // Orcamentos query
   const { data: orcamentos, refetch: refetchOrcamentos } = useQuery({
     queryKey: ["crm_orcamentos", detailClient?.id],
