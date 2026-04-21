@@ -71,6 +71,8 @@ const CRM = () => {
   const [itemCusto, setItemCusto] = useState(0);
   const [itemVenda, setItemVenda] = useState(0);
   const [itemRt, setItemRt] = useState(0);
+  const [itemRtTipo, setItemRtTipo] = useState<"valor" | "percentual">("valor");
+  const [itemRtPercentual, setItemRtPercentual] = useState(0);
   const [itemTipo, setItemTipo] = useState<"produto" | "servico" | "adicional">("produto");
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [itemProdutoId, setItemProdutoId] = useState<string | null>(null);
@@ -85,7 +87,12 @@ const CRM = () => {
 
   const handleItemVendaChange = (value: number) => {
     setItemVenda(value);
-    // Auto-calc RT only if not editing and architect has RT %
+    // Recalc when in % mode (always)
+    if (itemRtTipo === "percentual" && itemRtPercentual > 0) {
+      setItemRt(Number(((value * itemQtd * itemRtPercentual) / 100).toFixed(2)));
+      return;
+    }
+    // Auto-calc RT only if not editing and architect has RT % (legacy behavior)
     if (!editItemId && arquitetoRtPercentual > 0) {
       setItemRt(Number(((value * itemQtd * arquitetoRtPercentual) / 100).toFixed(2)));
     }
@@ -93,8 +100,27 @@ const CRM = () => {
 
   const handleItemQtdChange = (value: number) => {
     setItemQtd(value);
+    if (itemRtTipo === "percentual" && itemRtPercentual > 0) {
+      setItemRt(Number(((itemVenda * value * itemRtPercentual) / 100).toFixed(2)));
+      return;
+    }
     if (!editItemId && arquitetoRtPercentual > 0) {
       setItemRt(Number(((itemVenda * value * arquitetoRtPercentual) / 100).toFixed(2)));
+    }
+  };
+
+  const handleItemRtPercentualChange = (value: number) => {
+    setItemRtPercentual(value);
+    setItemRt(Number(((itemVenda * itemQtd * value) / 100).toFixed(2)));
+  };
+
+  const handleItemRtTipoChange = (tipo: "valor" | "percentual") => {
+    setItemRtTipo(tipo);
+    if (tipo === "valor") {
+      setItemRtPercentual(0);
+    } else {
+      // Switching to %, recompute from current %
+      setItemRt(Number(((itemVenda * itemQtd * itemRtPercentual) / 100).toFixed(2)));
     }
   };
 
@@ -225,7 +251,7 @@ const CRM = () => {
   });
 
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
-  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
+  const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemRtTipo("valor"); setItemRtPercentual(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
 
   const openEdit = (c: any) => {
@@ -896,10 +922,10 @@ const CRM = () => {
       }
 
       if (editItemId) {
-        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, tipo: itemTipo } as any)).eq("id", editItemId);
+        const { error } = await supabase.from("crm_itens").update(sanitizePayload({ descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, rt_tipo: itemRtTipo, rt_percentual: itemRtPercentual, tipo: itemTipo } as any)).eq("id", editItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
+        const { error } = await supabase.from("crm_itens").insert(sanitizePayload({ cliente_id: detailClient.id, empresa_id: empresaId!, descricao: itemDesc, quantidade: itemQtd, preco_custo: itemCusto, preco_venda: itemVenda, rt_comissao: itemRt, rt_tipo: itemRtTipo, rt_percentual: itemRtPercentual, orcamento_id: activeOrcamentoId, tipo: itemTipo } as any));
         if (error) throw error;
       }
     },
@@ -1746,8 +1772,41 @@ const CRM = () => {
                       <input type="number" value={itemVenda} onChange={e => handleItemVendaChange(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão (R$) {arquitetoRtPercentual > 0 ? `(${arquitetoRtPercentual}%)` : ""}</label>
-                      <input type="number" value={itemRt} onChange={e => setItemRt(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" step="0.01" />
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RT/Comissão {arquitetoRtPercentual > 0 ? `(arq. ${arquitetoRtPercentual}%)` : ""}</label>
+                      <div className="flex gap-1">
+                        <select
+                          value={itemRtTipo}
+                          onChange={e => handleItemRtTipoChange(e.target.value as "valor" | "percentual")}
+                          className="h-8 px-1.5 text-xs bg-background border border-border rounded shrink-0"
+                          title="Tipo de RT"
+                        >
+                          <option value="valor">R$</option>
+                          <option value="percentual">%</option>
+                        </select>
+                        {itemRtTipo === "percentual" ? (
+                          <input
+                            type="number"
+                            value={itemRtPercentual}
+                            onChange={e => handleItemRtPercentualChange(Number(e.target.value))}
+                            className="w-full h-8 px-2 text-xs bg-background border border-border rounded"
+                            step="0.01"
+                            min={0}
+                            placeholder="%"
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            value={itemRt}
+                            onChange={e => setItemRt(Number(e.target.value))}
+                            className="w-full h-8 px-2 text-xs bg-background border border-border rounded"
+                            step="0.01"
+                            min={0}
+                          />
+                        )}
+                      </div>
+                      {itemRtTipo === "percentual" && (
+                        <div className="text-[10px] text-muted-foreground">= R$ {itemRt.toFixed(2)}</div>
+                      )}
                     </div>
                     <div className="flex gap-1 items-end">
                       <button onClick={() => saveCrmItem.mutate()} disabled={!itemDesc.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editItemId ? "Salvar" : "Adicionar"}</button>
@@ -1842,7 +1901,14 @@ const CRM = () => {
                                 <InlineCell item={item} field="quantidade" type="number" align="text-center" />
                                 <InlineCell item={item} field="preco_custo" type="number" align="text-right" />
                                 <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
-                                <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
+                                {((item as any).rt_tipo ?? "valor") === "percentual" ? (
+                                  <td className="px-3 py-2 text-right" title="Calculado automaticamente — edite no formulário">
+                                    <div className="font-semibold">{Number((item as any).rt_percentual ?? 0)}%</div>
+                                    <div className="text-[10px] text-muted-foreground">R$ {Number((item as any).rt_comissao ?? 0).toFixed(2)}</div>
+                                  </td>
+                                ) : (
+                                  <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
+                                )}
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
                                 {title === "Produtos" && (
                                   <td className="px-2 py-1.5 text-center">
@@ -1863,7 +1929,7 @@ const CRM = () => {
                                 )}
                                 <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
-                                    <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
+                                    <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemRtTipo(((item as any).rt_tipo ?? "valor") as "valor" | "percentual"); setItemRtPercentual(Number((item as any).rt_percentual ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
                                     <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                                   </div>
                                 </td>
