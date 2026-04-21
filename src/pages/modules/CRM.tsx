@@ -2289,20 +2289,30 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
-                // RT split by paid / pending (across all items)
+                // RT — total (custo) vs pago (realizado). Capped per item so paid never exceeds total.
                 const rtTotal = (crmItens ?? []).reduce((s: number, i: any) => s + (Number(i.rt_comissao) || 0), 0);
                 const rtPago = (crmItens ?? []).reduce((s: number, i: any) => {
                   const t = Number(i.rt_comissao) || 0;
-                  const p = Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
-                  return s + p;
+                  return s + Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
                 }, 0);
                 const rtPendente = Math.max(rtTotal - rtPago, 0);
 
-                // Fretes + Impostos count as already realized cost
-                // RT paga conta como comprado; RT pendente conta como falta comprar
-                const totalComprado = produtosCompradoCusto + servicosCompradoCusto + totalFretesGeral + impostoValor + rtPago;
-                const totalPendente = produtosPendenteCusto + servicosPendenteCusto + rtPendente;
-                const totalCusto = totalComprado + totalPendente;
+                // TOTAL CUSTO DO PROJETO = todos os itens (comprados + pendentes) + frete + imposto + RT total
+                const totalCusto =
+                  produtosCompradoCusto + produtosPendenteCusto +
+                  servicosCompradoCusto + servicosPendenteCusto +
+                  totalFretesGeral + impostoValor + rtTotal;
+
+                // TOTAL COMPRADO = somente itens com status comprado/pago + frete + imposto + RT PAGA
+                const totalComprado =
+                  produtosCompradoCusto +
+                  servicosCompradoCusto +
+                  totalFretesGeral +
+                  impostoValor +
+                  rtPago;
+
+                // FALTA COMPRAR = pendentes + RT pendente
+                const totalPendente = Math.max(totalCusto - totalComprado, 0);
                 const pct = totalCusto > 0 ? (totalComprado / totalCusto) * 100 : 0;
 
                 return (
