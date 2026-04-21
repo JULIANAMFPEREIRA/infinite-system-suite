@@ -353,6 +353,8 @@ const CRM = () => {
     const sim = (orcData.simulacao_pagamento as any) ?? {};
     const simParcelas = sim.parcelas ?? [];
     const simFormaPgto = sim.formaPagamento ?? "";
+    const simEntradaValor = Number(sim.entrada) || 0;
+    const simEntradaData = sim.entradaData ?? null;
     const frete = totals.frete;
     const imposto = totals.imposto;
 
@@ -416,11 +418,20 @@ const CRM = () => {
 
     // ── Sync financeiro_receber ──
     await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
-    if (simParcelas.length > 0) {
-      const inserts = simParcelas.map((p: any, i: number) => ({
+    // Build full parcel list including entrada (if any) as parcela 1
+    const fullParcelas: { valor: number; data: string | null }[] = [];
+    if (simEntradaValor > 0) {
+      fullParcelas.push({ valor: simEntradaValor, data: simEntradaData ? parseDate(simEntradaData) : null });
+    }
+    simParcelas.forEach((p: any) => {
+      fullParcelas.push({ valor: Number(p.valor) || 0, data: p.data ? parseDate(p.data) : null });
+    });
+    if (fullParcelas.length > 0) {
+      const totalP = fullParcelas.length;
+      const inserts = fullParcelas.map((p, i) => ({
         empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
-        descricao: `Parcela ${i + 1}/${simParcelas.length} — ${detailClient.nome}`,
-        valor: p.valor, parcela: i + 1, data_vencimento: parseDate(p.data), status: "pendente" as const,
+        descricao: `Parcela ${i + 1}/${totalP} — ${detailClient.nome}`,
+        valor: p.valor, parcela: i + 1, data_vencimento: p.data, status: "pendente" as const,
       }));
       await supabase.from("financeiro_receber").insert(inserts);
     } else if (totalVenda > 0) {
