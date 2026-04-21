@@ -1089,6 +1089,13 @@ const CRM = () => {
   const [orcFreteVencimento, setOrcFreteVencimento] = useState<string>((activeOrc as any)?.frete_vencimento ?? "");
   const [orcImpostoVencimento, setOrcImpostoVencimento] = useState<string>((activeOrc as any)?.imposto_vencimento ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
+  // Múltiplos fretes (armazenados em simulacao_pagamento.fretes_extras para preservar schema)
+  type FreteExtra = { id: string; transportadora: string; valor: number; vencimento: string; status: "pendente" | "comprado" };
+  const [fretesExtras, setFretesExtras] = useState<FreteExtra[]>(
+    Array.isArray(((activeOrc as any)?.simulacao_pagamento as any)?.fretes_extras)
+      ? ((activeOrc as any).simulacao_pagamento as any).fretes_extras
+      : []
+  );
   // Desconto state
   const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
   const [orcDescontoValor, setOrcDescontoValor] = useState(Number(((activeOrc as any)?.simulacao_pagamento as any)?.descontoValor) || 0);
