@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_itens ADD COLUMN IF NOT EXISTS status_compra text NOT NULL DEFAULT 'pendente';
