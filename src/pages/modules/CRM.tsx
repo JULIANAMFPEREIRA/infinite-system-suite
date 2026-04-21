@@ -2075,6 +2075,74 @@ const CRM = () => {
                         <input type="date" value={orcImpostoVencimento} onChange={e => setOrcImpostoVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
                       </div>
                     </div>
+                    {/* ── Múltiplos fretes adicionais ── */}
+                    <div className="pt-2 mt-1 border-t border-warning/20 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes adicionais</span>
+                        <button
+                          type="button"
+                          onClick={() => setFretesExtras(prev => [...prev, { id: crypto.randomUUID(), transportadora: "", valor: 0, vencimento: "", status: "pendente" }])}
+                          className="text-[10px] font-semibold text-warning hover:underline flex items-center gap-1"
+                        >
+                          <Plus size={11} /> Adicionar frete
+                        </button>
+                      </div>
+                      {fretesExtras.length > 0 && (
+                        <div className="space-y-1">
+                          {fretesExtras.map((f, idx) => (
+                            <div key={f.id} className="grid grid-cols-[1.4fr_0.8fr_0.9fr_0.8fr_auto] gap-1.5 items-center">
+                              <select
+                                value={f.transportadora}
+                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, transportadora: e.target.value } : x))}
+                                className="h-7 px-2 text-xs bg-background border border-border rounded"
+                              >
+                                <option value="">Transportadora...</option>
+                                {(transportadoras ?? []).map((t: any) => (
+                                  <option key={t.id} value={`${t.nome} (${t.tipo})`}>{t.nome} ({t.tipo})</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number" step="0.01" min={0}
+                                value={f.valor || ""}
+                                placeholder="Valor"
+                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, valor: Number(e.target.value) || 0 } : x))}
+                                className="h-7 px-2 text-xs bg-background border border-border rounded"
+                              />
+                              <input
+                                type="date"
+                                value={f.vencimento}
+                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, vencimento: e.target.value } : x))}
+                                className="h-7 px-2 text-xs bg-background border border-border rounded"
+                              />
+                              <select
+                                value={f.status}
+                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, status: e.target.value as "pendente" | "comprado" } : x))}
+                                className={cn(
+                                  "h-7 px-2 text-xs border rounded",
+                                  f.status === "comprado" ? "bg-success/10 border-success/30 text-success" : "bg-warning/10 border-warning/30 text-warning"
+                                )}
+                              >
+                                <option value="pendente">Pendente</option>
+                                <option value="comprado">Comprado</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => setFretesExtras(prev => prev.filter((_, i) => i !== idx))}
+                                className="h-7 w-7 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded"
+                                title="Remover"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-3 pt-1 text-[11px]">
+                            <span className="text-foreground"><span className="text-muted-foreground">Total fretes:</span> <strong>R$ {totalFretesGeral.toFixed(2)}</strong></span>
+                            <span className="text-success"><span className="text-muted-foreground">Comprado:</span> <strong>R$ {totalFretesComprado.toFixed(2)}</strong></span>
+                            <span className="text-warning"><span className="text-muted-foreground">Falta:</span> <strong>R$ {totalFretesPendente.toFixed(2)}</strong></span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </section>
               )}
