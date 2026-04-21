@@ -1091,11 +1091,20 @@ const CRM = () => {
   const [orcImpostoVencimento, setOrcImpostoVencimento] = useState<string>((activeOrc as any)?.imposto_vencimento ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
   // Múltiplos fretes (armazenados em simulacao_pagamento.fretes_extras para preservar schema)
-  type FreteExtra = { id: string; transportadora: string; valor: number; vencimento: string; status: "pendente" | "comprado" };
+  // Status removido (não faz sentido operacional). Descrição passa a identificar o frete.
+  type FreteExtra = { id: string; descricao: string; transportadora: string; valor: number; vencimento: string };
+  const normalizeFretes = (raw: any): FreteExtra[] =>
+    Array.isArray(raw)
+      ? raw.map((f: any) => ({
+          id: f.id ?? crypto.randomUUID(),
+          descricao: f.descricao ?? "",
+          transportadora: f.transportadora ?? "",
+          valor: Number(f.valor) || 0,
+          vencimento: f.vencimento ?? "",
+        }))
+      : [];
   const [fretesExtras, setFretesExtras] = useState<FreteExtra[]>(
-    Array.isArray(((activeOrc as any)?.simulacao_pagamento as any)?.fretes_extras)
-      ? ((activeOrc as any).simulacao_pagamento as any).fretes_extras
-      : []
+    normalizeFretes(((activeOrc as any)?.simulacao_pagamento as any)?.fretes_extras)
   );
   // Desconto state
   const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
@@ -1113,14 +1122,6 @@ const CRM = () => {
 
   const totalFretesExtras = useMemo(
     () => fretesExtras.reduce((s, f) => s + (Number(f.valor) || 0), 0),
-    [fretesExtras]
-  );
-  const totalFretesComprado = useMemo(
-    () => fretesExtras.filter(f => f.status === "comprado").reduce((s, f) => s + (Number(f.valor) || 0), 0),
-    [fretesExtras]
-  );
-  const totalFretesPendente = useMemo(
-    () => fretesExtras.filter(f => f.status === "pendente").reduce((s, f) => s + (Number(f.valor) || 0), 0),
     [fretesExtras]
   );
   const totalFretesGeral = orcFrete + totalFretesExtras;
@@ -1147,7 +1148,7 @@ const CRM = () => {
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
     setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
-    setFretesExtras(Array.isArray(sim.fretes_extras) ? sim.fretes_extras : []);
+    setFretesExtras(normalizeFretes(sim.fretes_extras));
   }, []);
 
   // Sync state when activeOrc data loads/changes (e.g. after refetch or URL-based navigation)
