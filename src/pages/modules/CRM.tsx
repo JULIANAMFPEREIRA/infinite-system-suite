@@ -960,7 +960,27 @@ const CRM = () => {
     if (field === "descricao" && !String(val).trim()) { setInlineEdit(null); return; }
     setInlineSaving(true);
     try {
-      const { error } = await supabase.from("crm_itens").update(sanitizePayload({ [field]: val } as any)).eq("id", id);
+      let payload: any = { [field]: val };
+      if (field === "rt_comissao" || field === "rt_percentual") {
+        const item: any = (crmItens ?? []).find((i: any) => i.id === id);
+        const venda = (Number(item?.preco_venda) || 0) * (Number(item?.quantidade) || 1);
+        const tipo = (item?.rt_tipo ?? "valor") as "valor" | "percentual";
+        if (field === "rt_percentual" || tipo === "percentual") {
+          const perc = Number(inlineValue) || 0;
+          payload = {
+            rt_tipo: "percentual",
+            rt_percentual: perc,
+            rt_comissao: Number(((venda * perc) / 100).toFixed(2)),
+          };
+        } else {
+          payload = {
+            rt_tipo: "valor",
+            rt_comissao: Number(inlineValue) || 0,
+            rt_percentual: 0,
+          };
+        }
+      }
+      const { error } = await supabase.from("crm_itens").update(sanitizePayload(payload as any)).eq("id", id);
       if (error) throw error;
       refetchCrmItens();
       if (activeOrcamentoId) {
@@ -973,7 +993,7 @@ const CRM = () => {
       setInlineSaving(false);
       setInlineEdit(null);
     }
-  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos]);
+  }, [inlineEdit, inlineValue, activeOrcamentoId, orcamentos, crmItens]);
 
   const handleSortToggle = useCallback((key: string) => {
     setSortConfig(prev => {
@@ -1985,15 +2005,62 @@ const CRM = () => {
                                 {(() => {
                                   const rtTotal = Number((item as any).rt_comissao ?? 0);
                                   const isPerc = ((item as any).rt_tipo ?? "valor") === "percentual";
+                                  const rtField = isPerc ? "rt_percentual" : "rt_comissao";
+                                  const isEditingRt = inlineEdit?.id === item.id && (inlineEdit?.field === "rt_comissao" || inlineEdit?.field === "rt_percentual");
+                                  if (isEditingRt) {
+                                    return (
+                                      <td className="px-1 py-1 text-right">
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <select
+                                            value={isPerc ? "percentual" : "valor"}
+                                            onChange={async (e) => {
+                                              const novoTipo = e.target.value;
+                                              await supabase.from("crm_itens").update({ rt_tipo: novoTipo } as any).eq("id", item.id);
+                                              setInlineEdit({ id: item.id, field: novoTipo === "percentual" ? "rt_percentual" : "rt_comissao" });
+                                              setInlineValue(String(novoTipo === "percentual" ? (Number((item as any).rt_percentual) || 0) : (Number((item as any).rt_comissao) || 0)));
+                                              refetchCrmItens();
+                                            }}
+                                            className="h-7 px-1 text-[10px] bg-background border border-primary rounded focus:outline-none"
+                                            onMouseDown={e => e.stopPropagation()}
+                                          >
+                                            <option value="valor">R$</option>
+                                            <option value="percentual">%</option>
+                                          </select>
+                                          <input
+                                            type="number"
+                                            value={inlineValue}
+                                            onChange={e => setInlineValue(e.target.value)}
+                                            onBlur={saveInlineEdit}
+                                            onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") setInlineEdit(null); }}
+                                            autoFocus
+                                            step="0.01"
+                                            min={0}
+                                            className="w-16 h-7 px-1.5 text-xs bg-background border-2 border-primary rounded focus:outline-none ring-2 ring-primary/20 text-right"
+                                          />
+                                          {inlineSaving && <Loader2 size={12} className="animate-spin text-primary" />}
+                                        </div>
+                                      </td>
+                                    );
+                                  }
                                   return (
-                                    <td className="px-3 py-2 text-right">
+                                    <td
+                                      className="px-3 py-2 text-right cursor-pointer hover:bg-primary/5 group transition-colors"
+                                      onClick={() => startInlineEdit(item.id, rtField, isPerc ? Number((item as any).rt_percentual ?? 0) : rtTotal)}
+                                      title="Clique para editar RT"
+                                    >
                                       {isPerc ? (
-                                        <>
-                                          <div className="font-semibold">{Number((item as any).rt_percentual ?? 0)}%</div>
-                                          <div className="text-[10px] text-muted-foreground">R$ {rtTotal.toFixed(2)}</div>
-                                        </>
+                                        <span className="inline-flex flex-col items-end">
+                                          <span className="font-semibold inline-flex items-center gap-1">
+                                            {Number((item as any).rt_percentual ?? 0)}%
+                                            <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
+                                          </span>
+                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toFixed(2)}</span>
+                                        </span>
                                       ) : (
-                                        <div className="font-semibold">R$ {rtTotal.toFixed(2)}</div>
+                                        <span className="font-semibold inline-flex items-center gap-1">
+                                          R$ {rtTotal.toFixed(2)}
+                                          <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
+                                        </span>
                                       )}
                                     </td>
                                   );
