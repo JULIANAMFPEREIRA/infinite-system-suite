@@ -1728,6 +1728,54 @@ const CRM = () => {
                     <div className="bg-card border border-border rounded-lg p-4 text-center">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total RT</p>
                       <p className="text-xl font-bold text-warning">R$ {totalCrmRt.toFixed(2)}</p>
+                      {totalCrmRt > 0 && (() => {
+                        const itensComRt = (crmItens ?? []).filter((i: any) => (Number(i.rt_comissao) || 0) > 0);
+                        const rtPagoAtual = itensComRt.reduce((s: number, i: any) => {
+                          const t = Number(i.rt_comissao) || 0;
+                          return s + Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
+                        }, 0);
+                        const rtPendenteAtual = Math.max(totalCrmRt - rtPagoAtual, 0);
+                        return (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Pago</span>
+                              <input
+                                key={`rt-pago-${rtPagoAtual}`}
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                max={totalCrmRt}
+                                defaultValue={rtPagoAtual}
+                                onBlur={async (e) => {
+                                  const novoTotalPago = Math.min(Math.max(Number(e.target.value) || 0, 0), totalCrmRt);
+                                  if (Math.abs(novoTotalPago - rtPagoAtual) < 0.005) return;
+                                  // Distribute proportionally across items with RT
+                                  let restante = novoTotalPago;
+                                  const updates = itensComRt.map((it: any, idx: number) => {
+                                    const t = Number(it.rt_comissao) || 0;
+                                    let pago: number;
+                                    if (idx === itensComRt.length - 1) {
+                                      pago = Math.min(Math.max(restante, 0), t);
+                                    } else {
+                                      const share = totalCrmRt > 0 ? (t / totalCrmRt) * novoTotalPago : 0;
+                                      pago = Math.min(Math.max(share, 0), t);
+                                      restante -= pago;
+                                    }
+                                    return { id: it.id, rt_valor_pago: Number(pago.toFixed(2)) };
+                                  });
+                                  const results = await Promise.all(
+                                    updates.map(u => supabase.from("crm_itens").update({ rt_valor_pago: u.rt_valor_pago } as any).eq("id", u.id))
+                                  );
+                                  if (results.some(r => r.error)) { toast.error("Erro ao atualizar RT pago"); return; }
+                                  refetchCrmItens();
+                                }}
+                                className="w-24 h-6 px-1.5 text-[11px] text-right bg-background border border-border/60 rounded focus:outline-none focus:border-primary"
+                              />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">Pendente: <span className="text-warning font-semibold">R$ {rtPendenteAtual.toFixed(2)}</span></p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </section>
