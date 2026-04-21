@@ -1091,11 +1091,20 @@ const CRM = () => {
   const [orcImpostoVencimento, setOrcImpostoVencimento] = useState<string>((activeOrc as any)?.imposto_vencimento ?? "");
   const [orcDataPgtoAvista, setOrcDataPgtoAvista] = useState<string>((activeOrc as any)?.data_pagamento_avista ?? "");
   // Múltiplos fretes (armazenados em simulacao_pagamento.fretes_extras para preservar schema)
-  type FreteExtra = { id: string; transportadora: string; valor: number; vencimento: string; status: "pendente" | "comprado" };
+  // Status removido (não faz sentido operacional). Descrição passa a identificar o frete.
+  type FreteExtra = { id: string; descricao: string; transportadora: string; valor: number; vencimento: string };
+  const normalizeFretes = (raw: any): FreteExtra[] =>
+    Array.isArray(raw)
+      ? raw.map((f: any) => ({
+          id: f.id ?? crypto.randomUUID(),
+          descricao: f.descricao ?? "",
+          transportadora: f.transportadora ?? "",
+          valor: Number(f.valor) || 0,
+          vencimento: f.vencimento ?? "",
+        }))
+      : [];
   const [fretesExtras, setFretesExtras] = useState<FreteExtra[]>(
-    Array.isArray(((activeOrc as any)?.simulacao_pagamento as any)?.fretes_extras)
-      ? ((activeOrc as any).simulacao_pagamento as any).fretes_extras
-      : []
+    normalizeFretes(((activeOrc as any)?.simulacao_pagamento as any)?.fretes_extras)
   );
   // Desconto state
   const [orcDescontoTipo, setOrcDescontoTipo] = useState<"percentual" | "fixo">(((activeOrc as any)?.simulacao_pagamento as any)?.descontoTipo ?? "fixo");
@@ -1113,14 +1122,6 @@ const CRM = () => {
 
   const totalFretesExtras = useMemo(
     () => fretesExtras.reduce((s, f) => s + (Number(f.valor) || 0), 0),
-    [fretesExtras]
-  );
-  const totalFretesComprado = useMemo(
-    () => fretesExtras.filter(f => f.status === "comprado").reduce((s, f) => s + (Number(f.valor) || 0), 0),
-    [fretesExtras]
-  );
-  const totalFretesPendente = useMemo(
-    () => fretesExtras.filter(f => f.status === "pendente").reduce((s, f) => s + (Number(f.valor) || 0), 0),
     [fretesExtras]
   );
   const totalFretesGeral = orcFrete + totalFretesExtras;
@@ -1147,7 +1148,7 @@ const CRM = () => {
     setOrcDataPgtoAvista(orc?.data_pagamento_avista ?? "");
     setOrcDescontoTipo(sim.descontoTipo ?? "fixo");
     setOrcDescontoValor(Number(sim.descontoValor) || 0);
-    setFretesExtras(Array.isArray(sim.fretes_extras) ? sim.fretes_extras : []);
+    setFretesExtras(normalizeFretes(sim.fretes_extras));
   }, []);
 
   // Sync state when activeOrc data loads/changes (e.g. after refetch or URL-based navigation)
@@ -1913,7 +1914,7 @@ const CRM = () => {
                             <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
                             <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
-                            {title === "Produtos" && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Compra</th>}
+                            {(title === "Produtos" || title === "Serviços") && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Status</th>}
                             <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
                           </tr></thead>
                           <tbody>
@@ -1932,7 +1933,7 @@ const CRM = () => {
                                   <InlineCell item={item} field="rt_comissao" type="number" align="text-right" />
                                 )}
                                 <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
-                                {title === "Produtos" && (
+                                {(title === "Produtos" || title === "Serviços") && (
                                   <td className="px-2 py-1.5 text-center">
                                     <select
                                       value={(item as any).status_compra ?? "pendente"}
@@ -1942,10 +1943,17 @@ const CRM = () => {
                                         if (error) { toast.error("Erro ao atualizar status"); return; }
                                         refetchCrmItens();
                                       }}
-                                      className={`h-7 px-1.5 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary ${((item as any).status_compra ?? "pendente") === "comprado" ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400" : "border-amber-500/50 text-amber-600 dark:text-amber-400"}`}
+                                      className={`h-7 px-1.5 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary ${
+                                        ((item as any).status_compra ?? "pendente") === "comprado"
+                                          ? "border-success/50 text-success"
+                                          : ((item as any).status_compra ?? "pendente") === "pago"
+                                          ? "border-primary/50 text-primary"
+                                          : "border-warning/50 text-warning"
+                                      }`}
                                     >
                                       <option value="pendente">Pendente</option>
                                       <option value="comprado">Comprado</option>
+                                      {title === "Serviços" && <option value="pago">Pago</option>}
                                     </select>
                                   </td>
                                 )}
@@ -1964,34 +1972,12 @@ const CRM = () => {
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              {title === "Produtos" && <td></td>}
+                              {(title === "Produtos" || title === "Serviços") && <td></td>}
                               <td></td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
-                      {title === "Produtos" && (() => {
-                        const totalGeral = items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-                        const totalComprado = items.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-                        const totalPendente = totalGeral - totalComprado;
-                        const pct = totalGeral > 0 ? (totalComprado / totalGeral) * 100 : 0;
-                        return (
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <div className="rounded-lg border border-border/60 bg-card px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total de produtos</div>
-                              <div className="text-sm font-bold text-foreground">R$ {totalGeral.toFixed(2)}</div>
-                            </div>
-                            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Total comprado ({pct.toFixed(0)}%)</div>
-                              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">R$ {totalComprado.toFixed(2)}</div>
-                            </div>
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">Falta comprar</div>
-                              <div className="text-sm font-bold text-amber-600 dark:text-amber-400">R$ {totalPendente.toFixed(2)}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </section>
                   );
                 };
@@ -2023,15 +2009,16 @@ const CRM = () => {
               {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
 
               {/* ═══════════════════════════════════════════════════════ */}
-              {/* FRETE E IMPOSTOS                                      */}
+              {/* FRETES DO PROJETO (lista leve, múltiplos, sem status) */}
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && (
                 <section>
                   <h3 className="text-xs font-bold text-foreground tracking-tight mb-2 flex items-center gap-2">
                     <Calculator size={13} className="text-warning" />
-                    Frete e Impostos
+                    Fretes do Projeto
                   </h3>
                   <div className="bg-warning/5 border border-warning/20 rounded-lg p-3 space-y-2">
+                    {/* Frete principal (legacy / compatibilidade) */}
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-0.5">
                         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Transportadora</label>
@@ -2048,8 +2035,8 @@ const CRM = () => {
                         <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
                       </div>
                       <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Imposto (R$)</label>
-                        <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Frete</label>
+                        <input type="date" value={orcFreteVencimento} onChange={e => setOrcFreteVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
                       </div>
                     </div>
                     {orcFreteTipo === "outro" && (
@@ -2058,30 +2045,13 @@ const CRM = () => {
                         <input type="text" value={orcFreteOutro} onChange={e => setOrcFreteOutro(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" placeholder="Digite..." />
                       </div>
                     )}
-                    {(orcFrete > 0 || orcImposto > 0) && (
-                      <div className="flex items-center gap-3 pt-1.5 border-t border-warning/20">
-                        {orcFrete > 0 && <span className="text-[11px] text-foreground"><span className="text-muted-foreground">Frete:</span> <strong>R$ {orcFrete.toFixed(2)}</strong></span>}
-                        {orcImposto > 0 && <span className="text-[11px] text-foreground"><span className="text-muted-foreground">Imposto:</span> <strong>R$ {orcImposto.toFixed(2)}</strong></span>}
-                        <span className="text-[11px] font-bold text-warning ml-auto bg-warning/10 px-2 py-0.5 rounded">Total extras: R$ {(orcFrete + orcImposto).toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Frete</label>
-                        <input type="date" value={orcFreteVencimento} onChange={e => setOrcFreteVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Venc. Imposto</label>
-                        <input type="date" value={orcImpostoVencimento} onChange={e => setOrcImpostoVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
-                      </div>
-                    </div>
                     {/* ── Múltiplos fretes adicionais ── */}
                     <div className="pt-2 mt-1 border-t border-warning/20 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes adicionais</span>
                         <button
                           type="button"
-                          onClick={() => setFretesExtras(prev => [...prev, { id: crypto.randomUUID(), transportadora: "", valor: 0, vencimento: "", status: "pendente" }])}
+                          onClick={() => setFretesExtras(prev => [...prev, { id: crypto.randomUUID(), descricao: "", transportadora: "", valor: 0, vencimento: "" }])}
                           className="text-[10px] font-semibold text-warning hover:underline flex items-center gap-1"
                         >
                           <Plus size={11} /> Adicionar frete
@@ -2090,7 +2060,14 @@ const CRM = () => {
                       {fretesExtras.length > 0 && (
                         <div className="space-y-1">
                           {fretesExtras.map((f, idx) => (
-                            <div key={f.id} className="grid grid-cols-[1.4fr_0.8fr_0.9fr_0.8fr_auto] gap-1.5 items-center">
+                            <div key={f.id} className="grid grid-cols-[1.4fr_1.2fr_0.8fr_0.9fr_auto] gap-1.5 items-center">
+                              <input
+                                type="text"
+                                value={f.descricao}
+                                placeholder="Descrição (ex: Frete rack servidor)"
+                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, descricao: e.target.value } : x))}
+                                className="h-7 px-2 text-xs bg-background border border-border rounded"
+                              />
                               <select
                                 value={f.transportadora}
                                 onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, transportadora: e.target.value } : x))}
@@ -2114,17 +2091,6 @@ const CRM = () => {
                                 onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, vencimento: e.target.value } : x))}
                                 className="h-7 px-2 text-xs bg-background border border-border rounded"
                               />
-                              <select
-                                value={f.status}
-                                onChange={e => setFretesExtras(prev => prev.map((x, i) => i === idx ? { ...x, status: e.target.value as "pendente" | "comprado" } : x))}
-                                className={cn(
-                                  "h-7 px-2 text-xs border rounded",
-                                  f.status === "comprado" ? "bg-success/10 border-success/30 text-success" : "bg-warning/10 border-warning/30 text-warning"
-                                )}
-                              >
-                                <option value="pendente">Pendente</option>
-                                <option value="comprado">Comprado</option>
-                              </select>
                               <button
                                 type="button"
                                 onClick={() => setFretesExtras(prev => prev.filter((_, i) => i !== idx))}
@@ -2137,8 +2103,6 @@ const CRM = () => {
                           ))}
                           <div className="flex items-center gap-3 pt-1 text-[11px]">
                             <span className="text-foreground"><span className="text-muted-foreground">Total fretes:</span> <strong>R$ {totalFretesGeral.toFixed(2)}</strong></span>
-                            <span className="text-success"><span className="text-muted-foreground">Comprado:</span> <strong>R$ {totalFretesComprado.toFixed(2)}</strong></span>
-                            <span className="text-warning"><span className="text-muted-foreground">Falta:</span> <strong>R$ {totalFretesPendente.toFixed(2)}</strong></span>
                           </div>
                         </div>
                       )}
@@ -2146,6 +2110,71 @@ const CRM = () => {
                   </div>
                 </section>
               )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* IMPOSTOS DO PROJETO (separado do frete)                */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section>
+                  <h3 className="text-xs font-bold text-foreground tracking-tight mb-2 flex items-center gap-2">
+                    <DollarSign size={13} className="text-primary" />
+                    Impostos do Projeto
+                  </h3>
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo (opcional)</label>
+                        <input type="text" value={orcFreteOutro && orcFreteTipo === "imposto-tipo" ? orcFreteOutro : ""} placeholder="Ex: ISS, ICMS..." readOnly className="w-full h-7 px-2 text-xs bg-background/50 border border-border rounded text-muted-foreground" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Valor (R$)</label>
+                        <input type="number" value={orcImposto} onChange={e => setOrcImposto(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Vencimento</label>
+                        <input type="date" value={orcImpostoVencimento} onChange={e => setOrcImpostoVencimento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* RESUMO COMPRAS (Produtos + Serviços + Fretes)         */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
+                const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
+                const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
+                const valorItem = (i: any) => (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1);
+
+                const produtosComprado = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "comprado").reduce((s, i) => s + valorItem(i), 0);
+                const produtosPendente = allProdutos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + valorItem(i), 0);
+
+                const servicosComprado = allServicos.filter((i: any) => ["comprado", "pago"].includes(i.status_compra ?? "pendente")).reduce((s, i) => s + valorItem(i), 0);
+                const servicosPendente = allServicos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + valorItem(i), 0);
+
+                const totalComprado = produtosComprado + servicosComprado + totalFretesGeral;
+                const totalPendente = produtosPendente + servicosPendente;
+                const totalGeral = totalComprado + totalPendente;
+                const pct = totalGeral > 0 ? (totalComprado / totalGeral) * 100 : 0;
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-border/60 bg-card px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total geral (itens + fretes)</div>
+                      <div className="text-sm font-bold text-foreground">R$ {totalGeral.toFixed(2)}</div>
+                    </div>
+                    <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-success">Total comprado ({pct.toFixed(0)}%)</div>
+                      <div className="text-sm font-bold text-success">R$ {totalComprado.toFixed(2)}</div>
+                    </div>
+                    <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-warning">Falta comprar</div>
+                      <div className="text-sm font-bold text-warning">R$ {totalPendente.toFixed(2)}</div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ═══════════════════════════════════════════════════════ */}
               {/* DESCONTO                                                */}
