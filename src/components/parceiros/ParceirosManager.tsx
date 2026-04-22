@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useParceiros, useUpdateParceiro, useParceiroProjetos, useVincularParceiro, useDesvincularParceiro, SUBTIPOS_PARCEIRO } from "@/hooks/useParceiros";
+import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO } from "@/hooks/useParceiros";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Link2, X, UserPlus } from "lucide-react";
+import { UserPlus, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const ParceirosManager = () => {
@@ -13,8 +13,6 @@ const ParceirosManager = () => {
   const qc = useQueryClient();
   const { data: parceiros = [], isLoading } = useParceiros();
   const updateParceiro = useUpdateParceiro();
-  const vincular = useVincularParceiro();
-  const desvincular = useDesvincularParceiro();
 
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
@@ -66,82 +64,120 @@ const ParceirosManager = () => {
   };
 
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
-    const { data: vinculos = [] } = useParceiroProjetos(parceiroId);
-    const vinculadosIds = new Set(vinculos.map((v: any) => v.projeto_id));
-    const [selProjeto, setSelProjeto] = useState("");
+    const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
+    const vinculadosIds = useMemo(
+      () => new Set(vinculos.map((v: any) => v.projeto_id as string)),
+      [vinculos]
+    );
+    const [selecionados, setSelecionados] = useState<Set<string> | null>(null);
+    const [saving, setSaving] = useState(false);
+
+    // Inicializa selecionados com vínculos existentes
+    const current = selecionados ?? vinculadosIds;
+
+    const toggle = (id: string) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      setSelecionados(next);
+    };
+
+    const handleSalvar = async () => {
+      const finalSel = current;
+      const toAdd = [...finalSel].filter((id) => !vinculadosIds.has(id));
+      const toRemove = vinculos.filter((v: any) => !finalSel.has(v.projeto_id));
+
+      console.log("Projetos vinculados:", [...finalSel]);
+      console.log("Adicionar:", toAdd, "Remover:", toRemove.map((v: any) => v.projeto_id));
+
+      setSaving(true);
+      try {
+        if (toRemove.length > 0) {
+          const ids = toRemove.map((v: any) => v.id);
+          const { error } = await supabase.from("projeto_parceiros").delete().in("id", ids);
+          if (error) throw error;
+        }
+        if (toAdd.length > 0) {
+          const rows = toAdd.map((projeto_id) => ({
+            empresa_id: empresaId!,
+            projeto_id,
+            parceiro_id: parceiroId,
+          }));
+          const { error } = await supabase.from("projeto_parceiros").insert(rows);
+          if (error) throw error;
+        }
+        toast.success("Projetos vinculados com sucesso");
+        qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
+        qc.invalidateQueries({ queryKey: ["parceiro_projetos", parceiroId] });
+        setOpenVincular(null);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Erro ao salvar vínculos");
+      } finally {
+        setSaving(false);
+      }
+    };
 
     return (
       <Dialog open onOpenChange={(o) => !o && setOpenVincular(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Projetos vinculados ao parceiro</DialogTitle>
+            <DialogTitle>Gerenciar projetos do parceiro</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="flex gap-2">
-              <select
-                value={selProjeto}
-                onChange={(e) => setSelProjeto(e.target.value)}
-                className="flex-1 h-9 px-2 rounded border border-border bg-background text-xs"
-              >
-                <option value="">Selecione um projeto…</option>
-                {projetos
-                  .filter((p: any) => !vinculadosIds.has(p.id))
-                  .map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome} {p.clientes?.nome ? `— ${p.clientes.nome}` : ""}
-                    </option>
-                  ))}
-              </select>
-              <Button
-                size="sm"
-                disabled={!selProjeto || vincular.isPending}
-                onClick={() => {
-                  vincular.mutate({ projeto_id: selProjeto, parceiro_id: parceiroId });
-                  setSelProjeto("");
-                }}
-              >
-                <Link2 size={14} className="mr-1" /> Vincular
-              </Button>
-            </div>
-
-            <div className="border border-border rounded">
+            <p className="text-xs text-muted-foreground">
+              Marque os projetos que este parceiro pode acessar. Desmarque para remover o vínculo.
+            </p>
+            <div className="border border-border rounded max-h-[400px] overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="bg-secondary/60">
+                <thead className="bg-secondary/60 sticky top-0">
                   <tr>
+                    <th className="w-10 text-center px-2 py-1.5">✓</th>
                     <th className="text-left px-2 py-1.5">Projeto</th>
                     <th className="text-left px-2 py-1.5">Cliente</th>
-                    <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {vinculos.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="text-center text-muted-foreground py-3">
-                        Nenhum projeto vinculado.
-                      </td>
-                    </tr>
+                  {loadingVinc && (
+                    <tr><td colSpan={3} className="text-center text-muted-foreground py-3">Carregando…</td></tr>
                   )}
-                  {vinculos.map((v: any) => (
-                    <tr key={v.id} className="border-t border-border">
-                      <td className="px-2 py-1.5">{v.projetos?.nome}</td>
-                      <td className="px-2 py-1.5">{v.projetos?.clientes?.nome ?? "—"}</td>
-                      <td className="px-2 py-1.5">
-                        <button
-                          onClick={() => desvincular.mutate(v.id)}
-                          className="text-destructive hover:text-destructive/80"
-                          title="Remover vínculo"
-                        >
-                          <X size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {!loadingVinc && projetos.length === 0 && (
+                    <tr><td colSpan={3} className="text-center text-muted-foreground py-3">Nenhum projeto disponível.</td></tr>
+                  )}
+                  {projetos.map((p: any) => {
+                    const checked = current.has(p.id);
+                    return (
+                      <tr
+                        key={p.id}
+                        className="border-t border-border hover:bg-secondary/20 cursor-pointer"
+                        onClick={() => toggle(p.id)}
+                      >
+                        <td className="px-2 py-1.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggle(p.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">{p.nome}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground">{p.clientes?.nome ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            <div className="text-[11px] text-muted-foreground">
+              {current.size} projeto(s) selecionado(s)
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenVincular(null)}>Fechar</Button>
+            <Button variant="outline" onClick={() => setOpenVincular(null)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSalvar} disabled={saving}>
+              <Save size={14} className="mr-1" />
+              {saving ? "Salvando…" : "Salvar vínculos"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
