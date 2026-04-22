@@ -281,8 +281,9 @@ const ParceirosManager = () => {
 
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
     const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
-    type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens"; rt_percentual: number; rt_valor: number };
-    const defaultCfg: RTConfig = { rt_tipo: "percentual", rt_base: "venda_total", rt_percentual: 0, rt_valor: 0 };
+    type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens" | "rt_itens"; rt_percentual: number; rt_valor: number };
+    // Padrão: usar RT já definida nos itens do projeto (soma direta)
+    const defaultCfg: RTConfig = { rt_tipo: "percentual", rt_base: "rt_itens", rt_percentual: 100, rt_valor: 0 };
 
     const vinculadosMap = useMemo(() => {
       const m: Record<string, any> = {};
@@ -364,6 +365,14 @@ const ParceirosManager = () => {
             .eq("id", v.id);
           if (error) throw error;
         }
+        // Debug: ler rt_total recalculado pelo trigger
+        const { data: recalculados } = await supabase
+          .from("projeto_parceiros")
+          .select("projeto_id, rt_tipo, rt_base, rt_total, rt_recebido")
+          .eq("parceiro_id", parceiroId);
+        (recalculados ?? []).forEach((r: any) => {
+          console.log("RT total calculada:", r.rt_total, "(projeto:", r.projeto_id, "base:", r.rt_base, ")");
+        });
         toast.success("Vínculos e RT salvos com sucesso");
         qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
         qc.invalidateQueries({ queryKey: ["parceiro_projetos", parceiroId] });
@@ -450,8 +459,9 @@ const ParceirosManager = () => {
                                     onChange={(e) => updateCfg(p.id, { rt_base: e.target.value as any })}
                                     className="h-7 px-1 rounded border border-border bg-background text-[11px]"
                                   >
+                                    <option value="rt_itens">RT dos Itens</option>
                                     <option value="venda_total">Venda total</option>
-                                    <option value="itens">Itens</option>
+                                    <option value="itens">Soma dos Itens</option>
                                   </select>
                                 </>
                               ) : (
