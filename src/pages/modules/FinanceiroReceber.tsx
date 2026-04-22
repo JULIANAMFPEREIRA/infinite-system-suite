@@ -372,9 +372,34 @@ const FinanceiroReceber = () => {
       />
 
       <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-sm">Registrar Recebimento</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {baixaContaAtual && (() => {
+              const total = Number(baixaContaAtual.valor) || 0;
+              const recebido = Number(baixaContaAtual.valor_recebido) || 0;
+              const saldo = Math.max(total - recebido, 0);
+              return (
+                <div className="grid grid-cols-3 gap-2 p-2 bg-muted/30 rounded">
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Total</div>
+                    <div className="text-xs font-bold text-foreground tabular-nums">{fmtBRL(total)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Recebido</div>
+                    <div className="text-xs font-bold text-success tabular-nums">{fmtBRL(recebido)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Falta</div>
+                    <div className="text-xs font-bold text-warning tabular-nums">{fmtBRL(saldo)}</div>
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Valor do recebimento</label>
+              <input type="number" step="0.01" value={baixaValor} onChange={e => setBaixaValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Recebimento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
               <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
@@ -384,6 +409,24 @@ const FinanceiroReceber = () => {
               </select>
             </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            {historicoReceb.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Histórico de recebimentos</div>
+                <div className="max-h-32 overflow-y-auto border border-border rounded">
+                  <table className="w-full text-[11px]">
+                    <tbody>
+                      {historicoReceb.map((h: any) => (
+                        <tr key={h.id} className="border-b border-border last:border-b-0">
+                          <td className="px-2 py-1 text-foreground/80 tabular-nums">{fmtDate(h.data)}</td>
+                          <td className="px-2 py-1 text-right font-medium text-success tabular-nums">{fmtBRL(Number(h.valor) || 0)}</td>
+                          <td className="px-2 py-1 text-muted-foreground truncate max-w-[140px]">{h.observacao ?? ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
