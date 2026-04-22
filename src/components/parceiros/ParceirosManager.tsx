@@ -365,6 +365,14 @@ const ParceirosManager = () => {
             .eq("id", v.id);
           if (error) throw error;
         }
+        // Debug: ler rt_total recalculado pelo trigger
+        const { data: recalculados } = await supabase
+          .from("projeto_parceiros")
+          .select("projeto_id, rt_tipo, rt_base, rt_total, rt_recebido")
+          .eq("parceiro_id", parceiroId);
+        (recalculados ?? []).forEach((r: any) => {
+          console.log("RT total calculada:", r.rt_total, "(projeto:", r.projeto_id, "base:", r.rt_base, ")");
+        });
         toast.success("Vínculos e RT salvos com sucesso");
         qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
         qc.invalidateQueries({ queryKey: ["parceiro_projetos", parceiroId] });
