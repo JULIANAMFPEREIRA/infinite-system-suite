@@ -5,7 +5,7 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Wallet } from "lucide-react";
+import { Plus, Trash2, Wallet, MessageCircle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -61,6 +61,23 @@ export const PagamentosRTSection = ({ projetoId }: Props) => {
       return data ?? [];
     },
     enabled: !!projetoId,
+  });
+
+  // Logs de WhatsApp para os pagamentos deste projeto
+  const pagamentoIds = pagamentos.map((p: any) => p.id);
+  const { data: waLogs = [] } = useQuery({
+    queryKey: ["whatsapp_logs_projeto", projetoId, pagamentoIds.join(",")],
+    queryFn: async () => {
+      if (pagamentoIds.length === 0) return [];
+      const { data, error } = await (supabase as any)
+        .from("whatsapp_logs")
+        .select("id, data, status, telefone, erro, parceiro_id, fornecedores:parceiro_id(nome)")
+        .in("pagamento_rt_id", pagamentoIds)
+        .order("data", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: pagamentoIds.length > 0,
   });
 
   const createPagamento = useMutation({
@@ -202,6 +219,47 @@ export const PagamentosRTSection = ({ projetoId }: Props) => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+          <MessageCircle size={12} /> Notificações WhatsApp
+        </h4>
+        {waLogs.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma notificação enviada.</p>
+        ) : (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-secondary/60">
+                <tr>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Data</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Parceiro</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Telefone</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waLogs.map((l: any) => {
+                  const ok = l.status === "enviado";
+                  const sim = l.status === "simulado";
+                  const Icon = ok ? CheckCircle2 : AlertCircle;
+                  const color = ok ? "text-success" : sim ? "text-muted-foreground" : "text-destructive";
+                  const label = ok ? "Enviado" : sim ? "Simulado (sem provedor)" : l.status === "sem_telefone" ? "Sem telefone" : "Erro";
+                  return (
+                    <tr key={l.id} className="border-t border-border">
+                      <td className="px-2.5 py-1.5">{new Date(l.data).toLocaleString("pt-BR")}</td>
+                      <td className="px-2.5 py-1.5">{l.fornecedores?.nome ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-muted-foreground">{l.telefone || "—"}</td>
+                      <td className={`px-2.5 py-1.5 ${color}`} title={l.erro || ""}>
+                        <span className="inline-flex items-center gap-1"><Icon size={11} />{label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
