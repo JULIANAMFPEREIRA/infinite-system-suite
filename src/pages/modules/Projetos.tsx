@@ -800,8 +800,11 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
   };
 
   const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const calcTotalCustoItem = (item: any) => (Number(item.quantidade) || 0) * (Number(item.preco_custo) || 0);
-  const calcTotalVendaItem = (item: any) => (Number(item.quantidade) || 0) * (Number(item.preco_venda) || 0);
+  const getQuantidade = (item: any) => Number(item.quantidade) || 0;
+  const getValorCusto = (item: any) => Number(item.valor_custo ?? item.custo_unitario ?? item.preco_custo) || 0;
+  const getValorVenda = (item: any) => Number(item.valor_venda ?? item.preco_venda) || 0;
+  const calcTotalCustoItem = (item: any) => getQuantidade(item) * getValorCusto(item);
+  const calcTotalVendaItem = (item: any) => getQuantidade(item) * getValorVenda(item);
 
   const totalCusto = itens?.reduce((acc, i) => acc + calcTotalCustoItem(i), 0) ?? 0;
   const totalVenda = itens?.reduce((acc, i) => acc + calcTotalVendaItem(i), 0) ?? 0;
@@ -899,21 +902,30 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
               </tr>
             </thead>
             <tbody>
-              {itens.map(item => (
-                <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
-                  <td className="px-2 py-1.5">{item.descricao}</td>
-                  <td className="px-2 py-1.5 capitalize">{item.tipo}</td>
-                  <td className="px-2 py-1.5 text-right">{item.quantidade}</td>
-                  <td className="px-2 py-1.5 text-right">{formatCurrency(Number(item.preco_custo) || 0)}</td>
-                  <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(calcTotalCustoItem(item))}</td>
-                  <td className="px-2 py-1.5 text-right">{formatCurrency(Number(item.preco_venda) || 0)}</td>
-                  <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(calcTotalVendaItem(item))}</td>
-                  <td className="px-2 py-1.5 text-right text-primary">{item.rt_percentual ?? 0}%</td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
-                  </td>
-                </tr>
-              ))}
+              {itens.map(item => {
+                const quantidade = getQuantidade(item);
+                const valorCusto = getValorCusto(item);
+                const valorVenda = getValorVenda(item);
+                const totalCustoItem = quantidade * valorCusto;
+                const totalVendaItem = quantidade * valorVenda;
+                console.log("Total custo:", totalCustoItem);
+
+                return (
+                  <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2 py-1.5">{item.descricao}</td>
+                    <td className="px-2 py-1.5 capitalize">{item.tipo}</td>
+                    <td className="px-2 py-1.5 text-right">{quantidade}</td>
+                    <td className="px-2 py-1.5 text-right">{formatCurrency(valorCusto)}</td>
+                    <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(totalCustoItem)}</td>
+                    <td className="px-2 py-1.5 text-right">{formatCurrency(valorVenda)}</td>
+                    <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(totalVendaItem)}</td>
+                    <td className="px-2 py-1.5 text-right text-primary">{item.rt_percentual ?? 0}%</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border bg-secondary/30">
