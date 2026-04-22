@@ -315,6 +315,35 @@ const PortalParceiro = () => {
                 </table>
               </div>
             )}
+
+            {/* Histórico de pagamentos de RT */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground mb-2 mt-2">Histórico de pagamentos</h4>
+              {!pagamentosRT?.length ? (
+                <p className="text-xs text-muted-foreground py-3 text-center bg-secondary/20 rounded">
+                  Nenhum pagamento de RT registrado.
+                </p>
+              ) : (
+                <div className="border border-border rounded overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead><tr className="bg-secondary/60">
+                      <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Data</th>
+                      <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Observação</th>
+                      <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
+                    </tr></thead>
+                    <tbody>
+                      {pagamentosRT.map((p: any) => (
+                        <tr key={p.id} className="border-b border-border last:border-b-0">
+                          <td className="px-2.5 py-1.5">{new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+                          <td className="px-2.5 py-1.5 text-muted-foreground">{p.observacao || "—"}</td>
+                          <td className="px-2.5 py-1.5 text-right font-semibold text-success">{fmt(Number(p.valor) || 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* Anotações */}
