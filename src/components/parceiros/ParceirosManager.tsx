@@ -128,6 +128,7 @@ const ParceirosManager = () => {
         toast.success("Projetos vinculados com sucesso");
         qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
         qc.invalidateQueries({ queryKey: ["parceiro_projetos", parceiroId] });
+        qc.invalidateQueries({ queryKey: ["parceiros_vinculos_resumo"] });
         setOpenVincular(null);
       } catch (e: any) {
         toast.error(e?.message ?? "Erro ao salvar vínculos");
