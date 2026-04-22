@@ -558,7 +558,7 @@ const Dashboard = () => {
                   <p className="text-[11px] text-muted-foreground truncate">{item.projetoNome}</p>
                 </div>
                 <div className="text-right ml-3 shrink-0">
-                  <p className="text-xs font-bold text-destructive">{fmt(item.valor ?? 0)}</p>
+                  <p className="text-xs font-bold text-destructive">{fmt((item as any).valor_saldo ?? item.valor ?? 0)}</p>
                   <p className="text-[10px] text-destructive/70">{item.diasAtraso}d atraso</p>
                 </div>
               </div>
