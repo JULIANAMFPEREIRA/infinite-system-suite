@@ -1060,6 +1060,7 @@ export type Database = {
       }
       fornecedores: {
         Row: {
+          ativo: boolean
           cidade: string | null
           cnpj_cpf: string | null
           created_at: string
@@ -1070,11 +1071,13 @@ export type Database = {
           id: string
           nome: string
           rt_percentual: number | null
+          subtipo_parceiro: string | null
           telefone: string | null
           tipo: Database["public"]["Enums"]["tipo_fornecedor"] | null
           updated_at: string
         }
         Insert: {
+          ativo?: boolean
           cidade?: string | null
           cnpj_cpf?: string | null
           created_at?: string
@@ -1085,11 +1088,13 @@ export type Database = {
           id?: string
           nome: string
           rt_percentual?: number | null
+          subtipo_parceiro?: string | null
           telefone?: string | null
           tipo?: Database["public"]["Enums"]["tipo_fornecedor"] | null
           updated_at?: string
         }
         Update: {
+          ativo?: boolean
           cidade?: string | null
           cnpj_cpf?: string | null
           created_at?: string
@@ -1100,6 +1105,7 @@ export type Database = {
           id?: string
           nome?: string
           rt_percentual?: number | null
+          subtipo_parceiro?: string | null
           telefone?: string | null
           tipo?: Database["public"]["Enums"]["tipo_fornecedor"] | null
           updated_at?: string
@@ -1414,6 +1420,52 @@ export type Database = {
           },
           {
             foreignKeyName: "projeto_itens_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projeto_parceiros: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          parceiro_id: string
+          projeto_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          parceiro_id: string
+          projeto_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          parceiro_id?: string
+          projeto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_parceiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_parceiros_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_parceiros_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
@@ -1753,6 +1805,7 @@ export type Database = {
     Functions: {
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
       get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
+      get_parceiro_fornecedor_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1773,6 +1826,7 @@ export type Database = {
         | "operacional"
         | "comercial"
         | "funcionario"
+        | "parceiro"
       origem_lead:
         | "whatsapp"
         | "instagram"
@@ -1953,6 +2007,7 @@ export const Constants = {
         "operacional",
         "comercial",
         "funcionario",
+        "parceiro",
       ],
       origem_lead: ["whatsapp", "instagram", "indicacao", "outro", "arquiteto"],
       status_comissao: ["pendente", "pago"],

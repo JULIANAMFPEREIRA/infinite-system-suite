@@ -6,7 +6,7 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
-const VALID_ROLES = ["admin","administrativo","financeiro","tecnico","arquiteto","cliente","operacional","comercial","funcionario"];
+const VALID_ROLES = ["admin","administrativo","financeiro","tecnico","arquiteto","cliente","operacional","comercial","funcionario","parceiro"];
 
 function respond(ok: boolean, payload: Record<string, unknown>, _status = 200) {
   return new Response(JSON.stringify({ ok, ...payload }), { status: 200, headers: corsHeaders });
@@ -109,6 +109,32 @@ Deno.serve(async (req) => {
           tipo: "arquiteto",
         });
         if (fornErr) console.error("fornecedor insert", fornErr);
+      }
+    }
+
+    // If the user is a partner, ensure a fornecedor entry with subtipo
+    if (role === "parceiro") {
+      const subtipo = String(body?.subtipo_parceiro ?? "arquiteto").trim().toLowerCase();
+      const { data: existingForn } = await supabaseAdmin
+        .from("fornecedores")
+        .select("id")
+        .eq("empresa_id", callerProfile.empresa_id)
+        .eq("email", email)
+        .maybeSingle();
+      if (!existingForn) {
+        const { error: fornErr } = await supabaseAdmin.from("fornecedores").insert({
+          empresa_id: callerProfile.empresa_id,
+          nome: full_name.toUpperCase(),
+          email,
+          tipo: "arquiteto",
+          subtipo_parceiro: subtipo,
+          ativo: true,
+        });
+        if (fornErr) console.error("parceiro fornecedor insert", fornErr);
+      } else {
+        await supabaseAdmin.from("fornecedores")
+          .update({ subtipo_parceiro: subtipo, ativo: true })
+          .eq("id", existingForn.id);
       }
     }
 
