@@ -390,21 +390,45 @@ const PortalParceiro = () => {
 
   const renderProjectList = () => (
     <div className="space-y-4 animate-fade-in">
-      <h2 className="text-sm font-bold text-foreground">Meus Projetos ({projetos.length})</h2>
+      {/* Cards principais — destaque com cores e ícones */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Total de RT</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Wallet size={16} className="text-primary" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-foreground tracking-tight">{fmt(rtTotal)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">{projetos.length} {projetos.length === 1 ? "projeto" : "projetos"} vinculado{projetos.length === 1 ? "" : "s"}</p>
+        </div>
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recebido</span>
+            <div className="w-8 h-8 rounded-lg bg-success/15 flex items-center justify-center">
+              <CheckCircle2 size={16} className="text-success" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-success tracking-tight">{fmt(rtPago)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {rtTotal > 0 ? Math.round((rtPago / rtTotal) * 100) : 0}% do total
+          </p>
+        </div>
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Pendente</span>
+            <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
+              <Hourglass size={16} className="text-warning" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-warning tracking-tight">{fmt(rtPendente)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">A receber</p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">RT Total</p>
-          <p className="text-base font-bold text-foreground mt-1">{fmt(rtTotal)}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">Pago</p>
-          <p className="text-base font-bold text-success mt-1">{fmt(rtPago)}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">Pendente</p>
-          <p className="text-base font-bold text-warning mt-1">{fmt(rtPendente)}</p>
-        </div>
+      <div className="flex items-center justify-between pt-1">
+        <h2 className="text-sm font-bold text-foreground">Meus Projetos</h2>
+        <span className="text-[11px] text-muted-foreground">{projetos.length} no total</span>
       </div>
 
       <div className="space-y-2">
