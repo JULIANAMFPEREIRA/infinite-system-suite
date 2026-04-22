@@ -281,15 +281,36 @@ const ParceirosManager = () => {
 
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
     const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
-    const vinculadosIds = useMemo(
-      () => new Set(vinculos.map((v: any) => v.projeto_id as string)),
-      [vinculos]
-    );
+    type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens"; rt_percentual: number; rt_valor: number };
+    const defaultCfg: RTConfig = { rt_tipo: "percentual", rt_base: "venda_total", rt_percentual: 0, rt_valor: 0 };
+
+    const vinculadosMap = useMemo(() => {
+      const m: Record<string, any> = {};
+      vinculos.forEach((v: any) => { m[v.projeto_id] = v; });
+      return m;
+    }, [vinculos]);
+
     const [selecionados, setSelecionados] = useState<Set<string> | null>(null);
+    const [configs, setConfigs] = useState<Record<string, RTConfig>>({});
     const [saving, setSaving] = useState(false);
 
-    // Inicializa selecionados com vínculos existentes
-    const current = selecionados ?? vinculadosIds;
+    const current = selecionados ?? new Set(Object.keys(vinculadosMap));
+
+    const getCfg = (id: string): RTConfig => {
+      if (configs[id]) return configs[id];
+      const v = vinculadosMap[id];
+      if (v) return {
+        rt_tipo: (v.rt_tipo as any) ?? "percentual",
+        rt_base: (v.rt_base as any) ?? "venda_total",
+        rt_percentual: Number(v.rt_percentual ?? 0),
+        rt_valor: Number(v.rt_valor ?? 0),
+      };
+      return defaultCfg;
+    };
+
+    const updateCfg = (id: string, patch: Partial<RTConfig>) => {
+      setConfigs((prev) => ({ ...prev, [id]: { ...getCfg(id), ...patch } }));
+    };
 
     const toggle = (id: string) => {
       const next = new Set(current);
@@ -299,11 +320,12 @@ const ParceirosManager = () => {
 
     const handleSalvar = async () => {
       const finalSel = current;
-      const toAdd = [...finalSel].filter((id) => !vinculadosIds.has(id));
+      const toAdd = [...finalSel].filter((id) => !vinculadosMap[id]);
+      const toUpdate = [...finalSel].filter((id) => vinculadosMap[id] && configs[id]);
       const toRemove = vinculos.filter((v: any) => !finalSel.has(v.projeto_id));
 
       console.log("Projetos vinculados:", [...finalSel]);
-      console.log("Adicionar:", toAdd, "Remover:", toRemove.map((v: any) => v.projeto_id));
+      console.log("Adicionar:", toAdd, "Atualizar:", toUpdate, "Remover:", toRemove.map((v: any) => v.projeto_id));
 
       setSaving(true);
       try {
@@ -313,15 +335,36 @@ const ParceirosManager = () => {
           if (error) throw error;
         }
         if (toAdd.length > 0) {
-          const rows = toAdd.map((projeto_id) => ({
-            empresa_id: empresaId!,
-            projeto_id,
-            parceiro_id: parceiroId,
-          }));
+          const rows = toAdd.map((projeto_id) => {
+            const c = getCfg(projeto_id);
+            return {
+              empresa_id: empresaId!,
+              projeto_id,
+              parceiro_id: parceiroId,
+              rt_tipo: c.rt_tipo,
+              rt_base: c.rt_base,
+              rt_percentual: c.rt_percentual,
+              rt_valor: c.rt_valor,
+            };
+          });
           const { error } = await supabase.from("projeto_parceiros").insert(rows);
           if (error) throw error;
         }
-        toast.success("Projetos vinculados com sucesso");
+        for (const projeto_id of toUpdate) {
+          const v = vinculadosMap[projeto_id];
+          const c = getCfg(projeto_id);
+          const { error } = await supabase
+            .from("projeto_parceiros")
+            .update({
+              rt_tipo: c.rt_tipo,
+              rt_base: c.rt_base,
+              rt_percentual: c.rt_percentual,
+              rt_valor: c.rt_valor,
+            })
+            .eq("id", v.id);
+          if (error) throw error;
+        }
+        toast.success("Vínculos e RT salvos com sucesso");
         qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
         qc.invalidateQueries({ queryKey: ["parceiro_projetos", parceiroId] });
         qc.invalidateQueries({ queryKey: ["parceiros_vinculos_resumo"] });
