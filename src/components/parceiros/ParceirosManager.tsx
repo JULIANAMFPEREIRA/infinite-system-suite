@@ -485,12 +485,21 @@ const ParceirosManager = () => {
                   })()}
                 </td>
                 <td className="px-2.5 py-1.5 text-center">
-                  <button
-                    onClick={() => setOpenVincular(p.id)}
-                    className="text-primary hover:underline text-[11px]"
-                  >
-                    Gerenciar
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setOpenEdit(p.id)}
+                      className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
+                      title="Editar parceiro"
+                    >
+                      <Pencil size={12} /> Editar
+                    </button>
+                    <button
+                      onClick={() => setOpenVincular(p.id)}
+                      className="text-primary hover:underline text-[11px]"
+                    >
+                      Gerenciar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -499,6 +508,7 @@ const ParceirosManager = () => {
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
+      {openEdit && <EditModal parceiroId={openEdit} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
         <DialogContent>
