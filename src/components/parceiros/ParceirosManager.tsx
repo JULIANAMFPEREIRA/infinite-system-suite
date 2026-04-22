@@ -34,6 +34,26 @@ const ParceirosManager = () => {
     enabled: !!empresaId,
   });
 
+  // Vínculos de TODOS os parceiros (para resumo na listagem)
+  const { data: vinculosResumo = {} } = useQuery({
+    queryKey: ["parceiros_vinculos_resumo", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projeto_parceiros")
+        .select("parceiro_id, projetos(nome)")
+        .eq("empresa_id", empresaId!);
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      (data ?? []).forEach((row: any) => {
+        const pid = row.parceiro_id as string;
+        if (!map[pid]) map[pid] = [];
+        if (row.projetos?.nome) map[pid].push(row.projetos.nome);
+      });
+      return map;
+    },
+    enabled: !!empresaId,
+  });
+
   const handleCreate = async () => {
     if (!form.nome || !form.email || !form.password) {
       toast.error("Preencha todos os campos obrigatórios");
