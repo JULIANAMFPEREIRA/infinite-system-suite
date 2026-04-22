@@ -1923,6 +1923,48 @@ export type Database = {
           },
         ]
       }
+      whatsapp_logs: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          erro: string | null
+          id: string
+          mensagem: string
+          pagamento_rt_id: string | null
+          parceiro_id: string
+          provider: string | null
+          status: string
+          telefone: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id: string
+          erro?: string | null
+          id?: string
+          mensagem: string
+          pagamento_rt_id?: string | null
+          parceiro_id: string
+          provider?: string | null
+          status?: string
+          telefone?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          erro?: string | null
+          id?: string
+          mensagem?: string
+          pagamento_rt_id?: string | null
+          parceiro_id?: string
+          provider?: string | null
+          status?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1931,6 +1973,15 @@ export type Database = {
       calcular_rt_projeto_parceiro: {
         Args: { _pp_id: string }
         Returns: undefined
+      }
+      format_whatsapp_rt_message: {
+        Args: {
+          _data: string
+          _parceiro_nome: string
+          _projeto_nome: string
+          _valor: number
+        }
+        Returns: string
       }
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
       get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
