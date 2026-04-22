@@ -1434,6 +1434,12 @@ export type Database = {
           id: string
           parceiro_id: string
           projeto_id: string
+          rt_base: string
+          rt_percentual: number
+          rt_recebido: number
+          rt_tipo: string
+          rt_total: number
+          rt_valor: number
         }
         Insert: {
           created_at?: string
@@ -1441,6 +1447,12 @@ export type Database = {
           id?: string
           parceiro_id: string
           projeto_id: string
+          rt_base?: string
+          rt_percentual?: number
+          rt_recebido?: number
+          rt_tipo?: string
+          rt_total?: number
+          rt_valor?: number
         }
         Update: {
           created_at?: string
@@ -1448,6 +1460,12 @@ export type Database = {
           id?: string
           parceiro_id?: string
           projeto_id?: string
+          rt_base?: string
+          rt_percentual?: number
+          rt_recebido?: number
+          rt_tipo?: string
+          rt_total?: number
+          rt_valor?: number
         }
         Relationships: [
           {
@@ -1803,6 +1821,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calcular_rt_projeto_parceiro: {
+        Args: { _pp_id: string }
+        Returns: undefined
+      }
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
       get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
       get_parceiro_fornecedor_id: { Args: never; Returns: string }

@@ -43,11 +43,11 @@ const PortalParceiro = () => {
 
       const { data: vinculos } = await supabase
         .from("projeto_parceiros")
-        .select("projeto_id, projetos(id, nome, status, endereco_obra, data_inicio, data_previsao, descricao, cliente_id, clientes(nome))")
+        .select("projeto_id, rt_tipo, rt_base, rt_percentual, rt_valor, rt_total, rt_recebido, projetos(id, nome, status, endereco_obra, data_inicio, data_previsao, descricao, cliente_id, clientes(nome))")
         .eq("parceiro_id", forn.id);
 
       const projetos = (vinculos ?? [])
-        .map((v: any) => v.projetos)
+        .map((v: any) => v.projetos ? { ...v.projetos, _rt_total: Number(v.rt_total ?? 0), _rt_recebido: Number(v.rt_recebido ?? 0) } : null)
         .filter(Boolean);
 
       const { data: comissoes } = await supabase
@@ -140,8 +140,9 @@ const PortalParceiro = () => {
   const handleLogout = async () => { await signOut(); navigate("/login"); };
 
   // Resumo de RT
-  const rtTotal = (data?.comissoes ?? []).reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-  const rtPago = (data?.comissoes ?? []).filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+  // Resumo de RT — agora vem direto dos vínculos (projeto_parceiros)
+  const rtTotal = projetos.reduce((s: number, p: any) => s + (p._rt_total || 0), 0);
+  const rtPago = projetos.reduce((s: number, p: any) => s + (p._rt_recebido || 0), 0);
   const rtPendente = rtTotal - rtPago;
 
   if (isLoading) {
@@ -160,8 +161,8 @@ const PortalParceiro = () => {
   const renderProjectDetail = () => {
     if (!activeProjeto) return null;
     const projetoComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === active);
-    const rtProjTotal = projetoComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-    const rtProjPago = projetoComissoes.filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+    const rtProjTotal = Number((activeProjeto as any)._rt_total ?? 0);
+    const rtProjPago = Number((activeProjeto as any)._rt_recebido ?? 0);
     const rtProjPend = rtProjTotal - rtProjPago;
 
     return (
@@ -445,9 +446,8 @@ const PortalParceiro = () => {
         )}
         {projetos.map((p: any) => {
           const prog = progressMap[p.status as StatusProjeto] ?? 0;
-          const projComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === p.id);
-          const rtTot = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-          const rtRec = projComissoes.filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+          const rtTot = Number(p._rt_total || 0);
+          const rtRec = Number(p._rt_recebido || 0);
           const rtPen = rtTot - rtRec;
           const rtPct = rtTot > 0 ? Math.round((rtRec / rtTot) * 100) : 0;
           return (

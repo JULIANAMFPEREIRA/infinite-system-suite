@@ -77,7 +77,7 @@ export const useParceiroProjetos = (parceiroId?: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projeto_parceiros")
-        .select("id, projeto_id, projetos(id, nome, status, cliente_id, clientes(nome))")
+        .select("id, projeto_id, rt_tipo, rt_base, rt_percentual, rt_valor, rt_total, rt_recebido, projetos(id, nome, status, cliente_id, venda_total, clientes(nome))")
         .eq("parceiro_id", parceiroId!);
       if (error) throw error;
       return data ?? [];
