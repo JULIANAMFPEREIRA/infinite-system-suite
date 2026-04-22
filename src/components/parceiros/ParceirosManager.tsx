@@ -84,6 +84,201 @@ const ParceirosManager = () => {
     }
   };
 
+  const EditModal = ({ parceiroId }: { parceiroId: string }) => {
+    const parceiro = parceiros.find((x) => x.id === parceiroId);
+    const [nome, setNome] = useState(parceiro?.nome ?? "");
+    const [subtipo, setSubtipo] = useState(parceiro?.subtipo_parceiro ?? "arquiteto");
+    const [ativo, setAtivo] = useState(!!parceiro?.ativo);
+    const [novaSenha, setNovaSenha] = useState("");
+    const [confirmaSenha, setConfirmaSenha] = useState("");
+    const [tempSenha, setTempSenha] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+
+    if (!parceiro) return null;
+
+    const findUserId = async (): Promise<string | null> => {
+      if (!parceiro.email) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("empresa_id", empresaId!);
+      // Match via auth user by email — usamos full_name fallback ou email no metadata.
+      // Como profiles não tem email, usamos a edge function de busca por email indireta:
+      // tentamos casar pelo full_name do parceiro.
+      const match = (data ?? []).find(
+        (p: any) => (p.full_name ?? "").toUpperCase() === (parceiro.nome ?? "").toUpperCase()
+      );
+      return match?.id ?? null;
+    };
+
+    const gerarSenhaTemp = () => {
+      const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+      let s = "";
+      for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
+      setNovaSenha(s);
+      setConfirmaSenha(s);
+      setTempSenha(s);
+      toast.info("Senha temporária gerada — copie antes de salvar");
+    };
+
+    const copiarTemp = async () => {
+      if (!tempSenha) return;
+      try {
+        await navigator.clipboard.writeText(tempSenha);
+        toast.success("Senha copiada");
+      } catch {
+        toast.error("Não foi possível copiar");
+      }
+    };
+
+    const handleSalvar = async () => {
+      if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
+
+      const trocarSenha = novaSenha.length > 0;
+      if (trocarSenha) {
+        if (novaSenha.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
+        if (novaSenha !== confirmaSenha) { toast.error("Confirmação de senha não confere"); return; }
+      }
+
+      setSaving(true);
+      try {
+        // Atualiza dados do parceiro (fornecedores)
+        await new Promise<void>((resolve, reject) => {
+          updateParceiro.mutate(
+            { id: parceiroId, nome: nome.toUpperCase(), subtipo_parceiro: subtipo, ativo },
+            { onSuccess: () => resolve(), onError: (e) => reject(e) }
+          );
+        });
+
+        // Se mudou senha, chama edge function manage-user
+        if (trocarSenha) {
+          const userId = await findUserId();
+          if (!userId) {
+            toast.error("Não foi possível localizar o login deste parceiro para atualizar a senha");
+          } else {
+            const { data, error } = await supabase.functions.invoke("manage-user", {
+              body: { action: "update", user_id: userId, password: novaSenha, full_name: nome.toUpperCase() },
+            });
+            if (error) throw error;
+            if (!data?.ok) throw new Error(data?.error ?? "Erro ao atualizar senha");
+            toast.success("Senha atualizada com sucesso");
+          }
+        }
+
+        toast.success("Parceiro atualizado com sucesso");
+        setOpenEdit(null);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Erro ao salvar");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <Dialog open onOpenChange={(o) => !o && setOpenEdit(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Parceiro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">Nome completo *</label>
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Email</label>
+              <input
+                value={parceiro.email ?? ""}
+                disabled
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-muted text-sm text-muted-foreground"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">O email de login não pode ser alterado.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-medium">Tipo</label>
+                <select
+                  value={subtipo}
+                  onChange={(e) => setSubtipo(e.target.value)}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                >
+                  {SUBTIPOS_PARCEIRO.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Status</label>
+                <select
+                  value={ativo ? "1" : "0"}
+                  onChange={(e) => setAtivo(e.target.value === "1")}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                >
+                  <option value="1">Ativo</option>
+                  <option value="0">Inativo</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-3 mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Redefinir senha</label>
+                <button
+                  type="button"
+                  onClick={gerarSenhaTemp}
+                  className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                >
+                  <KeyRound size={12} /> Gerar senha temporária
+                </button>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Nova senha</label>
+                <input
+                  type="text"
+                  value={novaSenha}
+                  onChange={(e) => { setNovaSenha(e.target.value); setTempSenha(null); }}
+                  placeholder="Deixe em branco para manter a atual"
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                />
+              </div>
+              <div className="mt-2">
+                <label className="text-xs font-medium">Confirmar nova senha</label>
+                <input
+                  type="text"
+                  value={confirmaSenha}
+                  onChange={(e) => setConfirmaSenha(e.target.value)}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                />
+              </div>
+              {tempSenha && (
+                <div className="mt-2 flex items-center gap-2 p-2 rounded bg-secondary/40 border border-border">
+                  <span className="text-xs flex-1">Senha gerada: <span className="font-mono font-semibold">{tempSenha}</span></span>
+                  <button onClick={copiarTemp} className="text-primary hover:underline text-[11px] flex items-center gap-1">
+                    <Copy size={12} /> Copiar
+                  </button>
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Mínimo 6 caracteres. Vazio = senha atual mantida.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenEdit(null)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSalvar} disabled={saving}>
+              <Save size={14} className="mr-1" />
+              {saving ? "Salvando…" : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
     const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
     const vinculadosIds = useMemo(
