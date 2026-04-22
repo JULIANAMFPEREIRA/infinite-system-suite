@@ -15,6 +15,7 @@ import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel
 const STATUS_OPTIONS = [
   { value: "", label: "Todos status" },
   { value: "pendente", label: "Pendente" },
+  { value: "parcial", label: "Parcial" },
   { value: "pago", label: "Pago" },
   { value: "vencido", label: "Vencido" },
   { value: "cancelado", label: "Cancelado" },
