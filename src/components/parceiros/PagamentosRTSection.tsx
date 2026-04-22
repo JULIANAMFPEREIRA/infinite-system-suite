@@ -225,6 +225,47 @@ export const PagamentosRTSection = ({ projetoId }: Props) => {
         )}
       </div>
 
+      <div>
+        <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+          <MessageCircle size={12} /> Notificações WhatsApp
+        </h4>
+        {waLogs.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma notificação enviada.</p>
+        ) : (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-secondary/60">
+                <tr>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Data</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Parceiro</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Telefone</th>
+                  <th className="text-left px-2.5 py-1.5 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waLogs.map((l: any) => {
+                  const ok = l.status === "enviado";
+                  const sim = l.status === "simulado";
+                  const Icon = ok ? CheckCircle2 : AlertCircle;
+                  const color = ok ? "text-success" : sim ? "text-muted-foreground" : "text-destructive";
+                  const label = ok ? "Enviado" : sim ? "Simulado (sem provedor)" : l.status === "sem_telefone" ? "Sem telefone" : "Erro";
+                  return (
+                    <tr key={l.id} className="border-t border-border">
+                      <td className="px-2.5 py-1.5">{new Date(l.data).toLocaleString("pt-BR")}</td>
+                      <td className="px-2.5 py-1.5">{l.fornecedores?.nome ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-muted-foreground">{l.telefone || "—"}</td>
+                      <td className={`px-2.5 py-1.5 ${color}`} title={l.erro || ""}>
+                        <span className="inline-flex items-center gap-1"><Icon size={11} />{label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Lançar pagamento de RT</DialogTitle></DialogHeader>
