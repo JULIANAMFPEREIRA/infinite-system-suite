@@ -43,11 +43,11 @@ const PortalParceiro = () => {
 
       const { data: vinculos } = await supabase
         .from("projeto_parceiros")
-        .select("projeto_id, projetos(id, nome, status, endereco_obra, data_inicio, data_previsao, descricao, cliente_id, clientes(nome))")
+        .select("projeto_id, rt_tipo, rt_base, rt_percentual, rt_valor, rt_total, rt_recebido, projetos(id, nome, status, endereco_obra, data_inicio, data_previsao, descricao, cliente_id, clientes(nome))")
         .eq("parceiro_id", forn.id);
 
       const projetos = (vinculos ?? [])
-        .map((v: any) => v.projetos)
+        .map((v: any) => v.projetos ? { ...v.projetos, _rt_total: Number(v.rt_total ?? 0), _rt_recebido: Number(v.rt_recebido ?? 0) } : null)
         .filter(Boolean);
 
       const { data: comissoes } = await supabase
@@ -140,8 +140,9 @@ const PortalParceiro = () => {
   const handleLogout = async () => { await signOut(); navigate("/login"); };
 
   // Resumo de RT
-  const rtTotal = (data?.comissoes ?? []).reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-  const rtPago = (data?.comissoes ?? []).filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+  // Resumo de RT — agora vem direto dos vínculos (projeto_parceiros)
+  const rtTotal = projetos.reduce((s: number, p: any) => s + (p._rt_total || 0), 0);
+  const rtPago = projetos.reduce((s: number, p: any) => s + (p._rt_recebido || 0), 0);
   const rtPendente = rtTotal - rtPago;
 
   if (isLoading) {
