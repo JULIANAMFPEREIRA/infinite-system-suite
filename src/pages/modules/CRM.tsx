@@ -1158,12 +1158,15 @@ const CRM = () => {
   }, [orcDescontoTipo, orcDescontoValor, subtotalOrcamento]);
   const totalCrmVendaComDesconto = subtotalOrcamento - descontoCalculado;
 
-  const totalFretesExtras = useMemo(
+  // Frete previsto = orcFrete (valor do contrato/projeto).
+  // Fretes realizados = lançamentos individuais (fretesExtras) — somatório dos valores efetivamente gastos.
+  const fretePrevisto = Number(orcFrete) || 0;
+  const freteRealizado = useMemo(
     () => fretesExtras.reduce((s, f) => s + (Number(f.valor) || 0), 0),
     [fretesExtras]
   );
-  const totalFretesGeral = orcFrete + totalFretesExtras;
-  const totalCrmCustoComExtras = totalCrmCusto + totalFretesGeral + orcImposto + totalCrmRt;
+  const fretePendente = Math.max(fretePrevisto - freteRealizado, 0);
+  const totalCrmCustoComExtras = totalCrmCusto + fretePrevisto + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
