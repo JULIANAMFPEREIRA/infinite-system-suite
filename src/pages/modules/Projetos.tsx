@@ -799,8 +799,12 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
     setProdutoId(p.id); setShowSuggestions(false);
   };
 
-  const totalCusto = itens?.reduce((acc, i) => acc + (i.quantidade ?? 1) * (i.preco_custo ?? 0), 0) ?? 0;
-  const totalVenda = itens?.reduce((acc, i) => acc + (i.quantidade ?? 1) * (i.preco_venda ?? 0), 0) ?? 0;
+  const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const calcTotalCustoItem = (item: any) => (Number(item.quantidade) || 0) * (Number(item.preco_custo) || 0);
+  const calcTotalVendaItem = (item: any) => (Number(item.quantidade) || 0) * (Number(item.preco_venda) || 0);
+
+  const totalCusto = itens?.reduce((acc, i) => acc + calcTotalCustoItem(i), 0) ?? 0;
+  const totalVenda = itens?.reduce((acc, i) => acc + calcTotalVendaItem(i), 0) ?? 0;
   const margem = totalVenda > 0 ? ((totalVenda - totalCusto) / totalVenda) * 100 : 0;
   const lucro = totalVenda - totalCusto;
 
@@ -872,10 +876,10 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
       </div>
 
       <div className="flex gap-4 text-[11px] flex-wrap">
-        <span className="text-muted-foreground">Custo: <strong className="text-foreground">R$ {totalCusto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
-        <span className="text-muted-foreground">Venda: <strong className="text-foreground">R$ {totalVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+        <span className="text-muted-foreground">Custo: <strong className="text-foreground">{formatCurrency(totalCusto)}</strong></span>
+        <span className="text-muted-foreground">Venda: <strong className="text-foreground">{formatCurrency(totalVenda)}</strong></span>
         <span className="text-muted-foreground">Margem: <strong className={margem > 0 ? "text-success" : "text-destructive"}>{margem.toFixed(1)}%</strong></span>
-        <span className="text-muted-foreground">Lucro: <strong className={lucro > 0 ? "text-success" : "text-destructive"}>R$ {lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+        <span className="text-muted-foreground">Lucro: <strong className={lucro > 0 ? "text-success" : "text-destructive"}>{formatCurrency(lucro)}</strong></span>
       </div>
 
       {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : itens && itens.length > 0 && (
@@ -887,7 +891,9 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
                 <th className="text-left px-2 py-1.5 font-semibold border-b border-border w-20">Tipo</th>
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-12">Qtd</th>
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-20">Custo</th>
+                <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-24">Total Custo</th>
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-20">Venda</th>
+                <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-24">Total Venda</th>
                 <th className="text-right px-2 py-1.5 font-semibold border-b border-border w-14">RT%</th>
                 <th className="text-center px-2 py-1.5 font-semibold border-b border-border w-10"></th>
               </tr>
@@ -898,8 +904,10 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
                   <td className="px-2 py-1.5">{item.descricao}</td>
                   <td className="px-2 py-1.5 capitalize">{item.tipo}</td>
                   <td className="px-2 py-1.5 text-right">{item.quantidade}</td>
-                  <td className="px-2 py-1.5 text-right">R$ {(item.preco_custo ?? 0).toLocaleString("pt-BR")}</td>
-                  <td className="px-2 py-1.5 text-right">R$ {(item.preco_venda ?? 0).toLocaleString("pt-BR")}</td>
+                  <td className="px-2 py-1.5 text-right">{formatCurrency(Number(item.preco_custo) || 0)}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(calcTotalCustoItem(item))}</td>
+                  <td className="px-2 py-1.5 text-right">{formatCurrency(Number(item.preco_venda) || 0)}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(calcTotalVendaItem(item))}</td>
                   <td className="px-2 py-1.5 text-right text-primary">{item.rt_percentual ?? 0}%</td>
                   <td className="px-2 py-1.5 text-center">
                     <button onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
@@ -907,6 +915,15 @@ const ProjetoItensSection = ({ projetoId, projetoNome, clienteId, empresaId, num
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border bg-secondary/30">
+                <td className="px-2 py-2 font-semibold text-foreground" colSpan={4}>Total</td>
+                <td className="px-2 py-2 text-right font-semibold text-foreground">{formatCurrency(totalCusto)}</td>
+                <td className="px-2 py-2" />
+                <td className="px-2 py-2 text-right font-semibold text-foreground">{formatCurrency(totalVenda)}</td>
+                <td className="px-2 py-2" colSpan={2} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
