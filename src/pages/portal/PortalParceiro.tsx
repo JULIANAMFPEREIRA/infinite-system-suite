@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   FolderKanban, DollarSign, LogOut, Clock, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight, MessageSquare, History,
+  Wallet, CheckCircle2, Hourglass,
 } from "lucide-react";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -389,21 +390,45 @@ const PortalParceiro = () => {
 
   const renderProjectList = () => (
     <div className="space-y-4 animate-fade-in">
-      <h2 className="text-sm font-bold text-foreground">Meus Projetos ({projetos.length})</h2>
+      {/* Cards principais — destaque com cores e ícones */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Total de RT</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Wallet size={16} className="text-primary" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-foreground tracking-tight">{fmt(rtTotal)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">{projetos.length} {projetos.length === 1 ? "projeto" : "projetos"} vinculado{projetos.length === 1 ? "" : "s"}</p>
+        </div>
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Recebido</span>
+            <div className="w-8 h-8 rounded-lg bg-success/15 flex items-center justify-center">
+              <CheckCircle2 size={16} className="text-success" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-success tracking-tight">{fmt(rtPago)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {rtTotal > 0 ? Math.round((rtPago / rtTotal) * 100) : 0}% do total
+          </p>
+        </div>
+        <div className="group bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Pendente</span>
+            <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
+              <Hourglass size={16} className="text-warning" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-warning tracking-tight">{fmt(rtPendente)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">A receber</p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">RT Total</p>
-          <p className="text-base font-bold text-foreground mt-1">{fmt(rtTotal)}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">Pago</p>
-          <p className="text-base font-bold text-success mt-1">{fmt(rtPago)}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase">Pendente</p>
-          <p className="text-base font-bold text-warning mt-1">{fmt(rtPendente)}</p>
-        </div>
+      <div className="flex items-center justify-between pt-1">
+        <h2 className="text-sm font-bold text-foreground">Meus Projetos</h2>
+        <span className="text-[11px] text-muted-foreground">{projetos.length} no total</span>
       </div>
 
       <div className="space-y-2">
@@ -429,7 +454,7 @@ const PortalParceiro = () => {
             <button
               key={p.id}
               onClick={() => setSelectedProjeto(p.id)}
-              className="w-full text-left bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors space-y-2"
+              className="w-full text-left bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:border-primary/50 hover:-translate-y-0.5 transition-all space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -482,16 +507,30 @@ const PortalParceiro = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderKanban size={18} className="text-primary" />
-            <div>
-              <h1 className="text-sm font-bold text-foreground">Portal do Parceiro</h1>
-              <p className="text-[11px] text-muted-foreground">Olá, {data.fornecedor.nome}</p>
+      <header className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm shrink-0">
+              {data.fornecedor.nome
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((n: string) => n[0]?.toUpperCase())
+                .join("")}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-foreground truncate">
+                Olá, {data.fornecedor.nome.split(" ")[0]}
+              </h1>
+              <p className="text-[11px] text-muted-foreground truncate">
+                Acompanhe seus projetos e comissões
+              </p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+          <button
+            onClick={handleLogout}
+            className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors shrink-0"
+          >
             <LogOut size={14} /> Sair
           </button>
         </div>
