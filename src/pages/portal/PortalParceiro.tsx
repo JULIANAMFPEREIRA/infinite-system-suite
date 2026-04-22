@@ -93,6 +93,19 @@ const PortalParceiro = () => {
     enabled: !!active,
   });
 
+  // Pagamentos de RT do projeto ativo (filtrado por parceiro logado via RLS)
+  const { data: pagamentosRT } = useQuery({
+    queryKey: ["portal_parc_pag_rt", active],
+    queryFn: async () => {
+      const { data } = await supabase.from("pagamentos_rt")
+        .select("id, valor, data, observacao")
+        .eq("projeto_id", active!)
+        .order("data", { ascending: false });
+      return data ?? [];
+    },
+    enabled: !!active,
+  });
+
   // Imagens (crm_arquivos)
   const clienteId = activeProjeto ? (activeProjeto as any).cliente_id : null;
   const { data: arquivos, refetch: refetchArquivos } = useQuery({
