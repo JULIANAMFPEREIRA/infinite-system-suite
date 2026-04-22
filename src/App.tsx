@@ -41,9 +41,13 @@ import CadastroLivre from "./pages/CadastroLivre";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, roles, loading } = useAuth();
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
+  // Redireciona perfis de portal automaticamente
+  if (roles.includes("parceiro")) return <Navigate to="/portal/parceiro" replace />;
+  if (roles.includes("arquiteto") && !roles.includes("admin")) return <Navigate to="/portal/arquiteto" replace />;
+  if (roles.includes("cliente") && !roles.includes("admin")) return <Navigate to="/portal/cliente" replace />;
   return <>{children}</>;
 };
 

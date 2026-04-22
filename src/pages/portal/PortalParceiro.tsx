@@ -408,9 +408,15 @@ const PortalParceiro = () => {
 
       <div className="space-y-2">
         {projetos.length === 0 && (
-          <p className="text-xs text-muted-foreground py-6 text-center">
-            Nenhum projeto vinculado a você no momento.
-          </p>
+          <div className="bg-card border border-border rounded-lg p-8 text-center space-y-2">
+            <FolderKanban size={32} className="mx-auto text-muted-foreground/40" />
+            <p className="text-sm font-medium text-foreground">
+              Você ainda não possui projetos vinculados
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Assim que um projeto for vinculado a você, ele aparecerá aqui.
+            </p>
+          </div>
         )}
         {projetos.map((p: any) => {
           const prog = progressMap[p.status as StatusProjeto] ?? 0;
