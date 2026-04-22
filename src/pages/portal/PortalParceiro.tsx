@@ -420,6 +420,11 @@ const PortalParceiro = () => {
         )}
         {projetos.map((p: any) => {
           const prog = progressMap[p.status as StatusProjeto] ?? 0;
+          const projComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === p.id);
+          const rtTot = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+          const rtRec = projComissoes.filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+          const rtPen = rtTot - rtRec;
+          const rtPct = rtTot > 0 ? Math.round((rtRec / rtTot) * 100) : 0;
           return (
             <button
               key={p.id}
@@ -440,6 +445,33 @@ const PortalParceiro = () => {
               <div className="flex items-center gap-3">
                 <Progress value={prog} className="h-1.5 flex-1" />
                 <span className="text-[10px] text-muted-foreground w-8 text-right">{prog}%</span>
+              </div>
+
+              {/* RT do projeto */}
+              <div className="pt-2 mt-1 border-t border-border/60 space-y-1.5">
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div>
+                    <p className="text-muted-foreground uppercase text-[9px]">RT Total</p>
+                    <p className="font-semibold text-foreground">{fmt(rtTot)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground uppercase text-[9px]">Recebido</p>
+                    <p className="font-semibold text-success">{fmt(rtRec)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground uppercase text-[9px]">Pendente</p>
+                    <p className="font-semibold text-warning">{fmt(rtPen)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full bg-success transition-all"
+                      style={{ width: `${rtPct}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground w-10 text-right">{rtPct}%</span>
+                </div>
               </div>
             </button>
           );
