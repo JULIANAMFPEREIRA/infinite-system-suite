@@ -446,9 +446,8 @@ const PortalParceiro = () => {
         )}
         {projetos.map((p: any) => {
           const prog = progressMap[p.status as StatusProjeto] ?? 0;
-          const projComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === p.id);
-          const rtTot = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-          const rtRec = projComissoes.filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+          const rtTot = Number(p._rt_total || 0);
+          const rtRec = Number(p._rt_recebido || 0);
           const rtPen = rtTot - rtRec;
           const rtPct = rtTot > 0 ? Math.round((rtRec / rtTot) * 100) : 0;
           return (
