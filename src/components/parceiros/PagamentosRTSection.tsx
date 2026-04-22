@@ -63,6 +63,23 @@ export const PagamentosRTSection = ({ projetoId }: Props) => {
     enabled: !!projetoId,
   });
 
+  // Logs de WhatsApp para os pagamentos deste projeto
+  const pagamentoIds = pagamentos.map((p: any) => p.id);
+  const { data: waLogs = [] } = useQuery({
+    queryKey: ["whatsapp_logs_projeto", projetoId, pagamentoIds.join(",")],
+    queryFn: async () => {
+      if (pagamentoIds.length === 0) return [];
+      const { data, error } = await (supabase as any)
+        .from("whatsapp_logs")
+        .select("id, data, status, telefone, erro, parceiro_id, fornecedores:parceiro_id(nome)")
+        .in("pagamento_rt_id", pagamentoIds)
+        .order("data", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: pagamentoIds.length > 0,
+  });
+
   const createPagamento = useMutation({
     mutationFn: async () => {
       const valorNum = Number(form.valor);
