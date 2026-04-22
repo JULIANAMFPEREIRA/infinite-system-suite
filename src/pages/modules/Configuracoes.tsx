@@ -630,6 +630,7 @@ const Configuracoes = () => {
     categorias: renderCategorias,
     status_projeto: renderStatusProjeto,
     transportadoras: renderTransportadoras,
+    parceiros: () => <ParceirosManager />,
   };
 
   return (
