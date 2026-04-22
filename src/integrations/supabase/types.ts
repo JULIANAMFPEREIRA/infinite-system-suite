@@ -1266,6 +1266,45 @@ export type Database = {
           },
         ]
       }
+      notificacoes: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          lida: boolean
+          mensagem: string
+          parceiro_id: string
+          projeto_id: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id: string
+          id?: string
+          lida?: boolean
+          mensagem: string
+          parceiro_id: string
+          projeto_id?: string | null
+          tipo?: string
+          titulo: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          parceiro_id?: string
+          projeto_id?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       pagamentos_rt: {
         Row: {
           created_at: string
