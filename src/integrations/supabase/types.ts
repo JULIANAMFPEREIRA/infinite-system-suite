@@ -1773,6 +1773,7 @@ export type Database = {
         | "operacional"
         | "comercial"
         | "funcionario"
+        | "parceiro"
       origem_lead:
         | "whatsapp"
         | "instagram"
@@ -1953,6 +1954,7 @@ export const Constants = {
         "operacional",
         "comercial",
         "funcionario",
+        "parceiro",
       ],
       origem_lead: ["whatsapp", "instagram", "indicacao", "outro", "arquiteto"],
       status_comissao: ["pendente", "pago"],
