@@ -1,0 +1,2 @@
+ALTER TABLE public.projeto_parceiros DROP CONSTRAINT IF EXISTS projeto_parceiros_rt_base_check;
+ALTER TABLE public.projeto_parceiros ADD CONSTRAINT projeto_parceiros_rt_base_check CHECK (rt_base IN ('venda_total','itens','rt_itens'));
