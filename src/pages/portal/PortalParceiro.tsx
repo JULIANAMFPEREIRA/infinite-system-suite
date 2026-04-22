@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   FolderKanban, DollarSign, LogOut, Clock, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight, MessageSquare, History,
+  Wallet, CheckCircle2, Hourglass,
 } from "lucide-react";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
