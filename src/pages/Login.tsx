@@ -27,6 +27,16 @@ const Login = () => {
       } else {
         const { error } = await signIn(email, password);
         if (error) { toast.error(error.message); return; }
+        // Verifica role para redirecionar parceiros/arquitetos/clientes ao portal correto
+        const { data: { user } } = await (await import("@/integrations/supabase/client")).supabase.auth.getUser();
+        if (user) {
+          const { data: rolesData } = await (await import("@/integrations/supabase/client")).supabase
+            .from("user_roles").select("role").eq("user_id", user.id);
+          const userRoles = rolesData?.map(r => r.role) ?? [];
+          if (userRoles.includes("parceiro")) { navigate("/portal/parceiro"); return; }
+          if (userRoles.includes("arquiteto")) { navigate("/portal/arquiteto"); return; }
+          if (userRoles.includes("cliente")) { navigate("/portal/cliente"); return; }
+        }
         navigate("/");
       }
     } finally {

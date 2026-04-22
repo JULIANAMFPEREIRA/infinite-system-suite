@@ -33,6 +33,7 @@ import ItensComprar from "./pages/modules/ItensComprar";
 import Orcamentos from "./pages/modules/Orcamentos";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
+import PortalParceiro from "./pages/portal/PortalParceiro";
 import NotFound from "./pages/NotFound";
 import FormularioCliente from "./pages/FormularioCliente";
 import CadastroLivre from "./pages/CadastroLivre";
@@ -74,6 +75,7 @@ const App = () => (
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto"]}><PortalArquiteto /></RoleRoute>} />
+            <Route path="/portal/parceiro" element={<RoleRoute allowedRoles={["parceiro"]}><PortalParceiro /></RoleRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<ModuleRoute module="crm"><CRM /></ModuleRoute>} />
