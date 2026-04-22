@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useParceiros, useUpdateParceiro, useParceiroProjetos, useVincularParceiro, useDesvincularParceiro, SUBTIPOS_PARCEIRO } from "@/hooks/useParceiros";
+import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO } from "@/hooks/useParceiros";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Link2, X, UserPlus } from "lucide-react";
+import { UserPlus, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const ParceirosManager = () => {
@@ -13,8 +13,6 @@ const ParceirosManager = () => {
   const qc = useQueryClient();
   const { data: parceiros = [], isLoading } = useParceiros();
   const updateParceiro = useUpdateParceiro();
-  const vincular = useVincularParceiro();
-  const desvincular = useDesvincularParceiro();
 
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
