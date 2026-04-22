@@ -454,7 +454,7 @@ const PortalParceiro = () => {
             <button
               key={p.id}
               onClick={() => setSelectedProjeto(p.id)}
-              className="w-full text-left bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors space-y-2"
+              className="w-full text-left bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:border-primary/50 hover:-translate-y-0.5 transition-all space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div>
