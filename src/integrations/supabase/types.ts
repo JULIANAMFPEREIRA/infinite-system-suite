@@ -912,6 +912,7 @@ export type Database = {
           projeto_id: string | null
           status: Database["public"]["Enums"]["status_financeiro"] | null
           valor: number | null
+          valor_recebido: number
         }
         Insert: {
           cliente_id?: string | null
@@ -926,6 +927,7 @@ export type Database = {
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null
           valor?: number | null
+          valor_recebido?: number
         }
         Update: {
           cliente_id?: string | null
@@ -940,6 +942,7 @@ export type Database = {
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null
           valor?: number | null
+          valor_recebido?: number
         }
         Relationships: [
           {
@@ -1525,6 +1528,39 @@ export type Database = {
           },
         ]
       }
+      recebimentos_parciais: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          financeiro_receber_id: string
+          id: string
+          observacao: string | null
+          usuario_id: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id: string
+          financeiro_receber_id: string
+          id?: string
+          observacao?: string | null
+          usuario_id?: string | null
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          financeiro_receber_id?: string
+          id?: string
+          observacao?: string | null
+          usuario_id?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
       transportadoras: {
         Row: {
           ativo: boolean
@@ -1754,7 +1790,12 @@ export type Database = {
         | "instalado"
       status_crm: "lead" | "contato" | "proposta" | "projeto"
       status_estoque: "disponivel" | "reservado" | "instalado"
-      status_financeiro: "pendente" | "pago" | "vencido" | "cancelado"
+      status_financeiro:
+        | "pendente"
+        | "pago"
+        | "vencido"
+        | "cancelado"
+        | "parcial"
       status_projeto:
         | "orcamento"
         | "aprovado"
@@ -1926,7 +1967,13 @@ export const Constants = {
       ],
       status_crm: ["lead", "contato", "proposta", "projeto"],
       status_estoque: ["disponivel", "reservado", "instalado"],
-      status_financeiro: ["pendente", "pago", "vencido", "cancelado"],
+      status_financeiro: [
+        "pendente",
+        "pago",
+        "vencido",
+        "cancelado",
+        "parcial",
+      ],
       status_projeto: [
         "orcamento",
         "aprovado",
