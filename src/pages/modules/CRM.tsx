@@ -1158,12 +1158,15 @@ const CRM = () => {
   }, [orcDescontoTipo, orcDescontoValor, subtotalOrcamento]);
   const totalCrmVendaComDesconto = subtotalOrcamento - descontoCalculado;
 
-  const totalFretesExtras = useMemo(
+  // Frete previsto = orcFrete (valor do contrato/projeto).
+  // Fretes realizados = lançamentos individuais (fretesExtras) — somatório dos valores efetivamente gastos.
+  const fretePrevisto = Number(orcFrete) || 0;
+  const freteRealizado = useMemo(
     () => fretesExtras.reduce((s, f) => s + (Number(f.valor) || 0), 0),
     [fretesExtras]
   );
-  const totalFretesGeral = orcFrete + totalFretesExtras;
-  const totalCrmCustoComExtras = totalCrmCusto + totalFretesGeral + orcImposto + totalCrmRt;
+  const fretePendente = Math.max(fretePrevisto - freteRealizado, 0);
+  const totalCrmCustoComExtras = totalCrmCusto + fretePrevisto + orcImposto + totalCrmRt;
 
   // Reset simulation when orcamento changes
   const loadSimFromOrc = useCallback((orc: any) => {
@@ -2182,7 +2185,7 @@ const CRM = () => {
                         </select>
                       </div>
                       <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete previsto (R$)</label>
                         <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
                       </div>
                       <div className="space-y-0.5">
@@ -2199,13 +2202,13 @@ const CRM = () => {
                     {/* ── Múltiplos fretes adicionais ── */}
                     <div className="pt-2 mt-1 border-t border-warning/20 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes adicionais</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes realizados (lançamentos)</span>
                         <button
                           type="button"
                           onClick={() => setFretesExtras(prev => [...prev, { id: crypto.randomUUID(), descricao: "", transportadora: "", valor: 0, vencimento: "" }])}
                           className="text-[10px] font-semibold text-warning hover:underline flex items-center gap-1"
                         >
-                          <Plus size={11} /> Adicionar frete
+                          <Plus size={11} /> Lançar frete
                         </button>
                       </div>
                       {fretesExtras.length > 0 && (
@@ -2252,8 +2255,10 @@ const CRM = () => {
                               </button>
                             </div>
                           ))}
-                          <div className="flex items-center gap-3 pt-1 text-[11px]">
-                            <span className="text-foreground"><span className="text-muted-foreground">Total fretes:</span> <strong>R$ {totalFretesGeral.toFixed(2)}</strong></span>
+                          <div className="flex items-center gap-4 pt-1 text-[11px]">
+                            <span className="text-foreground"><span className="text-muted-foreground">Previsto:</span> <strong>R$ {fretePrevisto.toFixed(2)}</strong></span>
+                            <span className="text-success"><span className="text-muted-foreground">Realizado:</span> <strong>R$ {freteRealizado.toFixed(2)}</strong></span>
+                            <span className="text-warning"><span className="text-muted-foreground">Falta pagar:</span> <strong>R$ {fretePendente.toFixed(2)}</strong></span>
                           </div>
                         </div>
                       )}
@@ -2307,12 +2312,9 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
-                // Frete/Imposto efetivamente PAGOS — vindos do Contas a Pagar vinculados ao projeto deste orçamento
+                // Imposto efetivamente PAGO — vindo do Contas a Pagar vinculado ao projeto deste orçamento
                 const projetoVinculadoId = (clienteProjetos ?? []).find((p: any) => p.orcamento_id === activeOrcamentoId)?.id;
                 const contasProjeto = (contasFreteImposto ?? []).filter((c: any) => c.projeto_id === projetoVinculadoId);
-                const fretesPagosValor = contasProjeto
-                  .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Frete"))
-                  .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
                 const impostoPagoValor = contasProjeto
                   .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Imposto"))
                   .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
@@ -2325,17 +2327,17 @@ const CRM = () => {
                 }, 0);
                 const rtPendente = Math.max(rtTotal - rtPago, 0);
 
-                // TOTAL CUSTO DO PROJETO = todos os itens (comprados + pendentes) + frete + imposto + RT total
+                // TOTAL CUSTO DO PROJETO = itens (comprados + pendentes) + FRETE PREVISTO + imposto + RT total
                 const totalCusto =
                   produtosCompradoCusto + produtosPendenteCusto +
                   servicosCompradoCusto + servicosPendenteCusto +
-                  totalFretesGeral + impostoValor + rtTotal;
+                  fretePrevisto + impostoValor + rtTotal;
 
-                // TOTAL COMPRADO = itens comprados/pagos + FRETE PAGO (via Contas a Pagar) + IMPOSTO PAGO + RT PAGA
+                // TOTAL COMPRADO = itens comprados/pagos + FRETE REALIZADO (lançamentos) + IMPOSTO PAGO + RT PAGA
                 const totalComprado =
                   produtosCompradoCusto +
                   servicosCompradoCusto +
-                  fretesPagosValor +
+                  freteRealizado +
                   impostoPagoValor +
                   rtPago;
 
