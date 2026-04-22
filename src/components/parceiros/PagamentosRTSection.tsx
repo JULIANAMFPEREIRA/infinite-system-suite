@@ -64,27 +64,6 @@ export const PagamentosRTSection = ({ projetoId }: Props) => {
   });
 
   const createPagamento = useMutation({
-    // placeholder
-  } as any);
-
-  // Logs de WhatsApp para os pagamentos deste projeto
-  const pagamentoIds = pagamentos.map((p: any) => p.id);
-  const { data: waLogs = [] } = useQuery({
-    queryKey: ["whatsapp_logs_projeto", projetoId, pagamentoIds.join(",")],
-    queryFn: async () => {
-      if (pagamentoIds.length === 0) return [];
-      const { data, error } = await (supabase as any)
-        .from("whatsapp_logs")
-        .select("id, data, status, telefone, erro, mensagem, parceiro_id, fornecedores:parceiro_id(nome)")
-        .in("pagamento_rt_id", pagamentoIds)
-        .order("data", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: pagamentoIds.length > 0,
-  });
-
-  const _placeholderRemoveMe = useMutation({
     mutationFn: async () => {
       const valorNum = Number(form.valor);
       const parsed = pagamentoSchema.safeParse({
