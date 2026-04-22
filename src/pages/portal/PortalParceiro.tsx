@@ -161,8 +161,8 @@ const PortalParceiro = () => {
   const renderProjectDetail = () => {
     if (!activeProjeto) return null;
     const projetoComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === active);
-    const rtProjTotal = projetoComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-    const rtProjPago = projetoComissoes.filter((c: any) => c.status === "pago").reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+    const rtProjTotal = Number((activeProjeto as any)._rt_total ?? 0);
+    const rtProjPago = Number((activeProjeto as any)._rt_recebido ?? 0);
     const rtProjPend = rtProjTotal - rtProjPago;
 
     return (
