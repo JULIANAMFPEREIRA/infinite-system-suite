@@ -507,16 +507,30 @@ const PortalParceiro = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderKanban size={18} className="text-primary" />
-            <div>
-              <h1 className="text-sm font-bold text-foreground">Portal do Parceiro</h1>
-              <p className="text-[11px] text-muted-foreground">Olá, {data.fornecedor.nome}</p>
+      <header className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm shrink-0">
+              {data.fornecedor.nome
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((n: string) => n[0]?.toUpperCase())
+                .join("")}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-foreground truncate">
+                Olá, {data.fornecedor.nome.split(" ")[0]}
+              </h1>
+              <p className="text-[11px] text-muted-foreground truncate">
+                Acompanhe seus projetos e comissões
+              </p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+          <button
+            onClick={handleLogout}
+            className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors shrink-0"
+          >
             <LogOut size={14} /> Sair
           </button>
         </div>
