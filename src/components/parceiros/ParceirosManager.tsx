@@ -225,7 +225,7 @@ const ParceirosManager = () => {
               <th className="text-left px-2.5 py-2 font-semibold">Email</th>
               <th className="text-left px-2.5 py-2 font-semibold">Tipo</th>
               <th className="text-center px-2.5 py-2 font-semibold">Status</th>
-              <th className="text-center px-2.5 py-2 font-semibold">Projetos</th>
+              <th className="text-left px-2.5 py-2 font-semibold">Projetos vinculados</th>
               <th className="w-20"></th>
             </tr>
           </thead>
@@ -267,6 +267,27 @@ const ParceirosManager = () => {
                     {p.ativo ? "Ativo" : "Inativo"}
                   </button>
                 </td>
+                <td className="px-2.5 py-1.5">
+                  {(() => {
+                    const nomes = vinculosResumo[p.id] ?? [];
+                    const count = nomes.length;
+                    if (count === 0) {
+                      return <span className="text-[11px] text-muted-foreground">Nenhum projeto</span>;
+                    }
+                    const preview = nomes.slice(0, 2).join(", ");
+                    const extra = count > 2 ? `, +${count - 2}…` : "";
+                    return (
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-medium text-foreground">
+                          {count} projeto{count > 1 ? "s" : ""} vinculado{count > 1 ? "s" : ""}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[260px]" title={nomes.join(", ")}>
+                          {preview}{extra}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="px-2.5 py-1.5 text-center">
                   <button
                     onClick={() => setOpenVincular(p.id)}
@@ -275,7 +296,6 @@ const ParceirosManager = () => {
                     Gerenciar
                   </button>
                 </td>
-                <td className="px-2.5 py-1.5 text-center"></td>
               </tr>
             ))}
           </tbody>
