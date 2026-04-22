@@ -5,7 +5,7 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Wallet } from "lucide-react";
+import { Plus, Trash2, Wallet, MessageCircle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
