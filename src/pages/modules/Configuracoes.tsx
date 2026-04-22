@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronRight, Shield,
 } from "lucide-react";
 import UserPermissionsEditor from "@/components/settings/UserPermissionsEditor";
+import ParceirosManager from "@/components/parceiros/ParceirosManager";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ type Section =
   | "empresa"
   | "usuarios"
   | "funcionarios"
+  | "parceiros"
   | "formas_pagamento"
   | "tipos_financeiros"
   | "categorias"
@@ -39,6 +41,7 @@ const menuGroups = [
     items: [
       { key: "usuarios" as Section, label: "Usuários", icon: UserCog },
       { key: "funcionarios" as Section, label: "Funcionários", icon: Users },
+      { key: "parceiros" as Section, label: "Parceiros", icon: Shield },
     ],
   },
   {
