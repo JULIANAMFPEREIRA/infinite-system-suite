@@ -310,7 +310,20 @@ const FinanceiroReceber = () => {
                       <td className="px-3 py-2 text-center text-muted-foreground font-medium">{parcelaLabel}</td>
                       <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
                       <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">
+                        {(() => {
+                          const total = Number(c.valor) || 0;
+                          const recebido = Number((c as any).valor_recebido) || 0;
+                          if (recebido <= 0) return <span className="text-muted-foreground">—</span>;
+                          if (recebido >= total) return <span className="text-success font-medium">{fmtBRL(recebido)}</span>;
+                          return (
+                            <span className="text-info font-medium">
+                              {fmtBRL(recebido)}
+                              <span className="text-[10px] text-muted-foreground ml-1">/ falta {fmtBRL(total - recebido)}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-center">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
                           {statusLabel(c.status ?? "pendente")}
@@ -318,7 +331,7 @@ const FinanceiroReceber = () => {
                       </td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-0.5">
-                          {c.status === "pendente" && (
+                          {c.status !== "pago" && c.status !== "cancelado" && (
                             <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
                               <Check size={14} />
                             </button>
