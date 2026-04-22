@@ -1266,6 +1266,74 @@ export type Database = {
           },
         ]
       }
+      pagamentos_rt: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          observacao: string | null
+          parceiro_id: string
+          projeto_id: string
+          projeto_parceiro_id: string
+          usuario_id: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id: string
+          id?: string
+          observacao?: string | null
+          parceiro_id: string
+          projeto_id: string
+          projeto_parceiro_id: string
+          usuario_id?: string | null
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          observacao?: string | null
+          parceiro_id?: string
+          projeto_id?: string
+          projeto_parceiro_id?: string
+          usuario_id?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_rt_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_rt_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_rt_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_rt_projeto_parceiro_id_fkey"
+            columns: ["projeto_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_parceiros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
@@ -1835,6 +1903,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalc_rt_recebido: { Args: { _pp_id: string }; Returns: undefined }
     }
     Enums: {
       acao_audit: "criacao" | "edicao" | "exclusao"
