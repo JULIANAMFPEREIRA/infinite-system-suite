@@ -570,12 +570,15 @@ const PortalParceiro = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors shrink-0"
-          >
-            <LogOut size={14} /> Sair
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <NotificacoesBell parceiroId={data.fornecedor.id} />
+            <button
+              onClick={handleLogout}
+              className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+            >
+              <LogOut size={14} /> Sair
+            </button>
+          </div>
         </div>
       </header>
       <main className="max-w-4xl mx-auto p-4">
