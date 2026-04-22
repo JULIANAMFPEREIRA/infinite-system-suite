@@ -12,6 +12,7 @@ import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
