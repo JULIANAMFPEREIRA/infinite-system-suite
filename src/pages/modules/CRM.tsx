@@ -2185,7 +2185,7 @@ const CRM = () => {
                         </select>
                       </div>
                       <div className="space-y-0.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete (R$)</label>
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Frete previsto (R$)</label>
                         <input type="number" value={orcFrete} onChange={e => setOrcFrete(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" step="0.01" min={0} />
                       </div>
                       <div className="space-y-0.5">
@@ -2202,13 +2202,13 @@ const CRM = () => {
                     {/* ── Múltiplos fretes adicionais ── */}
                     <div className="pt-2 mt-1 border-t border-warning/20 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes adicionais</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fretes realizados (lançamentos)</span>
                         <button
                           type="button"
                           onClick={() => setFretesExtras(prev => [...prev, { id: crypto.randomUUID(), descricao: "", transportadora: "", valor: 0, vencimento: "" }])}
                           className="text-[10px] font-semibold text-warning hover:underline flex items-center gap-1"
                         >
-                          <Plus size={11} /> Adicionar frete
+                          <Plus size={11} /> Lançar frete
                         </button>
                       </div>
                       {fretesExtras.length > 0 && (
