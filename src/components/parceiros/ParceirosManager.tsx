@@ -378,13 +378,13 @@ const ParceirosManager = () => {
 
     return (
       <Dialog open onOpenChange={(o) => !o && setOpenVincular(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Gerenciar projetos do parceiro</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Marque os projetos que este parceiro pode acessar. Desmarque para remover o vínculo.
+              Marque os projetos e configure a Reserva Técnica (RT) de cada um. O cálculo é automático.
             </p>
             <div className="border border-border rounded max-h-[400px] overflow-y-auto">
               <table className="w-full text-xs">
@@ -393,24 +393,28 @@ const ParceirosManager = () => {
                     <th className="w-10 text-center px-2 py-1.5">✓</th>
                     <th className="text-left px-2 py-1.5">Projeto</th>
                     <th className="text-left px-2 py-1.5">Cliente</th>
+                    <th className="text-left px-2 py-1.5 w-[360px]">Configuração de RT</th>
+                    <th className="text-right px-2 py-1.5 w-[110px]">RT total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingVinc && (
-                    <tr><td colSpan={3} className="text-center text-muted-foreground py-3">Carregando…</td></tr>
+                    <tr><td colSpan={5} className="text-center text-muted-foreground py-3">Carregando…</td></tr>
                   )}
                   {!loadingVinc && projetos.length === 0 && (
-                    <tr><td colSpan={3} className="text-center text-muted-foreground py-3">Nenhum projeto disponível.</td></tr>
+                    <tr><td colSpan={5} className="text-center text-muted-foreground py-3">Nenhum projeto disponível.</td></tr>
                   )}
                   {projetos.map((p: any) => {
                     const checked = current.has(p.id);
+                    const cfg = getCfg(p.id);
+                    const v = vinculadosMap[p.id];
+                    const rtTotalSalvo = Number(v?.rt_total ?? 0);
                     return (
                       <tr
                         key={p.id}
-                        className="border-t border-border hover:bg-secondary/20 cursor-pointer"
-                        onClick={() => toggle(p.id)}
+                        className="border-t border-border hover:bg-secondary/20"
                       >
-                        <td className="px-2 py-1.5 text-center">
+                        <td className="px-2 py-1.5 text-center align-top pt-2 cursor-pointer" onClick={() => toggle(p.id)}>
                           <input
                             type="checkbox"
                             checked={checked}
@@ -418,8 +422,55 @@ const ParceirosManager = () => {
                             onClick={(e) => e.stopPropagation()}
                           />
                         </td>
-                        <td className="px-2 py-1.5">{p.nome}</td>
-                        <td className="px-2 py-1.5 text-muted-foreground">{p.clientes?.nome ?? "—"}</td>
+                        <td className="px-2 py-1.5 align-top pt-2 cursor-pointer" onClick={() => toggle(p.id)}>{p.nome}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground align-top pt-2 cursor-pointer" onClick={() => toggle(p.id)}>{p.clientes?.nome ?? "—"}</td>
+                        <td className="px-2 py-1.5">
+                          {checked ? (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <select
+                                value={cfg.rt_tipo}
+                                onChange={(e) => updateCfg(p.id, { rt_tipo: e.target.value as any })}
+                                className="h-7 px-1 rounded border border-border bg-background text-[11px]"
+                              >
+                                <option value="percentual">%</option>
+                                <option value="fixo">R$</option>
+                              </select>
+                              {cfg.rt_tipo === "percentual" ? (
+                                <>
+                                  <input
+                                    type="number" step="0.01" min="0"
+                                    value={cfg.rt_percentual}
+                                    onChange={(e) => updateCfg(p.id, { rt_percentual: Number(e.target.value) || 0 })}
+                                    className="w-16 h-7 px-1 rounded border border-border bg-background text-[11px] text-right"
+                                    placeholder="0,00"
+                                  />
+                                  <span className="text-[10px] text-muted-foreground">sobre</span>
+                                  <select
+                                    value={cfg.rt_base}
+                                    onChange={(e) => updateCfg(p.id, { rt_base: e.target.value as any })}
+                                    className="h-7 px-1 rounded border border-border bg-background text-[11px]"
+                                  >
+                                    <option value="venda_total">Venda total</option>
+                                    <option value="itens">Itens</option>
+                                  </select>
+                                </>
+                              ) : (
+                                <input
+                                  type="number" step="0.01" min="0"
+                                  value={cfg.rt_valor}
+                                  onChange={(e) => updateCfg(p.id, { rt_valor: Number(e.target.value) || 0 })}
+                                  className="w-24 h-7 px-1 rounded border border-border bg-background text-[11px] text-right"
+                                  placeholder="0,00"
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-right align-top pt-2 font-semibold">
+                          {checked && v ? `R$ ${rtTotalSalvo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                        </td>
                       </tr>
                     );
                   })}
@@ -427,7 +478,7 @@ const ParceirosManager = () => {
               </table>
             </div>
             <div className="text-[11px] text-muted-foreground">
-              {current.size} projeto(s) selecionado(s)
+              {current.size} projeto(s) selecionado(s) — RT é recalculado automaticamente após salvar
             </div>
           </div>
           <DialogFooter>
