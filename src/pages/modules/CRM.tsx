@@ -2255,8 +2255,10 @@ const CRM = () => {
                               </button>
                             </div>
                           ))}
-                          <div className="flex items-center gap-3 pt-1 text-[11px]">
-                            <span className="text-foreground"><span className="text-muted-foreground">Total fretes:</span> <strong>R$ {totalFretesGeral.toFixed(2)}</strong></span>
+                          <div className="flex items-center gap-4 pt-1 text-[11px]">
+                            <span className="text-foreground"><span className="text-muted-foreground">Previsto:</span> <strong>R$ {fretePrevisto.toFixed(2)}</strong></span>
+                            <span className="text-success"><span className="text-muted-foreground">Realizado:</span> <strong>R$ {freteRealizado.toFixed(2)}</strong></span>
+                            <span className="text-warning"><span className="text-muted-foreground">Falta pagar:</span> <strong>R$ {fretePendente.toFixed(2)}</strong></span>
                           </div>
                         </div>
                       )}
