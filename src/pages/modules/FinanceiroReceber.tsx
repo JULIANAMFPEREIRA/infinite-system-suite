@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
+import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass, saldoRestante, isContaVencida } from "@/lib/financeiroUtils";
 import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
@@ -154,20 +154,8 @@ const FinanceiroReceber = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Filtered data
-  // Helper: check if a record is effectively overdue
-  const isVencido = (c: any) => {
-    if (c.status === "pago" || c.status === "cancelado") return false;
-    if (c.status === "vencido") return true;
-    // pendente but past due date
-    if (c.data_vencimento) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const venc = new Date(c.data_vencimento + "T00:00:00");
-      return venc < today;
-    }
-    return false;
-  };
+  // Conta vencida: pendente/parcial, com vencimento passado e saldo restante > 0
+  const isVencido = (c: any) => isContaVencida(c);
 
   const filtered = useMemo(() => {
     let list = contas ?? [];
@@ -187,17 +175,19 @@ const FinanceiroReceber = () => {
     return list;
   }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter, clienteFilter]);
 
-  // Summary (on filtered)
-  // "A Receber" = todos os valores ainda não recebidos (pendentes + vencidos), excluindo pagos e cancelados
+  // Resumo (sobre filtrado) — sempre via saldo restante
+  // "A Receber" = somatório dos saldos pendentes + parciais + vencidos (exclui pagos e cancelados)
   const totalPendente = filtered
     .filter(c => c.status !== "pago" && c.status !== "cancelado")
-    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+    .reduce((s, c) => s + saldoRestante(c), 0);
+  // "Recebido" = soma dos valores efetivamente recebidos (inclui parciais)
   const totalPago = filtered
-    .filter(c => c.status === "pago")
-    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+    .filter(c => c.status !== "cancelado")
+    .reduce((s, c) => s + (Number((c as any).valor_recebido) || (c.status === "pago" ? (Number(c.valor) || 0) : 0)), 0);
+  // "Vencido" = saldo restante das contas vencidas
   const totalVencido = filtered
     .filter(c => isVencido(c))
-    .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+    .reduce((s, c) => s + saldoRestante(c), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">

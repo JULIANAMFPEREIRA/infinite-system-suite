@@ -85,3 +85,25 @@ export const rowHighlightClass = (
   if (isDueSoon(vencimento, 5)) return "bg-warning/[0.04]";
   return "";
 };
+
+/**
+ * Saldo restante de uma conta a receber (ou a pagar) considerando recebimentos parciais.
+ * Garante que nunca seja negativo.
+ */
+export const saldoRestante = (conta: any): number => {
+  const total = Number(conta?.valor) || 0;
+  const recebido = Number(conta?.valor_recebido) || 0;
+  return Math.max(total - recebido, 0);
+};
+
+/**
+ * Indica se uma conta está vencida (pendente/parcial com vencimento passado e saldo > 0).
+ * Contas pagas ou canceladas nunca aparecem como vencidas.
+ */
+export const isContaVencida = (conta: any): boolean => {
+  if (!conta) return false;
+  if (conta.status === "pago" || conta.status === "cancelado" || conta.status === "cancelada") return false;
+  if (saldoRestante(conta) <= 0) return false;
+  if (conta.status === "vencido") return true;
+  return isOverdue(conta.data_vencimento);
+};

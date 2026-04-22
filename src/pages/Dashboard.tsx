@@ -30,7 +30,7 @@ const Dashboard = () => {
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
       const [receber, pagar, projetos, clientes, necessidades, visitas, projetoItens, compras] = await Promise.all([
-        supabase.from("financeiro_receber").select("valor, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("financeiro_receber").select("valor, valor_recebido, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("financeiro_pagar").select("valor, status, data_vencimento").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("clientes").select("id, nome").eq("deletado", false).then(r => r.data ?? []),
@@ -65,23 +65,31 @@ const Dashboard = () => {
         itensComprarValorTotal += custoUnit * qty;
       });
 
+      // saldo restante helper (considera recebimento parcial)
+      const saldo = (r: any) => Math.max((Number(r.valor) || 0) - (Number((r as any).valor_recebido) || 0), 0);
+
       const inadimplentes = receber
-        .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) < hoje)
+        .filter(r => {
+          if (r.status === "pago" || r.status === "cancelado") return false;
+          if (saldo(r) <= 0) return false;
+          return r.data_vencimento && new Date(r.data_vencimento) < hoje;
+        })
         .map(r => ({
           ...r,
+          valor_saldo: saldo(r),
           clienteNome: r.cliente_id ? clienteMap[r.cliente_id] ?? "—" : "—",
           projetoNome: r.projeto_id ? projetoMap[r.projeto_id] ?? "—" : "—",
           diasAtraso: differenceInDays(hoje, new Date(r.data_vencimento!)),
         }))
         .sort((a, b) => b.diasAtraso - a.diasAtraso);
 
-      const inadimplentesValorTotal = inadimplentes.reduce((a, r) => a + (r.valor ?? 0), 0);
+      const inadimplentesValorTotal = inadimplentes.reduce((a, r) => a + r.valor_saldo, 0);
       const clientesInadimplentesUnicos = new Set(inadimplentes.map(i => i.cliente_id).filter(Boolean)).size;
 
-      // Total a Receber GERAL (todas as pendentes, independente do mês)
+      // Total a Receber GERAL — considera saldo restante (parcial conta apenas o que falta)
       const totalReceberGeral = receber
-        .filter(r => r.status === "pendente" || r.status === "vencido")
-        .reduce((a, r) => a + (r.valor ?? 0), 0);
+        .filter(r => r.status !== "pago" && r.status !== "cancelado")
+        .reduce((a, r) => a + saldo(r), 0);
 
       // Compras do Mês (compras realizadas + itens pendentes convertidos no mês atual)
       const comprasMesValor = compras
@@ -97,13 +105,16 @@ const Dashboard = () => {
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
 
       const receberMes = receber
-        .filter(r => r.status === "pendente" && r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes)
-        .reduce((a, r) => a + (r.valor ?? 0), 0);
+        .filter(r =>
+          r.status !== "pago" && r.status !== "cancelado" &&
+          r.data_vencimento && new Date(r.data_vencimento) >= inicioMes && new Date(r.data_vencimento) <= fimMes
+        )
+        .reduce((a, r) => a + saldo(r), 0);
 
-      // Resumo Financeiro
+      // Resumo Financeiro — somar valor_recebido (inclui parciais)
       const totalRecebido = receber
-        .filter(r => r.status === "pago")
-        .reduce((a, r) => a + (r.valor ?? 0), 0);
+        .filter(r => r.status !== "cancelado")
+        .reduce((a, r) => a + (Number((r as any).valor_recebido) || (r.status === "pago" ? (Number(r.valor) || 0) : 0)), 0);
       const totalPagoEfetivo = pagar
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
