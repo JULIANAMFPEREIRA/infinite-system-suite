@@ -21,6 +21,7 @@ import AtividadeLog from "@/components/projeto/AtividadeLog";
 import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
 import { useFieldVisibility } from "@/hooks/useFieldVisibility";
+import { PagamentosRTSection } from "@/components/parceiros/PagamentosRTSection";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
@@ -390,6 +391,9 @@ const Projetos = () => {
           <TabsContent value="comissoes">
             <div className="bg-card border border-border rounded-lg p-4">
               <ProjetoComissoesSection projetoId={detailProjetoId} arquitetoId={arquitetoId || currentProjeto.arquiteto_id || ""} />
+            </div>
+            <div className="bg-card border border-border rounded-lg p-4 mt-3">
+              <PagamentosRTSection projetoId={detailProjetoId} />
             </div>
           </TabsContent>
 
