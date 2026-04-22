@@ -2312,12 +2312,9 @@ const CRM = () => {
 
                 const impostoValor = Number(orcImposto) || 0;
 
-                // Frete/Imposto efetivamente PAGOS — vindos do Contas a Pagar vinculados ao projeto deste orçamento
+                // Imposto efetivamente PAGO — vindo do Contas a Pagar vinculado ao projeto deste orçamento
                 const projetoVinculadoId = (clienteProjetos ?? []).find((p: any) => p.orcamento_id === activeOrcamentoId)?.id;
                 const contasProjeto = (contasFreteImposto ?? []).filter((c: any) => c.projeto_id === projetoVinculadoId);
-                const fretesPagosValor = contasProjeto
-                  .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Frete"))
-                  .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
                 const impostoPagoValor = contasProjeto
                   .filter((c: any) => c.status === "pago" && String(c.descricao || "").startsWith("Imposto"))
                   .reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
@@ -2330,17 +2327,17 @@ const CRM = () => {
                 }, 0);
                 const rtPendente = Math.max(rtTotal - rtPago, 0);
 
-                // TOTAL CUSTO DO PROJETO = todos os itens (comprados + pendentes) + frete + imposto + RT total
+                // TOTAL CUSTO DO PROJETO = itens (comprados + pendentes) + FRETE PREVISTO + imposto + RT total
                 const totalCusto =
                   produtosCompradoCusto + produtosPendenteCusto +
                   servicosCompradoCusto + servicosPendenteCusto +
-                  totalFretesGeral + impostoValor + rtTotal;
+                  fretePrevisto + impostoValor + rtTotal;
 
-                // TOTAL COMPRADO = itens comprados/pagos + FRETE PAGO (via Contas a Pagar) + IMPOSTO PAGO + RT PAGA
+                // TOTAL COMPRADO = itens comprados/pagos + FRETE REALIZADO (lançamentos) + IMPOSTO PAGO + RT PAGA
                 const totalComprado =
                   produtosCompradoCusto +
                   servicosCompradoCusto +
-                  fretesPagosValor +
+                  freteRealizado +
                   impostoPagoValor +
                   rtPago;
 
