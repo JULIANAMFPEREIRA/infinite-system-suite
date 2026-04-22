@@ -42,6 +42,9 @@ const FinanceiroReceber = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+  const [baixaValor, setBaixaValor] = useState<number>(0);
+  const [baixaContaAtual, setBaixaContaAtual] = useState<any>(null);
+  const [historicoReceb, setHistoricoReceb] = useState<any[]>([]);
 
   // Detail panel
   const [detailConta, setDetailConta] = useState<any>(null);
@@ -85,15 +88,62 @@ const FinanceiroReceber = () => {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const openBaixa = (id: string) => {
-    setBaixaId(id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
+  const openBaixa = async (id: string) => {
+    const conta = (contas ?? []).find((c: any) => c.id === id);
+    setBaixaId(id);
+    setBaixaContaAtual(conta);
+    setBaixaData(new Date().toISOString().split("T")[0]);
+    setBaixaForma("");
+    setBaixaObs("");
+    const totalConta = Number(conta?.valor) || 0;
+    const jaRecebido = Number((conta as any)?.valor_recebido) || 0;
+    setBaixaValor(Math.max(totalConta - jaRecebido, 0));
+    setShowBaixa(true);
+    // Load history
+    const { data } = await supabase
+      .from("recebimentos_parciais" as any)
+      .select("*")
+      .eq("financeiro_receber_id", id)
+      .order("data", { ascending: true });
+    setHistoricoReceb((data as any[]) ?? []);
   };
 
   const handleBaixa = async () => {
-    if (!baixaId) return;
+    if (!baixaId || !baixaContaAtual || !empresaId) return;
+    const valorRec = Number(baixaValor) || 0;
+    if (valorRec <= 0) { toast.error("Informe um valor maior que zero"); return; }
+    const totalConta = Number(baixaContaAtual.valor) || 0;
+    const jaRecebido = Number(baixaContaAtual.valor_recebido) || 0;
+    const novoAcumulado = jaRecebido + valorRec;
+    if (novoAcumulado > totalConta + 0.001) {
+      if (!window.confirm(`Valor excede o saldo restante (${fmtBRL(totalConta - jaRecebido)}). Deseja continuar?`)) return;
+    }
     try {
-      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
-      toast.success("Recebido!");
+      // Insert history record
+      const { error: histErr } = await supabase
+        .from("recebimentos_parciais" as any)
+        .insert({
+          empresa_id: empresaId,
+          financeiro_receber_id: baixaId,
+          valor: valorRec,
+          data: baixaData,
+          observacao: baixaObs || (baixaForma ? `Forma: ${baixaForma}` : null),
+        } as any);
+      if (histErr) throw histErr;
+
+      // Determine new status
+      let novoStatus: "pago" | "parcial" | "pendente" = "pendente";
+      if (novoAcumulado >= totalConta) novoStatus = "pago";
+      else if (novoAcumulado > 0) novoStatus = "parcial";
+
+      await updateConta.mutateAsync({
+        id: baixaId,
+        status: novoStatus as any,
+        valor_recebido: novoAcumulado as any,
+        data_pagamento: novoStatus === "pago" ? baixaData : (baixaContaAtual.data_pagamento ?? null),
+      } as any);
+
+      toast.success(novoStatus === "pago" ? "Totalmente recebido!" : "Recebimento parcial registrado");
       setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
   };
