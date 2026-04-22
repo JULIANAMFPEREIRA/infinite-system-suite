@@ -15,6 +15,7 @@ import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel
 const STATUS_OPTIONS = [
   { value: "", label: "Todos status" },
   { value: "pendente", label: "Pendente" },
+  { value: "parcial", label: "Parcial" },
   { value: "pago", label: "Pago" },
   { value: "vencido", label: "Vencido" },
   { value: "cancelado", label: "Cancelado" },
@@ -41,6 +42,9 @@ const FinanceiroReceber = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+  const [baixaValor, setBaixaValor] = useState<number>(0);
+  const [baixaContaAtual, setBaixaContaAtual] = useState<any>(null);
+  const [historicoReceb, setHistoricoReceb] = useState<any[]>([]);
 
   // Detail panel
   const [detailConta, setDetailConta] = useState<any>(null);
@@ -84,15 +88,62 @@ const FinanceiroReceber = () => {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const openBaixa = (id: string) => {
-    setBaixaId(id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
+  const openBaixa = async (id: string) => {
+    const conta = (contas ?? []).find((c: any) => c.id === id);
+    setBaixaId(id);
+    setBaixaContaAtual(conta);
+    setBaixaData(new Date().toISOString().split("T")[0]);
+    setBaixaForma("");
+    setBaixaObs("");
+    const totalConta = Number(conta?.valor) || 0;
+    const jaRecebido = Number((conta as any)?.valor_recebido) || 0;
+    setBaixaValor(Math.max(totalConta - jaRecebido, 0));
+    setShowBaixa(true);
+    // Load history
+    const { data } = await supabase
+      .from("recebimentos_parciais" as any)
+      .select("*")
+      .eq("financeiro_receber_id", id)
+      .order("data", { ascending: true });
+    setHistoricoReceb((data as any[]) ?? []);
   };
 
   const handleBaixa = async () => {
-    if (!baixaId) return;
+    if (!baixaId || !baixaContaAtual || !empresaId) return;
+    const valorRec = Number(baixaValor) || 0;
+    if (valorRec <= 0) { toast.error("Informe um valor maior que zero"); return; }
+    const totalConta = Number(baixaContaAtual.valor) || 0;
+    const jaRecebido = Number(baixaContaAtual.valor_recebido) || 0;
+    const novoAcumulado = jaRecebido + valorRec;
+    if (novoAcumulado > totalConta + 0.001) {
+      if (!window.confirm(`Valor excede o saldo restante (${fmtBRL(totalConta - jaRecebido)}). Deseja continuar?`)) return;
+    }
     try {
-      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
-      toast.success("Recebido!");
+      // Insert history record
+      const { error: histErr } = await supabase
+        .from("recebimentos_parciais" as any)
+        .insert({
+          empresa_id: empresaId,
+          financeiro_receber_id: baixaId,
+          valor: valorRec,
+          data: baixaData,
+          observacao: baixaObs || (baixaForma ? `Forma: ${baixaForma}` : null),
+        } as any);
+      if (histErr) throw histErr;
+
+      // Determine new status
+      let novoStatus: "pago" | "parcial" | "pendente" = "pendente";
+      if (novoAcumulado >= totalConta) novoStatus = "pago";
+      else if (novoAcumulado > 0) novoStatus = "parcial";
+
+      await updateConta.mutateAsync({
+        id: baixaId,
+        status: novoStatus as any,
+        valor_recebido: novoAcumulado as any,
+        data_pagamento: novoStatus === "pago" ? baixaData : (baixaContaAtual.data_pagamento ?? null),
+      } as any);
+
+      toast.success(novoStatus === "pago" ? "Totalmente recebido!" : "Recebimento parcial registrado");
       setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -259,7 +310,20 @@ const FinanceiroReceber = () => {
                       <td className="px-3 py-2 text-center text-muted-foreground font-medium">{parcelaLabel}</td>
                       <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
                       <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">
+                        {(() => {
+                          const total = Number(c.valor) || 0;
+                          const recebido = Number((c as any).valor_recebido) || 0;
+                          if (recebido <= 0) return <span className="text-muted-foreground">—</span>;
+                          if (recebido >= total) return <span className="text-success font-medium">{fmtBRL(recebido)}</span>;
+                          return (
+                            <span className="text-info font-medium">
+                              {fmtBRL(recebido)}
+                              <span className="text-[10px] text-muted-foreground ml-1">/ falta {fmtBRL(total - recebido)}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-center">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
                           {statusLabel(c.status ?? "pendente")}
@@ -267,7 +331,7 @@ const FinanceiroReceber = () => {
                       </td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-0.5">
-                          {c.status === "pendente" && (
+                          {c.status !== "pago" && c.status !== "cancelado" && (
                             <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
                               <Check size={14} />
                             </button>
@@ -308,9 +372,34 @@ const FinanceiroReceber = () => {
       />
 
       <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-sm">Registrar Recebimento</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {baixaContaAtual && (() => {
+              const total = Number(baixaContaAtual.valor) || 0;
+              const recebido = Number(baixaContaAtual.valor_recebido) || 0;
+              const saldo = Math.max(total - recebido, 0);
+              return (
+                <div className="grid grid-cols-3 gap-2 p-2 bg-muted/30 rounded">
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Total</div>
+                    <div className="text-xs font-bold text-foreground tabular-nums">{fmtBRL(total)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Recebido</div>
+                    <div className="text-xs font-bold text-success tabular-nums">{fmtBRL(recebido)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase">Falta</div>
+                    <div className="text-xs font-bold text-warning tabular-nums">{fmtBRL(saldo)}</div>
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Valor do recebimento</label>
+              <input type="number" step="0.01" value={baixaValor} onChange={e => setBaixaValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Recebimento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
               <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
@@ -320,6 +409,24 @@ const FinanceiroReceber = () => {
               </select>
             </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            {historicoReceb.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Histórico de recebimentos</div>
+                <div className="max-h-32 overflow-y-auto border border-border rounded">
+                  <table className="w-full text-[11px]">
+                    <tbody>
+                      {historicoReceb.map((h: any) => (
+                        <tr key={h.id} className="border-b border-border last:border-b-0">
+                          <td className="px-2 py-1 text-foreground/80 tabular-nums">{fmtDate(h.data)}</td>
+                          <td className="px-2 py-1 text-right font-medium text-success tabular-nums">{fmtBRL(Number(h.valor) || 0)}</td>
+                          <td className="px-2 py-1 text-muted-foreground truncate max-w-[140px]">{h.observacao ?? ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>

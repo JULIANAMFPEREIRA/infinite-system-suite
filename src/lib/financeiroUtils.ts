@@ -38,6 +38,8 @@ export const statusBadgeClass = (s: string): string => {
     case "aprovada":
     case "comprado":
       return "bg-success/15 text-success border border-success/25";
+    case "parcial":
+      return "bg-info/15 text-info border border-info/25";
     case "vencido":
     case "cancelado":
     case "cancelada":
@@ -59,6 +61,7 @@ export const statusLabel = (s: string): string => {
   const map: Record<string, string> = {
     pendente: "PENDENTE",
     pago: "PAGO",
+    parcial: "PARCIAL",
     vencido: "VENCIDO",
     cancelado: "CANCELADO",
     aprovado: "APROVADO",
