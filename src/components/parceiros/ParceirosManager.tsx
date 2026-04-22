@@ -281,8 +281,9 @@ const ParceirosManager = () => {
 
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
     const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
-    type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens"; rt_percentual: number; rt_valor: number };
-    const defaultCfg: RTConfig = { rt_tipo: "percentual", rt_base: "venda_total", rt_percentual: 0, rt_valor: 0 };
+    type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens" | "rt_itens"; rt_percentual: number; rt_valor: number };
+    // Padrão: usar RT já definida nos itens do projeto (soma direta)
+    const defaultCfg: RTConfig = { rt_tipo: "percentual", rt_base: "rt_itens", rt_percentual: 100, rt_valor: 0 };
 
     const vinculadosMap = useMemo(() => {
       const m: Record<string, any> = {};
@@ -450,8 +451,9 @@ const ParceirosManager = () => {
                                     onChange={(e) => updateCfg(p.id, { rt_base: e.target.value as any })}
                                     className="h-7 px-1 rounded border border-border bg-background text-[11px]"
                                   >
+                                    <option value="rt_itens">RT dos Itens</option>
                                     <option value="venda_total">Venda total</option>
-                                    <option value="itens">Itens</option>
+                                    <option value="itens">Soma dos Itens</option>
                                   </select>
                                 </>
                               ) : (
