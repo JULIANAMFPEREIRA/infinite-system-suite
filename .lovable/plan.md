@@ -1,83 +1,47 @@
 
+# Aplicar tema claro profissional (SaaS)
 
-# Ajustes UX, Fluxo e Edição — Plano de Implementação
+Modificar **apenas** `src/index.css`, trocando os tokens HSL no `:root`. Nenhum `.tsx`, hook, contexto, rota, integração Supabase, `tailwind.config.ts` ou estrutura de layout será alterado. Como todo o sistema consome cores via `hsl(var(--token))`, a troca propaga automaticamente.
 
-## Resumo
+## Alterações em `:root`
 
-Ajustes cirúrgicos em módulos existentes para melhorar UX e completar funcionalidades parciais. Nenhum módulo será recriado, apenas complementado.
+- `--background`: `220 14% 98%` (#F8F9FA)
+- `--foreground`: `222 47% 11%` (#111827)
+- `--card`: `0 0% 100%` / `--card-foreground`: `222 47% 11%`
+- `--popover`: `0 0% 100%` / `--popover-foreground`: `222 47% 11%`
+- `--primary`: `221 83% 53%` (#2563EB) / `--primary-foreground`: `0 0% 100%`
+- `--secondary`: `220 14% 96%` / `--secondary-foreground`: `222 47% 11%`
+- `--muted`: `220 14% 96%` (#F3F4F6) / `--muted-foreground`: `220 9% 46%` (#6B7280)
+- `--accent`: `221 83% 96%` / `--accent-foreground`: `221 83% 53%`
+- `--destructive`: `0 72% 51%` (#DC2626) / `--destructive-foreground`: `0 0% 100%`
+- `--border`: `220 13% 91%` (#E5E7EB)
+- `--input`: `220 13% 91%`
+- `--ring`: `221 83% 53%`
+- `--success`: `142 71% 45%` (#16A34A)
+- `--warning`: `32 95% 44%` (#D97706)
+- `--info`: `221 83% 53%`
 
-## 1. Projeto — Tela Exclusiva com Abas
+## Sidebar (fundo branco + borda cinza)
 
-**Arquivo:** `src/pages/modules/Projetos.tsx`
+- `--sidebar-background`: `0 0% 100%`
+- `--sidebar-foreground`: `222 47% 11%`
+- `--sidebar-primary`: `221 83% 53%` / `--sidebar-primary-foreground`: `0 0% 100%`
+- `--sidebar-accent`: `220 14% 96%` / `--sidebar-accent-foreground`: `221 83% 53%`
+- `--sidebar-border`: `220 13% 91%`
+- `--sidebar-ring`: `221 83% 53%`
 
-Atualmente, clicar num projeto abre o formulário inline com a lista ainda visível abaixo. Ajuste:
+## Ajustes finos no mesmo arquivo
 
-- Adicionar estado `viewMode: "list" | "detail"` 
-- Quando `viewMode === "detail"`: ocultar lista e filtros, exibir botão "← Voltar para lista"
-- Organizar conteúdo do projeto em abas usando `Tabs` (já existe em `src/components/ui/tabs.tsx`):
-  - **Resumo** — formulário de edição do projeto (campos atuais)
-  - **Itens** — `ProjetoItensSection` (já existe)
-  - **Visitas Técnicas** — `VisitasTecnicasSection` (mover da posição atual para aba própria)
-  - **Financeiro** — listar contas a receber/pagar vinculadas ao projeto (query inline)
-  - **Compras** — listar compras vinculadas ao projeto
-  - **Cronograma** — etapas do projeto (placeholder funcional)
-  - **Contratos** — contratos vinculados
+- Scrollbar: track `#F3F4F6`, thumb `#D1D5DB`, hover `#9CA3AF`.
+- `.card-interactive`: trocar `rgba(255,255,255,...)` por sombras suaves escuras (`rgba(0,0,0,0.04)` / `rgba(0,0,0,0.06)`) para funcionar em fundo claro.
 
-## 2. Visitas Técnicas — Aba Própria com CRUD Completo
+## Fora de escopo (não tocar)
 
-**Arquivo:** `src/pages/modules/Projetos.tsx` (componente `VisitasTecnicasSection`)
+- Qualquer `.tsx`, hook, provider, rota.
+- `tailwind.config.ts`, `App.css`, `main.tsx`.
+- Páginas com classes hardcoded (ex.: `Login.tsx` com `bg-slate-900`) — ficam como estão.
+- Banco/Supabase/edge functions.
 
-Já existe parcialmente. Complementar:
-- Adicionar edição de visita existente (click na linha → popular form, `editId`)
-- Adicionar botão excluir visita
-- Adicionar campos faltantes no formulário: produtos levados (input texto/json), data_pagamento
-- Hook `useUpdateVisita` já existe, apenas conectar ao form de edição
+## Resultado esperado
 
-## 3. Financeiro Receber — Modal de Baixa
-
-**Arquivo:** `src/pages/modules/FinanceiroReceber.tsx`
-
-`FinanceiroPagar` já tem modal de baixa com data/forma/obs. `FinanceiroReceber` ainda faz baixa direta. Ajuste:
-- Adicionar `Dialog` de baixa igual ao `FinanceiroPagar` (data, forma de pagamento, observação)
-- Importar `useFormasPagamento` para o select de formas
-
-## 4. Comissões — Baixa com Modal + Criar Manual
-
-**Arquivo:** `src/pages/modules/Comissoes.tsx`
-
-- Adicionar modal de baixa (igual ao financeiro) em vez de baixa direta
-- Adicionar botão "Nova Comissão" com formulário manual (projeto, fornecedor, percentual, valor, vencimento)
-- Adicionar campos data_pagamento e forma_pagamento na baixa
-
-## 5. Parcelamento Manual no Projeto
-
-**Arquivo:** `src/pages/modules/Projetos.tsx` (aba Financeiro)
-
-Na aba Financeiro do projeto:
-- Listar parcelas existentes de `financeiro_receber` filtradas por `projeto_id`
-- Botão "Nova Parcela" com formulário: valor, vencimento, forma de pagamento
-- Cada parcela editável individualmente
-- Inserir diretamente em `financeiro_receber`
-
-## 6. Itens do Projeto — Autocomplete Já Funciona
-
-O autocomplete de produtos já está implementado e funcional (linhas 395-414 do Projetos.tsx). Também permite digitação manual quando tipo é "serviço" ou "mão de obra". **Nenhuma alteração necessária.**
-
-## 7. CRM → Projeto — Já Funciona
-
-A automação CRM → Projeto já está implementada (linhas 89-92 do CRM.tsx). **Nenhuma alteração necessária.** Apenas garantir que o projeto criado aparece no cronograma (já funciona via query de projetos).
-
-## 8. Configurações — Usuários Já Funciona
-
-Criação de usuários com roles (cliente, arquiteto, técnico) já está implementada. **Nenhuma alteração necessária.**
-
-## Arquivos Editados
-
-1. `src/pages/modules/Projetos.tsx` — tela exclusiva com abas, visitas CRUD completo, aba financeiro com parcelas
-2. `src/pages/modules/FinanceiroReceber.tsx` — modal de baixa completo
-3. `src/pages/modules/Comissoes.tsx` — modal de baixa + criar comissão manual
-
-## Arquivos NÃO Alterados
-
-- CRM.tsx, Configuracoes.tsx, Compras.tsx, hooks — já funcionais, sem mudanças
-
+Visual claro tipo HubSpot/Linear: fundo `#F8F9FA`, cards brancos, sidebar branca com borda `#E5E7EB`, primário azul `#2563EB`, tipografia escura `#111827`, sem alterar comportamento.
