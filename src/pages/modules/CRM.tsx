@@ -1977,7 +1977,11 @@ const CRM = () => {
                       title="Clique para editar"
                     >
                       <span className="inline-flex items-center gap-1">
-                        {type === "number" ? `R$ ${Number(value ?? 0).toFixed(2)}` : (field === "quantidade" ? Number(value) : String(value ?? ""))}
+                        {type === "number" ? (
+                          field === "quantidade" 
+                            ? Number(value ?? 0) 
+                            : `R$ ${Number(value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                        ) : String(value ?? "")}
                         <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground shrink-0" />
                       </span>
                     </td>
@@ -2075,18 +2079,18 @@ const CRM = () => {
                                             {Number((item as any).rt_percentual ?? 0)}%
                                             <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
                                           </span>
-                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toFixed(2)}</span>
+                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                                         </span>
                                       ) : (
                                         <span className="font-semibold inline-flex items-center gap-1">
-                                          R$ {rtTotal.toFixed(2)}
+                                          R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                           <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
                                         </span>
                                       )}
                                     </td>
                                   );
                                 })()}
-                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                                 {(title === "Produtos" || title === "Serviços") && (
                                   <td className="px-2 py-1.5 text-center">
                                     <select
