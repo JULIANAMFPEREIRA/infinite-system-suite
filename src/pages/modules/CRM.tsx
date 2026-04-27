@@ -1977,7 +1977,11 @@ const CRM = () => {
                       title="Clique para editar"
                     >
                       <span className="inline-flex items-center gap-1">
-                        {type === "number" ? `R$ ${Number(value ?? 0).toFixed(2)}` : (field === "quantidade" ? Number(value) : String(value ?? ""))}
+                        {type === "number" ? (
+                          field === "quantidade" 
+                            ? Number(value ?? 0) 
+                            : `R$ ${Number(value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                        ) : String(value ?? "")}
                         <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground shrink-0" />
                       </span>
                     </td>
@@ -1997,12 +2001,14 @@ const CRM = () => {
                       <div className="rounded-lg overflow-hidden border border-border/60 bg-card">
                         <table className="w-full text-xs table-fixed">
                           <colgroup>
-                            <col style={{ width: "32%" }} />
-                            <col style={{ width: "7%" }} />
-                            <col style={{ width: "11%" }} />
-                            <col style={{ width: "11%" }} />
-                            <col style={{ width: "11%" }} />
-                            <col style={{ width: "12%" }} />
+                            <col style={{ width: "24%" }} />
+                            <col style={{ width: "5%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "10%" }} />
                             {(title === "Produtos" || title === "Serviços") && <col style={{ width: "10%" }} />}
                             <col style={{ width: "6%" }} />
                           </colgroup>
@@ -2010,7 +2016,9 @@ const CRM = () => {
                             <SortableHeader colKey="descricao" label="Descrição" className="text-left" />
                             <SortableHeader colKey="quantidade" label="Qtd" className="text-center" />
                             <SortableHeader colKey="preco_custo" label="Custo" className="text-right" />
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">T. Custo</th>
                             <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
+                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">T. Venda</th>
                             <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
                             {(title === "Produtos" || title === "Serviços") && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Status</th>}
@@ -2022,7 +2030,13 @@ const CRM = () => {
                                 <InlineCell item={item} field="descricao" type="text" />
                                 <InlineCell item={item} field="quantidade" type="number" align="text-center" />
                                 <InlineCell item={item} field="preco_custo" type="number" align="text-right" />
+                                <td className="px-3 py-2 text-right text-muted-foreground bg-secondary/10 font-medium">
+                                  R$ {(Number(item.preco_custo) * Number(item.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </td>
                                 <InlineCell item={item} field="preco_venda" type="number" align="text-right" />
+                                <td className="px-3 py-2 text-right text-muted-foreground bg-secondary/10 font-medium">
+                                  R$ {(Number(item.preco_venda) * Number(item.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </td>
                                 {(() => {
                                   const rtTotal = Number((item as any).rt_comissao ?? 0);
                                   const isPerc = ((item as any).rt_tipo ?? "valor") === "percentual";
@@ -2075,18 +2089,18 @@ const CRM = () => {
                                             {Number((item as any).rt_percentual ?? 0)}%
                                             <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
                                           </span>
-                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toFixed(2)}</span>
+                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                                         </span>
                                       ) : (
                                         <span className="font-semibold inline-flex items-center gap-1">
-                                          R$ {rtTotal.toFixed(2)}
+                                          R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                           <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
                                         </span>
                                       )}
                                     </td>
                                   );
                                 })()}
-                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                                 {(title === "Produtos" || title === "Serviços") && (
                                   <td className="px-2 py-1.5 text-center">
                                     <select
@@ -2122,10 +2136,12 @@ const CRM = () => {
                             <tr className="border-t-2 border-border bg-secondary/20">
                               <td className="px-3 py-2 font-semibold text-foreground/80">Subtotal</td>
                               <td className="px-3 py-2 text-center font-semibold">{items.reduce((s: number, i: any) => s + (Number(i.quantidade) || 0), 0)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-semibold bg-secondary/10">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-semibold bg-secondary/10">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-semibold">R$ {items.reduce((s: number, i: any) => s + (Number((i as any).rt_comissao) || 0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-bold text-primary">R$ {items.reduce((s: number, i: any) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                               {(title === "Produtos" || title === "Serviços") && <td></td>}
                               <td></td>
                             </tr>
