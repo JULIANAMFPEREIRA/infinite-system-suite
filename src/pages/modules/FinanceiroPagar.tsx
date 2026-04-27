@@ -37,8 +37,8 @@ const inferTipo = (desc: string | null): string => {
   if (d.includes("frete") || d.includes("transporte") || d.includes("entrega")) return "frete";
   if (d.includes("serviço") || d.includes("servico") || d.includes("mão de obra") || d.includes("mao de obra") || d.includes("instalação") || d.includes("instalacao")) return "servico";
   if (d.includes("adicional")) return "adicional";
-  return "produto";
-};
+   return "";
+ };
 
 const tipoBadge = (conta: any) => {
   const desc = conta?.descricao ?? null;
@@ -98,8 +98,9 @@ const FinanceiroPagar = () => {
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
-  const [tipoFilter, setTipoFilter] = useState("");
-  const [categoriaFilter, setCategoriaFilter] = useState("");
+   const [tipoFilter, setTipoFilter] = useState("");
+   const [categoriaFilter, setCategoriaFilter] = useState("");
+   const [buscaFilter, setBuscaFilter] = useState("");
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores", empresaId],
