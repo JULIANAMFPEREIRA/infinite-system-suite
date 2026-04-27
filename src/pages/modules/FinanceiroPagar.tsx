@@ -193,14 +193,22 @@ const FinanceiroPagar = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const filtered = useMemo(() => {
-    let list = contas ?? [];
-    if (statusFilter) list = list.filter(c => c.status === statusFilter);
-    if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
-    if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
-    list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
-    return list;
-  }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter]);
+   const filtered = useMemo(() => {
+     let list = contas ?? [];
+     if (statusFilter) list = list.filter(c => c.status === statusFilter);
+     if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
+     if (categoriaFilter) list = list.filter(c => (c as any).categorias?.id === categoriaFilter);
+     if (buscaFilter.trim()) {
+       const q = buscaFilter.trim().toLowerCase();
+       list = list.filter(c => {
+         const descMatch = (c.descricao ?? "").toLowerCase().includes(q);
+         const fornecedorMatch = ((c as any).fornecedores?.nome ?? "").toLowerCase().includes(q);
+         return descMatch || fornecedorMatch;
+       });
+     }
+     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+     return list;
+   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter]);
 
   const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
   const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
@@ -246,33 +254,43 @@ const FinanceiroPagar = () => {
         </button>
       </div>
 
-      {/* Filters */}
-      <FinanceiroFilters
-        statusOptions={STATUS_OPTIONS}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        periodoFilter={periodoFilter}
-        onPeriodoChange={setPeriodoFilter}
-        mesFilter={mesFilter}
-        onMesChange={setMesFilter}
-        anoFilter={anoFilter}
-        onAnoChange={setAnoFilter}
-        extraFilters={
-          <div className="flex gap-2">
-            <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-              {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
-              <option value="">Todas categorias</option>
-              {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
-                  {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-        }
-      />
+       {/* Filters */}
+       <div className="space-y-2">
+         <FinanceiroFilters
+           statusOptions={STATUS_OPTIONS}
+           statusFilter={statusFilter}
+           onStatusChange={setStatusFilter}
+           periodoFilter={periodoFilter}
+           onPeriodoChange={setPeriodoFilter}
+           mesFilter={mesFilter}
+           onMesChange={setMesFilter}
+           anoFilter={anoFilter}
+           onAnoChange={setAnoFilter}
+         />
+         <div className="flex items-center gap-2">
+           <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+             {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+           </select>
+           <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
+             <option value="">Todas categorias</option>
+             {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+               <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                 {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+               </optgroup>
+             ))}
+           </select>
+           <div className="relative flex-1 max-w-sm">
+             <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+             <input
+               type="text"
+               value={buscaFilter}
+               onChange={e => setBuscaFilter(e.target.value)}
+               placeholder="Buscar por descrição ou fornecedor..."
+               className={`${selectCls} w-full pl-7`}
+             />
+           </div>
+         </div>
+       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
