@@ -54,7 +54,9 @@ const FinanceiroReceber = () => {
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
-  const [clienteFilter, setClienteFilter] = useState("");
+   const [buscaFilter, setBuscaFilter] = useState("");
+   const [tipoFilter, setTipoFilter] = useState("");
+   const [categoriaFilter, setCategoriaFilter] = useState("");
 
   const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
@@ -157,23 +159,24 @@ const FinanceiroReceber = () => {
   // Conta vencida: pendente/parcial, com vencimento passado e saldo restante > 0
   const isVencido = (c: any) => isContaVencida(c);
 
-  const filtered = useMemo(() => {
-    let list = contas ?? [];
-    if (statusFilter === "vencido") {
-      list = list.filter(c => isVencido(c));
-    } else if (statusFilter) {
-      list = list.filter(c => c.status === statusFilter);
-    }
-    list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
-    if (clienteFilter.trim()) {
-      const q = clienteFilter.trim().toLowerCase();
-      list = list.filter(c => {
-        const nome = ((c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "").toLowerCase();
-        return nome.includes(q);
-      });
-    }
-    return list;
-  }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter, clienteFilter]);
+   const filtered = useMemo(() => {
+     let list = contas ?? [];
+     if (statusFilter === "vencido") {
+       list = list.filter(c => isVencido(c));
+     } else if (statusFilter) {
+       list = list.filter(c => c.status === statusFilter);
+     }
+     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+     if (buscaFilter.trim()) {
+       const q = buscaFilter.trim().toLowerCase();
+       list = list.filter(c => {
+         const nome = ((c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "").toLowerCase();
+         const desc = (c.descricao ?? "").toLowerCase();
+         return nome.includes(q) || desc.includes(q);
+       });
+     }
+     return list;
+   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter]);
 
   // Resumo (sobre filtrado) — sempre via saldo restante
   // "A Receber" = somatório dos saldos pendentes + parciais + vencidos (exclui pagos e cancelados)
@@ -212,16 +215,19 @@ const FinanceiroReceber = () => {
         onMesChange={setMesFilter}
         anoFilter={anoFilter}
         onAnoChange={setAnoFilter}
-        extraFilters={
-          <input
-            type="text"
-            value={clienteFilter}
-            onChange={e => setClienteFilter(e.target.value)}
-            placeholder="Cliente..."
-            className="h-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary w-40"
-          />
-        }
-      />
+         extraFilters={
+           <div className="relative flex-1 max-w-sm">
+             <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+             <input
+               type="text"
+               value={buscaFilter}
+               onChange={e => setBuscaFilter(e.target.value)}
+               placeholder="Buscar por cliente ou descrição..."
+               className="h-7 w-full pl-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+             />
+           </div>
+         }
+       />
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
