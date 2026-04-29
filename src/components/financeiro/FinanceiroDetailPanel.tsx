@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel } from "@/lib/financeiroUtils";
-import { Check, Pencil, Trash2, X, Calendar, DollarSign, FileText, User, Briefcase, Hash } from "lucide-react";
+import { Check, Pencil, Trash2, X, Calendar, DollarSign, FileText, User, Briefcase, Hash, Paperclip } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface FinanceiroDetailPanelProps {
@@ -130,6 +130,25 @@ const FinanceiroDetailPanel = ({
               <div className="grid grid-cols-2 gap-x-4">
                 {conta.projeto_id && <InfoRow label="Projeto vinculado" value={projetoNome} icon={Briefcase} />}
                 {conta.comissao_id && <InfoRow label="Comissão vinculada" value="Sim" icon={DollarSign} />}
+              </div>
+            </>
+          )}
+
+          {conta.arquivo_url && (
+            <>
+              <Separator className="my-2" />
+              <SectionTitle>Documento Anexado</SectionTitle>
+              <div className="flex items-center justify-between gap-2 p-2 rounded border border-border bg-secondary/30">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Paperclip size={13} className="text-primary shrink-0" />
+                  <span className="text-xs text-foreground truncate">{conta.arquivo_nome ?? "Documento"}</span>
+                </div>
+                <button
+                  onClick={() => window.open(conta.arquivo_url, "_blank", "noopener,noreferrer")}
+                  className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20 transition-colors shrink-0"
+                >
+                  Ver Documento
+                </button>
               </div>
             </>
           )}
