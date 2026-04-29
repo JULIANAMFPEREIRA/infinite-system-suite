@@ -53,6 +53,8 @@ const CRM = () => {
   const [filterStatus, setFilterStatus] = useState<StatusCRM | "todos">("todos");
   const [novoClienteObs, setNovoClienteObs] = useState("");
   const [dragClientId, setDragClientId] = useState<string | null>(null);
+  const [kanbanLimit, setKanbanLimit] = useState<Record<string, number>>({});
+  const getLimit = (key: string) => kanbanLimit[key] ?? 15;
   const [tableSortKey, setTableSortKey] = useState<"nome" | "created_at" | "updated_at">("created_at");
   const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("desc");
 
@@ -2766,6 +2768,9 @@ const CRM = () => {
               {kanbanColumns.map(col => {
                 const colClients = (clientes ?? []).filter(c => c.status_crm === col.key);
                 const isDragOver = dragClientId !== null;
+                const limit = getLimit(col.key);
+                const visibleClients = colClients.slice(0, limit);
+                const hiddenCount = Math.max(0, colClients.length - limit);
                 return (
                   <div
                     key={col.key}
@@ -2777,13 +2782,15 @@ const CRM = () => {
                     <div className={`flex items-center justify-between px-3 py-2.5 border-b ${col.borderColor}`}>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold uppercase tracking-wider ${col.color}`}>{col.label}</span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/80 ${col.color}`}>{colClients.length}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/80 ${col.color}`}>
+                          {hiddenCount > 0 ? `${limit} de ${colClients.length}` : colClients.length}
+                        </span>
                       </div>
                     </div>
 
                     {/* Cards */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                      {colClients.map(c => {
+                      {visibleClients.map(c => {
                         const orcs = getClientOrcamentos(c.id);
                         const projs = getClientProjetos(c.id);
                         const totalVenda = getClientTotalVenda(c.id);
@@ -2850,6 +2857,15 @@ const CRM = () => {
                           </div>
                         );
                       })}
+                      {hiddenCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setKanbanLimit(prev => ({ ...prev, [col.key]: (prev[col.key] ?? 15) + 15 }))}
+                          className="w-full text-xs text-muted-foreground hover:text-primary py-2 text-center transition-colors"
+                        >
+                          + Ver mais {hiddenCount} clientes
+                        </button>
+                      )}
                       {colClients.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50">
                           <Users size={20} className="mb-1" />

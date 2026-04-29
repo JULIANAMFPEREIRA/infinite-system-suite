@@ -22,6 +22,9 @@ interface KanbanBoardProps<T extends KanbanCardData> {
   onMove: (itemId: string, fromColumn: string, toColumn: string) => void;
   onCardClick?: (item: T) => void;
   renderCard: (item: T) => React.ReactNode;
+  itemsLimit?: number;
+  kanbanLimits?: Record<string, number>;
+  onLoadMore?: (columnKey: string) => void;
 }
 
 export function KanbanBoard<T extends KanbanCardData>({
@@ -30,6 +33,9 @@ export function KanbanBoard<T extends KanbanCardData>({
   onMove,
   onCardClick,
   renderCard,
+  itemsLimit,
+  kanbanLimits,
+  onLoadMore,
 }: KanbanBoardProps<T>) {
   const [dragItem, setDragItem] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -72,6 +78,14 @@ export function KanbanBoard<T extends KanbanCardData>({
       {columns.map((col) => {
         const colItems = items.filter((i) => i.columnKey === col.key);
         const isOver = dragOverCol === col.key;
+        const limit =
+          itemsLimit !== undefined
+            ? kanbanLimits?.[col.key] ?? itemsLimit
+            : undefined;
+        const visibleItems =
+          limit !== undefined ? colItems.slice(0, limit) : colItems;
+        const hiddenCount =
+          limit !== undefined ? Math.max(0, colItems.length - limit) : 0;
 
         return (
           <div
@@ -91,7 +105,9 @@ export function KanbanBoard<T extends KanbanCardData>({
                 {col.label}
               </span>
               <span className={cn("text-[10px] font-semibold rounded-full px-1.5 py-0.5 bg-background/60", col.color)}>
-                {colItems.length}
+                {limit !== undefined && hiddenCount > 0
+                  ? `${visibleItems.length} de ${colItems.length}`
+                  : colItems.length}
               </span>
             </div>
             <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[60vh]">
@@ -100,7 +116,7 @@ export function KanbanBoard<T extends KanbanCardData>({
                   Nenhum item
                 </div>
               )}
-              {colItems.map((item) => (
+              {visibleItems.map((item) => (
                 <div
                   key={item.id}
                   draggable
@@ -118,6 +134,15 @@ export function KanbanBoard<T extends KanbanCardData>({
                   </div>
                 </div>
               ))}
+              {hiddenCount > 0 && onLoadMore && (
+                <button
+                  type="button"
+                  onClick={() => onLoadMore(col.key)}
+                  className="w-full text-xs text-muted-foreground hover:text-primary py-2 transition-colors"
+                >
+                  + Ver mais {hiddenCount} {hiddenCount === 1 ? "item" : "itens"}
+                </button>
+              )}
             </div>
           </div>
         );

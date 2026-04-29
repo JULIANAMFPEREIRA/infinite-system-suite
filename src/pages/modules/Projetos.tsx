@@ -82,6 +82,7 @@ const Projetos = () => {
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
   const [listViewType, setListViewType] = useState<"list" | "kanban">("list");
+  const [kanbanLimit, setKanbanLimit] = useState<Record<string, number>>({});
 
   const statusCounts = useMemo(() => {
     const all = projetos ?? [];
@@ -543,6 +544,11 @@ const Projetos = () => {
               items={projetoKanbanItems}
               onMove={handleProjetoKanbanMove}
               onCardClick={(item) => openEdit(item.projeto)}
+              itemsLimit={15}
+              kanbanLimits={kanbanLimit}
+              onLoadMore={(columnKey) =>
+                setKanbanLimit(prev => ({ ...prev, [columnKey]: (prev[columnKey] ?? 15) + 15 }))
+              }
               renderCard={(item) => {
                 const p = item.projeto;
                 const daysInStatus = p.updated_at ? differenceInDays(new Date(), new Date(p.updated_at)) : 0;
