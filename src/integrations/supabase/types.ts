@@ -816,6 +816,8 @@ export type Database = {
       }
       financeiro_pagar: {
         Row: {
+          arquivo_nome: string | null
+          arquivo_url: string | null
           categoria_id: string | null
           comissao_id: string | null
           created_at: string
@@ -831,6 +833,8 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
           categoria_id?: string | null
           comissao_id?: string | null
           created_at?: string
@@ -846,6 +850,8 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
           categoria_id?: string | null
           comissao_id?: string | null
           created_at?: string

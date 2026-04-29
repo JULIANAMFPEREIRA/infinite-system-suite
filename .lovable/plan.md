@@ -1,47 +1,24 @@
+## Objetivo
+Adicionar duas colunas opcionais à tabela `financeiro_pagar` para permitir anexar arquivo (comprovante/boleto) a contas a pagar. Nenhuma alteração de código frontend nesta etapa.
 
-# Aplicar tema claro profissional (SaaS)
+## Migration SQL
 
-Modificar **apenas** `src/index.css`, trocando os tokens HSL no `:root`. Nenhum `.tsx`, hook, contexto, rota, integração Supabase, `tailwind.config.ts` ou estrutura de layout será alterado. Como todo o sistema consome cores via `hsl(var(--token))`, a troca propaga automaticamente.
+```sql
+ALTER TABLE public.financeiro_pagar
+  ADD COLUMN arquivo_url text,
+  ADD COLUMN arquivo_nome text;
+```
 
-## Alterações em `:root`
+## Detalhes técnicos
+- **Tabela:** `public.financeiro_pagar`
+- **Colunas adicionadas:**
+  - `arquivo_url` — `TEXT`, nullable, sem default
+  - `arquivo_nome` — `TEXT`, nullable, sem default
+- **RLS:** não é necessário alterar — as policies existentes (`Admin manages pagar`, `Finance users see pagar`) já cobrem a tabela inteira, incluindo novas colunas.
+- **Triggers / Funções:** nenhum impacto. As funções `auto_gerar_conta_pagar_compra` e `auto_sync_conta_pagar_compra` não referenciam essas colunas.
+- **types.ts:** será regenerado automaticamente após a migration.
 
-- `--background`: `220 14% 98%` (#F8F9FA)
-- `--foreground`: `222 47% 11%` (#111827)
-- `--card`: `0 0% 100%` / `--card-foreground`: `222 47% 11%`
-- `--popover`: `0 0% 100%` / `--popover-foreground`: `222 47% 11%`
-- `--primary`: `221 83% 53%` (#2563EB) / `--primary-foreground`: `0 0% 100%`
-- `--secondary`: `220 14% 96%` / `--secondary-foreground`: `222 47% 11%`
-- `--muted`: `220 14% 96%` (#F3F4F6) / `--muted-foreground`: `220 9% 46%` (#6B7280)
-- `--accent`: `221 83% 96%` / `--accent-foreground`: `221 83% 53%`
-- `--destructive`: `0 72% 51%` (#DC2626) / `--destructive-foreground`: `0 0% 100%`
-- `--border`: `220 13% 91%` (#E5E7EB)
-- `--input`: `220 13% 91%`
-- `--ring`: `221 83% 53%`
-- `--success`: `142 71% 45%` (#16A34A)
-- `--warning`: `32 95% 44%` (#D97706)
-- `--info`: `221 83% 53%`
-
-## Sidebar (fundo branco + borda cinza)
-
-- `--sidebar-background`: `0 0% 100%`
-- `--sidebar-foreground`: `222 47% 11%`
-- `--sidebar-primary`: `221 83% 53%` / `--sidebar-primary-foreground`: `0 0% 100%`
-- `--sidebar-accent`: `220 14% 96%` / `--sidebar-accent-foreground`: `221 83% 53%`
-- `--sidebar-border`: `220 13% 91%`
-- `--sidebar-ring`: `221 83% 53%`
-
-## Ajustes finos no mesmo arquivo
-
-- Scrollbar: track `#F3F4F6`, thumb `#D1D5DB`, hover `#9CA3AF`.
-- `.card-interactive`: trocar `rgba(255,255,255,...)` por sombras suaves escuras (`rgba(0,0,0,0.04)` / `rgba(0,0,0,0.06)`) para funcionar em fundo claro.
-
-## Fora de escopo (não tocar)
-
-- Qualquer `.tsx`, hook, provider, rota.
-- `tailwind.config.ts`, `App.css`, `main.tsx`.
-- Páginas com classes hardcoded (ex.: `Login.tsx` com `bg-slate-900`) — ficam como estão.
-- Banco/Supabase/edge functions.
-
-## Resultado esperado
-
-Visual claro tipo HubSpot/Linear: fundo `#F8F9FA`, cards brancos, sidebar branca com borda `#E5E7EB`, primário azul `#2563EB`, tipografia escura `#111827`, sem alterar comportamento.
+## Fora de escopo (próxima etapa)
+- Upload de arquivo no formulário de contas a pagar
+- Exibição do anexo na listagem/detalhe do `FinanceiroPagar.tsx`
+- Bucket de storage (se necessário usar bucket dedicado em vez do `crm-files`)
