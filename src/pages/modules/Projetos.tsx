@@ -82,6 +82,7 @@ const Projetos = () => {
   const [selectedProjetoId, setSelectedProjetoId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState("lista");
   const [listViewType, setListViewType] = useState<"list" | "kanban">("list");
+  const [kanbanLimit, setKanbanLimit] = useState<Record<string, number>>({});
 
   const statusCounts = useMemo(() => {
     const all = projetos ?? [];
