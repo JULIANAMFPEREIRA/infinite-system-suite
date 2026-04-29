@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2, Search } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
@@ -93,6 +93,45 @@ const FinanceiroPagar = () => {
   const [baixaObs, setBaixaObs] = useState("");
 
   const [detailConta, setDetailConta] = useState<any>(null);
+
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const currentEditConta = useMemo(
+    () => (editId ? (contas ?? []).find((c: any) => c.id === editId) : null),
+    [editId, contas]
+  );
+  const arquivoUrlAtual = (currentEditConta as any)?.arquivo_url ?? null;
+  const arquivoNomeAtual = (currentEditConta as any)?.arquivo_nome ?? null;
+
+  const handleFileUpload = async (file: File) => {
+    if (!editId || !empresaId) return;
+    try {
+      setUploadingFile(true);
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `${empresaId}/financeiro-pagar/${editId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      await updateConta.mutateAsync({ id: editId, arquivo_url: pub.publicUrl, arquivo_nome: file.name } as any);
+      toast.success("Documento anexado");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro no upload");
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveFile = async () => {
+    if (!editId) return;
+    try {
+      await updateConta.mutateAsync({ id: editId, arquivo_url: null, arquivo_nome: null } as any);
+      toast.success("Documento removido");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const [statusFilter, setStatusFilter] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
@@ -345,6 +384,34 @@ const FinanceiroPagar = () => {
               </select>
             </div>
           </div>
+          {editId && (
+            <div className="space-y-1 pt-1 border-t border-border">
+              <label className="text-[11px] text-muted-foreground">Anexar Documento (boleto, NF, comprovante)</label>
+              {arquivoUrlAtual ? (
+                <div className="flex items-center gap-2 p-2 rounded border border-border bg-secondary/30">
+                  <Paperclip size={13} className="text-primary shrink-0" />
+                  <a href={arquivoUrlAtual} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1">
+                    {arquivoNomeAtual ?? "Documento anexado"}
+                  </a>
+                  <button type="button" onClick={handleRemoveFile} disabled={updateConta.isPending} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Remover">
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    disabled={uploadingFile}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+                    className="text-[11px] text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-primary file:text-primary-foreground hover:file:brightness-110 file:cursor-pointer disabled:opacity-50"
+                  />
+                  {uploadingFile && <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1"><Upload size={11} className="animate-pulse" /> Enviando...</span>}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={createConta.isPending || updateConta.isPending} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50 btn-press">Salvar</button>
             <button onClick={resetForm} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 btn-press">Cancelar</button>
@@ -413,6 +480,21 @@ const FinanceiroPagar = () => {
                       </td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-0.5">
+                          {(c as any).arquivo_url ? (
+                            <a
+                              href={(c as any).arquivo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={(c as any).arquivo_nome ?? "Ver documento"}
+                              className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                            >
+                              <Paperclip size={14} />
+                            </a>
+                          ) : (
+                            <span title="Sem documento" className="p-1.5 text-muted-foreground/40 cursor-not-allowed">
+                              <Paperclip size={14} />
+                            </span>
+                          )}
                           {c.status === "pendente" && (
                             <button onClick={() => openBaixa(c.id)} title="Registrar pagamento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
                               <Check size={14} />
