@@ -6,7 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -1729,7 +1729,11 @@ const CRM = () => {
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
             <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
+            <TabsTrigger value="visitas" className="text-xs gap-1.5"><CalendarDays size={13} /> Visitas Técnicas</TabsTrigger>
+            <TabsTrigger value="cronograma" className="text-xs gap-1.5"><Activity size={13} /> Cronograma</TabsTrigger>
             <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
+            <TabsTrigger value="historico" className="text-xs gap-1.5"><History size={13} /> Linha do Tempo</TabsTrigger>
+            <TabsTrigger value="atividades" className="text-xs gap-1.5"><Activity size={13} /> Atividades</TabsTrigger>
           </TabsList>
 
           {/* ─── DADOS DO CLIENTE ─── */}
