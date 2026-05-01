@@ -103,6 +103,13 @@ const FinanceiroDetailPanel = ({
               value={conta.data_pagamento ? fmtDate(conta.data_pagamento) : "—"}
               icon={Calendar}
             />
+            {tipo === "pagar" && conta.status === "pago" && conta.observacao?.includes("Forma: ") && (
+              <InfoRow 
+                label="Forma de Pagamento" 
+                value={conta.observacao.split("|")[0].replace("Forma: ", "").trim()} 
+                icon={DollarSign} 
+              />
+            )}
           </div>
 
           {/* Parcelamento (só receber) */}

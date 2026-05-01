@@ -139,7 +139,9 @@ const FinanceiroPagar = () => {
   const [anoFilter, setAnoFilter] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
-   const [buscaFilter, setBuscaFilter] = useState("");
+    const [buscaFilter, setBuscaFilter] = useState("");
+    const [dataInicio, setDataInicio] = useState("");
+    const [dataFim, setDataFim] = useState("");
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores", empresaId],
@@ -220,7 +222,12 @@ const FinanceiroPagar = () => {
   const handleBaixa = async () => {
     if (!baixaId) return;
     try {
-      await updateConta.mutateAsync({ id: baixaId, status: "pago", data_pagamento: baixaData });
+      await updateConta.mutateAsync({ 
+        id: baixaId, 
+        status: "pago", 
+        data_pagamento: baixaData,
+        observacao: baixaForma ? `Forma: ${baixaForma}${baixaObs ? ` | ${baixaObs}` : ""}` : (baixaObs || null)
+      } as any);
       toast.success("Pago!");
       setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
@@ -246,8 +253,14 @@ const FinanceiroPagar = () => {
        });
      }
      list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+     if (dataInicio) {
+       list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
+     }
+     if (dataFim) {
+       list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
+     }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter]);
+   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
 
   const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
   const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
@@ -305,6 +318,26 @@ const FinanceiroPagar = () => {
            onMesChange={setMesFilter}
            anoFilter={anoFilter}
            onAnoChange={setAnoFilter}
+           extraFilters={
+             <div className="flex items-center gap-1.5 shrink-0">
+               <div className="flex items-center gap-1">
+                 <span className="text-[10px] text-muted-foreground">De:</span>
+                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+               </div>
+               <div className="flex items-center gap-1">
+                 <span className="text-[10px] text-muted-foreground">Até:</span>
+                 <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+               </div>
+               {(dataInicio || dataFim) && (
+                 <button 
+                   onClick={() => { setDataInicio(""); setDataFim(""); }}
+                   className="h-7 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/10 rounded border border-destructive/20 transition-colors"
+                 >
+                   Limpar datas
+                 </button>
+               )}
+             </div>
+           }
          />
          <div className="flex items-center gap-2">
            <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
@@ -428,6 +461,7 @@ const FinanceiroPagar = () => {
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Origem</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Categoria</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
+                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Tipo</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
                   <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
                   <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
@@ -463,10 +497,10 @@ const FinanceiroPagar = () => {
                         )}
                       </td>
                       <td className="px-3 py-2 max-w-[220px]">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground truncate">{c.descricao}</span>
-                          {tipoBadge(c)}
-                        </div>
+                        <span className="font-medium text-foreground truncate block">{c.descricao}</span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {tipoBadge(c)}
                       </td>
                       <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
                       <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
@@ -514,7 +548,7 @@ const FinanceiroPagar = () => {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={11} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
