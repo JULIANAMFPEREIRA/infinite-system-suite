@@ -223,18 +223,38 @@ const FinanceiroReceber = () => {
         onMesChange={setMesFilter}
         anoFilter={anoFilter}
         onAnoChange={setAnoFilter}
-         extraFilters={
-           <div className="relative flex-1 max-w-sm">
-             <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-             <input
-               type="text"
-               value={buscaFilter}
-               onChange={e => setBuscaFilter(e.target.value)}
-               placeholder="Buscar por cliente ou descrição..."
-               className="h-7 w-full pl-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-             />
-           </div>
-         }
+          extraFilters={
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+              <div className="relative flex-1 w-full max-w-sm">
+                <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={buscaFilter}
+                  onChange={e => setBuscaFilter(e.target.value)}
+                  placeholder="Buscar por cliente ou descrição..."
+                  className="h-7 w-full pl-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">De:</span>
+                  <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">Até:</span>
+                  <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                </div>
+                {(dataInicio || dataFim) && (
+                  <button 
+                    onClick={() => { setDataInicio(""); setDataFim(""); }}
+                    className="h-7 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/10 rounded border border-destructive/20 transition-colors"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+          }
        />
 
       {/* Summary cards */}
