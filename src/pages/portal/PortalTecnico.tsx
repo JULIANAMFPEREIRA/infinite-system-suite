@@ -63,9 +63,9 @@ const PortalTecnico = () => {
 
       const { data: pagamentosVisitas } = await supabase
         .from("visitas_tecnicas")
-        .select("id, data, descricao, valor_tecnico, valor_pago_tecnico, status_pagamento_tecnico")
+        .select("id, data, descricao, valor_pago_tecnico, status_pagamento")
         .eq("tecnico_id", forn.id)
-        .gt("valor_tecnico", 0)
+        .gt("valor_pago_tecnico", 0)
         .eq("deletado", false);
 
       return { tecnico: forn, projetos, pagamentos: pagamentosVisitas ?? [] };
@@ -157,9 +157,7 @@ const PortalTecnico = () => {
     );
   }
 
-  const totalReceber = data.pagamentos.reduce((acc, p) => acc + (Number(p.valor_tecnico) || 0), 0);
   const recebido = data.pagamentos.reduce((acc, p) => acc + (Number(p.valor_pago_tecnico) || 0), 0);
-  const pendente = totalReceber - recebido;
 
   return (
     <div className="min-h-screen bg-background">
@@ -329,27 +327,20 @@ const PortalTecnico = () => {
           </div>
         ) : (
           <div className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">Total a Receber</span>
-                  <Wallet size={16} className="text-primary" />
-                </div>
-                <p className="text-xl font-bold">{fmt(totalReceber)}</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">Recebido</span>
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">Recebido Total</span>
                   <CheckCircle2 size={16} className="text-success" />
                 </div>
                 <p className="text-xl font-bold text-success">{fmt(recebido)}</p>
               </div>
               <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">Pendente</span>
-                  <Hourglass size={16} className="text-warning" />
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">Visitas Realizadas</span>
+                  <Activity size={16} className="text-primary" />
                 </div>
-                <p className="text-xl font-bold text-warning">{fmt(pendente)}</p>
+                <p className="text-xl font-bold text-foreground">{data.pagamentos.length}</p>
               </div>
             </div>
 
@@ -389,12 +380,12 @@ const PortalTecnico = () => {
                       <tr key={p.id}>
                         <td className="px-4 py-3">{new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
                         <td className="px-4 py-3 font-medium">{p.descricao}</td>
-                        <td className="px-4 py-3 text-right font-bold">{fmt(Number(p.valor_tecnico))}</td>
+                        <td className="px-4 py-3 text-right font-bold text-success">{fmt(Number(p.valor_pago_tecnico))}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status_pagamento_tecnico === "pago" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                            p.status_pagamento === "pago" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
                           }`}>
-                            {p.status_pagamento_tecnico === "pago" ? "PAGO" : "PENDENTE"}
+                            {p.status_pagamento === "pago" ? "PAGO" : "PENDENTE"}
                           </span>
                         </td>
                       </tr>
