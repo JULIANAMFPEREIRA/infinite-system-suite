@@ -74,9 +74,15 @@ const FinanceiroReceber = () => {
    const [dataInicio, setDataInicio] = useState("");
    const [dataFim, setDataFim] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
-   const [categoriaFilter, setCategoriaFilter] = useState("");
+    const [categoriaFilter, setCategoriaFilter] = useState("");
 
-  const { data: clientesList } = useQuery({
+    const [summaryTotals, setSummaryTotals] = useState({
+      aReceber: 0,
+      inadimplente: 0,
+      recebido: 0,
+    });
+
+    const { data: clientesList } = useQuery({
     queryKey: ["clientes_select", empresaId],
     queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
     enabled: !!empresaId,
@@ -175,15 +181,10 @@ const FinanceiroReceber = () => {
   });
 
   // Conta vencida: pendente/parcial, com vencimento passado e saldo restante > 0
-  const isVencido = (c: any) => isContaVencida(c);
-
-   const filtered = useMemo(() => {
-     let list = contas ?? [];
-     if (statusFilter === "vencido") {
-       list = list.filter(c => isVencido(c));
-     } else if (statusFilter) {
-       list = list.filter(c => c.status === statusFilter);
-     }
+    const filtered = useMemo(() => {
+      let list = contas ?? [];
+      
+      // Common date and search filters first
       list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
       if (dataInicio) {
         list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
@@ -191,30 +192,80 @@ const FinanceiroReceber = () => {
       if (dataFim) {
         list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
       }
-     if (buscaFilter.trim()) {
-       const q = buscaFilter.trim().toLowerCase();
-       list = list.filter(c => {
-         const nome = ((c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "").toLowerCase();
-         const desc = (c.descricao ?? "").toLowerCase();
-         return nome.includes(q) || desc.includes(q);
-       });
-     }
-     return list;
-    }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
+      if (buscaFilter.trim()) {
+        const q = buscaFilter.trim().toLowerCase();
+        list = list.filter(c => {
+          const nome = ((c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "").toLowerCase();
+          const desc = (c.descricao ?? "").toLowerCase();
+          return nome.includes(q) || desc.includes(q);
+        });
+      }
 
-  // Resumo (sobre filtrado) — sempre via saldo restante
-  // "A Receber" = somatório dos saldos pendentes + parciais + vencidos (exclui pagos e cancelados)
-  const totalPendente = filtered
-    .filter(c => c.status !== "pago" && c.status !== "cancelado")
-    .reduce((s, c) => s + saldoRestante(c), 0);
-  // "Recebido" = soma dos valores efetivamente recebidos (inclui parciais)
-  const totalPago = filtered
-    .filter(c => c.status !== "cancelado")
-    .reduce((s, c) => s + (Number((c as any).valor_recebido) || (c.status === "pago" ? (Number(c.valor) || 0) : 0)), 0);
-  // "Vencido" = saldo restante das contas vencidas
-  const totalVencido = filtered
-    .filter(c => isVencido(c))
-    .reduce((s, c) => s + saldoRestante(c), 0);
+      const hoje = new Date(new Date().toDateString());
+
+      // Totals calculation based on the list already filtered by date/search
+      let totAReceber = 0;
+      let totInadimplente = 0;
+      let totRecebido = 0;
+
+      if (statusFilter === "") {
+        list.forEach(c => {
+          if (c.status === "pago") {
+            totRecebido += (Number((c as any).valor_recebido) || (Number(c.valor) || 0));
+          } else if (c.status !== "cancelado") {
+            const saldo = Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0);
+            if (saldo > 0) {
+              const venc = c.data_vencimento ? new Date(c.data_vencimento) : null;
+              if (!venc || venc >= hoje) {
+                totAReceber += saldo;
+              } else {
+                totInadimplente += saldo;
+              }
+            }
+            // Add received part of partials to total received
+            totRecebido += (Number((c as any).valor_recebido) || 0);
+          }
+        });
+      }
+
+      // Now apply the status filter to the list
+      if (statusFilter === "pendente") {
+        list = list.filter(c => {
+          if (c.status === "pago" || c.status === "cancelado") return false;
+          const saldo = Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0);
+          if (saldo <= 0) return false;
+          if (!c.data_vencimento) return true;
+          return new Date(c.data_vencimento) >= hoje;
+        });
+        totAReceber = list.reduce((s, c) => s + Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0), 0);
+      } else if (statusFilter === "vencido") {
+        list = list.filter(c => {
+          if (c.status === "pago" || c.status === "cancelado") return false;
+          const saldo = Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0);
+          if (saldo <= 0) return false;
+          return c.data_vencimento && new Date(c.data_vencimento) < hoje;
+        });
+        totInadimplente = list.reduce((s, c) => s + Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0), 0);
+      } else if (statusFilter === "pago") {
+        list = list.filter(c => c.status === "pago");
+        totRecebido = list.reduce((s, c) => s + (Number((c as any).valor_recebido) || (Number(c.valor) || 0)), 0);
+      } else if (statusFilter === "parcial") {
+        list = list.filter(c => c.status === "parcial");
+        // For parcial/cancelado, the user asked to show just 1 card with total of filtered.
+        // We'll put it in totAReceber for visual consistency if needed, or follow the rule:
+        // "Mostrar apenas 1 card com o total do filtered - Os outros dois ficam R$ 0,00"
+        totAReceber = list.reduce((s, c) => s + Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0), 0);
+      } else if (statusFilter === "cancelado") {
+        list = list.filter(c => c.status === "cancelado");
+        totAReceber = list.reduce((s, c) => s + (Number(c.valor) || 0), 0);
+      }
+
+      // Use a side effect-free way to update state or just return them
+      // Since useMemo should be pure, we'll return both.
+      return { list, totals: { aReceber: totAReceber, inadimplente: totInadimplente, recebido: totRecebido } };
+    }, [contas, statusFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
+
+    const { list: filteredContas, totals } = filtered;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -275,18 +326,27 @@ const FinanceiroReceber = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-lg font-bold text-warning">{fmtBRL(totalPendente)}</div>
-          <div className="text-[11px] text-muted-foreground">A Receber</div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-lg font-bold text-destructive">{fmtBRL(totalVencido)}</div>
-          <div className="text-[11px] text-muted-foreground">Inadimplente</div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-lg font-bold text-success">{fmtBRL(totalPago)}</div>
-          <div className="text-[11px] text-muted-foreground">Recebido</div>
-        </div>
+        {(statusFilter === "" || statusFilter === "pendente" || statusFilter === "vencido" || statusFilter === "pago") ? (
+          <>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-warning">{fmtBRL(totals.aReceber)}</div>
+              <div className="text-[11px] text-muted-foreground">A Receber</div>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-destructive">{fmtBRL(totals.inadimplente)}</div>
+              <div className="text-[11px] text-muted-foreground">Inadimplente</div>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-success">{fmtBRL(totals.recebido)}</div>
+              <div className="text-[11px] text-muted-foreground">Recebido</div>
+            </div>
+          </>
+        ) : (
+          <div className="col-span-3 bg-card border border-border rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-primary">{fmtBRL(totals.aReceber)}</div>
+            <div className="text-[11px] text-muted-foreground">Total {recStatusLabel(statusFilter)}</div>
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -332,8 +392,8 @@ const FinanceiroReceber = () => {
                   <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map(c => {
+               <tbody>
+                 {filteredContas.map(c => {
                   const clienteNome = (c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "—";
                   // Calculate total parcelas for this project to display X/Y format
                   const totalParcelas = c.projeto_id
