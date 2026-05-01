@@ -21,6 +21,11 @@ const STATUS_OPTIONS = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
+const toTitleCase = (str: string) =>
+  (str ?? "").split(" ").map(w =>
+  w.charAt(0).toUpperCase() +
+  w.slice(1).toLowerCase()).join(" ");
+
 const FinanceiroReceber = () => {
   const recStatusLabel = (s: string) => ({
     pendente: "A RECEBER",
@@ -380,18 +385,18 @@ const FinanceiroReceber = () => {
       {isLoading ? <p className="text-xs text-muted-foreground text-center py-8">Carregando...</p> : (
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-             <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-muted/30">
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Parcela</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Recebido</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
-                </tr>
-              </thead>
+              <table className="w-full">
+               <thead>
+                 <tr className="bg-muted/30">
+                   <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Cliente</th>
+                   <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Parcela</th>
+                   <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
+                   <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
+                   <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Recebido</th>
+                   <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
+                   <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
+                 </tr>
+               </thead>
                <tbody>
                  {filteredContas.map(c => {
                   const clienteNome = (c.clientes as any)?.nome ?? (c.projetos as any)?.nome ?? "—";
@@ -403,14 +408,14 @@ const FinanceiroReceber = () => {
                   return (
                     <tr
                       key={c.id}
-                      className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
+                      className={`border-b border-border last:border-b-0 hover:bg-muted/40 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
                       onClick={() => openEdit(c)}
                     >
-                      <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">{clienteNome}</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground font-medium">{parcelaLabel}</td>
-                      <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
-                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                      <td className="px-3 py-2 text-center tabular-nums">
+                      <td className="px-3 py-2 text-xs font-medium text-foreground max-w-[200px] truncate">{toTitleCase(clienteNome)}</td>
+                      <td className="px-3 py-2 text-xs text-center text-muted-foreground font-medium">{parcelaLabel}</td>
+                      <td className="px-3 py-2 text-xs text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
+                      <td className="px-3 py-2 text-xs text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                      <td className="px-3 py-2 text-xs text-center tabular-nums">
                         {(() => {
                           const total = Number(c.valor) || 0;
                           const recebido = Number((c as any).valor_recebido) || 0;
