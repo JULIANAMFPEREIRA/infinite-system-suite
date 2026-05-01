@@ -437,9 +437,45 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
-      )}
-    </div>
-  );
-};
+       )}
+
+       {/* NOVA SEÇÃO – FINANÇAS PESSOAIS */}
+       <div className="relative py-4">
+         <div className="absolute inset-0 flex items-center">
+           <Separator className="w-full" />
+         </div>
+         <div className="relative flex justify-center">
+           <span className="bg-background px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+             Finanças Pessoais
+           </span>
+         </div>
+       </div>
+
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-8">
+         {/* Meu Saldo */}
+         <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm">
+           <div className="flex items-center gap-2 mb-2">
+             <PiggyBank size={16} className="text-purple-600" />
+             <p className="text-[11px] text-purple-800 font-bold uppercase tracking-wider">Meu Saldo</p>
+           </div>
+           <p className={`text-2xl font-bold ${saldoPessoal >= 0 ? "text-purple-700" : "text-destructive"}`}>
+             {fmt(saldoPessoal)}
+           </p>
+           <p className="text-[11px] text-purple-600/70 font-medium mt-1">Receitas − Despesas/Retiradas</p>
+         </div>
+
+         {/* A Pagar Pessoal */}
+         <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm">
+           <div className="flex items-center gap-2 mb-2">
+             <ShoppingCart size={16} className="text-purple-600" />
+             <p className="text-[11px] text-purple-800 font-bold uppercase tracking-wider">A Pagar Pessoal</p>
+           </div>
+           <p className="text-2xl font-bold text-foreground">{fmt(pagarPessoal)}</p>
+           <p className="text-[11px] text-purple-600/70 font-medium mt-1">Despesas pendentes do mês</p>
+         </div>
+       </div>
+     </div>
+   );
+ };
 
 export default Dashboard;
