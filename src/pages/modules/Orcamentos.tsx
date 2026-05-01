@@ -35,6 +35,11 @@ const STATUS_OPTIONS = [
   { value: "enviado", label: "Enviado" },
 ];
 
+const toTitleCase = (str: string) =>
+  (str ?? "").split(" ").map(w =>
+  w.charAt(0).toUpperCase() +
+  w.slice(1).toLowerCase()).join(" ");
+
 const Orcamentos = () => {
   const empresaId = useEmpresa();
   const navigate = useNavigate();
@@ -310,9 +315,9 @@ const Orcamentos = () => {
 
   const getClienteDisplay = (orc: any): string => {
     if ((orc as any).is_avulso) {
-      return (orc as any).cliente_nome_avulso || "CONSUMIDOR";
+      return toTitleCase((orc as any).cliente_nome_avulso || "CONSUMIDOR");
     }
-    return (orc.clientes as any)?.nome ?? "—";
+    return toTitleCase((orc.clientes as any)?.nome ?? "—");
   };
 
   // Handle edit button click — navigate to the quote itself
@@ -453,12 +458,12 @@ const Orcamentos = () => {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Cliente</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap px-3">Orçamento</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Valor Total</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-center px-3">Status</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Ações</TableHead>
+                <TableRow className="bg-muted/30 h-10">
+                  <TableHead className="text-[11px] py-2.5 font-semibold text-muted-foreground whitespace-nowrap px-3">Cliente</TableHead>
+                  <TableHead className="text-[11px] py-2.5 font-semibold text-muted-foreground whitespace-nowrap px-3">Orçamento</TableHead>
+                  <TableHead className="text-[11px] py-2.5 font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Valor Total</TableHead>
+                  <TableHead className="text-[11px] py-2.5 font-semibold text-muted-foreground whitespace-nowrap text-center px-3">Status</TableHead>
+                  <TableHead className="text-[11px] py-2.5 font-semibold text-muted-foreground whitespace-nowrap text-right px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -466,8 +471,8 @@ const Orcamentos = () => {
                   const total = calcTotal(orc);
                   const isAvulso = (orc as any).is_avulso;
                   return (
-                    <TableRow key={orc.id} className="hover:bg-muted/20 transition-colors">
-                      <TableCell className="text-xs px-3">
+                    <TableRow key={orc.id} className="hover:bg-muted/40 transition-colors">
+                      <TableCell className="text-xs py-2 px-3">
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium text-foreground">{getClienteDisplay(orc)}</span>
                           {isAvulso && (
@@ -477,16 +482,16 @@ const Orcamentos = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-foreground/80 px-3">{orc.nome}</TableCell>
-                      <TableCell className="text-xs text-right font-bold text-foreground tabular-nums px-3">
+                      <TableCell className="text-xs py-2 text-foreground/80 px-3">{orc.nome}</TableCell>
+                      <TableCell className="text-xs py-2 text-right font-bold text-foreground tabular-nums px-3">
                         {formatCurrency(total)}
                       </TableCell>
-                      <TableCell className="text-center px-3">
+                      <TableCell className="text-xs py-2 text-center px-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${orc.aprovado ? "bg-success/15 text-success border border-success/25" : "bg-warning/15 text-warning border border-warning/25"}`}>
                           {orc.aprovado ? "APROVADO" : "PENDENTE"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right px-3">
+                      <TableCell className="text-right py-2 px-3">
                         <div className="flex items-center justify-end gap-0.5">
                           {isAvulso && (
                             <Button
