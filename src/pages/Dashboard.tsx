@@ -65,12 +65,12 @@ const Dashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
-      const [receber, pagar, projetos, clientes, necessidades, visitas, projetoItens, compras] = await Promise.all([
+      const [receber, pagar, projetos, clientes, necRes, visitas, projetoItens, compras] = await Promise.all([
         supabase.from("financeiro_receber").select("valor, valor_recebido, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("financeiro_pagar").select("valor, status, data_vencimento").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("clientes").select("id, nome").eq("deletado", false).then(r => r.data ?? []),
-        (supabase.from("necessidades_compra" as any).select("id, descricao, quantidade, status, projeto_id, produto_id, projeto_item_id, projetos!inner(deletado)").eq("projetos.deletado", false) as any).then((r: any) => (r.data ?? []) as any[]),
+        supabase.from("necessidades_compra" as any).select("id, descricao, quantidade, status, projeto_id, produto_id, projeto_item_id").eq("status", "pendente").then(r => (r.data ?? []) as any[]),
         supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id, google_event_id").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projeto_itens").select("id, preco_custo, quantidade").then(r => r.data ?? []),
         supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
@@ -85,7 +85,7 @@ const Dashboard = () => {
       const produtoMap = Object.fromEntries(produtosRes.map(p => [p.id, p]));
       const projetoItemMap = Object.fromEntries(projetoItens.map(pi => [pi.id, pi]));
 
-      const itensPendentes = necessidades.filter(n => n.status === "pendente");
+      const itensPendentes = necRes;
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
 
       // Calcular valor total dos itens a comprar
