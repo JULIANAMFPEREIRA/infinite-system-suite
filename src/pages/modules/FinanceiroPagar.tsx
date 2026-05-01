@@ -37,8 +37,10 @@ const inferTipo = (desc: string | null): string => {
   if (d.includes("frete") || d.includes("transporte") || d.includes("entrega")) return "frete";
   if (d.includes("serviço") || d.includes("servico") || d.includes("mão de obra") || d.includes("mao de obra") || d.includes("instalação") || d.includes("instalacao")) return "servico";
   if (d.includes("adicional")) return "adicional";
-   return "";
- };
+  if (d.includes("comissão") || d.includes("comissao")) return "comissao";
+  if (d.includes("compra") || d.includes("produto")) return "produto";
+  return "";
+};
 
 const tipoBadge = (conta: any) => {
   const desc = conta?.descricao ?? null;
@@ -80,6 +82,7 @@ const FinanceiroPagar = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
+  const [tipo, setTipo] = useState("");
   const [valor, setValor] = useState(0);
   const [vencimento, setVencimento] = useState("");
   const [fornecedorId, setFornecedorId] = useState("");
@@ -159,10 +162,11 @@ const FinanceiroPagar = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setDesc(""); setTipo(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
     setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
+    setTipo(inferTipo(c.descricao) || "");
     // Parse descRetirada from description if it's a retirada
     const catName = getCatName(c.categoria_id);
     const rawDesc = c.descricao ?? "";
@@ -196,6 +200,22 @@ const FinanceiroPagar = () => {
       // Suggest "Juliana Pereira" as fornecedor if exists
       const juliana = fornecedores?.find(f => f.nome.toUpperCase().includes("JULIANA PEREIRA"));
       if (juliana && !fornecedorId) setFornecedorId(juliana.id);
+    }
+  };
+
+  const getPlaceholder = (t: string) => {
+    if (t === "frete") return "Ex: Frete — Nome do Cliente";
+    if (t === "imposto") return "Ex: Imposto — ISS";
+    if (t === "produto") return "Ex: Compra — Nome do Produto";
+    if (t === "servico") return "Ex: Instalação — Descrição";
+    return "";
+  };
+
+  const handleTipoChange = (newTipo: string) => {
+    setTipo(newTipo);
+    if (!desc && newTipo) {
+      const placeholder = getPlaceholder(newTipo);
+      if (placeholder) setDesc(placeholder);
     }
   };
 
@@ -388,14 +408,39 @@ const FinanceiroPagar = () => {
               <label className="text-[11px] text-muted-foreground">Categoria</label>
               <select value={categoriaId} onChange={e => handleCategoriaChange(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary">
                 <option value="">Selecionar categoria...</option>
-                {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                  <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                {Object.entries(categoriaGroups).map(([tipoGrp, cats]) => (
+                  <optgroup key={tipoGrp} label={tipoLabels[tipoGrp] || tipoGrp}>
                     {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                   </optgroup>
                 ))}
               </select>
             </div>
-            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Tipo</label>
+              <select 
+                value={tipo} 
+                onChange={e => handleTipoChange(e.target.value)} 
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Selecionar tipo...</option>
+                <option value="produto">Produto</option>
+                <option value="servico">Serviço</option>
+                <option value="frete">Frete</option>
+                <option value="imposto">Imposto</option>
+                <option value="adicional">Adicional</option>
+                <option value="comissao">Comissão</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div className="space-y-1 col-span-1">
+              <label className="text-[11px] text-muted-foreground">Descrição</label>
+              <input 
+                value={desc} 
+                onChange={e => setDesc(e.target.value)} 
+                placeholder={getPlaceholder(tipo)}
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" 
+              />
+            </div>
             {isRetiradaSelected && (
               <div className="space-y-1 col-span-2">
                 <label className="text-[11px] text-muted-foreground">Descrição da retirada <span className="text-muted-foreground/60">(opcional — ex: mercado, gasolina, conta pessoal)</span></label>
