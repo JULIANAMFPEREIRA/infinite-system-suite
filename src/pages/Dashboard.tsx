@@ -303,8 +303,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* LINHA 2 – OPERACIONAL */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* LINHA 2 – OPERACIONAL & COMPRAS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* A Pagar */}
         <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
@@ -324,11 +324,25 @@ const Dashboard = () => {
           <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
           <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
         </div>
+
+        {/* Falta Comprar */}
+        <div 
+          className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
+          onClick={() => navigate("/itens-comprar")}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingCart size={16} className="text-orange-600" />
+            <p className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">Falta Comprar</p>
+          </div>
+          <p className="text-2xl font-bold text-orange-600">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
+          <p className="text-[11px] text-orange-600/70 font-medium mt-1">
+            {stats?.itensPendentesCount ?? 0} itens pendentes
+          </p>
+        </div>
       </div>
 
-      {/* 3. CONTEÚDO PRINCIPAL – 3 blocos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* BLOCO 1 – Agenda Interativa */}
+      {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
+      <div className="grid grid-cols-1 gap-4">
         <InteractiveCalendar
           localVisitas={(stats?.proximasVisitas ?? []).map(v => ({
             id: v.id,
@@ -341,73 +355,6 @@ const Dashboard = () => {
             projetoNome: v.projetoNome,
           }))}
         />
-
-        {/* BLOCO 2 – Itens a Comprar */}
-        <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Package size={16} className="text-[hsl(38,92%,50%)]" />
-              Itens a Comprar
-            </h3>
-            <button
-              onClick={() => navigate("/itens-comprar")}
-              className="text-[11px] text-primary hover:underline flex items-center gap-1"
-            >
-              Ver todos <ExternalLink size={10} />
-            </button>
-          </div>
-          {(stats?.itensComprarDetalhados?.length ?? 0) > 0 ? (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-              {stats!.itensComprarDetalhados.map((item, i) => (
-                <div key={i} className="list-item-hover p-3 rounded-lg bg-secondary/30 border border-border/50">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">{item.produtoNome}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{item.projetoNome}</p>
-                    </div>
-                    <div className="text-right ml-2 shrink-0">
-                      <p className="text-xs font-semibold text-foreground">{fmt(item.custoUnit * (Number(item.quantidade) || 1))}</p>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[hsl(38,92%,50%)]/15 text-[hsl(38,92%,50%)]">pendente</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-8">Nenhum item pendente.</p>
-          )}
-        </div>
-
-        {/* BLOCO 3 – Status dos Projetos */}
-        <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <FolderKanban size={16} className="text-primary" />
-              Status dos Projetos
-            </h3>
-            <button
-              onClick={() => navigate("/projetos")}
-              className="text-[11px] text-primary hover:underline flex items-center gap-1"
-            >
-              Ver todos <ExternalLink size={10} />
-            </button>
-          </div>
-          {(stats?.statusCounts?.length ?? 0) > 0 ? (
-            <div className="space-y-2">
-              {stats!.statusCounts.map(s => (
-                <div key={s.key} className="list-item-hover flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="text-xs text-foreground">{s.label}</span>
-                  </div>
-                  <span className="text-sm font-bold text-foreground">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-8">Nenhum projeto.</p>
-          )}
-        </div>
       </div>
 
       {/* Inadimplência detalhada */}
