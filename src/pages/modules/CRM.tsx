@@ -2827,10 +2827,10 @@ const CRM = () => {
           <TabsContent value="cronograma">
             <div className="bg-card border border-border rounded-lg p-4">
               {clienteProjetos && clienteProjetos.length > 0 ? (
-                <ProjetoCronogramaSection 
-                  projeto={clienteProjetos[0]} 
-                  dataInicio={clienteProjetos[0].data_inicio ?? ""} 
-                  dataPrevisao={clienteProjetos[0].data_previsao ?? ""} 
+                <ProjetoCronogramaSection
+                  projeto={clienteProjetos[0]}
+                  dataInicio={(clienteProjetos[0] as any).data_inicio ?? ""}
+                  dataPrevisao={(clienteProjetos[0] as any).data_previsao ?? ""}
                 />
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-6">Aprove um orçamento para habilitar o cronograma</p>
@@ -2841,7 +2841,7 @@ const CRM = () => {
           <TabsContent value="historico">
             <div className="bg-card border border-border rounded-lg p-4">
               {clienteProjetos && clienteProjetos.length > 0 ? (
-                <HistoricoProjeto projetoId={clienteProjetos[0].id} dataCriacao={clienteProjetos[0].created_at} />
+                <HistoricoProjeto projetoId={clienteProjetos[0].id} dataCriacao={(clienteProjetos[0] as any).created_at} />
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado para exibir linha do tempo.</p>
               )}
