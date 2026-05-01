@@ -113,8 +113,19 @@ const Dashboard = () => {
       const inadimplentesValorTotal = inadimplentes.reduce((a, r) => a + r.valor_saldo, 0);
       const clientesInadimplentesUnicos = new Set(inadimplentes.map(i => i.cliente_id).filter(Boolean)).size;
 
-      // Total a Receber GERAL — considera saldo restante (parcial conta apenas o que falta)
-      const totalReceberGeral = receber
+      // A RECEBER = pendentes/parciais NÃO vencidos
+      const totalAReceber = receber
+        .filter(r => {
+          if (r.status === "pago" || r.status === "cancelado") return false;
+          const saldoR = saldo(r);
+          if (saldoR <= 0) return false;
+          if (!r.data_vencimento) return true;
+          return new Date(r.data_vencimento) >= hoje;
+        })
+        .reduce((a, r) => a + saldo(r), 0);
+
+      // Para saldo previsto, ainda precisamos do total geral (incluindo inadimplentes)
+      const totalReceberGeralParaSaldo = receber
         .filter(r => r.status !== "pago" && r.status !== "cancelado")
         .reduce((a, r) => a + saldo(r), 0);
 
@@ -146,7 +157,7 @@ const Dashboard = () => {
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
       const saldoAtual = totalRecebido - totalPagoEfetivo;
-      const saldoPrevisto = saldoAtual + totalReceberGeral - pagarGeral;
+      const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
       // Status operacionais
       const statusOperacionais = [
@@ -194,7 +205,7 @@ const Dashboard = () => {
         inadimplentesValorTotal,
         clientesInadimplentesUnicos,
         receberMes,
-        totalReceberGeral,
+        totalAReceber,
         comprasMesValor,
         pagarMes,
         pagarGeral,
