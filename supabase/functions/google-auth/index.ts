@@ -90,15 +90,23 @@ Deno.serve(async (req) => {
         });
       }
 
-      const expiryDate = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
-
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      
+      const existing = await serviceClient
+        .from("google_integrations")
+        .select("refresh_token")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const refreshToken = tokenData.refresh_token || existing?.data?.refresh_token;
+      const expiryDate = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+
       const { error: upsertErr } = await serviceClient
         .from("google_integrations")
         .upsert({
           user_id: userId,
           access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token || null,
+          refresh_token: refreshToken,
           expiry_date: expiryDate,
         }, { onConflict: "user_id" });
 
@@ -122,13 +130,13 @@ Deno.serve(async (req) => {
       }
 
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: integration } = await serviceClient
+      const { data } = await serviceClient
         .from("google_integrations")
-        .select("id, expiry_date")
+        .select("access_token, refresh_token, expiry_date")
         .eq("user_id", userId)
         .maybeSingle();
 
-      return new Response(JSON.stringify({ connected: !!integration }), {
+      return new Response(JSON.stringify({ connected: !!(data?.access_token && data?.refresh_token) }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
