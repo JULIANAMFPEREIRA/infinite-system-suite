@@ -1727,10 +1727,10 @@ const CRM = () => {
             <TabsTrigger value="dados" className="text-xs">Dados do Cliente</TabsTrigger>
             <TabsTrigger value="itens" className="text-xs">Itens (Pré-Projeto)</TabsTrigger>
             <TabsTrigger value="anotacoes" className="text-xs">Anotações</TabsTrigger>
-            <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
-            <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
             <TabsTrigger value="visitas" className="text-xs gap-1.5"><CalendarDays size={13} /> Visitas Técnicas</TabsTrigger>
             <TabsTrigger value="cronograma" className="text-xs gap-1.5"><Activity size={13} /> Cronograma</TabsTrigger>
+            <TabsTrigger value="imagens" className="text-xs">Imagens</TabsTrigger>
+            <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
             <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
             <TabsTrigger value="historico" className="text-xs gap-1.5"><History size={13} /> Linha do Tempo</TabsTrigger>
             <TabsTrigger value="atividades" className="text-xs gap-1.5"><Activity size={13} /> Atividades</TabsTrigger>
@@ -2811,6 +2811,50 @@ const CRM = () => {
                   ))}
                 </div>
               ) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum documento adicionado.</p>}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="visitas">
+            <div className="bg-card border border-border rounded-lg p-4">
+              {clienteProjetos && clienteProjetos.length > 0 ? (
+                <VisitasTecnicasSection projetoId={clienteProjetos[0].id} />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">Aprove um orçamento para habilitar visitas técnicas</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="cronograma">
+            <div className="bg-card border border-border rounded-lg p-4">
+              {clienteProjetos && clienteProjetos.length > 0 ? (
+                <ProjetoCronogramaSection 
+                  projeto={clienteProjetos[0]} 
+                  dataInicio={clienteProjetos[0].data_inicio ?? ""} 
+                  dataPrevisao={clienteProjetos[0].data_previsao ?? ""} 
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">Aprove um orçamento para habilitar o cronograma</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="historico">
+            <div className="bg-card border border-border rounded-lg p-4">
+              {clienteProjetos && clienteProjetos.length > 0 ? (
+                <HistoricoProjeto projetoId={clienteProjetos[0].id} dataCriacao={clienteProjetos[0].created_at} />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado para exibir linha do tempo.</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="atividades">
+            <div className="bg-card border border-border rounded-lg p-4">
+              {clienteProjetos && clienteProjetos.length > 0 ? (
+                <AtividadeLog projetoId={clienteProjetos[0].id} />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado para exibir atividades.</p>
+              )}
             </div>
           </TabsContent>
 
