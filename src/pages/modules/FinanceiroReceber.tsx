@@ -17,7 +17,7 @@ const STATUS_OPTIONS = [
   { value: "pendente", label: "Pendente" },
   { value: "parcial", label: "Parcial" },
   { value: "pago", label: "Pago" },
-  { value: "vencido", label: "Vencido" },
+  { value: "vencido", label: "Inadimplente" },
   { value: "cancelado", label: "Cancelado" },
 ];
 
@@ -55,6 +55,8 @@ const FinanceiroReceber = () => {
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
    const [buscaFilter, setBuscaFilter] = useState("");
+   const [dataInicio, setDataInicio] = useState("");
+   const [dataFim, setDataFim] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
 
@@ -129,7 +131,7 @@ const FinanceiroReceber = () => {
           financeiro_receber_id: baixaId,
           valor: valorRec,
           data: baixaData,
-          observacao: baixaObs || (baixaForma ? `Forma: ${baixaForma}` : null),
+          observacao: baixaForma ? `Forma: ${baixaForma}${baixaObs ? ` | ${baixaObs}` : ""}` : (baixaObs || null),
         } as any);
       if (histErr) throw histErr;
 
@@ -166,7 +168,13 @@ const FinanceiroReceber = () => {
      } else if (statusFilter) {
        list = list.filter(c => c.status === statusFilter);
      }
-     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+      list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+      if (dataInicio) {
+        list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
+      }
+      if (dataFim) {
+        list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
+      }
      if (buscaFilter.trim()) {
        const q = buscaFilter.trim().toLowerCase();
        list = list.filter(c => {
@@ -176,7 +184,7 @@ const FinanceiroReceber = () => {
        });
      }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter]);
+    }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
 
   // Resumo (sobre filtrado) — sempre via saldo restante
   // "A Receber" = somatório dos saldos pendentes + parciais + vencidos (exclui pagos e cancelados)
@@ -215,18 +223,38 @@ const FinanceiroReceber = () => {
         onMesChange={setMesFilter}
         anoFilter={anoFilter}
         onAnoChange={setAnoFilter}
-         extraFilters={
-           <div className="relative flex-1 max-w-sm">
-             <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-             <input
-               type="text"
-               value={buscaFilter}
-               onChange={e => setBuscaFilter(e.target.value)}
-               placeholder="Buscar por cliente ou descrição..."
-               className="h-7 w-full pl-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-             />
-           </div>
-         }
+          extraFilters={
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+              <div className="relative flex-1 w-full max-w-sm">
+                <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={buscaFilter}
+                  onChange={e => setBuscaFilter(e.target.value)}
+                  placeholder="Buscar por cliente ou descrição..."
+                  className="h-7 w-full pl-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">De:</span>
+                  <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">Até:</span>
+                  <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                </div>
+                {(dataInicio || dataFim) && (
+                  <button 
+                    onClick={() => { setDataInicio(""); setDataFim(""); }}
+                    className="h-7 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/10 rounded border border-destructive/20 transition-colors"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+          }
        />
 
       {/* Summary cards */}
@@ -237,7 +265,7 @@ const FinanceiroReceber = () => {
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <div className="text-lg font-bold text-destructive">{fmtBRL(totalVencido)}</div>
-          <div className="text-[11px] text-muted-foreground">Vencido</div>
+          <div className="text-[11px] text-muted-foreground">Inadimplente</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <div className="text-lg font-bold text-success">{fmtBRL(totalPago)}</div>
@@ -310,19 +338,24 @@ const FinanceiroReceber = () => {
                         {(() => {
                           const total = Number(c.valor) || 0;
                           const recebido = Number((c as any).valor_recebido) || 0;
-                          if (recebido <= 0) return <span className="text-muted-foreground">—</span>;
-                          if (recebido >= total) return <span className="text-success font-medium">{fmtBRL(recebido)}</span>;
-                          return (
-                            <span className="text-info font-medium">
-                              {fmtBRL(recebido)}
-                              <span className="text-[10px] text-muted-foreground ml-1">/ falta {fmtBRL(total - recebido)}</span>
-                            </span>
-                          );
+                          if (recebido > 0) {
+                            if (recebido >= total) return <span className="text-success font-medium">{fmtBRL(recebido)}</span>;
+                            return (
+                              <span className="text-info font-medium">
+                                {fmtBRL(recebido)}
+                                <span className="text-[10px] text-muted-foreground ml-1">/ falta {fmtBRL(total - recebido)}</span>
+                              </span>
+                            );
+                          }
+                          if (c.status === "pago" && recebido === 0) {
+                            return <span className="text-success font-medium">{fmtBRL(total)}</span>;
+                          }
+                          return <span className="text-muted-foreground">—</span>;
                         })()}
                       </td>
                       <td className="px-3 py-2 text-center">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
-                          {statusLabel(c.status ?? "pendente")}
+                          {c.status === "vencido" ? "INADIMPLENTE" : statusLabel(c.status ?? "pendente")}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
