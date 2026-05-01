@@ -13,15 +13,31 @@ import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/Fina
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "Todos status" },
-  { value: "pendente", label: "Pendente" },
-  { value: "parcial", label: "Parcial" },
-  { value: "pago", label: "Pago" },
+  { value: "", label: "Todos" },
+  { value: "pendente", label: "A Receber" },
   { value: "vencido", label: "Inadimplente" },
+  { value: "pago", label: "Recebido" },
+  { value: "parcial", label: "Parcial" },
   { value: "cancelado", label: "Cancelado" },
 ];
 
 const FinanceiroReceber = () => {
+  const recStatusLabel = (s: string) => ({
+    pendente: "A RECEBER",
+    vencido: "INADIMPLENTE",
+    pago: "RECEBIDO",
+    parcial: "PARCIAL",
+    cancelado: "CANCELADO",
+  }[s] ?? s.toUpperCase());
+
+  const recStatusBadgeClass = (s: string) => ({
+    "A RECEBER": "bg-blue-100 text-blue-700",
+    "INADIMPLENTE": "bg-red-100 text-red-700",
+    "RECEBIDO": "bg-green-100 text-green-700",
+    "PARCIAL": "bg-yellow-100 text-yellow-700",
+    "CANCELADO": "bg-gray-100 text-gray-500",
+  }[s] ?? "bg-gray-100 text-gray-500");
+
   const empresaId = useEmpresa();
   const qc = useQueryClient();
   const { data: contas, isLoading } = useFinanceiroReceber();
@@ -354,9 +370,14 @@ const FinanceiroReceber = () => {
                         })()}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
-                          {c.status === "vencido" ? "INADIMPLENTE" : statusLabel(c.status ?? "pendente")}
-                        </span>
+                        {(() => {
+                          const label = recStatusLabel(c.status ?? "pendente");
+                          return (
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${recStatusBadgeClass(label)}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-0.5">
