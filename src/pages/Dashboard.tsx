@@ -24,6 +24,12 @@ const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigi
 const Dashboard = () => {
    const { user } = useAuth();
    const empresaId = useEmpresa();
+   const navigate = useNavigate();
+   const queryClient = useQueryClient();
+   const hoje = new Date();
+   const inicioMes = startOfMonth(hoje);
+   const fimMes = endOfMonth(hoje);
+
    const { data: financasPessoais } = useQuery({
      queryKey: ["financas_pessoais", user?.id],
      queryFn: async () => {
@@ -55,12 +61,6 @@ const Dashboard = () => {
        .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes && f.tipo === "despesa")
        .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
    }, [financasPessoais, inicioMes, fimMes]);
-
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const hoje = new Date();
-  const inicioMes = startOfMonth(hoje);
-  const fimMes = endOfMonth(hoje);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
