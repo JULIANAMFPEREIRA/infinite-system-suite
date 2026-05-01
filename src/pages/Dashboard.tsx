@@ -65,41 +65,32 @@ const Dashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
-      const [receber, pagar, projetos, clientes, necRes, visitas, projetoItens, compras] = await Promise.all([
+      const [receber, pagar, projetos, clientes, visitas, compras] = await Promise.all([
         supabase.from("financeiro_receber").select("valor, valor_recebido, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("financeiro_pagar").select("valor, status, data_vencimento").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("clientes").select("id, nome").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("necessidades_compra" as any).select("id, descricao, quantidade, status, projeto_id, produto_id, projeto_item_id").eq("status", "pendente").then(r => (r.data ?? []) as any[]),
         supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id, google_event_id").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("projeto_itens").select("id, preco_custo, quantidade").then(r => r.data ?? []),
         supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
-      const [produtosRes] = await Promise.all([
+      const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
         supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
+        supabase.from("crm_orcamentos").select("id").eq("aprovado", true).then(r => r.data ?? []),
       ]);
 
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
       const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
       const produtoMap = Object.fromEntries(produtosRes.map(p => [p.id, p]));
-      const projetoItemMap = Object.fromEntries(projetoItens.map(pi => [pi.id, pi]));
 
-      const itensPendentes = necRes;
+      const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
+      const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
+
+      const itensComprarValorTotal = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+      const itensPendentesCount = itensFaltaComprar.length;
+
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
-
-      // Calcular valor total dos itens a comprar
-      let itensComprarValorTotal = 0;
-      itensPendentes.forEach(n => {
-        const qty = Number(n.quantidade) || 1;
-        let custoUnit = 0;
-        if (n.projeto_item_id && projetoItemMap[n.projeto_item_id]) {
-          custoUnit = Number(projetoItemMap[n.projeto_item_id].preco_custo) || 0;
-        } else if (n.produto_id && produtoMap[n.produto_id]) {
-          custoUnit = Number(produtoMap[n.produto_id].preco_custo) || 0;
-        }
-        itensComprarValorTotal += custoUnit * qty;
-      });
 
       // saldo restante helper (considera recebimento parcial)
       const saldo = (r: any) => Math.max((Number(r.valor) || 0) - (Number((r as any).valor_recebido) || 0), 0);
