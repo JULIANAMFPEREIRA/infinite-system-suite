@@ -460,7 +460,7 @@ const FinanceiroReceber = () => {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
+                {filteredContas.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada.</td></tr>}
               </tbody>
             </table>
           </div>
