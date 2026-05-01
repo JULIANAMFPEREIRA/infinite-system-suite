@@ -266,228 +266,64 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* RESUMO FINANCEIRO */}
-      <div>
-        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Resumo Financeiro</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Saldo Atual */}
-          <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet size={14} className="text-primary" />
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Saldo Atual</p>
-            </div>
-            <p className={`text-xl sm:text-2xl font-bold mt-1 ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-              {fmt(stats?.saldoAtual ?? 0)}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Recebido − Pago</p>
+      {/* LINHA 1 – PRINCIPAIS KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Saldo Atual */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet size={16} className="text-blue-600" />
+            <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
           </div>
+          <p className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+            {fmt(stats?.saldoAtual ?? 0)}
+          </p>
+          <p className="text-[11px] text-blue-600/70 font-medium mt-1">Recebido − Pago</p>
+        </div>
 
-          {/* A Receber */}
-          <div className="relative overflow-hidden rounded-xl border border-[hsl(210,70%,50%)]/25 bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowDownRight size={14} className="text-[hsl(210,70%,50%)]" />
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">A Receber</p>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{fmt(stats?.totalReceberGeral ?? 0)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Pendente</p>
+        {/* A Receber */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowDownRight size={16} className="text-blue-600" />
+            <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">A Receber</p>
           </div>
+          <p className="text-2xl font-bold text-foreground">{fmt(stats?.totalReceberGeral ?? 0)}</p>
+          <p className="text-[11px] text-blue-600/70 font-medium mt-1">Total pendente</p>
+        </div>
 
-          {/* A Pagar */}
-          <div className="relative overflow-hidden rounded-xl border border-[hsl(0,70%,50%)]/25 bg-gradient-to-br from-[hsl(0,70%,50%)]/15 to-[hsl(0,70%,50%)]/5 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowUpRight size={14} className="text-[hsl(0,70%,50%)]" />
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">A Pagar</p>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{fmt(stats?.pagarGeral ?? 0)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Pendente</p>
+        {/* Inadimplente */}
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <UserX size={16} className="text-red-600" />
+            <p className="text-[11px] text-red-800 font-bold uppercase tracking-wider">Inadimplente</p>
           </div>
-
-          {/* Saldo Previsto */}
-          <div className="relative overflow-hidden rounded-xl border border-[hsl(38,92%,50%)]/25 bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Scale size={14} className="text-[hsl(38,92%,50%)]" />
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Saldo Previsto</p>
-            </div>
-            <p className={`text-xl sm:text-2xl font-bold mt-1 ${(stats?.saldoPrevisto ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-              {fmt(stats?.saldoPrevisto ?? 0)}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Atual + Receber − Pagar</p>
-          </div>
+          <p className="text-2xl font-bold text-red-600">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
+          <p className="text-[11px] text-red-600/70 font-medium mt-1">
+            {stats?.clientesInadimplentesUnicos ?? 0} clientes · {stats?.inadimplentesCount ?? 0} parcelas
+          </p>
         </div>
       </div>
 
-      {/* LINHA 1 – FINANCEIRO RECEITAS */}
-      <div>
-        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Receitas</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Total a Receber (Geral) */}
-          <div
-            onClick={() => navigate("/financeiro/receber")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(210,70%,50%)]/15 to-[hsl(210,70%,50%)]/5 rounded-xl border border-[hsl(210,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(210,70%,50%)]/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total a Receber</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.totalReceberGeral ?? 0)}</p>
-                <p className="text-[11px] text-[hsl(210,70%,50%)] mt-1">Todas as pendentes</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[hsl(210,70%,50%)]/20 text-[hsl(210,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
-                <TrendingUp size={20} />
-              </div>
-            </div>
+      {/* LINHA 2 – OPERACIONAL */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* A Pagar */}
+        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpRight size={16} className="text-green-600" />
+            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">A Pagar</p>
           </div>
-
-          {/* A Receber (Mês) */}
-          <div
-            onClick={() => navigate("/financeiro/receber")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(152,69%,40%)]/15 to-[hsl(152,69%,40%)]/5 rounded-xl border border-[hsl(152,69%,40%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(152,69%,40%)]/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">A Receber (Mês)</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.receberMes ?? 0)}</p>
-                <p className="text-[11px] text-[hsl(152,69%,40%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[hsl(152,69%,40%)]/20 text-[hsl(152,69%,40%)] group-hover:scale-110 transition-transform shrink-0">
-                <DollarSign size={20} />
-              </div>
-            </div>
-          </div>
-
-          {/* Inadimplentes */}
-          <div
-            onClick={() => navigate("/financeiro/receber")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-destructive/15 to-destructive/5 rounded-xl border border-destructive/20 p-5 shadow-sm hover:shadow-md hover:border-destructive/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Inadimplentes</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
-                <p className="text-[11px] text-destructive mt-1">{stats?.clientesInadimplentesUnicos ?? 0} cliente(s) · {stats?.inadimplentesCount ?? 0} parcela(s)</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive group-hover:scale-110 transition-transform shrink-0">
-                <UserX size={20} />
-              </div>
-            </div>
-          </div>
+          <p className="text-2xl font-bold text-foreground">{fmt(stats?.pagarGeral ?? 0)}</p>
+          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total pendente</p>
         </div>
-      </div>
 
-      {/* LINHA 2 – CUSTOS E OPERAÇÃO */}
-      <div>
-        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Custos & Operação</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Itens a Comprar (Total) */}
-          <div
-            onClick={() => navigate("/itens-comprar")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(38,92%,50%)]/15 to-[hsl(38,92%,50%)]/5 rounded-xl border border-[hsl(38,92%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(38,92%,50%)]/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Itens a Comprar</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
-                <p className="text-[11px] text-[hsl(38,92%,50%)] mt-1">{stats?.itensPendentesCount ?? 0} itens pendentes</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[hsl(38,92%,50%)]/20 text-[hsl(38,92%,50%)] group-hover:scale-110 transition-transform shrink-0">
-                <ClipboardList size={20} />
-              </div>
-            </div>
+        {/* Projetos Ativos */}
+        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <FolderKanban size={16} className="text-green-600" />
+            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">Projetos Ativos</p>
           </div>
-
-          {/* Compras do Mês */}
-          <div
-            onClick={() => navigate("/itens-comprar")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(280,60%,50%)]/15 to-[hsl(280,60%,50%)]/5 rounded-xl border border-[hsl(280,60%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(280,60%,50%)]/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">A Comprar (Mês)</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.comprasMesValor ?? 0)}</p>
-                <p className="text-[11px] text-[hsl(280,60%,50%)] mt-1">{format(hoje, "MMMM/yyyy", { locale: ptBR })}</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[hsl(280,60%,50%)]/20 text-[hsl(280,60%,50%)] group-hover:scale-110 transition-transform shrink-0">
-                <Receipt size={20} />
-              </div>
-            </div>
-          </div>
-
-          {/* Total de Projetos */}
-          <div
-            onClick={() => navigate("/projetos")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl border border-primary/20 p-5 shadow-sm hover:shadow-md hover:border-primary/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total de Projetos</p>
-                <p className="text-3xl font-bold text-foreground mt-2">{stats?.projetosAtivosCount ?? 0}</p>
-                <p className="text-[11px] text-primary mt-1">ativos (excl. cancelados)</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-primary/20 text-primary group-hover:scale-110 transition-transform shrink-0">
-                <FolderKanban size={20} />
-              </div>
-            </div>
-          </div>
+          <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
+          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
         </div>
-      </div>
-
-      {/* LINHA 3 – DESPESAS + GRÁFICO */}
-      <div>
-        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-2">Despesas</p>
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
-          {/* Contas a Pagar */}
-          <div
-            onClick={() => navigate("/financeiro/pagar")}
-            className="cursor-pointer group card-interactive bg-gradient-to-br from-[hsl(0,70%,50%)]/15 to-[hsl(0,70%,50%)]/5 rounded-xl border border-[hsl(0,70%,50%)]/20 p-5 shadow-sm hover:shadow-md hover:border-[hsl(0,70%,50%)]/40"
-          >
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Contas a Pagar</p>
-                <p className="text-2xl font-bold text-foreground mt-2 truncate">{fmt(stats?.pagarMes ?? 0)}</p>
-                <p className="text-[11px] text-[hsl(0,70%,50%)] mt-1">Mês · Total: {fmt(stats?.pagarGeral ?? 0)}</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[hsl(0,70%,50%)]/20 text-[hsl(0,70%,50%)] group-hover:scale-110 transition-transform shrink-0">
-                <ShoppingCart size={20} />
-              </div>
-            </div>
-          </div>
-
-          {/* Gráfico Receitas vs Despesas */}
-          <div className="max-h-[260px]">
-            <RevenueExpensesChart
-              receber={stats?.receber ?? []}
-              pagar={stats?.pagar ?? []}
-            />
-          </div>
-        </div>
-      </div>
-
-
-
-
-      {/* 2. AÇÕES RÁPIDAS */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-        <button
-          onClick={() => navigate("/projetos")}
-          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
-        >
-          <Plus size={14} />
-          Novo Projeto
-        </button>
-        <button
-          onClick={() => navigate("/crm")}
-          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-lg bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium transition-colors border border-border/50 w-full sm:w-auto"
-        >
-          <FileText size={14} />
-          Novo Orçamento
-        </button>
-        <button
-          onClick={() => navigate("/financeiro/receber")}
-          className="btn-press flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg bg-[hsl(152,69%,40%)]/15 hover:bg-[hsl(152,69%,40%)]/25 text-[hsl(152,69%,40%)] text-xs font-semibold transition-colors border border-[hsl(152,69%,40%)]/30 w-full sm:w-auto"
-        >
-          <DollarSign size={14} />
-          Financeiro
-          <ArrowRight size={12} />
-        </button>
       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – 3 blocos */}
