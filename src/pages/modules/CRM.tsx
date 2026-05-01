@@ -2273,16 +2273,15 @@ const CRM = () => {
                       <div className="rounded-lg overflow-hidden border border-border/60 bg-card">
                         <table className="w-full text-xs table-fixed">
                           <colgroup>
-                            <col style={{ width: "24%" }} />
-                            <col style={{ width: "5%" }} />
-                            <col style={{ width: "9%" }} />
-                            <col style={{ width: "9%" }} />
-                            <col style={{ width: "9%" }} />
-                            <col style={{ width: "9%" }} />
-                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "28%" }} />
+                            <col style={{ width: "7%" }} />
                             <col style={{ width: "10%" }} />
-                            {(title === "Produtos" || title === "Serviços") && <col style={{ width: "10%" }} />}
-                            <col style={{ width: "6%" }} />
+                            <col style={{ width: "10%" }} />
+                            <col style={{ width: "10%" }} />
+                            <col style={{ width: "10%" }} />
+                            <col style={{ width: "10%" }} />
+                            <col style={{ width: "9%" }} />
+                            <col style={{ width: "8%" }} />
                           </colgroup>
                           <thead><tr className="bg-secondary/40">
                             <SortableHeader colKey="descricao" label="Descrição" className="text-left" />
@@ -2292,8 +2291,7 @@ const CRM = () => {
                             <SortableHeader colKey="preco_venda" label="Venda" className="text-right" />
                             <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">T. Venda</th>
                             <SortableHeader colKey="rt_comissao" label="RT" className="text-right" />
-                            <th className="text-right px-3 py-2.5 font-semibold text-foreground/80">Subtotal</th>
-                            {(title === "Produtos" || title === "Serviços") && <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Status</th>}
+                            <th className="text-center px-3 py-2.5 font-semibold text-foreground/80">Status</th>
                             <th className="text-center px-3 py-2.5 font-semibold text-foreground/80 w-16">Ações</th>
                           </tr></thead>
                           <tbody>
@@ -2350,53 +2348,50 @@ const CRM = () => {
                                     );
                                   }
                                   return (
-                                    <td
-                                      className="px-3 py-2 text-right cursor-pointer hover:bg-primary/5 group transition-colors"
-                                      onClick={() => startInlineEdit(item.id, rtField, isPerc ? Number((item as any).rt_percentual ?? 0) : rtTotal)}
-                                      title="Clique para editar RT"
-                                    >
-                                      {isPerc ? (
-                                        <span className="inline-flex flex-col items-end">
-                                          <span className="font-semibold inline-flex items-center gap-1">
-                                            {Number((item as any).rt_percentual ?? 0)}%
-                                            <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
-                                          </span>
-                                          <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                                        </span>
-                                      ) : (
+                                  <td
+                                    className="px-3 py-2 text-right cursor-pointer hover:bg-primary/5 group transition-colors"
+                                    onClick={() => startInlineEdit(item.id, rtField, isPerc ? Number((item as any).rt_percentual ?? 0) : rtTotal)}
+                                    title="Clique para editar RT"
+                                  >
+                                    {isPerc ? (
+                                      <span className="inline-flex flex-col items-end">
                                         <span className="font-semibold inline-flex items-center gap-1">
-                                          R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                          {Number((item as any).rt_percentual ?? 0)}%
                                           <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
                                         </span>
-                                      )}
-                                    </td>
-                                  );
-                                })()}
-                                <td className="px-3 py-2 text-right font-semibold">R$ {(Number(item.preco_venda) * Number(item.quantidade)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                                {(title === "Produtos" || title === "Serviços") && (
-                                  <td className="px-2 py-1.5 text-center">
-                                    <select
-                                      value={(item as any).status_compra ?? "pendente"}
-                                      onChange={async (e) => {
-                                        const novo = e.target.value;
-                                        const { error } = await supabase.from("crm_itens").update({ status_compra: novo } as any).eq("id", item.id);
-                                        if (error) { toast.error("Erro ao atualizar status"); return; }
-                                        refetchCrmItens();
-                                      }}
-                                      className={`h-7 px-1.5 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary ${
-                                        ((item as any).status_compra ?? "pendente") === "comprado"
-                                          ? "border-success/50 text-success"
-                                          : ((item as any).status_compra ?? "pendente") === "pago"
-                                          ? "border-primary/50 text-primary"
-                                          : "border-warning/50 text-warning"
-                                      }`}
-                                    >
-                                      <option value="pendente">Pendente</option>
-                                      <option value="comprado">Comprado</option>
-                                      {title === "Serviços" && <option value="pago">Pago</option>}
-                                    </select>
+                                        <span className="text-[10px] text-muted-foreground">R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="font-semibold inline-flex items-center gap-1">
+                                        R$ {rtTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                        <Pencil size={9} className="opacity-0 group-hover:opacity-40 text-muted-foreground" />
+                                      </span>
+                                    )}
                                   </td>
-                                )}
+                                );
+                              })()}
+                              <td className="px-2 py-1.5 text-center">
+                                <select
+                                  value={(item as any).status_compra ?? "pendente"}
+                                  onChange={async (e) => {
+                                    const novo = e.target.value;
+                                    const { error } = await supabase.from("crm_itens").update({ status_compra: novo } as any).eq("id", item.id);
+                                    if (error) { toast.error("Erro ao atualizar status"); return; }
+                                    refetchCrmItens();
+                                  }}
+                                  className={`h-7 px-1.5 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary ${
+                                    ((item as any).status_compra ?? "pendente") === "comprado"
+                                      ? "border-success/50 text-success"
+                                      : ((item as any).status_compra ?? "pendente") === "pago"
+                                      ? "border-primary/50 text-primary"
+                                      : "border-warning/50 text-warning"
+                                  }`}
+                                >
+                                  <option value="pendente">Pendente</option>
+                                  <option value="comprado">Comprado</option>
+                                  {(title === "Serviços" || title === "Adicionais") && <option value="pago">Pago</option>}
+                                </select>
+                              </td>
                                 <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
                                     <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemRtTipo(((item as any).rt_tipo ?? "valor") as "valor" | "percentual"); setItemRtPercentual(Number((item as any).rt_percentual ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
