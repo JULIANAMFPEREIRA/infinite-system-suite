@@ -415,7 +415,32 @@ const FinanceiroPagar = () => {
                 ))}
               </select>
             </div>
-            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={desc} onChange={e => setDesc(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Tipo</label>
+              <select 
+                value={tipo} 
+                onChange={e => handleTipoChange(e.target.value)} 
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Selecionar tipo...</option>
+                <option value="produto">Produto</option>
+                <option value="servico">Serviço</option>
+                <option value="frete">Frete</option>
+                <option value="imposto">Imposto</option>
+                <option value="adicional">Adicional</option>
+                <option value="comissao">Comissão</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div className="space-y-1 flex-1 min-w-[200px]">
+              <label className="text-[11px] text-muted-foreground">Descrição</label>
+              <input 
+                value={desc} 
+                onChange={e => setDesc(e.target.value)} 
+                placeholder={getPlaceholder(tipo)}
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" 
+              />
+            </div>
             {isRetiradaSelected && (
               <div className="space-y-1 col-span-2">
                 <label className="text-[11px] text-muted-foreground">Descrição da retirada <span className="text-muted-foreground/60">(opcional — ex: mercado, gasolina, conta pessoal)</span></label>
