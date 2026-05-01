@@ -74,7 +74,7 @@ export function KanbanBoard<T extends KanbanCardData>({
   };
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 300 }}>
+    <div className="flex gap-3 overflow-x-auto pb-2" style={{ height: "calc(100vh - 220px)", overflow: "hidden" }}>
       {columns.map((col) => {
         const colItems = items.filter((i) => i.columnKey === col.key);
         const isOver = dragOverCol === col.key;
@@ -91,7 +91,7 @@ export function KanbanBoard<T extends KanbanCardData>({
           <div
             key={col.key}
             className={cn(
-              "flex-shrink-0 w-[260px] rounded-lg border flex flex-col transition-all",
+              "flex-shrink-0 w-[260px] rounded-lg border flex flex-col transition-all h-full",
               col.borderColor,
               col.bgColor,
               isOver && "ring-2 ring-primary/40 scale-[1.01]"
@@ -100,7 +100,7 @@ export function KanbanBoard<T extends KanbanCardData>({
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, col.key)}
           >
-            <div className={cn("px-3 py-2 border-b flex items-center justify-between", col.borderColor)}>
+            <div className={cn("px-3 py-2 border-b flex items-center justify-between flex-shrink-0", col.borderColor)}>
               <span className={cn("text-xs font-bold uppercase tracking-wide", col.color)}>
                 {col.label}
               </span>
@@ -110,7 +110,7 @@ export function KanbanBoard<T extends KanbanCardData>({
                   : colItems.length}
               </span>
             </div>
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[60vh]">
+            <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0 pb-2">
               {colItems.length === 0 && (
                 <div className="text-[11px] text-muted-foreground text-center py-6 italic">
                   Nenhum item
