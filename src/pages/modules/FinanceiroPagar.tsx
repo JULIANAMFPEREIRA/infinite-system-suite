@@ -408,8 +408,8 @@ const FinanceiroPagar = () => {
               <label className="text-[11px] text-muted-foreground">Categoria</label>
               <select value={categoriaId} onChange={e => handleCategoriaChange(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary">
                 <option value="">Selecionar categoria...</option>
-                {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                  <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                {Object.entries(categoriaGroups).map(([tipoGrp, cats]) => (
+                  <optgroup key={tipoGrp} label={tipoLabels[tipoGrp] || tipoGrp}>
                     {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                   </optgroup>
                 ))}
@@ -432,7 +432,7 @@ const FinanceiroPagar = () => {
                 <option value="outro">Outro</option>
               </select>
             </div>
-            <div className="space-y-1 flex-1 min-w-[200px]">
+            <div className="space-y-1 col-span-1">
               <label className="text-[11px] text-muted-foreground">Descrição</label>
               <input 
                 value={desc} 
