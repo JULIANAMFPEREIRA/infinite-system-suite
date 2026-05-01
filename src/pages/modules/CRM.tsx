@@ -2764,7 +2764,7 @@ const CRM = () => {
         <>
           {/* ═══════ KANBAN VIEW ═══════ */}
           {listViewType === "kanban" && (
-            <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ height: "calc(100vh - 220px)", overflow: "hidden" }}>
+            <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ height: "calc(100vh - 220px)" }}>
               {kanbanColumns.map(col => {
                 const colClients = (clientes ?? []).filter(c => c.status_crm === col.key);
                 const isDragOver = dragClientId !== null;

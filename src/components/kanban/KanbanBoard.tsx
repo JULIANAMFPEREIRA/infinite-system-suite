@@ -74,7 +74,7 @@ export function KanbanBoard<T extends KanbanCardData>({
   };
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2" style={{ height: "calc(100vh - 220px)", overflow: "hidden" }}>
+    <div className="flex gap-3 overflow-x-auto pb-2" style={{ height: "calc(100vh - 220px)" }}>
       {columns.map((col) => {
         const colItems = items.filter((i) => i.columnKey === col.key);
         const isOver = dragOverCol === col.key;
