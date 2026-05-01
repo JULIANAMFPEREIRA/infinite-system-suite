@@ -3,7 +3,7 @@ import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -22,12 +22,237 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { statusCrmLabels, statusCrmColors, statusCrmKanban, statusCrmOptions, type StatusCRM } from "@/lib/statusConfig";
+import { statusCrmLabels, statusCrmColors, statusCrmKanban, statusCrmOptions, type StatusCRM, statusProjetoLabels, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
+import AtividadeLog from "@/components/projeto/AtividadeLog";
+import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
+import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/useVisitasTecnicas";
+import { useFormasPagamento } from "@/hooks/useCategorias";
 
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
 
 const origemLabels: Record<OrigemLead, string> = { whatsapp: "WhatsApp", instagram: "Instagram", indicacao: "Indicação", arquiteto: "Arquiteto", outro: "Outro" };
 
+const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
+  const empresaId = useEmpresa();
+  const qc = useQueryClient();
+  const { data: visitas, isLoading } = useVisitasTecnicas(projetoId);
+  const createVisita = useCreateVisita();
+  const updateVisita = useUpdateVisita();
+  const { data: formasPgto } = useFormasPagamento();
+  const { data: tecnicos } = useQuery({
+    queryKey: ["tecnicos_select", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [tecnicoId, setTecnicoId] = useState("");
+  const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
+  const [statusVisita, setStatusVisita] = useState("agendada");
+  const [descricao, setDescricao] = useState("");
+  const [servicos, setServicos] = useState("");
+  const [produtosLevados, setProdutosLevados] = useState("");
+  const [valor, setValor] = useState(0);
+  const [dataPagamento, setDataPagamento] = useState("");
+  const [showBaixa, setShowBaixa] = useState(false);
+  const [baixaVisitaId, setBaixaVisitaId] = useState<string | null>(null);
+  const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
+  const [baixaForma, setBaixaForma] = useState("");
+  const resetVisitaForm = () => {
+    setEditId(null); setTecnicoId(""); setData(""); setHora(""); setStatusVisita("agendada"); setDescricao("");
+    setServicos(""); setProdutosLevados(""); setValor(0); setDataPagamento("");
+    setShowForm(false);
+  };
+  const openEditVisita = (v: any) => {
+    setEditId(v.id); setTecnicoId(v.tecnico_id ?? ""); setData(v.data ?? "");
+    setHora(v.hora ?? ""); setStatusVisita(v.status_visita ?? "agendada");
+    setDescricao(v.descricao ?? ""); setServicos(v.servicos_executados ?? "");
+    setProdutosLevados(v.produtos_levados ? JSON.stringify(v.produtos_levados) : "");
+    setValor(v.valor_pago_tecnico ?? 0); setDataPagamento(v.data_pagamento ?? "");
+    setShowForm(true);
+  };
+  const handleSave = async () => {
+    try {
+      const payload: any = {
+        tecnico_id: tecnicoId || null, data: data || null, hora: hora || null,
+        status_visita: statusVisita, descricao: descricao || null,
+        servicos_executados: servicos || null, valor_pago_tecnico: valor,
+        produtos_levados: produtosLevados ? JSON.parse(produtosLevados) : [],
+        data_pagamento: dataPagamento || null,
+      };
+      if (editId) {
+        await updateVisita.mutateAsync({ id: editId, projeto_id: projetoId, ...payload });
+        toast.success("Visita atualizada");
+      } else {
+        await createVisita.mutateAsync({ projeto_id: projetoId, ...payload });
+        if (valor > 0 && empresaId) {
+          await supabase.from("financeiro_pagar").insert({
+            empresa_id: empresaId, projeto_id: projetoId,
+            fornecedor_id: tecnicoId || null,
+            descricao: `Visita técnica — ${descricao || "Sem descrição"}`,
+            valor, data_vencimento: data || null, status: "pendente",
+          });
+        }
+        toast.success("Visita registrada");
+      }
+      resetVisitaForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from("visitas_tecnicas").update({ deletado: true } as any).eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["visitas_tecnicas", projetoId] });
+      toast.success("Visita excluída");
+    } catch (err: any) { toast.error(err.message); }
+  };
+  const openBaixa = (v: any) => {
+    setBaixaVisitaId(v.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setShowBaixa(true);
+  };
+  const handleBaixa = async () => {
+    if (!baixaVisitaId) return;
+    try {
+      await updateVisita.mutateAsync({ id: baixaVisitaId, projeto_id: projetoId, status_pagamento: "pago", data_pagamento: baixaData });
+      await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("projeto_id", projetoId).eq("fornecedor_id", visitas?.find(v => v.id === baixaVisitaId)?.tecnico_id ?? "");
+      toast.success("Pagamento registrado");
+      setShowBaixa(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Visitas Técnicas</h3>
+        <button onClick={() => { resetVisitaForm(); setShowForm(true); }} className="text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:brightness-105">
+          <Plus size={12} className="inline mr-1" />Nova Visita
+        </button>
+      </div>
+      {showForm && (
+        <div className="bg-secondary/30 rounded p-3 space-y-2">
+          <h4 className="text-xs font-semibold">{editId ? "Editar" : "Nova Visita"}</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Técnico</label>
+              <select value={tecnicoId} onChange={e => setTecnicoId(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {tecnicos?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data</label><input type="date" value={data} onChange={e => setData(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Hora</label><input type="time" value={hora} onChange={e => setHora(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Status</label>
+              <select value={statusVisita} onChange={e => setStatusVisita(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded">
+                <option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor Técnico</label><input type="number" value={valor} onChange={e => setValor(Number(e.target.value))} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={dataPagamento} onChange={e => setDataPagamento(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Descrição</label><input value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Serviços Executados</label><input value={servicos} onChange={e => setServicos(e.target.value)} className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1 col-span-full"><label className="text-[11px] text-muted-foreground">Produtos Levados (JSON)</label><input value={produtosLevados} onChange={e => setProdutosLevados(e.target.value)} placeholder='["item1","item2"]' className="w-full h-7 px-2 text-xs bg-background border border-border rounded" /></div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} disabled={createVisita.isPending} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground disabled:opacity-50">Salvar</button>
+            <button onClick={resetVisitaForm} className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+          </div>
+        </div>
+      )}
+      {isLoading ? <p className="text-xs text-muted-foreground">Carregando...</p> : visitas && visitas.length > 0 ? (
+        <div className="border border-border rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-secondary/60">
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Técnico</th>
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Data</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Hora</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Status</th>
+              <th className="text-left px-2 py-1.5 font-semibold border-b border-border">Descrição</th>
+              <th className="text-right px-2 py-1.5 font-semibold border-b border-border">Valor</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Pgto</th>
+              <th className="text-center px-2 py-1.5 font-semibold border-b border-border">Ações</th>
+            </tr></thead>
+            <tbody>
+              {visitas.map(v => (
+                <tr key={v.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => openEditVisita(v)}>
+                  <td className="px-2 py-1.5">{(v.fornecedores as any)?.nome ?? "—"}</td>
+                  <td className="px-2 py-1.5">{v.data ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center">{(v as any).hora ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-center">
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${(v as any).status_visita === "realizada" ? "bg-success/15 text-success" : (v as any).status_visita === "cancelada" ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>
+                      {(v as any).status_visita === "realizada" ? "Realizada" : (v as any).status_visita === "cancelada" ? "Cancelada" : "Agendada"}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">{v.descricao ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-right">R$ {(v.valor_pago_tecnico ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                    {v.status_pagamento === "pago" ? (
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-success/15 text-success">Pago</span>
+                    ) : (
+                      <button onClick={() => openBaixa(v)} className="px-1.5 py-0.5 rounded text-[11px] bg-warning/15 text-warning hover:bg-warning/25">Pendente</button>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openEditVisita(v)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                      <button onClick={() => { if (window.confirm("Excluir visita?")) handleDelete(v.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="text-xs text-muted-foreground">Nenhuma visita registrada.</p>}
+      <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Registrar Pagamento — Visita Técnica</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
+              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                <option value="">Selecionar...</option>
+                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+const ProjetoCronogramaSection = ({ projeto, dataInicio, dataPrevisao }: { projeto: any; dataInicio: string; dataPrevisao: string }) => {
+  const status = projeto?.status as StatusProjeto | undefined;
+  const statusIdx = status ? statusProjetoOperacionais.indexOf(status) : 0;
+  const progress = status === "cancelado" ? 0 : Math.round((statusIdx / (statusProjetoOperacionais.length - 2)) * 100);
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-foreground">Cronograma</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div><span className="text-muted-foreground">Início:</span> <strong>{dataInicio || "Não definido"}</strong></div>
+        <div><span className="text-muted-foreground">Previsão:</span> <strong>{dataPrevisao || "Não definido"}</strong></div>
+        <div><span className="text-muted-foreground">Status:</span> <strong>{statusProjetoLabels[status ?? "orcamento"]}</strong></div>
+        <div><span className="text-muted-foreground">Progresso:</span> <strong>{progress}%</strong></div>
+      </div>
+      <div className="w-full bg-secondary rounded-full h-3">
+        <div className="bg-primary h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="flex gap-1 flex-wrap mt-2">
+        {statusProjetoOperacionais.filter(s => s !== "cancelado").map((s, i) => (
+          <div key={s} className={`px-2 py-1 rounded text-[10px] font-medium ${i <= statusIdx && status !== "cancelado" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+            {statusProjetoLabels[s]}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 const CRM = () => {
   const empresaId = useEmpresa();
   const { user } = useAuth();
