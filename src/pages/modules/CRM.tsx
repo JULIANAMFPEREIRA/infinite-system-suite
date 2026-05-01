@@ -2764,7 +2764,7 @@ const CRM = () => {
         <>
           {/* ═══════ KANBAN VIEW ═══════ */}
           {listViewType === "kanban" && (
-            <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ minHeight: "calc(100vh - 200px)" }}>
+            <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ height: "calc(100vh - 220px)", overflow: "hidden" }}>
               {kanbanColumns.map(col => {
                 const colClients = (clientes ?? []).filter(c => c.status_crm === col.key);
                 const isDragOver = dragClientId !== null;
@@ -2774,12 +2774,12 @@ const CRM = () => {
                 return (
                   <div
                     key={col.key}
-                    className={`flex-shrink-0 w-[280px] md:w-1/4 md:min-w-[240px] flex flex-col rounded-xl border ${col.borderColor} ${col.bgColor} snap-center transition-all ${isDragOver ? "ring-1 ring-primary/20" : ""}`}
+                    className={`flex-shrink-0 w-[280px] md:w-1/4 md:min-w-[240px] flex flex-col h-full rounded-xl border ${col.borderColor} ${col.bgColor} snap-center transition-all ${isDragOver ? "ring-1 ring-primary/20" : ""}`}
                     onDragOver={handleDragOver}
                     onDrop={e => handleDrop(e, col.key)}
                   >
                     {/* Column header */}
-                    <div className={`flex items-center justify-between px-3 py-2.5 border-b ${col.borderColor}`}>
+                    <div className={`flex items-center justify-between px-3 py-2.5 border-b flex-shrink-0 ${col.borderColor}`}>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold uppercase tracking-wider ${col.color}`}>{col.label}</span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/80 ${col.color}`}>
@@ -2789,7 +2789,7 @@ const CRM = () => {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 pb-2">
                       {visibleClients.map(c => {
                         const orcs = getClientOrcamentos(c.id);
                         const projs = getClientProjetos(c.id);
