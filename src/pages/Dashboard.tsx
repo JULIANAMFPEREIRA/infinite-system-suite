@@ -286,7 +286,7 @@ const Dashboard = () => {
             <ArrowDownRight size={16} className="text-blue-600" />
             <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">A Receber</p>
           </div>
-          <p className="text-2xl font-bold text-foreground">{fmt(stats?.totalReceberGeral ?? 0)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(stats?.totalAReceber ?? 0)}</p>
           <p className="text-[11px] text-blue-600/70 font-medium mt-1">Total pendente</p>
         </div>
 
