@@ -173,23 +173,21 @@ const Dashboard = () => {
         .map(v => ({ ...v, projetoNome: v.projeto_id ? projetoMap[v.projeto_id] ?? "—" : "—" }));
 
       // Itens a comprar detalhados
-      const itensComprarDetalhados = itensPendentes.slice(0, 6).map(n => {
-        let custoUnit = 0;
-        if (n.projeto_item_id && projetoItemMap[n.projeto_item_id]) {
-          custoUnit = Number(projetoItemMap[n.projeto_item_id].preco_custo) || 0;
-        } else if (n.produto_id && produtoMap[n.produto_id]) {
+      const itensComprarDetalhados = itensFaltaComprar.slice(0, 6).map(n => {
+        let custoUnit = Number(n.preco_custo) || 0;
+        if (!custoUnit && n.produto_id && produtoMap[n.produto_id]) {
           custoUnit = Number(produtoMap[n.produto_id].preco_custo) || 0;
         }
         return {
           ...n,
-          projetoNome: n.projeto_id ? projetoMap[n.projeto_id] ?? "—" : "—",
-          produtoNome: n.produto_id ? produtoMap[n.produto_id]?.nome ?? (n.descricao ?? "—") : (n.descricao ?? "—"),
+          projetoNome: n.cliente_id ? clienteMap[n.cliente_id] ?? "—" : "—",
+          produtoNome: n.descricao ?? "—",
           custoUnit,
         };
       });
 
       return {
-        itensPendentesCount: itensPendentes.length,
+        itensPendentesCount,
         itensComprarValorTotal,
         inadimplentes,
         inadimplentesCount: inadimplentes.length,
