@@ -69,6 +69,11 @@ const tipoBadge = (conta: any) => {
 
 const RETIRADA_NOME = "RETIRADA PESSOAL (PRÓ-LABORE)";
 
+const toTitleCase = (str: string) =>
+  (str ?? "").split(" ").map(w =>
+  w.charAt(0).toUpperCase() +
+  w.slice(1).toLowerCase()).join(" ");
+
 const FinanceiroPagar = () => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
@@ -500,20 +505,20 @@ const FinanceiroPagar = () => {
       {isLoading ? <p className="text-xs text-muted-foreground text-center py-8">Carregando...</p> : (
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full">
               <thead>
                 <tr className="bg-muted/30">
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Origem</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Categoria</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Tipo</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Pago</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
-                  <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
+                  <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Origem</th>
+                  <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Categoria</th>
+                  <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Descrição</th>
+                  <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Tipo</th>
+                  <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Fornecedor</th>
+                  <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Projeto</th>
+                  <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Valor</th>
+                  <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Vencimento</th>
+                  <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Pago</th>
+                  <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap">Status</th>
+                  <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-muted-foreground border-b border-border whitespace-nowrap w-24">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -522,10 +527,10 @@ const FinanceiroPagar = () => {
                   return (
                     <tr
                       key={c.id}
-                      className={`border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
+                      className={`border-b border-border last:border-b-0 hover:bg-muted/40 cursor-pointer transition-colors ${rowHighlightClass(c.data_vencimento, c.status)}`}
                       onClick={() => openEdit(c)}
                     >
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-xs text-center">
                         {c.descricao?.startsWith("Compra — ") ? (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Compra</span>
                         ) : c.comissao_id ? (
@@ -534,25 +539,25 @@ const FinanceiroPagar = () => {
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 max-w-[160px]">
+                      <td className="px-3 py-2 text-xs max-w-[160px]">
                         {catName ? (
                           <span className="text-[10px] text-muted-foreground truncate block">{catName}</span>
                         ) : (
                           <span className="text-[10px] text-muted-foreground/50">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 max-w-[220px]">
-                        <span className="font-medium text-foreground truncate block">{c.descricao}</span>
+                      <td className="px-3 py-2 text-xs max-w-[220px]">
+                        <span className="font-medium text-foreground truncate block">{toTitleCase(c.descricao)}</span>
                       </td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-xs text-center">
                         {tipoBadge(c)}
                       </td>
-                      <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                      <td className="px-3 py-2 text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
-                      <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
-                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
-                      <td className="px-3 py-2 text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs text-right font-bold text-foreground tabular-nums">{fmtBRL(c.valor ?? 0)}</td>
+                      <td className="px-3 py-2 text-xs text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
+                      <td className="px-3 py-2 text-xs text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
+                      <td className="px-3 py-2 text-xs text-center">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
                           {statusLabel(c.status ?? "pendente")}
                         </span>
