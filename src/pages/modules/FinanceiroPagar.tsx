@@ -37,8 +37,10 @@ const inferTipo = (desc: string | null): string => {
   if (d.includes("frete") || d.includes("transporte") || d.includes("entrega")) return "frete";
   if (d.includes("serviço") || d.includes("servico") || d.includes("mão de obra") || d.includes("mao de obra") || d.includes("instalação") || d.includes("instalacao")) return "servico";
   if (d.includes("adicional")) return "adicional";
-   return "";
- };
+  if (d.includes("comissão") || d.includes("comissao")) return "comissao";
+  if (d.includes("compra") || d.includes("produto")) return "produto";
+  return "";
+};
 
 const tipoBadge = (conta: any) => {
   const desc = conta?.descricao ?? null;
@@ -80,6 +82,7 @@ const FinanceiroPagar = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
+  const [tipo, setTipo] = useState("");
   const [valor, setValor] = useState(0);
   const [vencimento, setVencimento] = useState("");
   const [fornecedorId, setFornecedorId] = useState("");
@@ -159,10 +162,11 @@ const FinanceiroPagar = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setDesc(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setDesc(""); setTipo(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
     setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
+    setTipo(inferTipo(c.descricao) || "");
     // Parse descRetirada from description if it's a retirada
     const catName = getCatName(c.categoria_id);
     const rawDesc = c.descricao ?? "";
@@ -196,6 +200,22 @@ const FinanceiroPagar = () => {
       // Suggest "Juliana Pereira" as fornecedor if exists
       const juliana = fornecedores?.find(f => f.nome.toUpperCase().includes("JULIANA PEREIRA"));
       if (juliana && !fornecedorId) setFornecedorId(juliana.id);
+    }
+  };
+
+  const getPlaceholder = (t: string) => {
+    if (t === "frete") return "Ex: Frete — Nome do Cliente";
+    if (t === "imposto") return "Ex: Imposto — ISS";
+    if (t === "produto") return "Ex: Compra — Nome do Produto";
+    if (t === "servico") return "Ex: Instalação — Descrição";
+    return "";
+  };
+
+  const handleTipoChange = (newTipo: string) => {
+    setTipo(newTipo);
+    if (!desc && newTipo) {
+      const placeholder = getPlaceholder(newTipo);
+      if (placeholder) setDesc(placeholder);
     }
   };
 
