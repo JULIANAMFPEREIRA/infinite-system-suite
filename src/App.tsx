@@ -29,8 +29,9 @@ import NotasFiscais from "./pages/modules/NotasFiscais";
 import Integracoes from "./pages/modules/Integracoes";
 import Auditoria from "./pages/modules/Auditoria";
 import Configuracoes from "./pages/modules/Configuracoes";
-import ItensComprar from "./pages/modules/ItensComprar";
-import Orcamentos from "./pages/modules/Orcamentos";
+ import ItensComprar from "./pages/modules/ItensComprar";
+ import Orcamentos from "./pages/modules/Orcamentos";
+ import FaltaComprar from "./pages/modules/FaltaComprar";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalArquiteto from "./pages/portal/PortalArquiteto";
 import PortalParceiro from "./pages/portal/PortalParceiro";
@@ -94,8 +95,9 @@ const App = () => (
               <Route path="/estoque" element={<ModuleRoute module="estoque"><Estoque /></ModuleRoute>} />
               <Route path="/compras" element={<ModuleRoute module="compras"><Compras /></ModuleRoute>} />
               <Route path="/fornecedores" element={<ModuleRoute module="fornecedores"><Fornecedores /></ModuleRoute>} />
-              <Route path="/itens-comprar" element={<ModuleRoute module="compras"><ItensComprar /></ModuleRoute>} />
-              <Route path="/financeiro/receber" element={<ModuleRoute module="financeiro"><FinanceiroReceber /></ModuleRoute>} />
+               <Route path="/itens-comprar" element={<ModuleRoute module="compras"><ItensComprar /></ModuleRoute>} />
+               <Route path="/falta-comprar" element={<ModuleRoute module="compras"><FaltaComprar /></ModuleRoute>} />
+               <Route path="/financeiro/receber" element={<ModuleRoute module="financeiro"><FinanceiroReceber /></ModuleRoute>} />
               <Route path="/financeiro/pagar" element={<ModuleRoute module="financeiro"><FinanceiroPagar /></ModuleRoute>} />
               <Route path="/financeiro/fluxo" element={<ModuleRoute module="financeiro"><FluxoCaixa /></ModuleRoute>} />
               <Route path="/financas-pessoais" element={<ModuleRoute module="financas_pessoais"><FinancasPessoais /></ModuleRoute>} />

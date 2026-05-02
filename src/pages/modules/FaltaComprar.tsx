@@ -1,212 +1,201 @@
-import { useState, useMemo } from "react";
-import { ShoppingCart, Search, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/hooks/useEmpresa";
-import { Skeleton } from "@/components/ui/skeleton";
-
-const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
-const FaltaComprar = () => {
-  const empresaId = useEmpresa();
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const { data: faltaComprarData, isLoading } = useQuery({
-    queryKey: ["falta_comprar_full", empresaId],
-    queryFn: async () => {
-      const { data: orcAprovados } = await supabase
-        .from("crm_orcamentos")
-        .select("id, nome, cliente_id, frete, imposto, simulacao_pagamento, clientes(nome)")
-        .eq("aprovado", true);
-
-      if (!orcAprovados?.length) return [];
-
-      const orcIds = orcAprovados.map(o => o.id);
-
-      // Itens pendentes para o cálculo do "Falta Comprar"
-      const { data: itensPendentes } = await supabase
-        .from("crm_itens")
-        .select("id, quantidade, preco_custo, orcamento_id, rt_comissao")
-        .eq("status_compra", "pendente")
-        .in("orcamento_id", orcIds);
-
-      // Todos os itens para o custo total e RT
-      const { data: todosItens } = await supabase
-        .from("crm_itens")
-        .select("id, preco_custo, quantidade, status_compra, orcamento_id, rt_comissao, rt_valor_pago")
-        .in("orcamento_id", orcIds);
-
-      const porOrcamento: any[] = [];
-
-      orcAprovados.forEach(orc => {
-        const clienteNome = (orc.clientes as any)?.nome ?? "—";
-        const allItensOrc = (todosItens ?? []).filter(i => i.orcamento_id === orc.id);
-        const itensPend = (itensPendentes ?? []).filter(i => i.orcamento_id === orc.id);
-
-        // Total Custo Projeto = soma de preco_custo * quantidade de TODOS os itens
-        const totalCustoProjeto = allItensOrc.reduce(
-          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-
-        // Total Comprado = soma de preco_custo * quantidade dos itens com status_compra = "comprado"
-        const totalComprado = allItensOrc
-          .filter(i => i.status_compra === "comprado")
-          .reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-
-        // Falta Comprar = soma de preco_custo * quantidade dos itens pendentes
-        const itemsCostPend = itensPend.reduce(
-          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-
-        // RT Pendente
-        const rtTotal = allItensOrc.reduce((s, i) => s + (Number(i.rt_comissao) || 0), 0);
-        const rtPago = allItensOrc.reduce((s, i) => {
-          const t = Number(i.rt_comissao) || 0;
-          return s + Math.min(Math.max(Number(i.rt_valor_pago) || 0, 0), t);
-        }, 0);
-        const rtPendente = Math.max(rtTotal - rtPago, 0);
-
-        // Frete e Imposto Pendentes
-        const sim = (orc.simulacao_pagamento as any) ?? {};
-        const fretesExtras = Array.isArray(sim.fretes_extras) ? sim.fretes_extras : [];
-        const freteRealizado = fretesExtras.reduce((s: number, f: any) => s + (Number(f.valor) || 0), 0);
-        const fretePrevisto = Number(orc.frete) || 0;
-        const fretePendente = Math.max(fretePrevisto - freteRealizado, 0);
-        const orcImposto = Number(orc.imposto) || 0;
-        const impostoPendente = itensPend.length > 0 ? orcImposto : 0;
-
-        const valorFaltaComprar = itemsCostPend + rtPendente + fretePendente + impostoPendente;
-
-        porOrcamento.push({
-          clienteId: orc.cliente_id,
-          clienteNome,
-          orcamentoId: orc.id,
-          orcamentoNome: orc.nome,
-          totalCustoProjeto,
-          totalComprado,
-          valorFaltaComprar,
-          qtdItensPendentes: itensPend.length
-        });
-      });
-
-      return porOrcamento
-        .filter(o => o.valorFaltaComprar > 0)
-        .sort((a, b) => b.valorFaltaComprar - a.valorFaltaComprar);
-    },
-    enabled: !!empresaId,
-  });
-
-  const filteredData = useMemo(() => {
-    if (!faltaComprarData) return [];
-    if (!searchTerm.trim()) return faltaComprarData;
-    const q = searchTerm.toLowerCase();
-    return faltaComprarData.filter(o => 
-      o.clienteNome.toLowerCase().includes(q) || 
-      o.orcamentoNome.toLowerCase().includes(q)
-    );
-  }, [faltaComprarData, searchTerm]);
-
-  const totals = useMemo(() => {
-    return filteredData.reduce((acc, curr) => ({
-      custo: acc.custo + curr.totalCustoProjeto,
-      comprado: acc.comprado + curr.totalComprado,
-      falta: acc.falta + curr.valorFaltaComprar,
-      itens: acc.itens + curr.qtdItensPendentes
-    }), { custo: 0, comprado: 0, falta: 0, itens: 0 });
-  }, [filteredData]);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4 animate-fade-in">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <ShoppingCart className="text-orange-600" size={20} />
-              Falta Comprar por Projeto
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Resumo de pendências de compras por orçamento aprovado
-            </p>
-          </div>
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-          <input
-            type="text"
-            placeholder="Buscar por cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
-        </div>
-      </div>
-
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-secondary/30 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Orçamento</th>
-                <th className="px-4 py-3 text-right">Total Custo Projeto</th>
-                <th className="px-4 py-3 text-right">Total Comprado</th>
-                <th className="px-4 py-3 text-right">Itens Pend.</th>
-                <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredData.map((item, i) => (
-                <tr key={i} className="hover:bg-secondary/20 transition-colors group">
-                  <td className="px-4 py-3 text-sm font-semibold text-foreground">{item.clienteNome}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{item.orcamentoNome}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium tabular-nums">{fmt(item.totalCustoProjeto)}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium tabular-nums text-success">{fmt(item.totalComprado)}</td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    <span className="bg-secondary px-2 py-0.5 rounded-full font-medium text-[11px]">
-                      {item.qtdItensPendentes} itens
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right font-bold text-orange-600 tabular-nums">{fmt(item.valorFaltaComprar)}</td>
-                </tr>
-              ))}
-              {filteredData.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm italic">
-                    Nenhum orçamento com pendências encontrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot className="bg-orange-50/30 border-t-2 border-orange-100 font-bold">
-              <tr>
-                <td colSpan={2} className="px-4 py-4 text-sm uppercase tracking-wider">Total Geral</td>
-                <td className="px-4 py-4 text-sm text-right tabular-nums">{fmt(totals.custo)}</td>
-                <td className="px-4 py-4 text-sm text-right tabular-nums text-success">{fmt(totals.comprado)}</td>
-                <td className="px-4 py-4 text-sm text-right">{totals.itens} itens</td>
-                <td className="px-4 py-4 text-sm text-right text-orange-600 tabular-nums">{fmt(totals.falta)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default FaltaComprar;
+ import { useState, useMemo } from "react"
+ import { useQuery } from "@tanstack/react-query"
+ import { supabase } from "@/integrations/supabase/client"
+ import { useEmpresa } from "@/hooks/useEmpresa"
+ import { ShoppingCart, Search } from "lucide-react"
+ 
+ const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+ 
+ const FaltaComprar = () => {
+   const empresaId = useEmpresa()
+   const [busca, setBusca] = useState("")
+ 
+   const { data, isLoading } = useQuery({
+     queryKey: ["falta_comprar_pagina", empresaId],
+     queryFn: async () => {
+       const { data: orcAprovados } = await supabase
+         .from("crm_orcamentos")
+         .select("id, nome, cliente_id, clientes(nome)")
+         .eq("aprovado", true)
+ 
+       if (!orcAprovados?.length) return []
+ 
+       const orcIds = orcAprovados.map(o => o.id)
+ 
+       const { data: todosItens } = await supabase
+         .from("crm_itens")
+         .select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id")
+         .in("orcamento_id", orcIds)
+ 
+       return orcAprovados.map(orc => {
+         const itens = (todosItens ?? [])
+           .filter(i => i.orcamento_id === orc.id)
+ 
+         const totalCusto = itens.reduce((s, i) =>
+           s + (Number(i.preco_custo)||0) *
+           (Number(i.quantidade)||1), 0)
+ 
+         const totalComprado = itens
+           .filter(i => i.status_compra === "comprado")
+           .reduce((s, i) => s +
+           (Number(i.preco_custo)||0) *
+           (Number(i.quantidade)||1), 0)
+ 
+         const faltaComprar = itens
+           .filter(i => i.status_compra === "pendente")
+           .reduce((s, i) => s +
+           (Number(i.preco_custo)||0) *
+           (Number(i.quantidade)||1), 0)
+ 
+         const itensPendentes = itens
+           .filter(i => i.status_compra === "pendente")
+           .length
+ 
+         return {
+           clienteNome: (orc.clientes as any)?.nome ?? "—",
+           orcamentoNome: orc.nome,
+           totalCusto,
+           totalComprado,
+           faltaComprar,
+           itensPendentes,
+         }
+       })
+       .filter(r => r.faltaComprar > 0)
+       .sort((a, b) => b.faltaComprar - a.faltaComprar)
+     },
+     enabled: !!empresaId,
+   })
+ 
+   const filtered = useMemo(() => {
+     if (!busca.trim()) return data ?? []
+     const q = busca.toLowerCase()
+     return (data ?? []).filter(r =>
+       r.clienteNome.toLowerCase().includes(q) ||
+       r.orcamentoNome.toLowerCase().includes(q)
+     )
+   }, [data, busca])
+ 
+   const totalGeral = filtered.reduce((s, r) =>
+     s + r.faltaComprar, 0)
+   const totalCustoGeral = filtered.reduce((s, r) =>
+     s + r.totalCusto, 0)
+   const totalCompradoGeral = filtered.reduce((s, r) =>
+     s + r.totalComprado, 0)
+   const totalItens = filtered.reduce((s, r) =>
+     s + r.itensPendentes, 0)
+ 
+   return (
+     <div className="p-4 space-y-4 max-w-7xl mx-auto">
+       <div className="flex items-center justify-between">
+         <div className="flex items-center gap-2">
+           <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+             <ShoppingCart className="w-4 h-4 text-orange-600" />
+           </div>
+           <div>
+             <h1 className="text-base font-bold text-foreground">
+               Falta Comprar por Projeto
+             </h1>
+             <p className="text-[10px] text-muted-foreground">
+               Resumo de itens pendentes de compra por orçamento aprovado
+             </p>
+           </div>
+         </div>
+ 
+         <div className="relative">
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+           <input
+             type="text"
+             value={busca}
+             onChange={(e) => setBusca(e.target.value)}
+             placeholder="Buscar cliente..."
+             className="pl-9 h-8 w-56 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+           />
+         </div>
+       </div>
+ 
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+         <div className="bg-card p-3 rounded-lg border border-border">
+           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+             Total Custo Projetos
+           </p>
+           <p className="text-lg font-bold text-foreground mt-0.5">
+             {fmt(totalCustoGeral)}
+           </p>
+         </div>
+         <div className="bg-card p-3 rounded-lg border border-border">
+           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+             Total Comprado
+           </p>
+           <p className="text-lg font-bold text-green-600 mt-0.5">
+             {fmt(totalCompradoGeral)}
+           </p>
+         </div>
+         <div className="bg-card p-3 rounded-lg border border-border">
+           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+             Falta Comprar
+           </p>
+           <div className="flex items-baseline gap-2 mt-0.5">
+             <p className="text-lg font-bold text-orange-600">
+               {fmt(totalGeral)}
+             </p>
+             <span className="text-[10px] text-muted-foreground">
+               {totalItens} itens pendentes
+             </span>
+           </div>
+         </div>
+       </div>
+ 
+       {isLoading ? (
+         <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
+           Carregando...
+         </div>
+       ) : (
+         <div className="bg-card rounded-lg border border-border overflow-hidden">
+           <div className="overflow-x-auto">
+             <table className="w-full text-left border-collapse">
+               <thead>
+                 <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                   <th className="px-4 py-3">Cliente</th>
+                   <th className="px-4 py-3">Orçamento</th>
+                   <th className="px-4 py-3 text-right">Total Custo</th>
+                   <th className="px-4 py-3 text-right">Comprado</th>
+                   <th className="px-4 py-3 text-center">Itens Pend.</th>
+                   <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-border">
+                 {filtered.map((r, i) => (
+                   <tr key={i} className="hover:bg-secondary/10 transition-colors">
+                     <td className="px-4 py-3 text-xs font-bold text-foreground">{r.clienteNome}</td>
+                     <td className="px-4 py-3 text-[11px] text-muted-foreground">{r.orcamentoNome}</td>
+                     <td className="px-4 py-3 text-xs text-right tabular-nums">{fmt(r.totalCusto)}</td>
+                     <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
+                     <td className="px-4 py-3 text-center">
+                       <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium">
+                         {r.itensPendentes} itens
+                       </span>
+                     </td>
+                     <td className="px-4 py-3 text-xs text-right font-bold text-orange-600 tabular-nums">
+                       {fmt(r.faltaComprar)}
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+               <tfoot className="bg-secondary/20 font-bold border-t border-border">
+                 <tr>
+                   <td colSpan={2} className="px-4 py-3 text-xs">Total Geral</td>
+                   <td className="px-4 py-3 text-xs text-right">{fmt(totalCustoGeral)}</td>
+                   <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
+                   <td className="px-4 py-3 text-center text-[10px]">{totalItens} itens</td>
+                   <td className="px-4 py-3 text-xs text-right text-orange-600">{fmt(totalGeral)}</td>
+                 </tr>
+               </tfoot>
+             </table>
+           </div>
+         </div>
+       )}
+     </div>
+   )
+ }
+ 
+ export default FaltaComprar
