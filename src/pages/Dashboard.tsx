@@ -249,7 +249,7 @@ const Dashboard = () => {
    queryFn: async () => {
       const { data: orcAprovados } = await supabase
         .from("crm_orcamentos")
-        .select("id, nome, cliente_id, frete, imposto, clientes(nome)")
+        .select("id, nome, cliente_id, frete, imposto, simulacao_pagamento, clientes(nome)")
         .eq("aprovado", true);
 
      if (!orcAprovados?.length) return [];
@@ -262,10 +262,10 @@ const Dashboard = () => {
        .eq("status_compra", "pendente")
        .in("orcamento_id", orcIds);
 
-     const { data: todosItens } = await supabase
-       .from("crm_itens")
-       .select("id, preco_venda, quantidade, orcamento_id")
-       .in("orcamento_id", orcIds);
+      const { data: todosItens } = await supabase
+        .from("crm_itens")
+        .select("id, preco_venda, quantidade, orcamento_id, rt_comissao, rt_valor_pago")
+        .in("orcamento_id", orcIds);
 
      const porCliente: Record<string, any> = {};
 
@@ -283,15 +283,40 @@ const Dashboard = () => {
         const itensPend = (itensPendentes ?? [])
           .filter(i => i.orcamento_id === orc.id);
         
-        const itemsCost = itensPend.reduce(
-          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-        const rtCost = itensPend.reduce(
-          (s, i) => s + (Number(i.rt_comissao) || 0), 0);
-
-        // Se houver itens pendentes, incluir frete e impostos como custos pendentes do projeto
-        const orcFrete = Number(orc.frete) || 0;
-        const orcImposto = Number(orc.imposto) || 0;
-        const valorFalta = itemsCost + rtCost + (itensPend.length > 0 ? (orcFrete + orcImposto) : 0);
+         const itemsCostPend = itensPend.reduce(
+           (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+         
+         // RT — total (custo) vs pago (realizado).
+         const allItensOrc = (todosItens ?? []).filter(i => i.orcamento_id === orc.id);
+         
+         // Buscamos RT total e RT pago dos itens (precisamos do rt_comissao e rt_valor_pago que estão em todos os itens)
+         // Nota: precisamos incluir esses campos na query todosItens
+         
+         // Cálculo simplificado seguindo a lógica do CRM: Falta comprar = Itens Pendentes + RT Pendente + Frete Pendente + Imposto Pendente
+         // Para RT, Frete e Imposto, o CRM usa a lógica de (Previsto - Realizado)
+         
+         const sim = (orc.simulacao_pagamento as any) ?? {};
+         const fretesExtras = Array.isArray(sim.fretes_extras) ? sim.fretes_extras : [];
+         const freteRealizado = fretesExtras.reduce((s: number, f: any) => s + (Number(f.valor) || 0), 0);
+         const fretePrevisto = Number(orc.frete) || 0;
+         const fretePendente = Math.max(fretePrevisto - freteRealizado, 0);
+         
+         const orcImposto = Number(orc.imposto) || 0;
+         // Como o dashboard não tem acesso fácil às contas pagas de imposto aqui, 
+         // mantemos a lógica de que se houver itens pendentes, o imposto e frete principal ainda são considerados "falta comprar"
+         // mas para bater com o CRM, vamos usar os fretes extras se existirem.
+         
+         // Para RT Pendente: precisamos de rt_comissao e rt_valor_pago de TODOS os itens do orçamento
+         // Vamos ajustar a query de todosItens abaixo.
+         
+         const rtTotal = allItensOrc.reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0);
+         const rtPago = allItensOrc.reduce((s, i) => {
+           const t = Number((i as any).rt_comissao) || 0;
+           return s + Math.min(Math.max(Number((i as any).rt_valor_pago) || 0, 0), t);
+         }, 0);
+         const rtPendente = Math.max(rtTotal - rtPago, 0);
+ 
+         const valorFalta = itemsCostPend + rtPendente + fretePendente + (itensPend.length > 0 ? orcImposto : 0);
 
        if (!porCliente[clienteId]) {
          porCliente[clienteId] = {
