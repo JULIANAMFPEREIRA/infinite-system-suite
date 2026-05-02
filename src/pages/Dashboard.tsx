@@ -1,17 +1,23 @@
- import { useEffect, useState, useMemo } from "react";
+ import { useEffect, useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 
  import {
    DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
    CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-   AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
-   PiggyBank
+    AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
+    PiggyBank, Info
  } from "lucide-react";
  import { useAuth } from "@/contexts/AuthContext";
  import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
-import { Skeleton } from "@/components/ui/skeleton";
+ import { Skeleton } from "@/components/ui/skeleton";
+ import {
+   Dialog,
+   DialogContent,
+   DialogHeader,
+   DialogTitle,
+ } from "@/components/ui/dialog";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +33,7 @@ const Dashboard = () => {
    const navigate = useNavigate();
    const queryClient = useQueryClient();
    const hoje = new Date();
+   const [showFaltaComprar, setShowFaltaComprar] = useState(false);
    const inicioMes = startOfMonth(hoje);
    const fimMes = endOfMonth(hoje);
 
@@ -222,10 +229,72 @@ const Dashboard = () => {
       };
     },
     enabled: !!empresaId,
-    refetchInterval: 30000,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  });
+   refetchInterval: 30000,
+   staleTime: 0,
+   refetchOnWindowFocus: true,
+ });
+
+ const { data: faltaComprarPorCliente } = useQuery({
+   queryKey: ["falta_comprar_clientes", empresaId],
+   queryFn: async () => {
+     const { data: orcAprovados } = await supabase
+       .from("crm_orcamentos")
+       .select("id, nome, cliente_id, clientes(nome)")
+       .eq("aprovado", true);
+
+     if (!orcAprovados?.length) return [];
+
+     const orcIds = orcAprovados.map(o => o.id);
+
+     const { data: itensPendentes } = await supabase
+       .from("crm_itens")
+       .select("id, descricao, quantidade, preco_custo, orcamento_id, cliente_id")
+       .eq("status_compra", "pendente")
+       .in("orcamento_id", orcIds);
+
+     const { data: todosItens } = await supabase
+       .from("crm_itens")
+       .select("id, preco_venda, quantidade, orcamento_id")
+       .in("orcamento_id", orcIds);
+
+     const porCliente: Record<string, any> = {};
+
+     orcAprovados.forEach(orc => {
+       const clienteId = orc.cliente_id;
+       if (!clienteId) return;
+
+       const clienteNome = (orc.clientes as any)?.nome ?? "—";
+
+       const itensOrc = (todosItens ?? [])
+         .filter(i => i.orcamento_id === orc.id);
+       const valorTotal = itensOrc.reduce(
+         (s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
+
+       const itensPend = (itensPendentes ?? [])
+         .filter(i => i.orcamento_id === orc.id);
+       const valorFalta = itensPend.reduce(
+         (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+
+       if (!porCliente[clienteId]) {
+         porCliente[clienteId] = {
+           clienteNome,
+           orcamentoNome: orc.nome,
+           valorTotalProjeto: 0,
+           valorFaltaComprar: 0,
+           qtdItens: 0,
+         };
+       }
+       porCliente[clienteId].valorTotalProjeto += valorTotal;
+       porCliente[clienteId].valorFaltaComprar += valorFalta;
+       porCliente[clienteId].qtdItens += itensPend.length;
+     });
+
+     return Object.values(porCliente)
+       .filter(c => c.valorFaltaComprar > 0)
+       .sort((a, b) => b.valorFaltaComprar - a.valorFaltaComprar);
+   },
+     enabled: showFaltaComprar && !!empresaId,
+   });
 
   // Realtime: refetch dashboard whenever financial/operational data changes
   useEffect(() => {
@@ -326,9 +395,9 @@ const Dashboard = () => {
         </div>
 
         {/* Falta Comprar */}
-        <div 
+        <div
           className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
-          onClick={() => navigate("/itens-comprar")}
+          onClick={() => setShowFaltaComprar(true)}
         >
           <div className="flex items-center gap-2 mb-2">
             <ShoppingCart size={16} className="text-orange-600" />
@@ -342,6 +411,60 @@ const Dashboard = () => {
       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
+      <Dialog open={showFaltaComprar} onOpenChange={setShowFaltaComprar}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="text-orange-600" />
+              Falta Comprar por Cliente
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-4 gap-4 py-2 border-b text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <div>Cliente</div>
+              <div className="text-right">Valor do Projeto</div>
+              <div className="text-right">Itens Pendentes</div>
+              <div className="text-right text-orange-600">Falta Comprar</div>
+            </div>
+
+            <div className="divide-y">
+              {(faltaComprarPorCliente ?? []).map((c, i) => (
+                <div key={i} className="grid grid-cols-4 gap-4 py-3 items-center hover:bg-secondary/20 transition-colors rounded-lg px-1">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate text-foreground">{c.clienteNome}</p>
+                  </div>
+                  <div className="text-right text-sm font-medium">
+                    {fmt(c.valorTotalProjeto)}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded-full font-medium">
+                      {c.qtdItens} itens
+                    </span>
+                  </div>
+                  <div className="text-right text-sm font-bold text-orange-600">
+                    {fmt(c.valorFaltaComprar)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-4 gap-4 py-4 mt-2 border-t font-bold bg-orange-50/50 rounded-lg px-2">
+              <div className="text-sm">Total Geral</div>
+              <div className="text-right text-sm">
+                {fmt((faltaComprarPorCliente ?? []).reduce((s, c) => s + c.valorTotalProjeto, 0))}
+              </div>
+              <div className="text-right text-sm">
+                {(faltaComprarPorCliente ?? []).reduce((s, c) => s + c.qtdItens, 0)} itens
+              </div>
+              <div className="text-right text-sm text-orange-600">
+                {fmt((faltaComprarPorCliente ?? []).reduce((s, c) => s + c.valorFaltaComprar, 0))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 gap-4">
         <InteractiveCalendar
           localVisitas={(stats?.proximasVisitas ?? []).map(v => ({
