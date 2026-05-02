@@ -293,12 +293,8 @@ const Dashboard = () => {
        .filter(c => c.valorFaltaComprar > 0)
        .sort((a, b) => b.valorFaltaComprar - a.valorFaltaComprar);
    },
-   enabled: showFaltaComprar && !!empresaId,
- });
-    refetchInterval: 30000,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  });
+     enabled: showFaltaComprar && !!empresaId,
+   });
 
   // Realtime: refetch dashboard whenever financial/operational data changes
   useEffect(() => {
