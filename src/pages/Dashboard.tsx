@@ -94,7 +94,8 @@ const Dashboard = () => {
        const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
        const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
  
-        const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number(i.rt_comissao) || 0), 0);
+        const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+        const totalRtFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.rt_comissao) || 0), 0);
  
        // Somar frete e imposto apenas dos orçamentos aprovados que tenham pelo menos 1 item pendente
        // ou orçamentos aprovados que tenham frete/imposto > 0 (considerando que são custos de projeto)
@@ -102,8 +103,8 @@ const Dashboard = () => {
        const totalFreteImposto = orcamentosAprovados
          .filter(o => orcsComPendencia.has(o.id))
          .reduce((sum, o) => sum + (Number(o.frete) || 0) + (Number(o.imposto) || 0), 0);
- 
-       const itensComprarValorTotal = totalItensFalta + totalFreteImposto;
+
+       const itensComprarValorTotal = totalItensFalta + totalRtFalta + totalFreteImposto;
       const itensPendentesCount = itensFaltaComprar.length;
 
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
@@ -283,12 +284,14 @@ const Dashboard = () => {
           .filter(i => i.orcamento_id === orc.id);
         
         const itemsCost = itensPend.reduce(
-          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number(i.rt_comissao) || 0), 0);
+          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+        const rtCost = itensPend.reduce(
+          (s, i) => s + (Number(i.rt_comissao) || 0), 0);
 
         // Se houver itens pendentes, incluir frete e impostos como custos pendentes do projeto
         const orcFrete = Number(orc.frete) || 0;
         const orcImposto = Number(orc.imposto) || 0;
-        const valorFalta = itemsCost + (itensPend.length > 0 ? (orcFrete + orcImposto) : 0);
+        const valorFalta = itemsCost + rtCost + (itensPend.length > 0 ? (orcFrete + orcImposto) : 0);
 
        if (!porCliente[clienteId]) {
          porCliente[clienteId] = {
