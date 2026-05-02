@@ -1,4 +1,5 @@
- import { useState, useMemo } from "react"
+import { useState, useMemo } from "react"
+import { calcFaltaComprar, calcCustoTotal } from "@/lib/calcFaltaComprar"
  import { useQuery } from "@tanstack/react-query"
  import { supabase } from "@/integrations/supabase/client"
  import { useEmpresa } from "@/hooks/useEmpresa"
@@ -28,48 +29,18 @@
           .in("orcamento_id", orcIds)
  
         return orcAprovados.map(orc => {
-          const itens = (todosItens ?? [])
-            .filter(i => i.orcamento_id === orc.id)
-
-          // Custo dos itens
-          const custoItens = itens.reduce((s, i) =>
-            s + (Number(i.preco_custo)||0) *
-            (Number(i.quantidade)||1), 0)
-
-          // RT total
-          const rtTotal = itens.reduce((s, i) =>
-            s + (Number(i.rt_comissao)||0), 0)
-
-          // Frete e imposto do orçamento
+          const itens = (todosItens ?? []).filter(i => i.orcamento_id === orc.id)
           const frete = Number(orc.frete) || 0
           const imposto = Number(orc.imposto) || 0
 
-          // Custo total = itens + frete + imposto + RT
-          const totalCusto = custoItens + frete + imposto + rtTotal
-
-          // Valor de venda total
-          const totalVenda = itens.reduce((s, i) =>
-            s + (Number(i.preco_venda)||0) *
-            (Number(i.quantidade)||1), 0)
-
-          // Itens comprados (custo)
+          const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
+          const totalCusto = calcCustoTotal(itens, frete, imposto)
           const totalComprado = itens
             .filter(i => i.status_compra === "comprado" || i.status_compra === "pago")
-            .reduce((s, i) => s +
-              (Number(i.preco_custo)||0) *
-              (Number(i.quantidade)||1), 0)
-
-          // Itens pendentes (custo)
-          const itensPendentes = itens
-            .filter(i => i.status_compra === "pendente")
-
-          const faltaComprar = itensPendentes
-            .reduce((s, i) => s +
-              (Number(i.preco_custo)||0) *
-              (Number(i.quantidade)||1), 0)
-
-          // Falta comprar total inclui frete e imposto se ainda não pagos
-          const faltaTotal = faltaComprar + (totalComprado === 0 ? frete + imposto : 0)
+            .reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0)
+          
+          const faltaComprar = calcFaltaComprar(itens, frete, imposto)
+          const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
           return {
             clienteNome: (orc.clientes as any)?.nome ?? "—",
@@ -77,8 +48,8 @@
             totalVenda,
             totalCusto,
             totalComprado,
-            faltaComprar: faltaTotal,
-            itensPendentes: itensPendentes.length,
+            faltaComprar,
+            itensPendentes: itensPendentesCount,
           }
         })
        .filter(r => r.faltaComprar > 0)

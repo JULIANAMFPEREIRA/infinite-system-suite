@@ -1,5 +1,6 @@
  import { useEffect, useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
+import { calcFaltaComprar } from "@/lib/calcFaltaComprar";
 
  import {
    DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
@@ -100,23 +101,11 @@ const Dashboard = () => {
           .select("quantidade, preco_custo, rt_comissao, status_compra, orcamento_id")
           .in("orcamento_id", orcIds);
 
-        // Custo dos itens pendentes
-        const custoItensPendentes = (itensPend ?? [])
-          .filter(i => i.status_compra === "pendente")
-          .reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+        const freteTotal = (orcAprovados ?? []).reduce((s, orc) => s + (Number(orc.frete) || 0), 0);
+        const impostoTotal = (orcAprovados ?? []).reduce((s, orc) => s + (Number(orc.imposto) || 0), 0);
 
-        // RT total de TODOS os itens do orçamento (pendente ou comprado — RT é custo fixo)
-        const rtTotal = (itensPend ?? [])
-          .reduce((s, i) => s + (Number(i.rt_comissao) || 0), 0);
-
-        // Frete e imposto de cada orçamento
-        const freteImpostoTotal = (orcAprovados ?? []).reduce((s, orc) =>
-          s + (Number(orc.frete) || 0) + (Number(orc.imposto) || 0), 0);
-
-        itensComprarValorTotal = custoItensPendentes + rtTotal + freteImpostoTotal;
-        itensPendentesCount = (itensPend ?? [])
-          .filter(i => i.status_compra === "pendente")
-          .length;
+        itensComprarValorTotal = calcFaltaComprar(itensPend ?? [], freteTotal, impostoTotal);
+        itensPendentesCount = (itensPend ?? []).filter(i => i.status_compra === "pendente").length;
       }
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
       const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
