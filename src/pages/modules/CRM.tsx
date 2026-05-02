@@ -692,32 +692,65 @@ const CRM = () => {
       insertedItens = insertedData ?? [];
     }
 
-    // ── Sync financeiro_receber ──
-    await supabase.from("financeiro_receber").delete().eq("projeto_id", projId);
-    // Build full parcel list including entrada (if any) as parcela 1
-    const fullParcelas: { valor: number; data: string | null }[] = [];
-    if (simEntradaValor > 0) {
-      fullParcelas.push({ valor: simEntradaValor, data: simEntradaData ? parseDate(simEntradaData) : null });
-    }
-    simParcelas.forEach((p: any) => {
-      fullParcelas.push({ valor: Number(p.valor) || 0, data: p.data ? parseDate(p.data) : null });
-    });
-    if (fullParcelas.length > 0) {
-      const totalP = fullParcelas.length;
-      const inserts = fullParcelas.map((p, i) => ({
-        empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
-        descricao: `Parcela ${i + 1}/${totalP} — ${detailClient.nome}`,
-        valor: p.valor, parcela: i + 1, data_vencimento: p.data, status: "pendente" as const,
-      }));
-      await supabase.from("financeiro_receber").insert(inserts);
-    } else if (totalVenda > 0) {
-      // No payment simulation — generate a single receivable with the full amount
-      await supabase.from("financeiro_receber").insert({
-        empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
-        descricao: `Conta a receber — ${detailClient.nome}`,
-        valor: totalVenda, parcela: 1, status: "pendente" as const,
-      });
-    }
+     // ── Sync financeiro_receber ──
+     const { data: parcelasExistentes } = await supabase
+       .from("financeiro_receber")
+       .select("id, parcela, status, valor_recebido")
+       .eq("projeto_id", projId);
+ 
+     const idsPendentes = (parcelasExistentes ?? [])
+       .filter(p => p.status === "pendente" || p.status === null)
+       .map(p => p.id);
+ 
+     if (idsPendentes.length > 0) {
+       await supabase
+         .from("financeiro_receber")
+         .delete()
+         .in("id", idsPendentes);
+     }
+ 
+     const parcelasPagas = (parcelasExistentes ?? [])
+       .filter(p => p.status === "pago" || p.status === "parcial");
+ 
+     const fullParcelas: { valor: number; data: string | null }[] = [];
+     if (simEntradaValor > 0) {
+       fullParcelas.push({ valor: simEntradaValor, data: simEntradaData ? parseDate(simEntradaData) : null });
+     }
+     simParcelas.forEach((p: any) => {
+       fullParcelas.push({ valor: Number(p.valor) || 0, data: p.data ? parseDate(p.data) : null });
+     });
+ 
+     if (fullParcelas.length > 0) {
+       const totalP = fullParcelas.length;
+       const numerosJaPagos = new Set(parcelasPagas.map(p => p.parcela));
+ 
+       const inserts = fullParcelas
+         .filter((_, i) => !numerosJaPagos.has(i + 1))
+         .map((p, i) => {
+           let numero = i + 1;
+           while (numerosJaPagos.has(numero)) numero++;
+           return {
+             empresa_id: empresaId,
+             projeto_id: projId,
+             cliente_id: detailClient.id,
+             descricao: `Parcela ${numero}/${totalP} — ${detailClient.nome}`,
+             valor: p.valor,
+             parcela: numero,
+             data_vencimento: p.data,
+             status: "pendente" as const,
+           };
+         });
+ 
+       if (inserts.length > 0) {
+         await supabase.from("financeiro_receber").insert(inserts);
+       }
+     } else if (totalVenda > 0 && parcelasPagas.length === 0) {
+       await supabase.from("financeiro_receber").insert({
+         empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
+         descricao: `Conta a receber — ${detailClient.nome}`,
+         valor: totalVenda, parcela: 1, status: "pendente" as const,
+       });
+     }
 
     // ── Sync comissões (RT) — single consolidated entry ──
     await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
@@ -802,9 +835,24 @@ const CRM = () => {
       }
     }
 
-    // ── Sync frete e imposto como contas a pagar ──
-    // Remove existing frete/imposto entries (identified by description pattern)
-    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).is("comissao_id", null).is("fornecedor_id", null);
+     // ── Sync frete e imposto como contas a pagar ──
+     const { data: contasPagarExist } = await supabase
+       .from("financeiro_pagar")
+       .select("id, status")
+       .eq("projeto_id", projId)
+       .is("comissao_id", null)
+       .is("fornecedor_id", null);
+ 
+     const idsPagarPendentes = (contasPagarExist ?? [])
+       .filter(p => p.status === "pendente")
+       .map(p => p.id);
+ 
+     if (idsPagarPendentes.length > 0) {
+       await supabase
+         .from("financeiro_pagar")
+         .delete()
+         .in("id", idsPagarPendentes);
+     }
     const contasPagarExtras: any[] = [];
     if (frete > 0) {
       contasPagarExtras.push({
