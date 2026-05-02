@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { calcFaltaComprar, calcCustoTotal } from "@/lib/calcFaltaComprar"
+import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
  import { useQuery } from "@tanstack/react-query"
  import { supabase } from "@/integrations/supabase/client"
  import { useEmpresa } from "@/hooks/useEmpresa"
@@ -25,35 +25,30 @@ import { calcFaltaComprar, calcCustoTotal } from "@/lib/calcFaltaComprar"
  
         const { data: todosItens } = await supabase
           .from("crm_itens")
-          .select("id, descricao, quantidade, preco_custo, preco_venda, rt_comissao, status_compra, orcamento_id, tipo")
+          .select("id, descricao, quantidade, preco_custo, preco_venda, rt_comissao, rt_valor_pago, status_compra, orcamento_id, tipo")
           .in("orcamento_id", orcIds)
- 
+
         return orcAprovados.map(orc => {
           const itens = (todosItens ?? []).filter(i => i.orcamento_id === orc.id)
           const frete = Number(orc.frete) || 0
           const imposto = Number(orc.imposto) || 0
 
+          const stats = calcFaltaComprar(itens, frete, imposto)
           const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
-          const totalCusto = calcCustoTotal(itens, frete, imposto)
-          const totalComprado = itens
-            .filter(i => i.status_compra === "comprado" || i.status_compra === "pago")
-            .reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0)
-          
-          const faltaComprar = calcFaltaComprar(itens, frete, imposto)
           const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
           return {
             clienteNome: (orc.clientes as any)?.nome ?? "—",
             orcamentoNome: orc.nome,
             totalVenda,
-            totalCusto,
-            totalComprado,
-            faltaComprar,
+            totalCusto: stats.totalCusto,
+            totalComprado: stats.totalComprado,
+            faltaComprar: stats.faltaComprar,
             itensPendentes: itensPendentesCount,
           }
         })
-       .filter(r => r.faltaComprar > 0)
-       .sort((a, b) => b.faltaComprar - a.faltaComprar)
+        .filter(r => r.faltaComprar > 0)
+        .sort((a, b) => b.faltaComprar - a.faltaComprar)
      },
      enabled: !!empresaId,
    })
