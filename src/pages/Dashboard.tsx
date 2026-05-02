@@ -262,10 +262,10 @@ const Dashboard = () => {
        .eq("status_compra", "pendente")
        .in("orcamento_id", orcIds);
 
-     const { data: todosItens } = await supabase
-       .from("crm_itens")
-       .select("id, preco_venda, quantidade, orcamento_id")
-       .in("orcamento_id", orcIds);
+      const { data: todosItens } = await supabase
+        .from("crm_itens")
+        .select("id, preco_venda, quantidade, orcamento_id, rt_comissao, rt_valor_pago")
+        .in("orcamento_id", orcIds);
 
      const porCliente: Record<string, any> = {};
 
