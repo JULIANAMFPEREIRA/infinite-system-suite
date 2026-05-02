@@ -81,20 +81,29 @@ const Dashboard = () => {
         supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
-      const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
-        supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
-        supabase.from("crm_orcamentos").select("id").eq("aprovado", true).then(r => r.data ?? []),
-      ]);
+       const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
+         supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
+         supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
+         supabase.from("crm_orcamentos").select("id, frete, imposto").eq("aprovado", true).then(r => (r.data ?? []) as any[]),
+       ]);
 
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
       const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
       const produtoMap = Object.fromEntries(produtosRes.map(p => [p.id, p]));
 
-      const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
-      const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
-
-      const itensComprarValorTotal = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+       const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
+       const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
+ 
+       const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+ 
+       // Somar frete e imposto apenas dos orçamentos aprovados que tenham pelo menos 1 item pendente
+       // ou orçamentos aprovados que tenham frete/imposto > 0 (considerando que são custos de projeto)
+       const orcsComPendencia = new Set(itensFaltaComprar.map(i => i.orcamento_id));
+       const totalFreteImposto = orcamentosAprovados
+         .filter(o => orcsComPendencia.has(o.id))
+         .reduce((sum, o) => sum + (Number(o.frete) || 0) + (Number(o.imposto) || 0), 0);
+ 
+       const itensComprarValorTotal = totalItensFalta + totalFreteImposto;
       const itensPendentesCount = itensFaltaComprar.length;
 
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
