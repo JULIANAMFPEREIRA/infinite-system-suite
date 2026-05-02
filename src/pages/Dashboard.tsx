@@ -81,20 +81,43 @@ const Dashboard = () => {
       ]);
 
         
+      // Buscar orçamentos aprovados com frete/imposto
       const { data: orcAprovados } = await supabase
         .from("crm_orcamentos")
-        .select("id")
+        .select("id, frete, imposto")
         .eq("aprovado", true);
-      const orcIds = (orcAprovados ?? []).map(o => o.id);
-      const { data: itensPend } = await supabase
-        .from("crm_itens")
-        .select("quantidade, preco_custo, orcamento_id")
-        .eq("status_compra", "pendente")
-        .in("orcamento_id", orcIds.length > 0 ? orcIds : ["none"]);
 
-      const itensComprarValorTotal = (itensPend ?? []).reduce((s, i) =>
-        s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-      const itensPendentesCount = (itensPend ?? []).length;
+      const orcIds = (orcAprovados ?? []).map(o => o.id);
+      let itensComprarValorTotal = 0;
+      let itensPendentesCount = 0;
+
+      if (orcIds.length === 0) {
+        itensComprarValorTotal = 0;
+        itensPendentesCount = 0;
+      } else {
+        const { data: itensPend } = await supabase
+          .from("crm_itens")
+          .select("quantidade, preco_custo, rt_comissao, status_compra, orcamento_id")
+          .in("orcamento_id", orcIds);
+
+        // Custo dos itens pendentes
+        const custoItensPendentes = (itensPend ?? [])
+          .filter(i => i.status_compra === "pendente")
+          .reduce((s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+
+        // RT total de TODOS os itens do orçamento (pendente ou comprado — RT é custo fixo)
+        const rtTotal = (itensPend ?? [])
+          .reduce((s, i) => s + (Number(i.rt_comissao) || 0), 0);
+
+        // Frete e imposto de cada orçamento
+        const freteImpostoTotal = (orcAprovados ?? []).reduce((s, orc) =>
+          s + (Number(orc.frete) || 0) + (Number(orc.imposto) || 0), 0);
+
+        itensComprarValorTotal = custoItensPendentes + rtTotal + freteImpostoTotal;
+        itensPendentesCount = (itensPend ?? [])
+          .filter(i => i.status_compra === "pendente")
+          .length;
+      }
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
       const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
