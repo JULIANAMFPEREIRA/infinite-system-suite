@@ -83,7 +83,7 @@ const Dashboard = () => {
 
        const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
          supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
-         supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
+          supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id, rt_comissao").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
          supabase.from("crm_orcamentos").select("id, frete, imposto").eq("aprovado", true).then(r => (r.data ?? []) as any[]),
        ]);
 
@@ -94,7 +94,7 @@ const Dashboard = () => {
        const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
        const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
  
-       const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+        const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number(i.rt_comissao) || 0), 0);
  
        // Somar frete e imposto apenas dos orçamentos aprovados que tenham pelo menos 1 item pendente
        // ou orçamentos aprovados que tenham frete/imposto > 0 (considerando que são custos de projeto)
@@ -257,7 +257,7 @@ const Dashboard = () => {
 
      const { data: itensPendentes } = await supabase
        .from("crm_itens")
-       .select("id, descricao, quantidade, preco_custo, orcamento_id, cliente_id")
+        .select("id, descricao, quantidade, preco_custo, orcamento_id, cliente_id, rt_comissao")
        .eq("status_compra", "pendente")
        .in("orcamento_id", orcIds);
 
@@ -283,7 +283,7 @@ const Dashboard = () => {
           .filter(i => i.orcamento_id === orc.id);
         
         const itemsCost = itensPend.reduce(
-          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1) + (Number(i.rt_comissao) || 0), 0);
 
         // Se houver itens pendentes, incluir frete e impostos como custos pendentes do projeto
         const orcFrete = Number(orc.frete) || 0;
