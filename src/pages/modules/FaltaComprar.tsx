@@ -13,53 +13,74 @@
    const { data, isLoading } = useQuery({
      queryKey: ["falta_comprar_pagina", empresaId],
      queryFn: async () => {
-       const { data: orcAprovados } = await supabase
-         .from("crm_orcamentos")
-         .select("id, nome, cliente_id, clientes(nome)")
-         .eq("aprovado", true)
+        const { data: orcAprovados } = await supabase
+          .from("crm_orcamentos")
+          .select("id, nome, cliente_id, frete, imposto, simulacao_pagamento, clientes(nome)")
+          .eq("aprovado", true)
  
        if (!orcAprovados?.length) return []
  
        const orcIds = orcAprovados.map(o => o.id)
  
-       const { data: todosItens } = await supabase
-         .from("crm_itens")
-         .select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id")
-         .in("orcamento_id", orcIds)
+        const { data: todosItens } = await supabase
+          .from("crm_itens")
+          .select("id, descricao, quantidade, preco_custo, preco_venda, rt_comissao, status_compra, orcamento_id, tipo")
+          .in("orcamento_id", orcIds)
  
-       return orcAprovados.map(orc => {
-         const itens = (todosItens ?? [])
-           .filter(i => i.orcamento_id === orc.id)
- 
-         const totalCusto = itens.reduce((s, i) =>
-           s + (Number(i.preco_custo)||0) *
-           (Number(i.quantidade)||1), 0)
- 
-         const totalComprado = itens
-           .filter(i => i.status_compra === "comprado")
-           .reduce((s, i) => s +
-           (Number(i.preco_custo)||0) *
-           (Number(i.quantidade)||1), 0)
- 
-         const faltaComprar = itens
-           .filter(i => i.status_compra === "pendente")
-           .reduce((s, i) => s +
-           (Number(i.preco_custo)||0) *
-           (Number(i.quantidade)||1), 0)
- 
-         const itensPendentes = itens
-           .filter(i => i.status_compra === "pendente")
-           .length
- 
-         return {
-           clienteNome: (orc.clientes as any)?.nome ?? "—",
-           orcamentoNome: orc.nome,
-           totalCusto,
-           totalComprado,
-           faltaComprar,
-           itensPendentes,
-         }
-       })
+        return orcAprovados.map(orc => {
+          const itens = (todosItens ?? [])
+            .filter(i => i.orcamento_id === orc.id)
+
+          // Custo dos itens
+          const custoItens = itens.reduce((s, i) =>
+            s + (Number(i.preco_custo)||0) *
+            (Number(i.quantidade)||1), 0)
+
+          // RT total
+          const rtTotal = itens.reduce((s, i) =>
+            s + (Number(i.rt_comissao)||0), 0)
+
+          // Frete e imposto do orçamento
+          const frete = Number(orc.frete) || 0
+          const imposto = Number(orc.imposto) || 0
+
+          // Custo total = itens + frete + imposto + RT
+          const totalCusto = custoItens + frete + imposto + rtTotal
+
+          // Valor de venda total
+          const totalVenda = itens.reduce((s, i) =>
+            s + (Number(i.preco_venda)||0) *
+            (Number(i.quantidade)||1), 0)
+
+          // Itens comprados (custo)
+          const totalComprado = itens
+            .filter(i => i.status_compra === "comprado" || i.status_compra === "pago")
+            .reduce((s, i) => s +
+              (Number(i.preco_custo)||0) *
+              (Number(i.quantidade)||1), 0)
+
+          // Itens pendentes (custo)
+          const itensPendentes = itens
+            .filter(i => i.status_compra === "pendente")
+
+          const faltaComprar = itensPendentes
+            .reduce((s, i) => s +
+              (Number(i.preco_custo)||0) *
+              (Number(i.quantidade)||1), 0)
+
+          // Falta comprar total inclui frete e imposto se ainda não pagos
+          const faltaTotal = faltaComprar + (totalComprado === 0 ? frete + imposto : 0)
+
+          return {
+            clienteNome: (orc.clientes as any)?.nome ?? "—",
+            orcamentoNome: orc.nome,
+            totalVenda,
+            totalCusto,
+            totalComprado,
+            faltaComprar: faltaTotal,
+            itensPendentes: itensPendentes.length,
+          }
+        })
        .filter(r => r.faltaComprar > 0)
        .sort((a, b) => b.faltaComprar - a.faltaComprar)
      },
@@ -75,14 +96,11 @@
      )
    }, [data, busca])
  
-   const totalGeral = filtered.reduce((s, r) =>
-     s + r.faltaComprar, 0)
-   const totalCustoGeral = filtered.reduce((s, r) =>
-     s + r.totalCusto, 0)
-   const totalCompradoGeral = filtered.reduce((s, r) =>
-     s + r.totalComprado, 0)
-   const totalItens = filtered.reduce((s, r) =>
-     s + r.itensPendentes, 0)
+    const totalGeral = filtered.reduce((s, r) => s + r.faltaComprar, 0)
+    const totalCustoGeral = filtered.reduce((s, r) => s + r.totalCusto, 0)
+    const totalCompradoGeral = filtered.reduce((s, r) => s + r.totalComprado, 0)
+    const totalVendaGeral = filtered.reduce((s, r) => s + r.totalVenda, 0)
+    const totalItens = filtered.reduce((s, r) => s + r.itensPendentes, 0)
  
    return (
      <div className="p-4 space-y-4 max-w-7xl mx-auto">
@@ -113,37 +131,37 @@
          </div>
        </div>
  
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-         <div className="bg-card p-3 rounded-lg border border-border">
-           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-             Total Custo Projetos
-           </p>
-           <p className="text-lg font-bold text-foreground mt-0.5">
-             {fmt(totalCustoGeral)}
-           </p>
-         </div>
-         <div className="bg-card p-3 rounded-lg border border-border">
-           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-             Total Comprado
-           </p>
-           <p className="text-lg font-bold text-green-600 mt-0.5">
-             {fmt(totalCompradoGeral)}
-           </p>
-         </div>
-         <div className="bg-card p-3 rounded-lg border border-border">
-           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-             Falta Comprar
-           </p>
-           <div className="flex items-baseline gap-2 mt-0.5">
-             <p className="text-lg font-bold text-orange-600">
-               {fmt(totalGeral)}
-             </p>
-             <span className="text-[10px] text-muted-foreground">
-               {totalItens} itens pendentes
-             </span>
-           </div>
-         </div>
-       </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+              Valor dos Projetos
+            </p>
+            <p className="text-lg font-bold text-foreground mt-0.5">
+              {fmt(totalVendaGeral)}
+            </p>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+              Total Comprado
+            </p>
+            <p className="text-lg font-bold text-green-600 mt-0.5">
+              {fmt(totalCompradoGeral)}
+            </p>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+              Falta Comprar
+            </p>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <p className="text-lg font-bold text-orange-600">
+                {fmt(totalGeral)}
+              </p>
+              <span className="text-[10px] text-muted-foreground">
+                {totalItens} itens pendentes
+              </span>
+            </div>
+          </div>
+        </div>
  
        {isLoading ? (
          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
@@ -154,42 +172,46 @@
            <div className="overflow-x-auto">
              <table className="w-full text-left border-collapse">
                <thead>
-                 <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                   <th className="px-4 py-3">Cliente</th>
-                   <th className="px-4 py-3">Orçamento</th>
-                   <th className="px-4 py-3 text-right">Total Custo</th>
-                   <th className="px-4 py-3 text-right">Comprado</th>
-                   <th className="px-4 py-3 text-center">Itens Pend.</th>
-                   <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
-                 </tr>
+                  <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3 text-right">Valor do Projeto</th>
+                    <th className="px-4 py-3 text-right">Custo do Projeto</th>
+                    <th className="px-4 py-3 text-right">Comprado</th>
+                    <th className="px-4 py-3 text-center">Itens Pend.</th>
+                    <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
+                  </tr>
                </thead>
                <tbody className="divide-y divide-border">
-                 {filtered.map((r, i) => (
-                   <tr key={i} className="hover:bg-secondary/10 transition-colors">
-                     <td className="px-4 py-3 text-xs font-bold text-foreground">{r.clienteNome}</td>
-                     <td className="px-4 py-3 text-[11px] text-muted-foreground">{r.orcamentoNome}</td>
-                     <td className="px-4 py-3 text-xs text-right tabular-nums">{fmt(r.totalCusto)}</td>
-                     <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
-                     <td className="px-4 py-3 text-center">
-                       <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium">
-                         {r.itensPendentes} itens
-                       </span>
-                     </td>
-                     <td className="px-4 py-3 text-xs text-right font-bold text-orange-600 tabular-nums">
-                       {fmt(r.faltaComprar)}
-                     </td>
-                   </tr>
-                 ))}
+                  {filtered.map((r, i) => (
+                    <tr key={i} className="hover:bg-secondary/10 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-bold text-foreground">{r.clienteNome}</p>
+                        <p className="text-[10px] text-muted-foreground">{r.orcamentoNome}</p>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums">{fmt(r.totalVenda)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-muted-foreground">{fmt(r.totalCusto)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium">
+                          {r.itensPendentes} itens
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-right font-bold text-orange-600 tabular-nums">
+                        {fmt(r.faltaComprar)}
+                      </td>
+                    </tr>
+                  ))}
                </tbody>
-               <tfoot className="bg-secondary/20 font-bold border-t border-border">
-                 <tr>
-                   <td colSpan={2} className="px-4 py-3 text-xs">Total Geral</td>
-                   <td className="px-4 py-3 text-xs text-right">{fmt(totalCustoGeral)}</td>
-                   <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
-                   <td className="px-4 py-3 text-center text-[10px]">{totalItens} itens</td>
-                   <td className="px-4 py-3 text-xs text-right text-orange-600">{fmt(totalGeral)}</td>
-                 </tr>
-               </tfoot>
+                <tfoot className="bg-secondary/20 font-bold border-t border-border">
+                  <tr>
+                    <td className="px-4 py-3 text-xs">Total Geral</td>
+                    <td className="px-4 py-3 text-xs text-right">{fmt(totalVendaGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-muted-foreground">{fmt(totalCustoGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
+                    <td className="px-4 py-3 text-center text-[10px]">{totalItens} itens</td>
+                    <td className="px-4 py-3 text-xs text-right text-orange-600">{fmt(totalGeral)}</td>
+                  </tr>
+                </tfoot>
              </table>
            </div>
          </div>
