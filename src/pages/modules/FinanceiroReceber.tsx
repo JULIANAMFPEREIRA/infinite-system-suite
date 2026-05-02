@@ -462,10 +462,10 @@ const FinanceiroReceber = () => {
                       </td>
                       <td className="px-3 py-2 text-center">
                         {(() => {
-                          const label = recStatusLabel(c.status ?? "pendente");
+                          const status = getStatusDisplay(c);
                           return (
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${recStatusBadgeClass(label)}`}>
-                              {label}
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${status.class}`}>
+                              {status.label}
                             </span>
                           );
                         })()}
