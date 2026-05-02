@@ -98,13 +98,16 @@ const Dashboard = () => {
       } else {
         const { data: itensPend } = await supabase
           .from("crm_itens")
-          .select("quantidade, preco_custo, rt_comissao, status_compra, orcamento_id")
+          .select("quantidade, preco_custo, rt_comissao, rt_valor_pago, status_compra, orcamento_id")
           .in("orcamento_id", orcIds);
 
-        const freteTotal = (orcAprovados ?? []).reduce((s, orc) => s + (Number(orc.frete) || 0), 0);
-        const impostoTotal = (orcAprovados ?? []).reduce((s, orc) => s + (Number(orc.imposto) || 0), 0);
+        // Calculate faltaComprar per approved budget and sum them up
+        itensComprarValorTotal = (orcAprovados ?? []).reduce((acc, orc) => {
+          const orcItens = (itensPend ?? []).filter(i => i.orcamento_id === orc.id);
+          const stats = calcFaltaComprar(orcItens, Number(orc.frete) || 0, Number(orc.imposto) || 0);
+          return acc + stats.faltaComprar;
+        }, 0);
 
-        itensComprarValorTotal = calcFaltaComprar(itensPend ?? [], freteTotal, impostoTotal);
         itensPendentesCount = (itensPend ?? []).filter(i => i.status_compra === "pendente").length;
       }
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
