@@ -112,7 +112,23 @@ const Dashboard = () => {
       }
       const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
       const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
-      const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
+       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
+
+       // Lucro total dos projetos ativos
+       const lucroTotal = projetos
+         .filter(p => p.status !== "cancelado")
+         .reduce((s, p) =>
+           s + (Number(p.venda_total) || 0), 0);
+
+       const custoTotalProjetos = projetos
+         .filter(p => p.status !== "cancelado")
+         .reduce((s, p) =>
+           s + (Number(p.custo_previsto) || 0), 0);
+
+       const lucroBruto = lucroTotal - custoTotalProjetos;
+       const margemMedia = lucroTotal > 0
+         ? (lucroBruto / lucroTotal) * 100
+         : 0;
 
       // saldo restante helper (considera recebimento parcial)
       const saldo = (r: any) => Math.max((Number(r.valor) || 0) - (Number((r as any).valor_recebido) || 0), 0);
@@ -225,7 +241,11 @@ const Dashboard = () => {
         totalRecebido,
         totalPagoEfetivo,
         projetosAtivosCount: projetosAtivos.length,
-        statusCounts,
+         statusCounts,
+         lucroTotal,
+         custoTotalProjetos,
+         lucroBruto,
+         margemMedia,
         proximasVisitas,
         itensComprarDetalhados,
         receber,
@@ -316,43 +336,166 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* LINHA 2 – OPERACIONAL & COMPRAS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* A Pagar */}
-        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowUpRight size={16} className="text-green-600" />
-            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">A Pagar</p>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{fmt(stats?.pagarGeral ?? 0)}</p>
-          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total pendente</p>
-        </div>
+       {/* LINHA 2 – OPERACIONAL & COMPRAS */}
+       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+         {/* A Pagar */}
+         <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+           <div className="flex items-center gap-2 mb-2">
+             <ArrowUpRight size={16} className="text-green-600" />
+             <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">A Pagar</p>
+           </div>
+           <p className="text-2xl font-bold text-foreground">{fmt(stats?.pagarGeral ?? 0)}</p>
+           <p className="text-[11px] text-green-600/70 font-medium mt-1">Total pendente</p>
+         </div>
 
-        {/* Projetos Ativos */}
-        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <FolderKanban size={16} className="text-green-600" />
-            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">Projetos Ativos</p>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
-          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
-        </div>
+         {/* Projetos Ativos */}
+         <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+           <div className="flex items-center gap-2 mb-2">
+             <FolderKanban size={16} className="text-green-600" />
+             <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">Projetos Ativos</p>
+           </div>
+           <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
+           <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
+         </div>
 
-        {/* Falta Comprar */}
-        <div
-          className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
-          onClick={() => navigate("/falta-comprar")}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <ShoppingCart size={16} className="text-orange-600" />
-            <p className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">Falta Comprar</p>
-          </div>
-          <p className="text-2xl font-bold text-orange-600">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
-          <p className="text-[11px] text-orange-600/70 font-medium mt-1">
-            {stats?.itensPendentesCount ?? 0} itens pendentes
-          </p>
-        </div>
-      </div>
+         {/* Falta Comprar */}
+         <div
+           className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
+           onClick={() => navigate("/falta-comprar")}
+         >
+           <div className="flex items-center gap-2 mb-2">
+             <ShoppingCart size={16} className="text-orange-600" />
+             <p className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">Falta Comprar</p>
+           </div>
+           <p className="text-2xl font-bold text-orange-600">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
+           <p className="text-[11px] text-orange-600/70 font-medium mt-1">
+             {stats?.itensPendentesCount ?? 0} itens pendentes
+           </p>
+         </div>
+       </div>
+
+       {/* Card de Visão Financeira dos Projetos */}
+       <div className="relative overflow-hidden
+         rounded-2xl border border-border
+         bg-gradient-to-r from-slate-900
+         via-slate-800 to-slate-900
+         p-6 shadow-lg">
+
+         {/* Glow effect */}
+         <div className="absolute inset-0
+           bg-gradient-to-r from-primary/10
+           via-transparent to-emerald-500/10
+           pointer-events-none" />
+
+         {/* Grid de 4 métricas */}
+         <div className="relative grid
+           grid-cols-2 md:grid-cols-4 gap-6">
+
+           {/* Receita Total */}
+           <div className="space-y-1">
+             <p className="text-[11px] font-semibold
+               uppercase tracking-widest
+               text-slate-400">
+               Receita Total
+             </p>
+             <p className="text-2xl font-black
+               text-white tracking-tight">
+               {fmt(stats?.lucroTotal ?? 0)}
+             </p>
+             <p className="text-[10px] text-slate-500">
+               todos os projetos ativos
+             </p>
+           </div>
+
+           {/* Custo Total */}
+           <div className="space-y-1">
+             <p className="text-[11px] font-semibold
+               uppercase tracking-widest
+               text-slate-400">
+               Custo Total
+             </p>
+             <p className="text-2xl font-black
+               text-red-400 tracking-tight">
+               {fmt(stats?.custoTotalProjetos ?? 0)}
+             </p>
+             <p className="text-[10px] text-slate-500">
+               previsto nos projetos
+             </p>
+           </div>
+
+           {/* Lucro Bruto */}
+           <div className="space-y-1">
+             <p className="text-[11px] font-semibold
+               uppercase tracking-widest
+               text-slate-400">
+               Lucro Bruto
+             </p>
+             <p className={`text-2xl font-black
+               tracking-tight ${
+                 (stats?.lucroBruto ?? 0) >= 0
+                   ? "text-emerald-400"
+                   : "text-red-400"
+               }`}>
+               {fmt(stats?.lucroBruto ?? 0)}
+             </p>
+             <div className="flex items-center gap-1">
+               <div className="flex-1 h-1
+                 rounded-full bg-slate-700
+                 overflow-hidden">
+                 <div
+                   className="h-full bg-emerald-400
+                     transition-all rounded-full"
+                   style={{
+                     width: `${Math.min(
+                       Math.max(
+                         stats?.margemMedia ?? 0, 0
+                       ), 100
+                     )}%`
+                   }}
+                 />
+               </div>
+             </div>
+             <p className="text-[10px] text-slate-500">
+               receita − custo
+             </p>
+           </div>
+
+           {/* Margem Média */}
+           <div className="space-y-1">
+             <p className="text-[11px] font-semibold
+               uppercase tracking-widest
+               text-slate-400">
+               Margem Média
+             </p>
+             <p className={`text-2xl font-black
+               tracking-tight ${
+                 (stats?.margemMedia ?? 0) >= 30
+                   ? "text-emerald-400"
+                   : (stats?.margemMedia ?? 0) >= 15
+                   ? "text-yellow-400"
+                   : "text-red-400"
+               }`}>
+               {(stats?.margemMedia ?? 0).toFixed(1)}%
+             </p>
+             <p className="text-[10px] text-slate-500">
+               {(stats?.margemMedia ?? 0) >= 30
+                 ? "✓ Margem saudável"
+                 : (stats?.margemMedia ?? 0) >= 15
+                 ? "⚠ Margem moderada"
+                 : "↓ Margem baixa"}
+             </p>
+           </div>
+         </div>
+
+         {/* Label no canto */}
+         <div className="absolute top-3 right-4">
+           <span className="text-[9px] font-bold
+             uppercase tracking-widest
+             text-slate-600">
+             Visão Financeira dos Projetos
+           </span>
+         </div>
+       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
 
