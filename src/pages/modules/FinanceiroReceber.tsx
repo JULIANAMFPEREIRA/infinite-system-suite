@@ -97,7 +97,7 @@ const FinanceiroReceber = () => {
   const [detailConta, setDetailConta] = useState<any>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("pendente_e_inadimplente");
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [anoFilter, setAnoFilter] = useState("");
@@ -232,6 +232,14 @@ const FinanceiroReceber = () => {
         });
       }
 
+      if (statusFilter === "pendente_e_inadimplente") {
+        list = list.filter(c => {
+          if (c.status === "pago" || c.status === "cancelado") return false;
+          const saldo = Math.max((Number(c.valor) || 0) - (Number((c as any).valor_recebido) || 0), 0);
+          return saldo > 0;
+        });
+      }
+
       const hoje = new Date(new Date().toDateString());
 
       // Totals calculation based on the list already filtered by date/search
@@ -239,7 +247,7 @@ const FinanceiroReceber = () => {
       let totInadimplente = 0;
       let totRecebido = 0;
 
-      if (statusFilter === "") {
+      if (statusFilter === "" || statusFilter === "pendente_e_inadimplente") {
         list.forEach(c => {
           if (c.status === "pago") {
             totRecebido += (Number((c as any).valor_recebido) || (Number(c.valor) || 0));
@@ -357,7 +365,7 @@ const FinanceiroReceber = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2">
-        {(statusFilter === "" || statusFilter === "pendente" || statusFilter === "vencido" || statusFilter === "pago") ? (
+        {(statusFilter === "" || statusFilter === "pendente_e_inadimplente" || statusFilter === "pendente" || statusFilter === "vencido" || statusFilter === "pago") ? (
           <>
             <div className="bg-card border border-border rounded-lg p-3 text-center">
               <div className="text-lg font-bold text-warning">{fmtBRL(totals.aReceber)}</div>
@@ -368,8 +376,8 @@ const FinanceiroReceber = () => {
               <div className="text-[11px] text-muted-foreground">Inadimplente</div>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <div className="text-lg font-bold text-success">{fmtBRL(totals.recebido)}</div>
-              <div className="text-[11px] text-muted-foreground">Recebido</div>
+              <div className="text-lg font-bold text-primary">{statusFilter === "pendente_e_inadimplente" ? fmtBRL(totals.aReceber + totals.inadimplente) : fmtBRL(totals.recebido)}</div>
+              <div className="text-[11px] text-muted-foreground">{statusFilter === "pendente_e_inadimplente" ? "Total" : "Recebido"}</div>
             </div>
           </>
         ) : (
