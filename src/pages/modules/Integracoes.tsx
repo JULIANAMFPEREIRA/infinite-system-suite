@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+ import { useEffect, useRef } from "react";
 import { Building2, CheckCircle2, Clock, Calendar, Loader2, Unlink } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+ import { useAuth } from "@/contexts/AuthContext";
 import {
   useGoogleCalendarStatus,
   useGoogleAuthUrl,
@@ -22,28 +23,48 @@ const integracoes = [
 
 const Integracoes = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+   const { user } = useAuth();
   const { data: googleStatus, isLoading: loadingStatus } = useGoogleCalendarStatus();
   const authUrlMutation = useGoogleAuthUrl();
   const callbackMutation = useGoogleCallback();
   const disconnectMutation = useGoogleDisconnect();
   const { data: events } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
+   const processingCodeRef = useRef<string | null>(null);
 
   // Handle OAuth callback code
   useEffect(() => {
     const code = searchParams.get("code");
-    if (code) {
-      callbackMutation.mutate(code, {
-        onSuccess: () => {
-          toast.success("Google Agenda conectado com sucesso!");
-          setSearchParams({});
-        },
-        onError: (err) => {
-          toast.error("Erro ao conectar: " + (err as Error).message);
-          setSearchParams({});
-        },
-      });
-    }
-  }, [searchParams]);
+     const error = searchParams.get("error");
+ 
+     // Se Google retornou erro (usuário cancelou)
+     if (error) {
+       toast.error("Conexão cancelada.");
+       setSearchParams({});
+       return;
+     }
+ 
+     // Aguardar user estar disponível e evitar processamento duplicado
+     if (!code || !user || processingCodeRef.current === code) return;
+ 
+     processingCodeRef.current = code;
+     toast.info("Processando conexão...");
+ 
+     callbackMutation.mutate(code, {
+       onSuccess: () => {
+         toast.success("Google Agenda conectado!");
+         setSearchParams({});
+         // Forçar refetch do status após 1 segundo
+         setTimeout(() => {
+           window.location.reload();
+         }, 1500);
+       },
+       onError: (err) => {
+         toast.error("Erro ao conectar: " + (err as Error).message);
+         setSearchParams({});
+         processingCodeRef.current = null;
+       },
+     });
+   }, [searchParams, user]);
 
   const handleConnect = () => {
     authUrlMutation.mutate(undefined, {
