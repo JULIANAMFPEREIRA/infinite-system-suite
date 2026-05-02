@@ -13,6 +13,7 @@ import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/Fina
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
 const STATUS_OPTIONS = [
+  { value: "pendente_e_inadimplente", label: "Pendente + Inadimplente" },
   { value: "", label: "Todos" },
   { value: "pendente", label: "A Receber" },
   { value: "vencido", label: "Inadimplente" },
