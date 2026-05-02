@@ -33,7 +33,6 @@ const Dashboard = () => {
    const navigate = useNavigate();
    const queryClient = useQueryClient();
    const hoje = new Date();
-   const [showFaltaComprar, setShowFaltaComprar] = useState(false);
    const inicioMes = startOfMonth(hoje);
    const fimMes = endOfMonth(hoje);
 
@@ -82,31 +81,20 @@ const Dashboard = () => {
       ]);
 
        const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
-         supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).then(r => r.data ?? []),
-          supabase.from("crm_itens").select("id, descricao, quantidade, preco_custo, preco_venda, status_compra, orcamento_id, cliente_id, rt_comissao").eq("status_compra", "pendente").then(r => (r.data ?? []) as any[]),
-         supabase.from("crm_orcamentos").select("id, frete, imposto").eq("aprovado", true).then(r => (r.data ?? []) as any[]),
-       ]);
+      const { data: orcAprovados } = await supabase
+        .from("crm_orcamentos")
+        .select("id")
+        .eq("aprovado", true);
+      const orcIds = (orcAprovados ?? []).map(o => o.id);
+      const { data: itensPend } = await supabase
+        .from("crm_itens")
+        .select("quantidade, preco_custo, orcamento_id")
+        .eq("status_compra", "pendente")
+        .in("orcamento_id", orcIds.length > 0 ? orcIds : ["none"]);
 
-      const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
-      const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
-      const produtoMap = Object.fromEntries(produtosRes.map(p => [p.id, p]));
-
-       const idsAprovados = new Set(orcamentosAprovados.map(o => o.id));
-       const itensFaltaComprar = crmItensPendentes.filter(i => i.orcamento_id && idsAprovados.has(i.orcamento_id));
- 
-        const totalItensFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-        const totalRtFalta = itensFaltaComprar.reduce((sum, i) => sum + (Number(i.rt_comissao) || 0), 0);
- 
-       // Somar frete e imposto apenas dos orçamentos aprovados que tenham pelo menos 1 item pendente
-       // ou orçamentos aprovados que tenham frete/imposto > 0 (considerando que são custos de projeto)
-       const orcsComPendencia = new Set(itensFaltaComprar.map(i => i.orcamento_id));
-       const totalFreteImposto = orcamentosAprovados
-         .filter(o => orcsComPendencia.has(o.id))
-         .reduce((sum, o) => sum + (Number(o.frete) || 0) + (Number(o.imposto) || 0), 0);
-
-       const itensComprarValorTotal = totalItensFalta + totalRtFalta + totalFreteImposto;
-      const itensPendentesCount = itensFaltaComprar.length;
-
+      const itensComprarValorTotal = (itensPend ?? []).reduce((s, i) =>
+        s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+      const itensPendentesCount = (itensPend ?? []).length;
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
 
       // saldo restante helper (considera recebimento parcial)
@@ -244,93 +232,6 @@ const Dashboard = () => {
    refetchOnWindowFocus: true,
  });
 
- const { data: faltaComprarPorCliente } = useQuery({
-   queryKey: ["falta_comprar_clientes", empresaId],
-   queryFn: async () => {
-      const { data: orcAprovados } = await supabase
-        .from("crm_orcamentos")
-        .select("id, nome, cliente_id, frete, imposto, simulacao_pagamento, clientes(nome)")
-        .eq("aprovado", true);
-
-     if (!orcAprovados?.length) return [];
-
-     const orcIds = orcAprovados.map(o => o.id);
-
-     const { data: itensPendentes } = await supabase
-       .from("crm_itens")
-        .select("id, descricao, quantidade, preco_custo, orcamento_id, cliente_id, rt_comissao")
-       .eq("status_compra", "pendente")
-       .in("orcamento_id", orcIds);
-
-      const { data: todosItens } = await supabase
-        .from("crm_itens")
-        .select("id, preco_venda, quantidade, orcamento_id, rt_comissao, rt_valor_pago")
-        .in("orcamento_id", orcIds);
-
-     const porCliente: Record<string, any> = {};
-
-     orcAprovados.forEach(orc => {
-       const clienteId = orc.cliente_id;
-       if (!clienteId) return;
-
-       const clienteNome = (orc.clientes as any)?.nome ?? "—";
-
-       const itensOrc = (todosItens ?? [])
-         .filter(i => i.orcamento_id === orc.id);
-       const valorTotal = itensOrc.reduce(
-         (s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
-
-        const itensPend = (itensPendentes ?? [])
-          .filter(i => i.orcamento_id === orc.id);
-        
-         const itemsCostPend = itensPend.reduce(
-           (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
-         
-         // RT — total (custo) vs pago (realizado).
-         const allItensOrc = (todosItens ?? []).filter(i => i.orcamento_id === orc.id);
-         
-         // Buscamos RT total e RT pago dos itens (precisamos do rt_comissao e rt_valor_pago que estão em todos os itens)
-         // Nota: precisamos incluir esses campos na query todosItens
-         
-         // Cálculo simplificado seguindo a lógica do CRM: Falta comprar = Itens Pendentes + RT Pendente + Frete Pendente + Imposto Pendente
-         // Para RT, Frete e Imposto, o CRM usa a lógica de (Previsto - Realizado)
-         
-         const sim = (orc.simulacao_pagamento as any) ?? {};
-         const fretesExtras = Array.isArray(sim.fretes_extras) ? sim.fretes_extras : [];
-         const freteRealizado = fretesExtras.reduce((s: number, f: any) => s + (Number(f.valor) || 0), 0);
-         const fretePrevisto = Number(orc.frete) || 0;
-         const fretePendente = Math.max(fretePrevisto - freteRealizado, 0);
-         
-         const orcImposto = Number(orc.imposto) || 0;
-         // Como o dashboard não tem acesso fácil às contas pagas de imposto aqui, 
-         // mantemos a lógica de que se houver itens pendentes, o imposto e frete principal ainda são considerados "falta comprar"
-         // mas para bater com o CRM, vamos usar os fretes extras se existirem.
-         
-         // Para RT Pendente: precisamos de rt_comissao e rt_valor_pago de TODOS os itens do orçamento
-         // Vamos ajustar a query de todosItens abaixo.
-         
-         const rtTotal = allItensOrc.reduce((s, i) => s + (Number((i as any).rt_comissao) || 0), 0);
-         const rtPago = allItensOrc.reduce((s, i) => {
-           const t = Number((i as any).rt_comissao) || 0;
-           return s + Math.min(Math.max(Number((i as any).rt_valor_pago) || 0, 0), t);
-         }, 0);
-         const rtPendente = Math.max(rtTotal - rtPago, 0);
- 
-         const valorFalta = itemsCostPend + rtPendente + fretePendente + (itensPend.length > 0 ? orcImposto : 0);
-
-       if (!porCliente[clienteId]) {
-         porCliente[clienteId] = {
-           clienteNome,
-           orcamentoNome: orc.nome,
-           valorTotalProjeto: 0,
-           valorFaltaComprar: 0,
-           qtdItens: 0,
-         };
-       }
-       porCliente[clienteId].valorTotalProjeto += valorTotal;
-       porCliente[clienteId].valorFaltaComprar += valorFalta;
-       porCliente[clienteId].qtdItens += itensPend.length;
-     });
 
      return Object.values(porCliente)
        .filter(c => c.valorFaltaComprar > 0)
@@ -362,7 +263,6 @@ const Dashboard = () => {
         { event: "*", schema: "public", table },
         () => {
           queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3"] });
-          queryClient.invalidateQueries({ queryKey: ["falta_comprar_clientes"] });
         }
       );
     });
@@ -444,7 +344,7 @@ const Dashboard = () => {
         {/* Falta Comprar */}
         <div
           className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
-          onClick={() => setShowFaltaComprar(true)}
+          onClick={() => navigate("/falta-comprar")}
         >
           <div className="flex items-center gap-2 mb-2">
             <ShoppingCart size={16} className="text-orange-600" />
@@ -458,59 +358,6 @@ const Dashboard = () => {
       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
-      <Dialog open={showFaltaComprar} onOpenChange={setShowFaltaComprar}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="text-orange-600" />
-              Falta Comprar por Cliente
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-4 gap-4 py-2 border-b text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              <div>Cliente</div>
-              <div className="text-right">Valor do Projeto</div>
-              <div className="text-right">Itens Pendentes</div>
-              <div className="text-right text-orange-600">Falta Comprar</div>
-            </div>
-
-            <div className="divide-y">
-              {(faltaComprarPorCliente ?? []).map((c, i) => (
-                <div key={i} className="grid grid-cols-4 gap-4 py-3 items-center hover:bg-secondary/20 transition-colors rounded-lg px-1">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{c.clienteNome}</p>
-                  </div>
-                  <div className="text-right text-sm font-medium">
-                    {fmt(c.valorTotalProjeto)}
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded-full font-medium">
-                      {c.qtdItens} itens
-                    </span>
-                  </div>
-                  <div className="text-right text-sm font-bold text-orange-600">
-                    {fmt(c.valorFaltaComprar)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 py-4 mt-2 border-t font-bold bg-orange-50/50 rounded-lg px-2">
-              <div className="text-sm">Total Geral</div>
-              <div className="text-right text-sm">
-                {fmt((faltaComprarPorCliente ?? []).reduce((s, c) => s + c.valorTotalProjeto, 0))}
-              </div>
-              <div className="text-right text-sm">
-                {(faltaComprarPorCliente ?? []).reduce((s, c) => s + c.qtdItens, 0)} itens
-              </div>
-              <div className="text-right text-sm text-orange-600">
-                {fmt((faltaComprarPorCliente ?? []).reduce((s, c) => s + c.valorFaltaComprar, 0))}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <div className="grid grid-cols-1 gap-4">
         <InteractiveCalendar
