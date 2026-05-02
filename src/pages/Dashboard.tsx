@@ -246,10 +246,10 @@ const Dashboard = () => {
  const { data: faltaComprarPorCliente } = useQuery({
    queryKey: ["falta_comprar_clientes", empresaId],
    queryFn: async () => {
-     const { data: orcAprovados } = await supabase
-       .from("crm_orcamentos")
-       .select("id, nome, cliente_id, clientes(nome)")
-       .eq("aprovado", true);
+      const { data: orcAprovados } = await supabase
+        .from("crm_orcamentos")
+        .select("id, nome, cliente_id, frete, imposto, clientes(nome)")
+        .eq("aprovado", true);
 
      if (!orcAprovados?.length) return [];
 
@@ -279,10 +279,16 @@ const Dashboard = () => {
        const valorTotal = itensOrc.reduce(
          (s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0);
 
-       const itensPend = (itensPendentes ?? [])
-         .filter(i => i.orcamento_id === orc.id);
-       const valorFalta = itensPend.reduce(
-         (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+        const itensPend = (itensPendentes ?? [])
+          .filter(i => i.orcamento_id === orc.id);
+        
+        const itemsCost = itensPend.reduce(
+          (s, i) => s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
+
+        // Se houver itens pendentes, incluir frete e impostos como custos pendentes do projeto
+        const orcFrete = Number(orc.frete) || 0;
+        const orcImposto = Number(orc.imposto) || 0;
+        const valorFalta = itemsCost + (itensPend.length > 0 ? (orcFrete + orcImposto) : 0);
 
        if (!porCliente[clienteId]) {
          porCliente[clienteId] = {
