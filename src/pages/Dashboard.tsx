@@ -95,6 +95,8 @@ const Dashboard = () => {
       const itensComprarValorTotal = (itensPend ?? []).reduce((s, i) =>
         s + (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1), 0);
       const itensPendentesCount = (itensPend ?? []).length;
+      const clienteMap = Object.fromEntries(clientes.map(c => [c.id, c.nome]));
+      const projetoMap = Object.fromEntries(projetos.map(p => [p.id, p.nome]));
       const projetosAtivos = projetos.filter(p => p.status !== "cancelado" && p.status !== "concluido");
 
       // saldo restante helper (considera recebimento parcial)
@@ -189,18 +191,7 @@ const Dashboard = () => {
         .map(v => ({ ...v, projetoNome: v.projeto_id ? projetoMap[v.projeto_id] ?? "—" : "—" }));
 
       // Itens a comprar detalhados
-      const itensComprarDetalhados = itensFaltaComprar.slice(0, 6).map(n => {
-        let custoUnit = Number(n.preco_custo) || 0;
-        if (!custoUnit && n.produto_id && produtoMap[n.produto_id]) {
-          custoUnit = Number(produtoMap[n.produto_id].preco_custo) || 0;
-        }
-        return {
-          ...n,
-          projetoNome: n.cliente_id ? clienteMap[n.cliente_id] ?? "—" : "—",
-          produtoNome: n.descricao ?? "—",
-          custoUnit,
-        };
-      });
+      const itensComprarDetalhados: any[] = [];
 
       return {
         itensPendentesCount,
