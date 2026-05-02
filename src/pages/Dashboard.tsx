@@ -80,7 +80,7 @@ const Dashboard = () => {
         supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
-       const [produtosRes, crmItensPendentes, orcamentosAprovados] = await Promise.all([
+        
       const { data: orcAprovados } = await supabase
         .from("crm_orcamentos")
         .select("id")
@@ -232,15 +232,6 @@ const Dashboard = () => {
    refetchOnWindowFocus: true,
  });
 
-
-     return Object.values(porCliente)
-       .filter(c => c.valorFaltaComprar > 0)
-       .sort((a, b) => b.valorFaltaComprar - a.valorFaltaComprar);
-   },
-     enabled: showFaltaComprar && !!empresaId,
-    refetchInterval: 30000,
-    staleTime: 0,
-   });
 
   // Realtime: refetch dashboard whenever financial/operational data changes
   useEffect(() => {
