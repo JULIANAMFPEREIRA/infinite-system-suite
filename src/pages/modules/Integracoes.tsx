@@ -29,42 +29,42 @@ const Integracoes = () => {
   const callbackMutation = useGoogleCallback();
   const disconnectMutation = useGoogleDisconnect();
   const { data: events } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
-   const processingCodeRef = useRef<string | null>(null);
+   const callbackProcessed = useRef(false);
 
   // Handle OAuth callback code
   useEffect(() => {
     const code = searchParams.get("code");
-     const error = searchParams.get("error");
- 
-     // Se Google retornou erro (usuário cancelou)
-     if (error) {
-       toast.error("Conexão cancelada.");
-       setSearchParams({});
-       return;
-     }
- 
-     // Aguardar user estar disponível e evitar processamento duplicado
-     if (!code || !user || processingCodeRef.current === code) return;
- 
-     processingCodeRef.current = code;
-     toast.info("Processando conexão...");
- 
-     callbackMutation.mutate(code, {
-       onSuccess: () => {
-         toast.success("Google Agenda conectado!");
-         setSearchParams({});
-         // Forçar refetch do status após 1 segundo
-         setTimeout(() => {
-           window.location.reload();
-         }, 1500);
-       },
-       onError: (err) => {
-         toast.error("Erro ao conectar: " + (err as Error).message);
-         setSearchParams({});
-         processingCodeRef.current = null;
-       },
-     });
-   }, [searchParams, user]);
+    const error = searchParams.get("error");
+
+    if (error) {
+      toast.error("Conexão cancelada.");
+      setSearchParams({});
+      return;
+    }
+
+    if (!code || !user) return;
+
+    // Garantir que só processa uma vez
+    if (callbackProcessed.current) return;
+    callbackProcessed.current = true;
+
+    toast.info("Conectando ao Google Agenda...");
+
+    callbackMutation.mutate(code, {
+      onSuccess: () => {
+        toast.success("Google Agenda conectado!");
+        setSearchParams({});
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      },
+      onError: (err) => {
+        callbackProcessed.current = false;
+        toast.error("Erro: " + (err as Error).message);
+        setSearchParams({});
+      },
+    });
+  }, [user]);
 
   const handleConnect = () => {
     authUrlMutation.mutate(undefined, {
