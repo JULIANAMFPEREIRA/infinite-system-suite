@@ -337,6 +337,8 @@ const Dashboard = () => {
        .sort((a, b) => b.valorFaltaComprar - a.valorFaltaComprar);
    },
      enabled: showFaltaComprar && !!empresaId,
+    refetchInterval: 30000,
+    staleTime: 0,
    });
 
   // Realtime: refetch dashboard whenever financial/operational data changes
@@ -351,6 +353,7 @@ const Dashboard = () => {
       "projeto_itens",
       "visitas_tecnicas",
       "crm_orcamentos",
+      "crm_itens",
     ];
     const channel = supabase.channel(`dashboard-realtime-${empresaId}`);
     tables.forEach((table) => {
@@ -359,6 +362,7 @@ const Dashboard = () => {
         { event: "*", schema: "public", table },
         () => {
           queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3"] });
+          queryClient.invalidateQueries({ queryKey: ["falta_comprar_clientes"] });
         }
       );
     });
