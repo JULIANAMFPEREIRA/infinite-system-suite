@@ -27,6 +27,40 @@ const toTitleCase = (str: string) =>
   w.slice(1).toLowerCase()).join(" ");
 
 const FinanceiroReceber = () => {
+  const getStatusDisplay = (c: any) => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const isPendente = c.status === "pendente" || c.status === "parcial";
+    const isVencido = c.data_vencimento && new Date(c.data_vencimento) < hoje;
+    const saldo = Math.max((Number(c.valor) || 0) - (Number(c.valor_recebido) || 0), 0);
+
+    if (isPendente && isVencido && saldo > 0) {
+      return {
+        label: "INADIMPLENTE",
+        class: "bg-red-100 text-red-700 border border-red-200"
+      };
+    }
+
+    const statusMap: Record<string, string> = {
+      pendente: "A RECEBER",
+      pago: "RECEBIDO",
+      parcial: "PARCIAL",
+      cancelado: "CANCELADO",
+    };
+
+    const classMap: Record<string, string> = {
+      pendente: "bg-blue-100 text-blue-700",
+      pago: "bg-green-100 text-green-700",
+      parcial: "bg-yellow-100 text-yellow-700",
+      cancelado: "bg-gray-100 text-gray-500",
+    };
+
+    return {
+      label: statusMap[c.status] ?? c.status?.toUpperCase(),
+      class: classMap[c.status] ?? "bg-gray-100 text-gray-500"
+    };
+  };
+
   const recStatusLabel = (s: string) => ({
     pendente: "A RECEBER",
     vencido: "INADIMPLENTE",
@@ -34,14 +68,6 @@ const FinanceiroReceber = () => {
     parcial: "PARCIAL",
     cancelado: "CANCELADO",
   }[s] ?? s.toUpperCase());
-
-  const recStatusBadgeClass = (s: string) => ({
-    "A RECEBER": "bg-blue-100 text-blue-700",
-    "INADIMPLENTE": "bg-red-100 text-red-700",
-    "RECEBIDO": "bg-green-100 text-green-700",
-    "PARCIAL": "bg-yellow-100 text-yellow-700",
-    "CANCELADO": "bg-gray-100 text-gray-500",
-  }[s] ?? "bg-gray-100 text-gray-500");
 
   const empresaId = useEmpresa();
   const qc = useQueryClient();
