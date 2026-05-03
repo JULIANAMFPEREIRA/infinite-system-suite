@@ -185,18 +185,41 @@ const FinanceiroPagar = () => {
   const resetForm = () => { setDesc(""); setTipo(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
-    setTipo(inferTipo(c.descricao) || "");
-    // Parse descRetirada from description if it's a retirada
-    const catName = getCatName(c.categoria_id);
+    setEditId(c.id); 
+    setValor(c.valor ?? 0); 
+    setVencimento(c.data_vencimento ?? ""); 
+    setFornecedorId(c.fornecedor_id ?? ""); 
+    setProjetoId(c.projeto_id ?? ""); 
+    setCategoriaId(c.categoria_id ?? "");
+    
+    // PROBLEMA 3 — Extrair tipo do prefixo [TIPO] se existir
     const rawDesc = c.descricao ?? "";
-    if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
-      const parts = rawDesc.split(" — ");
-      setDesc(parts[0]);
-      setDescRetirada(parts.slice(1).join(" — "));
+    const prefixMatch = rawDesc.match(/^\[(\w+)\]\s*/);
+    if (prefixMatch) {
+      setTipo(prefixMatch[1].toLowerCase());
+      const descWithoutPrefix = rawDesc.replace(/^\[\w+\]\s*/, "");
+      
+      // Lógica de retirada
+      const catName = getCatName(c.categoria_id);
+      if (catName?.toUpperCase() === RETIRADA_NOME && descWithoutPrefix.includes(" — ")) {
+        const parts = descWithoutPrefix.split(" — ");
+        setDesc(parts[0]);
+        setDescRetirada(parts.slice(1).join(" — "));
+      } else {
+        setDesc(descWithoutPrefix);
+        setDescRetirada("");
+      }
     } else {
-      setDesc(rawDesc);
-      setDescRetirada("");
+      setTipo(inferTipo(rawDesc) || "");
+      const catName = getCatName(c.categoria_id);
+      if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
+        const parts = rawDesc.split(" — ");
+        setDesc(parts[0]);
+        setDescRetirada(parts.slice(1).join(" — "));
+      } else {
+        setDesc(rawDesc);
+        setDescRetirada("");
+      }
     }
     setShowForm(true);
   };
@@ -242,7 +265,13 @@ const FinanceiroPagar = () => {
   const handleSave = async () => {
     if (!isNotEmpty(desc, "Descrição")) return;
     if (!isPositiveNumber(valor, "Valor")) return;
-    const finalDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
+    
+    // PROBLEMA 3 — Adicionar prefixo do tipo na descrição
+    const baseDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
+    const finalDesc = tipo 
+      ? `[${tipo.toUpperCase()}] ${baseDesc.replace(/^\[\w+\]\s*/, "")}`
+      : baseDesc;
+
     try {
       if (editId) {
         await updateConta.mutateAsync({ id: editId, descricao: finalDesc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
