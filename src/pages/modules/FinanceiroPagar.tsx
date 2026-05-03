@@ -575,10 +575,12 @@ const FinanceiroPagar = () => {
                       onClick={() => openEdit(c)}
                     >
                       <td className="px-3 py-2 text-xs text-center">
-                        {c.descricao?.startsWith("Compra — ") ? (
+                        {c.descricao?.includes("[CRM]") ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium bg-blue-100 text-blue-700 border border-blue-200">CRM</span>
+                        ) : c.comissao_id || c.descricao?.includes("[COMISSAO]") ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium bg-purple-100 text-purple-700 border border-purple-200">Comissão</span>
+                        ) : c.descricao?.startsWith("Compra — ") ? (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Compra</span>
-                        ) : c.comissao_id ? (
-                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-purple-500/10 text-purple-500 border-purple-500/20">Comissão</span>
                         ) : (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
                         )}
@@ -591,7 +593,9 @@ const FinanceiroPagar = () => {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs max-w-[220px]">
-                        <span className="font-medium text-foreground truncate block">{toTitleCase(c.descricao)}</span>
+                        <span className="font-medium text-foreground truncate block">
+                          {toTitleCase(c.descricao?.replace(/^\[\w+\]\s*/, ""))}
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-xs text-center">
                         {tipoBadge(c)}
