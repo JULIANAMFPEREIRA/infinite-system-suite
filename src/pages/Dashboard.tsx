@@ -387,25 +387,9 @@ const Dashboard = () => {
            via-transparent to-emerald-500/10
            pointer-events-none" />
 
-          <div className="relative flex items-center
-            justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-4 rounded-full
-                bg-emerald-400" />
-              <span className="text-[11px] font-bold
-                uppercase tracking-widest
-                text-slate-400">
-                Visão Financeira dos Projetos
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-600">
-              projetos ativos excl. cancelados
-            </span>
-          </div>
-
-          {/* Grid de 4 métricas */}
-          <div className="relative grid
-            grid-cols-2 md:grid-cols-4 gap-6">
+         {/* Grid de 4 métricas */}
+         <div className="relative grid
+           grid-cols-2 md:grid-cols-4 gap-6">
 
            {/* Receita Total */}
            <div className="space-y-1">
@@ -503,7 +487,15 @@ const Dashboard = () => {
            </div>
          </div>
 
-        </div>
+         {/* Label no canto */}
+         <div className="absolute top-3 right-4">
+           <span className="text-[9px] font-bold
+             uppercase tracking-widest
+             text-slate-600">
+             Visão Financeira dos Projetos
+           </span>
+         </div>
+       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
 
