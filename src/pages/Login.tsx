@@ -125,6 +125,7 @@ const Login = () => {
                   style={{
                     background: "rgba(20, 28, 50, 0.7)",
                     border: "1px solid rgba(100, 140, 200, 0.2)",
+                    textTransform: "none",
                   }}
                 />
                 <button
