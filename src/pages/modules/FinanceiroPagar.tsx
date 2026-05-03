@@ -33,6 +33,11 @@ const TIPO_OPTIONS = [
 const inferTipo = (desc: string | null): string => {
   if (!desc) return "";
   const d = desc.toLowerCase();
+  
+  // PROBLEMA 3 — Verificar se tem prefixo [TIPO]
+  const match = desc.match(/^\[(\w+)\]/);
+  if (match) return match[1].toLowerCase();
+
   if (d.includes("imposto") || d.includes("taxa") || d.includes("tributo")) return "imposto";
   if (d.includes("frete") || d.includes("transporte") || d.includes("entrega")) return "frete";
   if (d.includes("serviço") || d.includes("servico") || d.includes("mão de obra") || d.includes("mao de obra") || d.includes("instalação") || d.includes("instalacao")) return "servico";
@@ -44,24 +49,34 @@ const inferTipo = (desc: string | null): string => {
 
 const tipoBadge = (conta: any) => {
   const desc = conta?.descricao ?? null;
-  const isCompra = typeof desc === "string" && desc.startsWith("Compra — ");
-  const isComissao = !!conta?.comissao_id;
-  // Origem manual/comissão => Serviço por padrão; mantém detecção fina por descrição
+  
+  // PROBLEMA 3 — Prioridade para prefixo salvo na descrição
+  const prefixMatch = typeof desc === "string" ? desc.match(/^\[(\w+)\]/) : null;
   let tipo: string;
-  if (isCompra) {
-    tipo = "produto";
-  } else if (isComissao) {
-    tipo = "servico";
+  
+  if (prefixMatch) {
+    tipo = prefixMatch[1].toLowerCase();
   } else {
-    const inferred = inferTipo(desc);
-    tipo = inferred === "produto" ? "servico" : inferred;
+    const isCompra = typeof desc === "string" && desc.startsWith("Compra — ");
+    const isComissao = !!conta?.comissao_id;
+    
+    if (isCompra) {
+      tipo = "produto";
+    } else if (isComissao) {
+      tipo = "servico";
+    } else {
+      const inferred = inferTipo(desc);
+      tipo = inferred === "produto" ? "servico" : inferred;
+    }
   }
+
   const map: Record<string, { label: string; cls: string }> = {
     imposto: { label: "Imposto", cls: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
     frete: { label: "Frete", cls: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
     servico: { label: "Serviço", cls: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
     adicional: { label: "Adicional", cls: "bg-teal-500/10 text-teal-600 border-teal-500/20" },
     produto: { label: "Produto", cls: "bg-secondary text-muted-foreground border-border" },
+    comissao: { label: "Comissão", cls: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   };
   const { label, cls } = map[tipo] ?? map.servico;
   return <span className={`inline-flex px-1.5 py-0 rounded text-[9px] font-medium border ${cls}`}>{label}</span>;
@@ -170,18 +185,41 @@ const FinanceiroPagar = () => {
   const resetForm = () => { setDesc(""); setTipo(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
-    setTipo(inferTipo(c.descricao) || "");
-    // Parse descRetirada from description if it's a retirada
-    const catName = getCatName(c.categoria_id);
+    setEditId(c.id); 
+    setValor(c.valor ?? 0); 
+    setVencimento(c.data_vencimento ?? ""); 
+    setFornecedorId(c.fornecedor_id ?? ""); 
+    setProjetoId(c.projeto_id ?? ""); 
+    setCategoriaId(c.categoria_id ?? "");
+    
+    // PROBLEMA 3 — Extrair tipo do prefixo [TIPO] se existir
     const rawDesc = c.descricao ?? "";
-    if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
-      const parts = rawDesc.split(" — ");
-      setDesc(parts[0]);
-      setDescRetirada(parts.slice(1).join(" — "));
+    const prefixMatch = rawDesc.match(/^\[(\w+)\]\s*/);
+    if (prefixMatch) {
+      setTipo(prefixMatch[1].toLowerCase());
+      const descWithoutPrefix = rawDesc.replace(/^\[\w+\]\s*/, "");
+      
+      // Lógica de retirada
+      const catName = getCatName(c.categoria_id);
+      if (catName?.toUpperCase() === RETIRADA_NOME && descWithoutPrefix.includes(" — ")) {
+        const parts = descWithoutPrefix.split(" — ");
+        setDesc(parts[0]);
+        setDescRetirada(parts.slice(1).join(" — "));
+      } else {
+        setDesc(descWithoutPrefix);
+        setDescRetirada("");
+      }
     } else {
-      setDesc(rawDesc);
-      setDescRetirada("");
+      setTipo(inferTipo(rawDesc) || "");
+      const catName = getCatName(c.categoria_id);
+      if (catName?.toUpperCase() === RETIRADA_NOME && rawDesc.includes(" — ")) {
+        const parts = rawDesc.split(" — ");
+        setDesc(parts[0]);
+        setDescRetirada(parts.slice(1).join(" — "));
+      } else {
+        setDesc(rawDesc);
+        setDescRetirada("");
+      }
     }
     setShowForm(true);
   };
@@ -227,7 +265,13 @@ const FinanceiroPagar = () => {
   const handleSave = async () => {
     if (!isNotEmpty(desc, "Descrição")) return;
     if (!isPositiveNumber(valor, "Valor")) return;
-    const finalDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
+    
+    // PROBLEMA 3 — Adicionar prefixo do tipo na descrição
+    const baseDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
+    const finalDesc = tipo 
+      ? `[${tipo.toUpperCase()}] ${baseDesc.replace(/^\[\w+\]\s*/, "")}`
+      : baseDesc;
+
     try {
       if (editId) {
         await updateConta.mutateAsync({ id: editId, descricao: finalDesc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
@@ -531,10 +575,12 @@ const FinanceiroPagar = () => {
                       onClick={() => openEdit(c)}
                     >
                       <td className="px-3 py-2 text-xs text-center">
-                        {c.descricao?.startsWith("Compra — ") ? (
+                        {c.descricao?.includes("[CRM]") ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium bg-blue-100 text-blue-700 border border-blue-200">CRM</span>
+                        ) : c.comissao_id || c.descricao?.includes("[COMISSAO]") ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium bg-purple-100 text-purple-700 border border-purple-200">Comissão</span>
+                        ) : c.descricao?.startsWith("Compra — ") ? (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Compra</span>
-                        ) : c.comissao_id ? (
-                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-purple-500/10 text-purple-500 border-purple-500/20">Comissão</span>
                         ) : (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
                         )}
@@ -547,7 +593,9 @@ const FinanceiroPagar = () => {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs max-w-[220px]">
-                        <span className="font-medium text-foreground truncate block">{toTitleCase(c.descricao)}</span>
+                        <span className="font-medium text-foreground truncate block">
+                          {toTitleCase(c.descricao?.replace(/^\[\w+\]\s*/, ""))}
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-xs text-center">
                         {tipoBadge(c)}

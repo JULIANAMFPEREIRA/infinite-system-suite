@@ -797,6 +797,36 @@ const CRM = () => {
           }
         }
 
+        // PROBLEMA 2 — Criar lançamento em financeiro_pagar para a comissão
+        const { data: comissaoData } = await supabase
+          .from("comissoes")
+          .select("id")
+          .eq("projeto_id", projId)
+          .eq("fornecedor_id", arquitetoId)
+          .eq("status", "pendente")
+          .maybeSingle();
+
+        if (comissaoData?.id) {
+          const { data: pagarExiste } = await supabase
+            .from("financeiro_pagar")
+            .select("id")
+            .eq("comissao_id", comissaoData.id)
+            .maybeSingle();
+
+          if (!pagarExiste) {
+            await supabase.from("financeiro_pagar")
+              .insert({
+                empresa_id: empresaId!,
+                projeto_id: projId,
+                fornecedor_id: arquitetoId,
+                comissao_id: comissaoData.id,
+                descricao: `Comissão RT — ${detailClient.nome}`,
+                valor: totalRt,
+                status: "pendente" as const,
+              });
+          }
+        }
+
         qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
         qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
         qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
@@ -856,17 +886,21 @@ const CRM = () => {
     const contasPagarExtras: any[] = [];
     if (frete > 0) {
       contasPagarExtras.push({
-        empresa_id: empresaId!, projeto_id: projId,
-        descricao: `Frete — ${detailClient.nome}`,
-        valor: frete, status: "pendente" as const,
+        empresa_id: empresaId!, 
+        projeto_id: projId,
+        descricao: `[CRM] Frete — ${detailClient.nome}`,
+        valor: frete, 
+        status: "pendente" as const,
         data_vencimento: (orcData as any).frete_vencimento || null,
       });
     }
     if (imposto > 0) {
       contasPagarExtras.push({
-        empresa_id: empresaId!, projeto_id: projId,
-        descricao: `Imposto — ${detailClient.nome}`,
-        valor: imposto, status: "pendente" as const,
+        empresa_id: empresaId!, 
+        projeto_id: projId,
+        descricao: `[CRM] Imposto — ${detailClient.nome}`,
+        valor: imposto, 
+        status: "pendente" as const,
         data_vencimento: (orcData as any).imposto_vencimento || null,
       });
     }
