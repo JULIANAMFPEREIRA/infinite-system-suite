@@ -142,13 +142,31 @@ export const useComissoes = () => {
   return useQuery({
     queryKey: ["comissoes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("comissoes")
-        .select("*, fornecedores(nome), projetos(nome, cliente_id, clientes(nome), orcamento_id)")
-        .eq("deletado", false)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [comRes, fornRes, projRes, cliRes] = await Promise.all([
+        supabase
+          .from("comissoes")
+          .select("*")
+          .eq("deletado", false)
+          .order("created_at", { ascending: false }),
+        supabase.from("fornecedores").select("id, nome"),
+        supabase.from("projetos").select("id, nome, cliente_id, orcamento_id"),
+        supabase.from("clientes").select("id, nome"),
+      ]);
+
+      if (comRes.error) throw comRes.error;
+
+      const fornMap = Object.fromEntries((fornRes.data ?? []).map((f: any) => [f.id, f]));
+      const cliMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+      const projMap = Object.fromEntries((projRes.data ?? []).map((p: any) => [p.id, {
+        ...p,
+        clientes: cliMap[p.cliente_id] || null
+      }]));
+
+      return (comRes.data ?? []).map((c: any) => ({
+        ...c,
+        fornecedores: fornMap[c.fornecedor_id] || null,
+        projetos: projMap[c.projeto_id] || null,
+      }));
     },
   });
 };
