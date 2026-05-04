@@ -331,27 +331,84 @@ const Configuracoes = () => {
 
   // --- Section renderers ---
 
-  const renderEmpresa = () => (
-    <div className="space-y-4">
-      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Empresa</h2>
-        <div className="space-y-2 text-xs">
-          <div><span className="text-muted-foreground">Nome:</span> <span className="text-foreground font-medium">{empresa?.nome ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">Fantasia:</span> <span className="text-foreground">{empresa?.nome_fantasia ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">CNPJ:</span> <span className="text-foreground">{empresa?.cnpj ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">Segmento:</span> <span className="text-foreground">{empresa?.segmento ?? "—"}</span></div>
+  const renderEmpresa = () => {
+    const [formData, setFormData] = useState({
+      nome: empresa?.nome || "",
+      nome_fantasia: empresa?.nome_fantasia || "",
+      cnpj: empresa?.cnpj || "",
+      telefone: empresa?.telefone || "",
+      email: empresa?.email || "",
+      endereco: empresa?.endereco || "",
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Building2 className="w-5 h-5" /> Dados da Empresa
+          </h2>
+          
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-shrink-0 space-y-2">
+              <Label>Logo</Label>
+              <div className="relative w-32 h-32 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-secondary/20">
+                {empresa?.logo_url ? (
+                  <img src={empresa.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 className="w-12 h-12 text-muted-foreground opacity-20" />
+                )}
+                {isUploading && <div className="absolute inset-0 bg-background/50 flex items-center justify-center text-[10px]">Enviando...</div>}
+              </div>
+              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => document.getElementById("logo-upload")?.click()}>
+                Alterar Logo
+              </Button>
+            </div>
+
+            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Razão Social</Label>
+                <Input value={formData.nome} onChange={e => setFormData({ ...formData, nome: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome Fantasia</Label>
+                <Input value={formData.nome_fantasia} onChange={e => setFormData({ ...formData, nome_fantasia: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">CNPJ</Label>
+                <Input value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Telefone</Label>
+                <Input value={formData.telefone} onChange={e => setFormData({ ...formData, telefone: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">E-mail Corporativo</Label>
+                <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs">Endereço Completo</Label>
+                <Input value={formData.endereco} onChange={e => setFormData({ ...formData, endereco: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => updateEmpresaMutation.mutate(formData)} disabled={updateEmpresaMutation.isPending}>
+              Salvar Alterações
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6 space-y-4 opacity-70">
+          <h2 className="text-sm font-semibold text-foreground">Informações de Conta</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div><span className="text-muted-foreground block mb-1">Seu Nome:</span> <div className="p-2 border rounded bg-secondary/10">{profile?.full_name ?? "—"}</div></div>
+            <div><span className="text-muted-foreground block mb-1">E-mail de Login:</span> <div className="p-2 border rounded bg-secondary/10">{user?.email ?? "—"}</div></div>
+          </div>
         </div>
       </div>
-      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Meu Perfil</h2>
-        <div className="space-y-2 text-xs">
-          <div><span className="text-muted-foreground">Nome:</span> <span className="text-foreground font-medium">{profile?.full_name ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">E-mail:</span> <span className="text-foreground">{user?.email ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">Roles:</span> <span className="text-foreground">{roles.join(", ") || "—"}</span></div>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderUsuarios = () => (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
