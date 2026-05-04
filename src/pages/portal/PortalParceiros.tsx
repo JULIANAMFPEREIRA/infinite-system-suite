@@ -422,7 +422,7 @@ const PortalParceiros = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell />}
+            {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
             <button onClick={handleLogout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
               <LogOut size={14} /> Sair
             </button>
