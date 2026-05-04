@@ -267,6 +267,23 @@ const CRM = () => {
   const createProjetoItem = useCreateProjetoItem();
   const { data: arquitetos } = useArquitetos();
   const { data: transportadoras } = useTransportadoras();
+  const arquiteto = useMemo(() => arquitetos?.find(a => a.id === detailClient?.arquiteto_id), [arquitetos, detailClient?.arquiteto_id]);
+  const fmt = (val: number) => val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const { data: tecnicos = [] } = useQuery({
+    queryKey: ["tecnicos_crm", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("empresa_id", empresaId!)
+        .eq("tipo", "tecnico")
+        .eq("deletado", false)
+        .order("nome");
+      return data ?? [];
+    },
+    enabled: !!empresaId
+  });
 
   const [viewMode, setViewMode] = useState<"list" | "detail" | "new">("list");
   const [listViewType, setListViewType] = useState<"kanban" | "table">("kanban");
