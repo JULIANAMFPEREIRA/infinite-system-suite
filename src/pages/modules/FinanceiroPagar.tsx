@@ -800,6 +800,11 @@ const FinanceiroPagar = () => {
                               <Check size={14} />
                             </button>
                           )}
+                          {c.origem === "comissao" && c.status === "pendente" && (
+                            <button onClick={() => openParcelar(c)} title="Parcelar" className="p-1.5 rounded-md hover:bg-purple-500/15 text-muted-foreground hover:text-purple-500 transition-colors">
+                              <Layers size={14} />
+                            </button>
+                          )}
                           <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
                             <Search size={14} />
                           </button>
@@ -851,6 +856,91 @@ const FinanceiroPagar = () => {
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
             <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showParcelar} onOpenChange={setShowParcelar}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Parcelar Comissão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Valor Total</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={fmtBRL(contaParaParcelar?.valor ?? 0)} 
+                  className="w-full h-9 px-3 text-sm bg-muted border border-border rounded cursor-not-allowed" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Número de Parcelas</label>
+                <select 
+                  value={numParcelas} 
+                  onChange={(e) => handleNumParcelasChange(Number(e.target.value))}
+                  className="w-full h-9 px-3 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}x</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+              {parcelasForm.map((p, i) => (
+                <div key={i} className="flex items-end gap-2 p-2 rounded border border-border bg-muted/30">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase font-semibold">Parcela {i + 1}/{numParcelas}</label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5 ml-1">Valor</span>
+                        <input 
+                          type="number" 
+                          value={p.valor} 
+                          onChange={(e) => {
+                            const newForm = [...parcelasForm];
+                            newForm[i].valor = Number(e.target.value);
+                            setParcelasForm(newForm);
+                          }}
+                          className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5 ml-1">Vencimento</span>
+                        <input 
+                          type="date" 
+                          value={p.data_vencimento} 
+                          onChange={(e) => {
+                            const newForm = [...parcelasForm];
+                            newForm[i].data_vencimento = e.target.value;
+                            setParcelasForm(newForm);
+                          }}
+                          className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <button 
+              onClick={() => setShowParcelar(false)} 
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleConfirmarParcelamento} 
+              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded hover:brightness-110 transition-all btn-press"
+            >
+              Confirmar Parcelamento
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
