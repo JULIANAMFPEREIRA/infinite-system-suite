@@ -60,6 +60,18 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
           const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
+          const recebidoProjeto = receber
+            ?.filter(r => r.projeto_id === orc.id)
+            .reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
+
+          const faltaReceberProjeto = receber
+            ?.filter(r => r.projeto_id === orc.id)
+            .reduce((s, r) => s + (
+              r.status !== "pago"
+                ? (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
+                : 0
+            ), 0) ?? 0
+
           return {
             clienteNome: (orc.clientes as any)?.nome ?? "—",
             orcamentoNome: orc.nome,
@@ -68,6 +80,8 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             totalComprado: stats.totalComprado,
             faltaComprar: stats.faltaComprar,
             itensPendentes: itensPendentesCount,
+            recebidoProjeto,
+            faltaReceberProjeto,
           }
         })
         .filter(r => r.faltaComprar > 0)
@@ -125,10 +139,10 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
  
       {/* Painel Financeiro */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {/* Recebido dos clientes */}
+        {/* Recebido */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Recebido Clientes
+            Recebido
           </p>
           <p className="text-2xl font-black text-green-600">
             {fmt(totalRecebido)}
@@ -138,10 +152,10 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* A receber dos clientes */}
+        {/* A Receber */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Falta Receber
+            A Receber
           </p>
           <p className="text-2xl font-black text-primary">
             {fmt(totalAReceber)}
@@ -151,7 +165,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* Falta comprar */}
+        {/* Falta Comprar */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             Falta Comprar
@@ -164,14 +178,14 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* Saldo disponível */}
+        {/* Saldo */}
         <div className={`border rounded-xl p-4 ${
           saldoDisponivel >= 0
             ? "bg-green-500/10 border-green-500/30"
             : "bg-destructive/10 border-destructive/30"
         }`}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Saldo Disponível
+            Saldo
           </p>
           <p className={`text-2xl font-black ${
             saldoDisponivel >= 0
@@ -198,38 +212,6 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Valor dos Projetos
-          </p>
-          <p className="text-lg font-bold text-foreground mt-0.5">
-            {fmt(totalVendaGeral)}
-          </p>
-        </div>
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Total Comprado
-          </p>
-          <p className="text-lg font-bold text-green-600 mt-0.5">
-            {fmt(totalCompradoGeral)}
-          </p>
-        </div>
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Falta Comprar
-          </p>
-          <div className="flex items-baseline gap-2 mt-0.5">
-            <p className="text-lg font-bold text-orange-600">
-              {fmt(totalGeral)}
-            </p>
-            <span className="text-[10px] text-muted-foreground">
-              {totalItens} itens pendentes
-            </span>
-          </div>
-        </div>
-      </div>
  
        {isLoading ? (
          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
@@ -240,13 +222,14 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
            <div className="overflow-x-auto">
              <table className="w-full text-left border-collapse">
                <thead>
-                  <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3 text-right">Valor do Projeto</th>
+                    <th className="px-4 py-3 text-right text-success">Recebido</th>
+                    <th className="px-4 py-3 text-right text-primary">Falta Receber</th>
                     <th className="px-4 py-3 text-right">Custo do Projeto</th>
                     <th className="px-4 py-3 text-right">Comprado</th>
                     <th className="px-4 py-3 text-center">Itens Pend.</th>
-                    <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
+                    <th className="px-4 py-3 text-right text-orange-500">Falta Comprar</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-border">
@@ -256,28 +239,30 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                         <p className="text-xs font-bold text-foreground">{r.clienteNome}</p>
                         <p className="text-[10px] text-muted-foreground">{r.orcamentoNome}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-right tabular-nums">{fmt(r.totalVenda)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-success">{fmt(r.recebidoProjeto)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-primary">{fmt(r.faltaReceberProjeto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-muted-foreground">{fmt(r.totalCusto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium">
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium whitespace-nowrap">
                           {r.itensPendentes} itens
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-bold text-orange-600 tabular-nums">
+                      <td className="px-4 py-3 text-xs text-right font-bold text-orange-500 tabular-nums">
                         {fmt(r.faltaComprar)}
                       </td>
                     </tr>
                   ))}
                </tbody>
-                <tfoot className="bg-secondary/20 font-bold border-t border-border">
+                <tfoot className="bg-secondary/20 font-bold border-t border-border whitespace-nowrap">
                   <tr>
                     <td className="px-4 py-3 text-xs">Total Geral</td>
-                    <td className="px-4 py-3 text-xs text-right">{fmt(totalVendaGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-success">{fmt(totalRecebido)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-primary">{fmt(totalAReceber)}</td>
                     <td className="px-4 py-3 text-xs text-right text-muted-foreground">{fmt(totalCustoGeral)}</td>
                     <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
                     <td className="px-4 py-3 text-center text-[10px]">{totalItens} itens</td>
-                    <td className="px-4 py-3 text-xs text-right text-orange-600">{fmt(totalGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-orange-500">{fmt(totalGeral)}</td>
                   </tr>
                 </tfoot>
              </table>
