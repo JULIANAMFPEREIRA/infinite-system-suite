@@ -88,6 +88,7 @@ const FinanceiroPagar = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
   const [tipo, setTipo] = useState("");
+  const [origem, setOrigem] = useState("manual");
   const [valor, setValor] = useState(0);
   const [vencimento, setVencimento] = useState("");
   const [fornecedorId, setFornecedorId] = useState("");
@@ -167,11 +168,29 @@ const FinanceiroPagar = () => {
     enabled: !!empresaId,
   });
 
-  const resetForm = () => { setDesc(""); setTipo(""); setValor(0); setVencimento(""); setFornecedorId(""); setProjetoId(""); setCategoriaId(""); setDescRetirada(""); setEditId(null); setShowForm(false); };
+  const resetForm = () => { 
+    setDesc(""); 
+    setTipo(""); 
+    setOrigem("manual");
+    setValor(0); 
+    setVencimento(""); 
+    setFornecedorId(""); 
+    setProjetoId(""); 
+    setCategoriaId(""); 
+    setDescRetirada(""); 
+    setEditId(null); 
+    setShowForm(false); 
+  };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setValor(c.valor ?? 0); setVencimento(c.data_vencimento ?? ""); setFornecedorId(c.fornecedor_id ?? ""); setProjetoId(c.projeto_id ?? ""); setCategoriaId(c.categoria_id ?? "");
-    setTipo(inferTipo(c.descricao) || "");
+    setEditId(c.id); 
+    setValor(c.valor ?? 0); 
+    setVencimento(c.data_vencimento ?? ""); 
+    setFornecedorId(c.fornecedor_id ?? ""); 
+    setProjetoId(c.projeto_id ?? ""); 
+    setCategoriaId(c.categoria_id ?? "");
+    setOrigem(c.origem || "manual");
+    setTipo(c.tipo_manual || inferTipo(c.descricao) || "");
     // Parse descRetirada from description if it's a retirada
     const catName = getCatName(c.categoria_id);
     const rawDesc = c.descricao ?? "";
@@ -229,11 +248,22 @@ const FinanceiroPagar = () => {
     if (!isPositiveNumber(valor, "Valor")) return;
     const finalDesc = isRetiradaSelected && descRetirada.trim() ? `${desc} — ${descRetirada.trim()}` : desc;
     try {
+      const payload = {
+        descricao: finalDesc,
+        valor,
+        data_vencimento: vencimento || null,
+        fornecedor_id: fornecedorId || null,
+        projeto_id: projetoId || null,
+        categoria_id: categoriaId || null,
+        origem: origem,
+        tipo_manual: tipo
+      };
+
       if (editId) {
-        await updateConta.mutateAsync({ id: editId, descricao: finalDesc, valor, data_vencimento: vencimento || null, fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await updateConta.mutateAsync({ id: editId, ...payload } as any);
         toast.success("Conta atualizada");
       } else {
-        await createConta.mutateAsync({ descricao: finalDesc, valor, data_vencimento: vencimento || null, status: "pendente", fornecedor_id: fornecedorId || null, projeto_id: projetoId || null, categoria_id: categoriaId || null } as any);
+        await createConta.mutateAsync({ ...payload, status: "pendente" } as any);
         toast.success("Conta adicionada");
       }
       resetForm();
@@ -408,8 +438,20 @@ const FinanceiroPagar = () => {
       {showForm && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-3">
           <h2 className="text-xs font-semibold text-foreground">{editId ? "Editar" : "Nova"} Conta a Pagar</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1 col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="space-y-1 col-span-1">
+              <label className="text-[11px] text-muted-foreground">Origem</label>
+              <select 
+                value={origem} 
+                onChange={e => setOrigem(e.target.value)} 
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="manual">Manual</option>
+                <option value="orcamento">Orçamento</option>
+                <option value="comissao">Comissão</option>
+              </select>
+            </div>
+            <div className="space-y-1 col-span-1">
               <label className="text-[11px] text-muted-foreground">Categoria</label>
               <select value={categoriaId} onChange={e => handleCategoriaChange(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary">
                 <option value="">Selecionar categoria...</option>
@@ -437,7 +479,7 @@ const FinanceiroPagar = () => {
                 <option value="outro">Outro</option>
               </select>
             </div>
-            <div className="space-y-1 col-span-1">
+            <div className="space-y-1 col-span-2">
               <label className="text-[11px] text-muted-foreground">Descrição</label>
               <input 
                 value={desc} 
@@ -531,9 +573,9 @@ const FinanceiroPagar = () => {
                       onClick={() => openEdit(c)}
                     >
                       <td className="px-3 py-2 text-xs text-center">
-                        {c.descricao?.startsWith("Compra — ") ? (
-                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Compra</span>
-                        ) : c.comissao_id ? (
+                        {c.origem === "orcamento" ? (
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Orçamento</span>
+                        ) : c.origem === "comissao" ? (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-purple-500/10 text-purple-500 border-purple-500/20">Comissão</span>
                         ) : (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
