@@ -60,6 +60,18 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
           const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
+          const recebidoProjeto = receber
+            ?.filter(r => r.projeto_id === orc.id)
+            .reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
+
+          const faltaReceberProjeto = receber
+            ?.filter(r => r.projeto_id === orc.id)
+            .reduce((s, r) => s + (
+              r.status !== "pago"
+                ? (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
+                : 0
+            ), 0) ?? 0
+
           return {
             clienteNome: (orc.clientes as any)?.nome ?? "—",
             orcamentoNome: orc.nome,
@@ -68,6 +80,8 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             totalComprado: stats.totalComprado,
             faltaComprar: stats.faltaComprar,
             itensPendentes: itensPendentesCount,
+            recebidoProjeto,
+            faltaReceberProjeto,
           }
         })
         .filter(r => r.faltaComprar > 0)
