@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload } from "lucide-react";
+ import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
@@ -128,6 +128,12 @@ const FinanceiroPagar = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Parcelamento
+  const [showParcelar, setShowParcelar] = useState(false);
+  const [contaParaParcelar, setContaParaParcelar] = useState<any>(null);
+  const [numParcelas, setNumParcelas] = useState(2);
+  const [parcelasForm, setParcelasForm] = useState<any[]>([]);
 
   const [detailConta, setDetailConta] = useState<any>(null);
 
@@ -309,6 +315,8 @@ const FinanceiroPagar = () => {
 
   const handleBaixa = async () => {
     if (!baixaId) return;
+    const contaOriginal = (contas ?? []).find((c: any) => c.id === baixaId);
+    
     try {
       await updateConta.mutateAsync({ 
         id: baixaId, 
@@ -321,6 +329,26 @@ const FinanceiroPagar = () => {
       await qc.invalidateQueries({
         queryKey: ["financeiro_pagar"]
       });
+
+      // Se for comissão, sincronizar com parcelas_parceiros
+      if (contaOriginal?.origem === "comissao") {
+        const hoje = new Date().toISOString().split("T")[0];
+        await supabase
+          .from("parcelas_parceiros")
+          .update({
+            status: "pago",
+            data_pagamento: hoje
+          })
+          .eq("projeto_id", contaOriginal.projeto_id)
+          .eq("parceiro_id", contaOriginal.fornecedor_id)
+          .eq("valor", contaOriginal.valor)
+          .eq("data_vencimento", contaOriginal.data_vencimento);
+          
+        await qc.invalidateQueries({
+          queryKey: ["parcelas_parceiros"]
+        });
+      }
+
       refetch();
 
       toast.success("Pago!");
@@ -387,6 +415,112 @@ const FinanceiroPagar = () => {
   const getCatName = (catId: string | null) => {
     if (!catId || !categorias) return null;
     return categorias.find(c => c.id === catId)?.nome ?? null;
+  };
+
+  const openParcelar = (conta: any) => {
+    setContaParaParcelar(conta);
+    setNumParcelas(2);
+    const valorParcela = (conta.valor ?? 0) / 2;
+    const dataBase = new Date(conta.data_vencimento || new Date());
+    
+    const initialParcelas = Array.from({ length: 2 }).map((_, i) => {
+      const data = new Date(dataBase);
+      data.setMonth(data.getMonth() + i);
+      return {
+        valor: Number(valorParcela.toFixed(2)),
+        data_vencimento: data.toISOString().split("T")[0]
+      };
+    });
+    
+    setParcelasForm(initialParcelas);
+    setShowParcelar(true);
+  };
+
+  const handleNumParcelasChange = (n: number) => {
+    setNumParcelas(n);
+    if (!contaParaParcelar) return;
+    
+    const valorParcela = (contaParaParcelar.valor ?? 0) / n;
+    const dataBase = new Date(contaParaParcelar.data_vencimento || new Date());
+    
+    const newParcelas = Array.from({ length: n }).map((_, i) => {
+      const data = new Date(dataBase);
+      data.setMonth(data.getMonth() + i);
+      return {
+        valor: Number(valorParcela.toFixed(2)),
+        data_vencimento: data.toISOString().split("T")[0]
+      };
+    });
+    
+    setParcelasForm(newParcelas);
+  };
+
+  const handleConfirmarParcelamento = async () => {
+    if (!contaParaParcelar || !empresaId) return;
+    
+    try {
+      const totalParcelas = parcelasForm.length;
+      const fornecedorNome = (contaParaParcelar.fornecedores as any)?.nome ?? "Parceiro";
+
+      // 1. Deletar original
+      const { error: delErr } = await supabase
+        .from("financeiro_pagar")
+        .delete()
+        .eq("id", contaParaParcelar.id);
+      
+      if (delErr) throw delErr;
+
+      // 2. Inserir novas em financeiro_pagar
+      const parcelasPagar = parcelasForm.map((p, i) => ({
+        empresa_id: empresaId,
+        projeto_id: contaParaParcelar.projeto_id,
+        fornecedor_id: contaParaParcelar.fornecedor_id,
+        categoria_id: contaParaParcelar.categoria_id,
+        comissao_id: contaParaParcelar.comissao_id,
+        descricao: `Parcela ${i + 1}/${totalParcelas} — ${contaParaParcelar.descricao}`,
+        valor: p.valor,
+        data_vencimento: p.data_vencimento,
+        status: "pendente",
+        origem: "comissao",
+        tipo_manual: "comissao"
+      }));
+
+      const { error: insErr } = await supabase
+        .from("financeiro_pagar")
+        .insert(parcelasPagar);
+      
+      if (insErr) throw insErr;
+
+      // 3. Inserir em parcelas_parceiros
+      const parcelasParceiros = parcelasForm.map((p, i) => ({
+        empresa_id: empresaId,
+        projeto_id: contaParaParcelar.projeto_id,
+        parceiro_id: contaParaParcelar.fornecedor_id,
+        parceiro_nome: fornecedorNome,
+        tipo_parceiro: "arquiteto",
+        descricao: `Parcela ${i + 1}/${totalParcelas} — RT`,
+        valor: p.valor,
+        data_vencimento: p.data_vencimento,
+        status: "pendente"
+      }));
+
+      const { error: insParErr } = await supabase
+        .from("parcelas_parceiros")
+        .insert(parcelasParceiros);
+      
+      if (insParErr) throw insParErr;
+
+      // 4. Invalidações
+      await qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+      await qc.invalidateQueries({ queryKey: ["parcelas_parceiros"] });
+      refetch();
+      
+      toast.success("Comissão parcelada com sucesso!");
+      setShowParcelar(false);
+      setContaParaParcelar(null);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao parcelar");
+    }
   };
 
   return (
