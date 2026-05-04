@@ -38,11 +38,11 @@ const Estoque = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("produtos")
-        .select("*, fornecedores(nome)")
+        .select("*")
         .eq("deletado", false)
         .order("nome");
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     enabled: !!empresaId,
   });
@@ -210,7 +210,7 @@ const Estoque = () => {
                       <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
                       <td className="px-2.5 py-1.5">{p.categoria ?? "—"}</td>
                       <td className="px-2.5 py-1.5">{p.marca ?? "—"}</td>
-                      <td className="px-2.5 py-1.5">{(p.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-2.5 py-1.5">{fornecedores?.find(f => f.id === p.fornecedor_id)?.nome ?? "—"}</td>
                       <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_custo ?? 0).toLocaleString("pt-BR")}</td>
                       <td className="px-2.5 py-1.5 text-right">R$ {(p.preco_venda ?? 0).toLocaleString("pt-BR")}</td>
                       <td className="px-2.5 py-1.5 text-center" onClick={e => e.stopPropagation()}>
