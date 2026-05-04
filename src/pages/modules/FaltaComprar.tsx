@@ -222,13 +222,14 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
            <div className="overflow-x-auto">
              <table className="w-full text-left border-collapse">
                <thead>
-                  <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3 text-right">Valor do Projeto</th>
+                    <th className="px-4 py-3 text-right text-success">Recebido</th>
+                    <th className="px-4 py-3 text-right text-primary">Falta Receber</th>
                     <th className="px-4 py-3 text-right">Custo do Projeto</th>
                     <th className="px-4 py-3 text-right">Comprado</th>
                     <th className="px-4 py-3 text-center">Itens Pend.</th>
-                    <th className="px-4 py-3 text-right text-orange-600">Falta Comprar</th>
+                    <th className="px-4 py-3 text-right text-orange-500">Falta Comprar</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-border">
@@ -238,15 +239,16 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                         <p className="text-xs font-bold text-foreground">{r.clienteNome}</p>
                         <p className="text-[10px] text-muted-foreground">{r.orcamentoNome}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-right tabular-nums">{fmt(r.totalVenda)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-success">{fmt(r.recebidoProjeto)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-primary">{fmt(r.faltaReceberProjeto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-muted-foreground">{fmt(r.totalCusto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium">
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium whitespace-nowrap">
                           {r.itensPendentes} itens
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-bold text-orange-600 tabular-nums">
+                      <td className="px-4 py-3 text-xs text-right font-bold text-orange-500 tabular-nums">
                         {fmt(r.faltaComprar)}
                       </td>
                     </tr>
