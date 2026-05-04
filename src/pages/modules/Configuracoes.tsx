@@ -291,6 +291,36 @@ const Configuracoes = () => {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const updateEmpresaMutation = useMutation({
+    mutationFn: async (updatedData: any) => {
+      const { error } = await supabase.from("empresas").update(updatedData).eq("id", empresaId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["empresa_config"] });
+      toast.success("Dados da empresa atualizados");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresaId) return;
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${empresaId}/logo_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from("crm-files").upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("crm-files").getPublicUrl(fileName);
+      await updateEmpresaMutation.mutateAsync({ logo_url: publicUrl });
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const tiposTransportadora = [
     { value: "transportadora", label: "Transportadora" },
     { value: "sedex", label: "Sedex" },
