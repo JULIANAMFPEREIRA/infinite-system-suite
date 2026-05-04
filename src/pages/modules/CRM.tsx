@@ -814,6 +814,30 @@ const CRM = () => {
           valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
         });
 
+        // Buscar a comissão recém inserida
+        const { data: comissaoNova } = await supabase
+          .from("comissoes")
+          .select("id")
+          .eq("projeto_id", projId)
+          .eq("fornecedor_id", arquitetoId)
+          .eq("status", "pendente")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Criar lançamento em financeiro_pagar
+        if (comissaoNova?.id) {
+          await supabase.from("financeiro_pagar").insert({
+            empresa_id: empresaId!,
+            projeto_id: projId,
+            fornecedor_id: arquitetoId,
+            comissao_id: comissaoNova.id,
+            descricao: `Comissão RT — ${detailClient.nome}`,
+            valor: totalRt,
+            status: "pendente" as const,
+          } as any);
+        }
+
         // ── Auto-vincular arquiteto em projeto_parceiros ──
         if (arquitetoId && totalRt > 0 && projId && empresaId) {
           // Verificar se já existe vínculo
