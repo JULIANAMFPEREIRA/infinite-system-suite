@@ -217,6 +217,17 @@ const Configuracoes = () => {
   const [editUserSenha, setEditUserSenha] = useState("");
   const [editUserLoading, setEditUserLoading] = useState(false);
 
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase.from("profiles").update({ is_active: !currentStatus }).eq("id", userId);
+      if (error) throw error;
+      toast.success(currentStatus ? "Usuário desativado" : "Usuário ativado");
+      refetchUsers();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleCreateUser = async () => {
     if (!nuNome.trim() || !nuEmail.trim() || !nuSenha.trim()) { toast.error("Preencha todos os campos"); return; }
     setNuLoading(true);
