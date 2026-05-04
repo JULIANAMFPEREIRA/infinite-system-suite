@@ -10,13 +10,26 @@ export const useProjetos = () => {
   return useQuery({
     queryKey: ["projetos", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projetos")
-        .select("*, clientes(nome), fornecedores(nome)")
-        .eq("deletado", false)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [projRes, cliRes, fornRes] = await Promise.all([
+        supabase
+          .from("projetos")
+          .select("*")
+          .eq("deletado", false)
+          .order("created_at", { ascending: false }),
+        supabase.from("clientes").select("id, nome"),
+        supabase.from("fornecedores").select("id, nome"),
+      ]);
+
+      if (projRes.error) throw projRes.error;
+
+      const cliMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+      const fornMap = Object.fromEntries((fornRes.data ?? []).map((f: any) => [f.id, f]));
+
+      return (projRes.data ?? []).map((p: any) => ({
+        ...p,
+        clientes: cliMap[p.cliente_id] || null,
+        fornecedores: fornMap[p.fornecedor_id] || null,
+      }));
     },
     enabled: !!empresaId,
   });
