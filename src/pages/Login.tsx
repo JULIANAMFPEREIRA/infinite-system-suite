@@ -34,7 +34,8 @@ const Login = () => {
             .from("user_roles").select("role").eq("user_id", user.id);
           const userRoles = rolesData?.map(r => r.role) ?? [];
           if (userRoles.includes("parceiro")) { navigate("/portal/parceiro"); return; }
-          if (userRoles.includes("arquiteto")) { navigate("/portal/arquiteto"); return; }
+          if (userRoles.includes("arquiteto")) { navigate("/portal/parceiro"); return; }
+          if (userRoles.includes("tecnico")) { navigate("/portal/parceiro"); return; }
           if (userRoles.includes("cliente")) { navigate("/portal/cliente"); return; }
         }
         navigate("/");
