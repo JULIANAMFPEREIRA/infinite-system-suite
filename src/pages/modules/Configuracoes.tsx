@@ -472,7 +472,7 @@ const Configuracoes = () => {
                       </td>
                       <td className="px-2.5 py-1.5 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={(e) => { e.stopPropagation(); toggleUserStatus(u.id, u.is_active); }} className={} title={u.is_active ? 'Ativo - Clique para desativar' : 'Inativo - Clique para ativar'}>
+                          <button onClick={(e) => { e.stopPropagation(); toggleUserStatus(u.id, u.is_active); }} className={`p-1 rounded ${u.is_active ? 'text-green-600 hover:bg-green-50' : 'text-red-500 hover:bg-red-50'}`} title={u.is_active ? 'Ativo - Clique para desativar' : 'Inativo - Clique para ativar'}>
                             {u.is_active ? <Power size={13} /> : <PowerOff size={13} />}
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); openEditUser(u); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Resetar Senha">
