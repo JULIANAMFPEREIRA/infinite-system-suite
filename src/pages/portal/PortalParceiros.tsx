@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { 
-  LogOut, Activity, CalendarDays, 
-  Image as ImageIcon, ChevronLeft, ChevronRight, 
-  Plus, DollarSign, MessageSquare, Clock
+  LogOut, Activity, CalendarDays,
+  Image as ImageIcon, ChevronLeft, ChevronRight,
+  Plus, DollarSign, MessageSquare, Clock,
+  CheckCircle2, Hourglass
 } from "lucide-react";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -107,7 +108,11 @@ const PortalParceiros = () => {
     enabled: !!user?.email
   });
 
-  const activeProjeto = data?.projetos?.find((p: any) => p.id === selectedProjeto);
+  const activeProjeto = data?.projetos?.find(
+    (p: any) => p.id === selectedProjeto
+  ) ?? data?.projetos?.find(
+    (p: any) => p.projeto_id === selectedProjeto
+  );
   const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
 
   const { data: historico } = useQuery({
@@ -213,26 +218,41 @@ const PortalParceiros = () => {
                    data.fornecedor.tipo === "tecnico" ? "Acompanhe suas visitas e projetos" :
                    "Acompanhe seus projetos";
 
-  const renderDetail = () => (
-    <div className="space-y-5 animate-fade-in">
-      <button onClick={() => setSelectedProjeto(null)} className="flex items-center gap-1 text-xs text-primary hover:underline">
-        <ChevronLeft size={14} /> Voltar
-      </button>
-      <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h2 className="text-base font-bold text-foreground">{activeProjeto?.nome}</h2>
-          <span className={`self-start px-3 py-1 rounded text-xs font-semibold ${statusColor[activeProjeto?.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
-            {statusLabel[activeProjeto?.status ?? ""] ?? activeProjeto?.status}
-          </span>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Progresso</span>
-            <span className="font-semibold text-foreground">{progress}%</span>
+  const renderDetail = () => {
+    if (!activeProjeto) return null;
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 mb-5 space-y-4">
+          <button onClick={() => setSelectedProjeto(null)}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors">
+            <ChevronLeft size={14} />
+            Voltar aos projetos
+          </button>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-white">
+                {activeProjeto?.nome}
+              </h2>
+              {activeProjeto?.clientes?.nome && (
+                <p className="text-sm text-slate-400">
+                  👤 {activeProjeto.clientes.nome}
+                </p>
+              )}
+            </div>
+            <span className={`px-3 py-1 rounded-lg text-xs font-bold shrink-0 ${statusColor[activeProjeto?.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
+              {statusLabel[activeProjeto?.status ?? ""] ?? activeProjeto?.status}
+            </span>
           </div>
-          <Progress value={progress} className="h-2.5" />
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>Progresso da obra</span>
+              <span className="font-bold text-white">
+                {progress}%
+              </span>
+            </div>
+            <Progress value={progress} className="h-2.5" />
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="cronograma" className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
