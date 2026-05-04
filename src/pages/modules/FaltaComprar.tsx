@@ -27,30 +27,37 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
   const receber = receberRaw ?? []
   const hoje = new Date().toISOString().split("T")[0]
 
-  const totalRecebido = receber.reduce(
-    (s, r) => s + (Number(r.valor_recebido) || 0), 0)
+   const totalRecebido = receber?.reduce(
+     (s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
 
-  const totalInadimplente = receber.reduce(
-    (s, r) => {
-      if (r.status === "pendente" &&
-          r.data_vencimento &&
-          r.data_vencimento < hoje) {
-        return s + (Number(r.valor) || 0) -
-          (Number(r.valor_recebido) || 0)
-      }
-      return s
-    }, 0)
+   const totalInadimplente = receber?.reduce(
+     (s, r) => {
+       if (
+         r.status === "pendente" &&
+         r.data_vencimento &&
+         r.data_vencimento < hoje
+       ) {
+         return s + Math.max(
+           (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0),
+           0
+         )
+       }
+       return s
+     }, 0) ?? 0
 
-  const totalAReceber = receber.reduce(
-    (s, r) => {
-      if (r.status !== "pago") {
-        const isInadimplente = r.status === "pendente" && r.data_vencimento && r.data_vencimento < hoje
-        if (!isInadimplente) {
-          return s + (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
-        }
-      }
-      return s
-    }, 0)
+   const totalAReceber = receber?.reduce(
+     (s, r) => {
+       if (r.status !== "pago") {
+         const isInadimplente = r.status === "pendente" && r.data_vencimento && r.data_vencimento < hoje
+         if (!isInadimplente) {
+           return s + Math.max(
+             (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0),
+             0
+           )
+         }
+       }
+       return s
+     }, 0) ?? 0
 
    const { data, isLoading } = useQuery({
      queryKey: ["falta_comprar_pagina", empresaId],
@@ -78,17 +85,26 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
           const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
-          const recebidoProjeto = receber
-            ?.filter(r => r.projeto_id === orc.id)
-            .reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
+          const recebidoProjeto = (receber ?? [])
+            .filter(r => r.projeto_id === orc.id)
+            .reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0)
 
-          const faltaReceberProjeto = receber
-            ?.filter(r => r.projeto_id === orc.id)
-            .reduce((s, r) => s + (
-              r.status !== "pago"
-                ? (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
-                : 0
-            ), 0) ?? 0
+          const faltaReceberProjeto = (receber ?? [])
+            .filter(r => r.projeto_id === orc.id && r.status !== "pago")
+            .reduce((s, r) => s + Math.max(
+              (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0), 0
+            ), 0)
+
+          const inadimplenteProjeto = (receber ?? [])
+            .filter(r =>
+              r.projeto_id === orc.id &&
+              r.status === "pendente" &&
+              r.data_vencimento &&
+              r.data_vencimento < hoje
+            )
+            .reduce((s, r) => s + Math.max(
+              (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0), 0
+            ), 0)
 
           return {
             clienteNome: (orc.clientes as any)?.nome ?? "—",
@@ -100,6 +116,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             itensPendentes: itensPendentesCount,
             recebidoProjeto,
             faltaReceberProjeto,
+            inadimplenteProjeto,
           }
         })
         .filter(r => r.faltaComprar > 0)
@@ -156,7 +173,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
        </div>
  
       {/* Painel Financeiro */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {/* Recebido */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
@@ -180,6 +197,19 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
             Pendente dos clientes
+          </p>
+        </div>
+
+        {/* Inadimplente */}
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Inadimplente
+          </p>
+          <p className="text-2xl font-black text-destructive">
+            {fmt(totalInadimplente)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Vencido não recebido
           </p>
         </div>
 
@@ -243,8 +273,9 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                   <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3 text-right text-success">Recebido</th>
+                    <th className="px-4 py-3 text-right text-destructive">Inadimplente</th>
                     <th className="px-4 py-3 text-right text-primary">Falta Receber</th>
-                    <th className="px-4 py-3 text-right">Custo do Projeto</th>
+                    <th className="px-4 py-3 text-right">Custo</th>
                     <th className="px-4 py-3 text-right">Comprado</th>
                     <th className="px-4 py-3 text-center">Itens Pend.</th>
                     <th className="px-4 py-3 text-right text-orange-500">Falta Comprar</th>
@@ -258,6 +289,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                         <p className="text-[10px] text-muted-foreground">{r.orcamentoNome}</p>
                       </td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-success">{fmt(r.recebidoProjeto)}</td>
+                      <td className="px-4 py-3 text-xs text-right tabular-nums text-destructive">{fmt(r.inadimplenteProjeto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-primary">{fmt(r.faltaReceberProjeto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-muted-foreground">{fmt(r.totalCusto)}</td>
                       <td className="px-4 py-3 text-xs text-right tabular-nums text-green-600">{fmt(r.totalComprado)}</td>
@@ -276,6 +308,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                   <tr>
                     <td className="px-4 py-3 text-xs">Total Geral</td>
                     <td className="px-4 py-3 text-xs text-right text-success">{fmt(totalRecebido)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-destructive">{fmt(totalInadimplente)}</td>
                     <td className="px-4 py-3 text-xs text-right text-primary">{fmt(totalAReceber)}</td>
                     <td className="px-4 py-3 text-xs text-right text-muted-foreground">{fmt(totalCustoGeral)}</td>
                     <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
