@@ -108,12 +108,23 @@ const PortalParceiros = () => {
     enabled: !!user?.email
   });
 
-  const activeProjeto = data?.projetos?.find(
+  const activeProjeto = (data?.projetos as any[])?.find(
     (p: any) => p.id === selectedProjeto
-  ) ?? data?.projetos?.find(
+  ) ?? (data?.projetos as any[])?.find(
     (p: any) => p.projeto_id === selectedProjeto
-  );
-  const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
+  )?.projetos;
+
+  console.log("PortalParceiros - Debug:", {
+    selectedProjeto,
+    hasProjetos: !!data?.projetos,
+    projetosCount: data?.projetos?.length,
+    activeProjetoFound: !!activeProjeto,
+    activeProjetoId: activeProjeto?.id
+  });
+
+  const progress = activeProjeto
+    ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0)
+    : 0;
 
   const { data: historico } = useQuery({
     queryKey: ["portal_parc_historico", selectedProjeto],
@@ -218,7 +229,7 @@ const PortalParceiros = () => {
                    data.fornecedor.tipo === "tecnico" ? "Acompanhe suas visitas e projetos" :
                    "Acompanhe seus projetos";
 
-  const renderDetail = () => {
+  const renderProjectDetail = () => {
     if (!activeProjeto) return null;
     return (
       <div className="space-y-5 animate-fade-in">
@@ -542,7 +553,24 @@ const PortalParceiros = () => {
         </div>
       </header>
       <main className="max-w-4xl mx-auto p-4">
-        {selectedProjeto ? renderDetail() : renderList()}
+        {selectedProjeto && activeProjeto
+          ? renderProjectDetail()
+          : selectedProjeto && !activeProjeto
+          ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-muted-foreground">
+                Carregando projeto...
+              </p>
+              <button
+                onClick={() => setSelectedProjeto(null)}
+                className="text-primary text-xs mt-2 hover:underline"
+              >
+                Voltar
+              </button>
+            </div>
+          )
+          : renderList()
+        }
       </main>
       <footer className="mt-8 px-4 pb-6 text-center space-y-1">
         <p className="text-xs font-bold text-muted-foreground">
