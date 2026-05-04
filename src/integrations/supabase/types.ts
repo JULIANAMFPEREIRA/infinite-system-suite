@@ -644,26 +644,38 @@ export type Database = {
         Row: {
           cnpj: string | null
           created_at: string
+          email: string | null
+          endereco: string | null
           id: string
+          logo_url: string | null
           nome: string
           nome_fantasia: string | null
           segmento: string | null
+          telefone: string | null
         }
         Insert: {
           cnpj?: string | null
           created_at?: string
+          email?: string | null
+          endereco?: string | null
           id?: string
+          logo_url?: string | null
           nome: string
           nome_fantasia?: string | null
           segmento?: string | null
+          telefone?: string | null
         }
         Update: {
           cnpj?: string | null
           created_at?: string
+          email?: string | null
+          endereco?: string | null
           id?: string
+          logo_url?: string | null
           nome?: string
           nome_fantasia?: string | null
           segmento?: string | null
+          telefone?: string | null
         }
         Relationships: []
       }
@@ -1455,6 +1467,7 @@ export type Database = {
           empresa_id: string | null
           full_name: string | null
           id: string
+          is_active: boolean | null
           phone: string | null
           updated_at: string
         }
@@ -1464,6 +1477,7 @@ export type Database = {
           empresa_id?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean | null
           phone?: string | null
           updated_at?: string
         }
@@ -1473,6 +1487,7 @@ export type Database = {
           empresa_id?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean | null
           phone?: string | null
           updated_at?: string
         }
