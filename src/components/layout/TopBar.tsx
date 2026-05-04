@@ -118,9 +118,9 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
                  href="/portal/parceiro"
                  target="_blank"
                  rel="noopener noreferrer"
-                 className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded border border-border hover:border-primary/40 bg-secondary/30"
+                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:border-primary/40"
                >
-                 <ExternalLink size={10} />
+                 <ExternalLink size={12} />
                  Portal
                </a>
              )}
