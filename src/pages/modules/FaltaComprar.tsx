@@ -254,14 +254,15 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
                     </tr>
                   ))}
                </tbody>
-                <tfoot className="bg-secondary/20 font-bold border-t border-border">
+                <tfoot className="bg-secondary/20 font-bold border-t border-border whitespace-nowrap">
                   <tr>
                     <td className="px-4 py-3 text-xs">Total Geral</td>
-                    <td className="px-4 py-3 text-xs text-right">{fmt(totalVendaGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-success">{fmt(totalRecebido)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-primary">{fmt(totalAReceber)}</td>
                     <td className="px-4 py-3 text-xs text-right text-muted-foreground">{fmt(totalCustoGeral)}</td>
                     <td className="px-4 py-3 text-xs text-right text-green-600">{fmt(totalCompradoGeral)}</td>
                     <td className="px-4 py-3 text-center text-[10px]">{totalItens} itens</td>
-                    <td className="px-4 py-3 text-xs text-right text-orange-600">{fmt(totalGeral)}</td>
+                    <td className="px-4 py-3 text-xs text-right text-orange-500">{fmt(totalGeral)}</td>
                   </tr>
                 </tfoot>
              </table>
