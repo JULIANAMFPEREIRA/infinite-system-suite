@@ -2650,6 +2650,125 @@ const CRM = () => {
               )}
 
               {/* ═══════════════════════════════════════════════════════ */}
+              {/* TÉCNICO DO PROJETO                                     */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {activeOrcamentoId && (
+                <section className="border border-border rounded-lg p-4 space-y-3 bg-card">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Wrench size={16} className="text-primary" />
+                    Técnico do Projeto
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Técnico</label>
+                      <select value={tecnicoId ?? ""} onChange={e => setTecnicoId(e.target.value || null)} className="w-full border border-border rounded px-2 py-1.5 text-sm bg-background">
+                        <option value="">Sem técnico</option>
+                        {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Valor RT Técnico (R$)</label>
+                      <input type="number" min="0" value={tecnicoRt} onChange={e => setTecnicoRt(Number(e.target.value))} className="w-full border border-border rounded px-2 py-1.5 text-sm bg-background" placeholder="0,00" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Vencimento RT Técnico</label>
+                      <input type="date" value={tecnicoRtVencimento ?? ""} onChange={e => setTecnicoRtVencimento(e.target.value || null)} className="w-full border border-border rounded px-2 py-1.5 text-sm bg-background" />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* PARCELAS DE PARCEIROS                                  */}
+              {/* ═══════════════════════════════════════════════════════ */}
+              {orcamentoAprovado && (
+                <section className="border border-border rounded-lg p-4 space-y-3 bg-card">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <CalendarDays size={16} className="text-primary" />
+                      Parcelas de Parceiros
+                    </h3>
+                    <button onClick={() => setShowAddParcela(true)} className="flex items-center gap-1 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded">
+                      <Plus size={14} /> Nova Parcela
+                    </button>
+                  </div>
+
+                  {showAddParcela && (
+                    <div className="bg-secondary/30 rounded p-4 space-y-3 border border-border">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Adicionar Parcela</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Parceiro</label>
+                          <select value={novaParcela.parceiro_id} onChange={e => setNovaParcela(prev => ({ ...prev, parceiro_id: e.target.value }))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+                            <option value="">Selecionar...</option>
+                            <optgroup label="Arquitetos">
+                              {arquiteto && <option value={arquiteto.id}>{arquiteto.nome} (Arquiteto)</option>}
+                            </optgroup>
+                            <optgroup label="Técnicos">
+                              {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Descrição</label>
+                          <input type="text" value={novaParcela.descricao} onChange={e => setNovaParcela(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Ex: Parcela 1/3" className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Valor (R$)</label>
+                          <input type="number" value={novaParcela.valor} onChange={e => setNovaParcela(prev => ({ ...prev, valor: Number(e.target.value) }))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase">Vencimento</label>
+                          <input type="date" value={novaParcela.data_vencimento} onChange={e => setNovaParcela(prev => ({ ...prev, data_vencimento: e.target.value }))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button onClick={() => setShowAddParcela(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
+                        <button onClick={handleAddParcela} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Salvar Parcela</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {parcelasParceiros.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Nenhuma parcela definida.</p>
+                  ) : (
+                    <div className="border border-border rounded overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-secondary/60">
+                            <th className="text-left px-3 py-2 border-b border-border">Parceiro</th>
+                            <th className="text-left px-3 py-2 border-b border-border">Descrição</th>
+                            <th className="text-right px-3 py-2 border-b border-border">Valor</th>
+                            <th className="text-center px-3 py-2 border-b border-border">Vencimento</th>
+                            <th className="text-center px-3 py-2 border-b border-border">Status</th>
+                            <th className="text-center px-3 py-2 border-b border-border">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {parcelasParceiros.map(p => (
+                            <tr key={p.id} className="border-b border-border last:border-b-0">
+                              <td className="px-3 py-2">{p.parceiro_nome}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{p.descricao}</td>
+                              <td className="px-3 py-2 text-right font-medium">{fmt(p.valor)}</td>
+                              <td className="px-3 py-2 text-center">{p.data_vencimento ? new Date(p.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${p.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
+                                  {p.status === "pago" ? "Pago" : "Pendente"}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <button onClick={() => handlePagarParcela(p.id)} disabled={p.status === "pago"} className="text-[11px] text-success hover:underline disabled:opacity-40">Marcar Pago</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════ */}
               {/* RESUMO COMPRAS (Produtos + Serviços + Fretes)         */}
               {/* ═══════════════════════════════════════════════════════ */}
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
