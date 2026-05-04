@@ -386,7 +386,7 @@ const PortalParceiros = () => {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  );};
 
   const renderList = () => (
     <div className="space-y-6 animate-fade-in">
