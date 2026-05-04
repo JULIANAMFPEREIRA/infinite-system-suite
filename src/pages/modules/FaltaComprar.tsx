@@ -3,7 +3,7 @@ import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
  import { useQuery } from "@tanstack/react-query"
  import { supabase } from "@/integrations/supabase/client"
  import { useEmpresa } from "@/hooks/useEmpresa"
- import { ShoppingCart, Search } from "lucide-react"
+import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
  
  const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
  
@@ -11,6 +11,29 @@ import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
    const empresaId = useEmpresa()
    const [busca, setBusca] = useState("")
  
+  const { data: receber } = useQuery({
+    queryKey: ["fc_receber", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("financeiro_receber")
+        .select("valor, valor_recebido, status, projeto_id")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+      return data ?? []
+    },
+    enabled: !!empresaId
+  })
+
+  const totalRecebido = receber?.reduce(
+    (s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
+
+  const totalAReceber = receber?.reduce(
+    (s, r) => s + (
+      r.status !== "pago"
+        ? (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
+        : 0
+    ), 0) ?? 0
+
    const { data, isLoading } = useQuery({
      queryKey: ["falta_comprar_pagina", empresaId],
      queryFn: async () => {
@@ -68,6 +91,9 @@ import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
     const totalVendaGeral = filtered.reduce((s, r) => s + r.totalVenda, 0)
     const totalItens = filtered.reduce((s, r) => s + r.itensPendentes, 0)
  
+    const totalFaltaComprar = totalGeral
+    const saldoDisponivel = totalRecebido - totalFaltaComprar
+
    return (
      <div className="p-4 space-y-4 max-w-7xl mx-auto">
        <div className="flex items-center justify-between">
@@ -97,37 +123,113 @@ import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
          </div>
        </div>
  
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-card p-3 rounded-lg border border-border">
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-              Valor dos Projetos
+      {/* Painel Financeiro */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Recebido dos clientes */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Recebido Clientes
+          </p>
+          <p className="text-2xl font-black text-green-600">
+            {fmt(totalRecebido)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Total já recebido
+          </p>
+        </div>
+
+        {/* A receber dos clientes */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Falta Receber
+          </p>
+          <p className="text-2xl font-black text-primary">
+            {fmt(totalAReceber)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Pendente dos clientes
+          </p>
+        </div>
+
+        {/* Falta comprar */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Falta Comprar
+          </p>
+          <p className="text-2xl font-black text-orange-500">
+            {fmt(totalFaltaComprar)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Custo pendente
+          </p>
+        </div>
+
+        {/* Saldo disponível */}
+        <div className={`border rounded-xl p-4 ${
+          saldoDisponivel >= 0
+            ? "bg-green-500/10 border-green-500/30"
+            : "bg-destructive/10 border-destructive/30"
+        }`}>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Saldo Disponível
+          </p>
+          <p className={`text-2xl font-black ${
+            saldoDisponivel >= 0
+              ? "text-green-600"
+              : "text-destructive"
+          }`}>
+            {fmt(saldoDisponivel)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {saldoDisponivel >= 0
+              ? "Recebido − Falta comprar"
+              : "⚠ Deficit de caixa"}
+          </p>
+        </div>
+      </div>
+
+      {/* Alerta de Saldo Negativo */}
+      {saldoDisponivel < 0 && (
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2">
+          <AlertTriangle size={16} className="text-destructive shrink-0" />
+          <p className="text-sm text-destructive">
+            <strong>Atenção:</strong> Você precisa receber mais{" "}
+            <strong>{fmt(Math.abs(saldoDisponivel))}</strong> dos clientes ou usar recursos de outros projetos para cobrir as compras pendentes.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-card p-3 rounded-lg border border-border">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+            Valor dos Projetos
+          </p>
+          <p className="text-lg font-bold text-foreground mt-0.5">
+            {fmt(totalVendaGeral)}
+          </p>
+        </div>
+        <div className="bg-card p-3 rounded-lg border border-border">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+            Total Comprado
+          </p>
+          <p className="text-lg font-bold text-green-600 mt-0.5">
+            {fmt(totalCompradoGeral)}
+          </p>
+        </div>
+        <div className="bg-card p-3 rounded-lg border border-border">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+            Falta Comprar
+          </p>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <p className="text-lg font-bold text-orange-600">
+              {fmt(totalGeral)}
             </p>
-            <p className="text-lg font-bold text-foreground mt-0.5">
-              {fmt(totalVendaGeral)}
-            </p>
-          </div>
-          <div className="bg-card p-3 rounded-lg border border-border">
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-              Total Comprado
-            </p>
-            <p className="text-lg font-bold text-green-600 mt-0.5">
-              {fmt(totalCompradoGeral)}
-            </p>
-          </div>
-          <div className="bg-card p-3 rounded-lg border border-border">
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-              Falta Comprar
-            </p>
-            <div className="flex items-baseline gap-2 mt-0.5">
-              <p className="text-lg font-bold text-orange-600">
-                {fmt(totalGeral)}
-              </p>
-              <span className="text-[10px] text-muted-foreground">
-                {totalItens} itens pendentes
-              </span>
-            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {totalItens} itens pendentes
+            </span>
           </div>
         </div>
+      </div>
  
        {isLoading ? (
          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
