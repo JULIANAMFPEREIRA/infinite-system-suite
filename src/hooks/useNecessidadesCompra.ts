@@ -8,16 +8,45 @@ export const useNecessidadesCompra = (projetoId?: string) => {
     queryKey: ["necessidades_compra", empresaId, projetoId],
     enabled: !!empresaId,
     queryFn: async () => {
-      let q = supabase
-        .from("necessidades_compra" as any)
-        .select("*, projetos!inner(nome, deletado, cliente_id, clientes!inner(nome, deletado)), produtos(nome), projeto_itens(preco_custo)")
-        .eq("empresa_id", empresaId!)
-        .eq("projetos.deletado", false)
-        .eq("projetos.clientes.deletado", false)
-        .order("created_at", { ascending: false });
-      if (projetoId) q = q.eq("projeto_id", projetoId);
-      const { data, error } = await q;
-      if (error) throw error;
+      const [necRes, projRes, prodRes, itemRes, cliRes] = await Promise.all([
+        supabase
+          .from("necessidades_compra" as any)
+          .select("*")
+          .eq("empresa_id", empresaId!)
+          .order("created_at", { ascending: false }),
+        supabase.from("projetos").select("id, nome, deletado, cliente_id").eq("deletado", false),
+        supabase.from("produtos").select("id, nome"),
+        supabase.from("projeto_itens").select("id, preco_custo"),
+        supabase.from("clientes").select("id, nome, deletado").eq("deletado", false),
+      ]);
+
+      if (necRes.error) throw necRes.error;
+
+      const projetosMap = Object.fromEntries((projRes.data ?? []).map((p: any) => [p.id, p]));
+      const produtosMap = Object.fromEntries((prodRes.data ?? []).map((p: any) => [p.id, p]));
+      const itensMap = Object.fromEntries((itemRes.data ?? []).map((i: any) => [i.id, i]));
+      const clientesMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+
+      let data = (necRes.data ?? [])
+        .map((n: any) => {
+          const projeto = projetosMap[n.projeto_id];
+          if (!projeto) return null;
+          const cliente = clientesMap[projeto.cliente_id];
+          if (!cliente) return null;
+
+          return {
+            ...n,
+            projetos: { ...projeto, clientes: cliente },
+            produtos: produtosMap[n.produto_id] || null,
+            projeto_itens: itensMap[n.projeto_item_id] || null,
+          };
+        })
+        .filter(Boolean);
+
+      if (projetoId) {
+        data = data.filter((n: any) => n.projeto_id === projetoId);
+      }
+
       return data as any[];
     },
   });
