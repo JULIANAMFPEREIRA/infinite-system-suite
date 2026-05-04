@@ -1,0 +1,1 @@
+ALTER TYPE public.tipo_fornecedor ADD VALUE IF NOT EXISTS 'tecnico';

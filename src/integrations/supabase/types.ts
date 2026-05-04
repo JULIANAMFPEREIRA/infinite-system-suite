@@ -2158,7 +2158,7 @@ export type Database = {
         | "personalizacao"
         | "em_pausa"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
-      tipo_fornecedor: "fornecedor" | "arquiteto"
+      tipo_fornecedor: "fornecedor" | "arquiteto" | "tecnico"
       tipo_projeto_item: "produto" | "servico" | "mao_de_obra" | "adicional"
     }
     CompositeTypes: {
@@ -2338,7 +2338,7 @@ export const Constants = {
         "em_pausa",
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
-      tipo_fornecedor: ["fornecedor", "arquiteto"],
+      tipo_fornecedor: ["fornecedor", "arquiteto", "tecnico"],
       tipo_projeto_item: ["produto", "servico", "mao_de_obra", "adicional"],
     },
   },
