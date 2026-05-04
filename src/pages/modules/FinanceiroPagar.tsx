@@ -77,7 +77,25 @@ const toTitleCase = (str: string) =>
 const FinanceiroPagar = () => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
-  const { data: contas, isLoading, refetch } = useFinanceiroPagar();
+   const { data: contas, isLoading, refetch } = useQuery({
+     queryKey: ["financeiro_pagar", empresaId],
+     queryFn: async () => {
+       let query = supabase
+         .from("financeiro_pagar")
+         .select("*, fornecedores(nome), projetos(nome)")
+         .eq("empresa_id", empresaId!)
+         .eq("deletado", false)
+         .order("created_at", { ascending: false });
+ 
+       const { data, error } = await query;
+       if (error) {
+         console.error("Erro financeiro_pagar:", error);
+         throw error;
+       }
+       return data ?? [];
+     },
+     enabled: !!empresaId,
+   });
   const createConta = useCreateContaPagar();
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
