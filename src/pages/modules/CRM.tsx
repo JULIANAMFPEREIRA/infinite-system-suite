@@ -289,6 +289,38 @@ const CRM = () => {
 
   const [detailClient, setDetailClient] = useState<any>(null);
 
+  // Estados para Técnico do Projeto
+  const [tecnicoId, setTecnicoId] = useState<string | null>(null);
+  const [tecnicoRt, setTecnicoRt] = useState<number>(0);
+  const [tecnicoRtVencimento, setTecnicoRtVencimento] = useState<string | null>(null);
+
+  // Estados para Parcelas de Parceiros
+  const [showAddParcela, setShowAddParcela] = useState(false);
+  const [novaParcela, setNovaParcela] = useState({
+    parceiro_id: "",
+    descricao: "",
+    valor: 0,
+    data_vencimento: ""
+  });
+
+  const arquiteto = useMemo(() => arquitetos?.find(a => a.id === detailClient?.arquiteto_id), [arquitetos, detailClient?.arquiteto_id]);
+  const fmt = (val: number) => val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const { data: tecnicos = [] } = useQuery({
+    queryKey: ["tecnicos_crm", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("empresa_id", empresaId!)
+        .eq("tipo", "tecnico" as any)
+        .eq("deletado", false)
+        .order("nome");
+      return data ?? [];
+    },
+    enabled: !!empresaId
+  });
+
   // Interaction form
   const [intTipo, setIntTipo] = useState("ligacao");
   const [intDesc, setIntDesc] = useState("");
