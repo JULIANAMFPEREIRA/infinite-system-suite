@@ -9,13 +9,29 @@ export const useFinanceiroPagar = () => {
   return useQuery({
     queryKey: ["financeiro_pagar"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financeiro_pagar")
-        .select("*, fornecedores(nome), projetos(nome), categorias(id, nome, tipo)")
-        .eq("deletado", false)
-        .order("data_vencimento", { ascending: true });
-      if (error) throw error;
-      return data;
+      const [pagarRes, fornRes, projRes, catRes] = await Promise.all([
+        supabase
+          .from("financeiro_pagar")
+          .select("*")
+          .eq("deletado", false)
+          .order("data_vencimento", { ascending: true }),
+        supabase.from("fornecedores").select("id, nome"),
+        supabase.from("projetos").select("id, nome"),
+        supabase.from("categorias").select("id, nome, tipo"),
+      ]);
+
+      if (pagarRes.error) throw pagarRes.error;
+
+      const fornMap = Object.fromEntries((fornRes.data ?? []).map((f: any) => [f.id, f]));
+      const projMap = Object.fromEntries((projRes.data ?? []).map((p: any) => [p.id, p]));
+      const catMap = Object.fromEntries((catRes.data ?? []).map((c: any) => [c.id, c]));
+
+      return (pagarRes.data ?? []).map((p: any) => ({
+        ...p,
+        fornecedores: fornMap[p.fornecedor_id] || null,
+        projetos: projMap[p.projeto_id] || null,
+        categorias: catMap[p.categoria_id] || null,
+      }));
     },
   });
 };
@@ -24,13 +40,26 @@ export const useFinanceiroReceber = () => {
   return useQuery({
     queryKey: ["financeiro_receber"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financeiro_receber")
-        .select("*, clientes(nome), projetos(nome)")
-        .eq("deletado", false)
-        .order("data_vencimento", { ascending: true });
-      if (error) throw error;
-      return data;
+      const [receberRes, cliRes, projRes] = await Promise.all([
+        supabase
+          .from("financeiro_receber")
+          .select("*")
+          .eq("deletado", false)
+          .order("data_vencimento", { ascending: true }),
+        supabase.from("clientes").select("id, nome"),
+        supabase.from("projetos").select("id, nome"),
+      ]);
+
+      if (receberRes.error) throw receberRes.error;
+
+      const cliMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+      const projMap = Object.fromEntries((projRes.data ?? []).map((p: any) => [p.id, p]));
+
+      return (receberRes.data ?? []).map((r: any) => ({
+        ...r,
+        clientes: cliMap[r.cliente_id] || null,
+        projetos: projMap[r.projeto_id] || null,
+      }));
     },
   });
 };
