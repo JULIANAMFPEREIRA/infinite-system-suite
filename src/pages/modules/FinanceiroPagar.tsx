@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
- import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers } from "lucide-react";
+  import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
