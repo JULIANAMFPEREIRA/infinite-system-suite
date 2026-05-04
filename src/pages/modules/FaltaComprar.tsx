@@ -139,10 +139,10 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
  
       {/* Painel Financeiro */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {/* Recebido dos clientes */}
+        {/* Recebido */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Recebido Clientes
+            Recebido
           </p>
           <p className="text-2xl font-black text-green-600">
             {fmt(totalRecebido)}
@@ -152,10 +152,10 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* A receber dos clientes */}
+        {/* A Receber */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Falta Receber
+            A Receber
           </p>
           <p className="text-2xl font-black text-primary">
             {fmt(totalAReceber)}
@@ -165,7 +165,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* Falta comprar */}
+        {/* Falta Comprar */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             Falta Comprar
@@ -178,14 +178,14 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
 
-        {/* Saldo disponível */}
+        {/* Saldo */}
         <div className={`border rounded-xl p-4 ${
           saldoDisponivel >= 0
             ? "bg-green-500/10 border-green-500/30"
             : "bg-destructive/10 border-destructive/30"
         }`}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Saldo Disponível
+            Saldo
           </p>
           <p className={`text-2xl font-black ${
             saldoDisponivel >= 0
@@ -212,38 +212,6 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
           </p>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Valor dos Projetos
-          </p>
-          <p className="text-lg font-bold text-foreground mt-0.5">
-            {fmt(totalVendaGeral)}
-          </p>
-        </div>
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Total Comprado
-          </p>
-          <p className="text-lg font-bold text-green-600 mt-0.5">
-            {fmt(totalCompradoGeral)}
-          </p>
-        </div>
-        <div className="bg-card p-3 rounded-lg border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-            Falta Comprar
-          </p>
-          <div className="flex items-baseline gap-2 mt-0.5">
-            <p className="text-lg font-bold text-orange-600">
-              {fmt(totalGeral)}
-            </p>
-            <span className="text-[10px] text-muted-foreground">
-              {totalItens} itens pendentes
-            </span>
-          </div>
-        </div>
-      </div>
  
        {isLoading ? (
          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
