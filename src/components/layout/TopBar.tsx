@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
 import { useNecessidadesCompra } from "@/hooks/useNecessidadesCompra";
-import logoInfinit from "@/assets/logo-infinit.png";
 import GlobalSearch from "./GlobalSearch";
 import {
   Dialog,
@@ -61,15 +60,14 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
         >
           <Menu size={20} />
         </button>
-        <img src={logoInfinit} alt="Infinit Network" className="h-6 md:h-7 w-auto object-contain" />
-        <div className="flex flex-col justify-center">
-          <h1 className="text-sm font-bold text-foreground uppercase leading-tight" style={{ letterSpacing: "0.15em" }}>
-            <span className="text-[10px] font-medium text-muted-foreground mr-1" style={{ letterSpacing: "0.12em" }}>ERP</span>
-            <span className="text-xs md:text-sm font-bold text-foreground" style={{ letterSpacing: "0.18em" }}>INFINIT NETWORK</span>
-          </h1>
-          <p className="text-[8px] md:text-[9px] text-muted-foreground font-light mt-0.5 hidden sm:block" style={{ letterSpacing: "0.08em" }}>
-            Sistema Inteligente de Gestão Comercial e Projetos
-          </p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg font-black text-foreground tracking-tight">
+            INFINIT
+          </span>
+          <div className="w-px h-5 bg-border" />
+          <span className="text-lg font-light text-muted-foreground tracking-widest uppercase text-sm">
+            system
+          </span>
         </div>
       </div>
       <GlobalSearch />
