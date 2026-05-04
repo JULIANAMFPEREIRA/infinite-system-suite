@@ -11,12 +11,12 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
    const empresaId = useEmpresa()
    const [busca, setBusca] = useState("")
  
-  const { data: receber } = useQuery({
+  const { data: receberRaw } = useQuery({
     queryKey: ["fc_receber", empresaId],
     queryFn: async () => {
       const { data } = await supabase
         .from("financeiro_receber")
-        .select("valor, valor_recebido, status, projeto_id")
+        .select("valor, valor_recebido, status, projeto_id, data_vencimento")
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
       return data ?? []
@@ -24,15 +24,33 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
     enabled: !!empresaId
   })
 
-  const totalRecebido = receber?.reduce(
-    (s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
+  const receber = receberRaw ?? []
+  const hoje = new Date().toISOString().split("T")[0]
 
-  const totalAReceber = receber?.reduce(
-    (s, r) => s + (
-      r.status !== "pago"
-        ? (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
-        : 0
-    ), 0) ?? 0
+  const totalRecebido = receber.reduce(
+    (s, r) => s + (Number(r.valor_recebido) || 0), 0)
+
+  const totalInadimplente = receber.reduce(
+    (s, r) => {
+      if (r.status === "pendente" &&
+          r.data_vencimento &&
+          r.data_vencimento < hoje) {
+        return s + (Number(r.valor) || 0) -
+          (Number(r.valor_recebido) || 0)
+      }
+      return s
+    }, 0)
+
+  const totalAReceber = receber.reduce(
+    (s, r) => {
+      if (r.status !== "pago") {
+        const isInadimplente = r.status === "pendente" && r.data_vencimento && r.data_vencimento < hoje
+        if (!isInadimplente) {
+          return s + (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0)
+        }
+      }
+      return s
+    }, 0)
 
    const { data, isLoading } = useQuery({
      queryKey: ["falta_comprar_pagina", empresaId],
