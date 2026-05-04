@@ -42,7 +42,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const { data: tecnicos } = useQuery({
     queryKey: ["tecnicos_select", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -375,9 +375,26 @@ const CRM = () => {
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").eq("deletado", false).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const { data: clientesData, error: clientesError } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("deletado", false)
+        .order("created_at", { ascending: false, nullsFirst: false });
+
+      if (clientesError) throw clientesError;
+
+      // Buscar fornecedores (arquitetos) separadamente para evitar erro de join
+      const { data: fornecedoresData } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("deletado", false);
+
+      const result = clientesData?.map(cliente => ({
+        ...cliente,
+        fornecedores: fornecedoresData?.find(f => f.id === cliente.arquiteto_id) || null
+      }));
+
+      return result;
     },
     enabled: !!empresaId,
   });
@@ -386,7 +403,7 @@ const CRM = () => {
   const { data: allOrcamentos } = useQuery({
     queryKey: ["all_crm_orcamentos", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true });
+      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -396,7 +413,7 @@ const CRM = () => {
   const { data: produtosCatalogo } = useQuery({
     queryKey: ["produtos_autocomplete_crm", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda, cor").eq("deletado", false).order("nome");
+      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda, cor").eq("deletado", false).order("nome", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -409,7 +426,7 @@ const CRM = () => {
   const { data: allProjetos } = useQuery({
     queryKey: ["all_projetos_kanban", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").eq("deletado", false).neq("status", "cancelado").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").eq("deletado", false).neq("status", "cancelado").order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -419,7 +436,7 @@ const CRM = () => {
   const { data: interacoes, refetch: refetchInteracoes } = useQuery({
     queryKey: ["crm_interacoes", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -457,7 +474,7 @@ const CRM = () => {
   const { data: orcamentos, refetch: refetchOrcamentos } = useQuery({
     queryKey: ["crm_orcamentos", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_orcamentos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true });
+      const { data, error } = await supabase.from("crm_orcamentos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -467,7 +484,7 @@ const CRM = () => {
   const { data: crmItens, refetch: refetchCrmItens } = useQuery({
     queryKey: ["crm_itens", detailClient?.id, activeOrcamentoId],
     queryFn: async () => {
-      let q = supabase.from("crm_itens").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true });
+      let q = supabase.from("crm_itens").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: true, nullsFirst: false });
       if (activeOrcamentoId) {
         q = q.eq("orcamento_id", activeOrcamentoId);
       } else {
@@ -483,7 +500,7 @@ const CRM = () => {
   const { data: equipeMembers } = useQuery({
     queryKey: ["equipe", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).eq("deletado", false).order("nome");
+      const { data, error } = await supabase.from("equipe").select("*").eq("empresa_id", empresaId!).eq("deletado", false).order("nome", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -493,7 +510,7 @@ const CRM = () => {
   const { data: crmArquivos, refetch: refetchArquivos } = useQuery({
     queryKey: ["crm_arquivos", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_arquivos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("crm_arquivos").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
