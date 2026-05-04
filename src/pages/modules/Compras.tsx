@@ -31,13 +31,34 @@ const Compras = () => {
   const { data: compras, isLoading } = useQuery({
     queryKey: ["compras", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("compras")
-        .select("*, fornecedores(nome), projetos(nome, cliente_id, clientes(nome)), produtos(nome)")
-        .eq("deletado", false)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [compRes, fornRes, projRes, cliRes, prodRes] = await Promise.all([
+        supabase
+          .from("compras")
+          .select("*")
+          .eq("deletado", false)
+          .order("created_at", { ascending: false }),
+        supabase.from("fornecedores").select("id, nome"),
+        supabase.from("projetos").select("id, nome, cliente_id"),
+        supabase.from("clientes").select("id, nome"),
+        supabase.from("produtos").select("id, nome"),
+      ]);
+
+      if (compRes.error) throw compRes.error;
+
+      const fornMap = Object.fromEntries((fornRes.data ?? []).map((f: any) => [f.id, f]));
+      const cliMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+      const projMap = Object.fromEntries((projRes.data ?? []).map((p: any) => [p.id, {
+        ...p,
+        clientes: cliMap[p.cliente_id] || null
+      }]));
+      const prodMap = Object.fromEntries((prodRes.data ?? []).map((p: any) => [p.id, p]));
+
+      return (compRes.data ?? []).map((c: any) => ({
+        ...c,
+        fornecedores: fornMap[c.fornecedor_id] || null,
+        projetos: projMap[c.projeto_id] || null,
+        produtos: prodMap[c.produto_id] || null,
+      }));
     },
     enabled: !!empresaId,
   });

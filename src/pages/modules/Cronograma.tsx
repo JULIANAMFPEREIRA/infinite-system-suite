@@ -17,9 +17,23 @@ const Cronograma = () => {
   const { data: projetos, isLoading } = useQuery({
     queryKey: ["projetos_cronograma", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("id, nome, status, data_inicio, data_previsao, clientes(nome)").eq("deletado", false).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [projRes, cliRes] = await Promise.all([
+        supabase
+          .from("projetos")
+          .select("id, nome, status, data_inicio, data_previsao, cliente_id")
+          .eq("deletado", false)
+          .order("created_at", { ascending: false }),
+        supabase.from("clientes").select("id, nome"),
+      ]);
+
+      if (projRes.error) throw projRes.error;
+
+      const cliMap = Object.fromEntries((cliRes.data ?? []).map((c: any) => [c.id, c]));
+
+      return (projRes.data ?? []).map((p: any) => ({
+        ...p,
+        clientes: cliMap[p.cliente_id] || null,
+      }));
     },
     enabled: !!empresaId,
   });
