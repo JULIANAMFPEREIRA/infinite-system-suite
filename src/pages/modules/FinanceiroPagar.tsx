@@ -480,7 +480,7 @@ const FinanceiroPagar = () => {
         descricao: `Parcela ${i + 1}/${totalParcelas} — ${contaParaParcelar.descricao}`,
         valor: p.valor,
         data_vencimento: p.data_vencimento,
-        status: "pendente",
+        status: "pendente" as "pendente",
         origem: "comissao",
         tipo_manual: "comissao"
       }));
@@ -501,7 +501,7 @@ const FinanceiroPagar = () => {
         descricao: `Parcela ${i + 1}/${totalParcelas} — RT`,
         valor: p.valor,
         data_vencimento: p.data_vencimento,
-        status: "pendente"
+        status: "pendente" as "pendente"
       }));
 
       const { error: insParErr } = await supabase
