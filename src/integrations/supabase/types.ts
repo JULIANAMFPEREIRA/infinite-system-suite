@@ -849,8 +849,10 @@ export type Database = {
           empresa_id: string
           fornecedor_id: string | null
           id: string
+          origem: string | null
           projeto_id: string | null
           status: Database["public"]["Enums"]["status_financeiro"] | null
+          tipo_manual: string | null
           valor: number | null
         }
         Insert: {
@@ -866,8 +868,10 @@ export type Database = {
           empresa_id: string
           fornecedor_id?: string | null
           id?: string
+          origem?: string | null
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null
+          tipo_manual?: string | null
           valor?: number | null
         }
         Update: {
@@ -883,8 +887,10 @@ export type Database = {
           empresa_id?: string
           fornecedor_id?: string | null
           id?: string
+          origem?: string | null
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null
+          tipo_manual?: string | null
           valor?: number | null
         }
         Relationships: [
