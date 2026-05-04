@@ -2,8 +2,10 @@ import { useState } from "react";
 import {
   Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil,
   CreditCard, Tag, ListChecks, Building2, UserCog, Wallet, FolderKanban, PackageCheck,
-  ChevronDown, ChevronRight, Shield,
+  ChevronDown, ChevronRight, Shield, RefreshCw, Key, Power, PowerOff
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import UserPermissionsEditor from "@/components/settings/UserPermissionsEditor";
 import ParceirosManager from "@/components/parceiros/ParceirosManager";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
