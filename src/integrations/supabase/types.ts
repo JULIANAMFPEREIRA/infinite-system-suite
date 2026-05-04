@@ -582,6 +582,9 @@ export type Database = {
           is_avulso: boolean
           nome: string
           simulacao_pagamento: Json | null
+          tecnico_id: string | null
+          tecnico_rt_valor: number | null
+          tecnico_rt_vencimento: string | null
         }
         Insert: {
           aprovado?: boolean
@@ -602,6 +605,9 @@ export type Database = {
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
+          tecnico_id?: string | null
+          tecnico_rt_valor?: number | null
+          tecnico_rt_vencimento?: string | null
         }
         Update: {
           aprovado?: boolean
@@ -622,6 +628,9 @@ export type Database = {
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
+          tecnico_id?: string | null
+          tecnico_rt_valor?: number | null
+          tecnico_rt_vencimento?: string | null
         }
         Relationships: [
           {
@@ -1391,6 +1400,86 @@ export type Database = {
           },
         ]
       }
+      parcelas_parceiros: {
+        Row: {
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          empresa_id: string | null
+          id: string
+          orcamento_id: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          projeto_id: string | null
+          status: string | null
+          tipo_parceiro: string | null
+          updated_at: string | null
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          orcamento_id?: string | null
+          parceiro_id?: string | null
+          parceiro_nome?: string | null
+          projeto_id?: string | null
+          status?: string | null
+          tipo_parceiro?: string | null
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          orcamento_id?: string | null
+          parceiro_id?: string | null
+          parceiro_nome?: string | null
+          projeto_id?: string | null
+          status?: string | null
+          tipo_parceiro?: string | null
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_parceiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_parceiros_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orcamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_parceiros_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_parceiros_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
@@ -2069,7 +2158,7 @@ export type Database = {
         | "personalizacao"
         | "em_pausa"
       tipo_financa_pessoal: "retirada" | "devolucao" | "despesa" | "receita"
-      tipo_fornecedor: "fornecedor" | "arquiteto"
+      tipo_fornecedor: "fornecedor" | "arquiteto" | "tecnico"
       tipo_projeto_item: "produto" | "servico" | "mao_de_obra" | "adicional"
     }
     CompositeTypes: {
@@ -2249,7 +2338,7 @@ export const Constants = {
         "em_pausa",
       ],
       tipo_financa_pessoal: ["retirada", "devolucao", "despesa", "receita"],
-      tipo_fornecedor: ["fornecedor", "arquiteto"],
+      tipo_fornecedor: ["fornecedor", "arquiteto", "tecnico"],
       tipo_projeto_item: ["produto", "servico", "mao_de_obra", "adicional"],
     },
   },
