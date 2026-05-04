@@ -41,6 +41,8 @@ const PortalParceiros = () => {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["portal_parceiros", user?.email],
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data: forn } = await supabase
         .from("fornecedores")
@@ -294,30 +296,105 @@ const PortalParceiros = () => {
 
         {data.fornecedor.tipo === "arquiteto" && (
           <TabsContent value="rt" className="space-y-4">
-            <div className="border border-border rounded overflow-hidden">
-              <table className="w-full text-xs">
-                <thead><tr className="bg-secondary/60">
-                  <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
-                  <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
-                  <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                </tr></thead>
-                <tbody>
-                  {(data?.parcelas ?? []).filter(p => p.projeto_id === selectedProjeto).map(p => (
-                    <tr key={p.id} className="border-b border-border last:border-b-0">
-                      <td className="px-2.5 py-1.5">{p.descricao}</td>
-                      <td className="px-2.5 py-1.5 text-right font-medium">{fmt(p.valor)}</td>
-                      <td className="px-2.5 py-1.5 text-right">{new Date(p.data_vencimento).toLocaleDateString("pt-BR")}</td>
-                      <td className="px-2.5 py-1.5 text-center">
-                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${p.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
-                          {p.status === "pago" ? "Pago" : "Pendente"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              const projComissoes = (data?.comissoes ?? [])
+                .filter((c: any) => c.projeto_id === selectedProjeto);
+              const projRtTotal = projComissoes.reduce(
+                (s, c: any) => s + (Number(c.valor) || 0), 0);
+              const projRtPago = projComissoes.reduce(
+                (s, c: any) => c.status === "pago"
+                  ? s + (Number(c.valor) || 0) : s, 0);
+              const projRtPendente = projRtTotal - projRtPago;
+
+              return (
+                <>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-card border border-border rounded-xl p-3 text-center">
+                      <p className="text-[10px] uppercase text-muted-foreground">RT Total</p>
+                      <p className="text-lg font-black text-foreground">{fmt(projRtTotal)}</p>
+                    </div>
+                    <div className="bg-card border border-border rounded-xl p-3 text-center">
+                      <p className="text-[10px] uppercase text-muted-foreground">Pago</p>
+                      <p className="text-lg font-black text-success">{fmt(projRtPago)}</p>
+                    </div>
+                    <div className="bg-card border border-border rounded-xl p-3 text-center">
+                      <p className="text-[10px] uppercase text-muted-foreground">Pendente</p>
+                      <p className="text-lg font-black text-warning">{fmt(projRtPendente)}</p>
+                    </div>
+                  </div>
+
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                    Comissões
+                  </h4>
+                  {projComissoes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Nenhuma comissão registrada.
+                    </p>
+                  ) : (
+                    <div className="border border-border rounded-lg overflow-hidden mb-4">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-secondary/60">
+                            <th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+                            <th className="text-right px-3 py-2 border-b border-border">Valor</th>
+                            <th className="text-center px-3 py-2 border-b border-border">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {projComissoes.map((c: any) => (
+                            <tr key={c.id} className="border-b border-border last:border-b-0">
+                              <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
+                                  {c.status === "pago" ? "Pago" : "Pendente"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                    Parcelas Definidas
+                  </h4>
+                  {data.parcelas.filter(p => p.projeto_id === selectedProjeto).length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4 bg-secondary/20 rounded">
+                      Nenhuma parcela definida ainda. As parcelas são definidas pelo administrador.
+                    </p>
+                  ) : (
+                    <div className="border border-border rounded overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-secondary/60">
+                            <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
+                            <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
+                            <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
+                            <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data?.parcelas ?? []).filter(p => p.projeto_id === selectedProjeto).map(p => (
+                            <tr key={p.id} className="border-b border-border last:border-b-0">
+                              <td className="px-2.5 py-1.5">{p.descricao}</td>
+                              <td className="px-2.5 py-1.5 text-right font-medium">{fmt(p.valor)}</td>
+                              <td className="px-2.5 py-1.5 text-right">{new Date(p.data_vencimento).toLocaleDateString("pt-BR")}</td>
+                              <td className="px-2.5 py-1.5 text-center">
+                                <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${p.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
+                                  {p.status === "pago" ? "Pago" : "Pendente"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </TabsContent>
         )}
 
@@ -527,9 +604,13 @@ const PortalParceiros = () => {
             {iniciais}
           </div>
           <div>
-            <p className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
+            <button
+              onClick={() => {
+                setSelectedProjeto(null)
+              }}
+              className="text-[11px] text-slate-400 uppercase tracking-widest font-medium hover:text-white transition-colors">
               INFINIT NETWORK
-            </p>
+            </button>
             <h1 className="text-sm font-bold text-white">
               Olá, {primeiroNome} 👋
             </h1>
