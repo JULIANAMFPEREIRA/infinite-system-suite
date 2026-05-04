@@ -277,7 +277,7 @@ const PortalParceiros = () => {
 
         <TabsContent value="cronograma" className="space-y-4">
           <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
-            {historico.map((h, i) => (
+            {(historico ?? []).map((h, i) => (
               <div key={h.id} className="relative">
                 <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-background ${i === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
                 <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ const PortalParceiros = () => {
                   <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
                 </tr></thead>
                 <tbody>
-                  {data.parcelas.filter(p => p.projeto_id === selectedProjeto).map(p => (
+                  {(data?.parcelas ?? []).filter(p => p.projeto_id === selectedProjeto).map(p => (
                     <tr key={p.id} className="border-b border-border last:border-b-0">
                       <td className="px-2.5 py-1.5">{p.descricao}</td>
                       <td className="px-2.5 py-1.5 text-right font-medium">{fmt(p.valor)}</td>
@@ -344,7 +344,7 @@ const PortalParceiros = () => {
               </div>
             )}
             <div className="space-y-3">
-              {visitas.map(v => (
+              {(visitas ?? []).map(v => (
                 <div key={v.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold">{new Date(v.data + "T00:00:00").toLocaleDateString("pt-BR")} às {v.hora}</span>
@@ -359,7 +359,7 @@ const PortalParceiros = () => {
 
         <TabsContent value="visitas" className="space-y-4">
           <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
-            {visitas.map(v => (
+            {(visitas ?? []).map(v => (
               <div key={v.id} className="relative">
                 <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
                 <div className="bg-card border border-border rounded-lg p-3 space-y-1.5">
@@ -373,7 +373,7 @@ const PortalParceiros = () => {
 
         <TabsContent value="imagens" className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {imagens.map(img => (
+            {(imagens ?? []).map(img => (
               <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
                 <img src={img.url} className="w-full h-full object-cover" />
               </a>
@@ -387,7 +387,7 @@ const PortalParceiros = () => {
             <button onClick={handleAddNota} disabled={!novaNota.trim()} className="px-3 self-start rounded bg-primary text-primary-foreground text-xs h-8 disabled:opacity-50">Salvar</button>
           </div>
           <div className="space-y-2">
-            {notas.filter(n => n.tipo === "anotacao").map(n => (
+            {(notas ?? []).filter(n => n.tipo === "anotacao").map(n => (
               <div key={n.id} className="bg-card border border-border rounded p-3">
                 <p className="text-xs text-foreground">{n.descricao}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</p>
@@ -460,7 +460,7 @@ const PortalParceiros = () => {
       <div className="space-y-4">
         <h2 className="text-sm font-bold">Meus Projetos</h2>
         <div className="grid grid-cols-1 gap-4">
-          {data.projetos.map((p: any) => (
+          {(data?.projetos ?? []).map((p: any) => (
             <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
               className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
               <div className="flex items-start justify-between gap-2">
@@ -488,7 +488,7 @@ const PortalParceiros = () => {
                 <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
               </div>
               {data.fornecedor.tipo === "arquiteto" && (() => {
-                const projComissoes = data.comissoes?.filter((c: any) => c.projeto_id === p.id) ?? [];
+                const projComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === p.id);
                 const projRtTotal = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
                 const projRtPago = projComissoes.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0);
                 if (projRtTotal === 0) return null;
