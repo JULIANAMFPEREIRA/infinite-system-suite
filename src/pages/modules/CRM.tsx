@@ -1474,6 +1474,50 @@ const CRM = () => {
 
   // Payment simulation state - now per orcamento
   const activeOrc = orcamentos?.find(o => o.id === activeOrcamentoId);
+  const projetoId = useMemo(() => (clienteProjetos ?? []).find((p: any) => p.orcamento_id === activeOrcamentoId)?.id, [clienteProjetos, activeOrcamentoId]);
+  const orcamentoAprovado = activeOrc?.aprovado;
+
+  const { data: parcelasParceiros = [], refetch: refetchParcelas } = useQuery({
+    queryKey: ["parcelas_parceiros", projetoId],
+    queryFn: async () => {
+      const { data } = await supabase.from("parcelas_parceiros").select("*").eq("projeto_id", projetoId!).order("data_vencimento");
+      return data ?? [];
+    },
+    enabled: !!projetoId && !!orcamentoAprovado
+  });
+
+  const handleAddParcela = async () => {
+    if (!novaParcela.parceiro_id || !novaParcela.valor) return;
+    const parceiro = [...tecnicos, ...(arquiteto ? [arquiteto] : [])].find(p => p.id === novaParcela.parceiro_id);
+    const { error } = await supabase.from("parcelas_parceiros").insert({
+      empresa_id: empresaId,
+      projeto_id: projetoId,
+      orcamento_id: activeOrcamentoId,
+      parceiro_id: novaParcela.parceiro_id,
+      parceiro_nome: parceiro?.nome ?? "",
+      tipo_parceiro: tecnicos.find(t => t.id === novaParcela.parceiro_id) ? "tecnico" : "arquiteto",
+      descricao: novaParcela.descricao,
+      valor: novaParcela.valor,
+      data_vencimento: novaParcela.data_vencimento,
+      status: "pendente"
+    });
+    if (error) { toast.error(error.message); return; }
+    refetchParcelas();
+    setShowAddParcela(false);
+    setNovaParcela({ parceiro_id: "", descricao: "", valor: 0, data_vencimento: "" });
+    toast.success("Parcela adicionada!");
+  };
+
+  const handlePagarParcela = async (id: string) => {
+    const { error } = await supabase.from("parcelas_parceiros").update({
+      status: "pago",
+      data_pagamento: new Date().toISOString().split("T")[0]
+    }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    refetchParcelas();
+    toast.success("Pagamento registrado!");
+  };
+
   const savedSim = (activeOrc?.simulacao_pagamento as any) ?? {};
   const [simCondicao, setSimCondicao] = useState<"avista" | "parcelado">(savedSim.condicao ?? "avista");
   const [simFormaPgto, setSimFormaPgto] = useState(savedSim.formaPagamento ?? "boleto");
