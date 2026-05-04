@@ -77,7 +77,7 @@ const toTitleCase = (str: string) =>
 const FinanceiroPagar = () => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
-  const { data: contas, isLoading } = useFinanceiroPagar();
+  const { data: contas, isLoading, refetch } = useFinanceiroPagar();
   const createConta = useCreateContaPagar();
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
@@ -199,8 +199,8 @@ const FinanceiroPagar = () => {
     setFornecedorId(c.fornecedor_id ?? ""); 
     setProjetoId(c.projeto_id ?? ""); 
     setCategoriaId(c.categoria_id ?? "");
-    setOrigem(c.origem || "manual");
-    setTipo(c.tipo_manual || inferTipo(c.descricao) || "");
+    setOrigem(c.origem ?? "manual");
+    setTipo(c.tipo_manual ?? "");
     // Parse descRetirada from description if it's a retirada
     const catName = getCatName(c.categoria_id);
     const rawDesc = c.descricao ?? "";
@@ -271,6 +271,11 @@ const FinanceiroPagar = () => {
 
       if (editId) {
         await updateConta.mutateAsync({ id: editId, ...payload } as any);
+        // Invalidar e refazer a query
+        await qc.invalidateQueries({
+          queryKey: ["financeiro_pagar"]
+        });
+        refetch();
         toast.success("Conta atualizada");
       } else {
         await createConta.mutateAsync({ ...payload, status: "pendente" } as any);
@@ -293,6 +298,13 @@ const FinanceiroPagar = () => {
         data_pagamento: baixaData,
         observacao: baixaForma ? `Forma: ${baixaForma}${baixaObs ? ` | ${baixaObs}` : ""}` : (baixaObs || null)
       } as any);
+
+      // Invalidar e refazer a query
+      await qc.invalidateQueries({
+        queryKey: ["financeiro_pagar"]
+      });
+      refetch();
+
       toast.success("Pago!");
       setShowBaixa(false);
     } catch (err: any) { toast.error(err.message); }
