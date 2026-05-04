@@ -47,7 +47,7 @@ const PortalParceiros = () => {
         .eq("email", user!.email!)
         .maybeSingle();
 
-      if (!forn) return { fornecedor: null, projetos: [], parcelas: [] };
+      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [] };
 
       let projetos = [];
       if (forn.tipo === "arquiteto") {
@@ -56,6 +56,7 @@ const PortalParceiros = () => {
           .select("id, nome, status, endereco_obra, data_inicio, data_previsao, cliente_id, empresa_id, clientes(nome)")
           .eq("arquiteto_id", forn.id)
           .eq("deletado", false)
+          .neq("status", "cancelado")
           .order("created_at", { ascending: false });
         projetos = p ?? [];
       } else {
@@ -86,7 +87,22 @@ const PortalParceiros = () => {
         parcelas = parc ?? [];
       }
 
-      return { fornecedor: forn, projetos, parcelas };
+      let comissoes = [];
+      if (forn.tipo === "arquiteto") {
+        const { data: com } = await supabase
+          .from("comissoes")
+          .select("*, projetos(nome)")
+          .eq("fornecedor_id", forn.id)
+          .eq("deletado", false);
+        comissoes = com ?? [];
+      }
+
+      return { 
+        fornecedor: forn, 
+        projetos, 
+        parcelas, 
+        comissoes 
+      };
     },
     enabled: !!user?.email
   });
@@ -355,22 +371,28 @@ const PortalParceiros = () => {
   const renderList = () => (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {data.fornecedor.tipo === "arquiteto" ? (
-          <>
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total RT</p>
-              <p className="text-xl font-bold">{fmt(data.parcelas.reduce((s, p) => s + p.valor, 0))}</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pago</p>
-              <p className="text-xl font-bold text-success">{fmt(data.parcelas.filter(p => p.status === "pago").reduce((s, p) => s + p.valor, 0))}</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pendente</p>
-              <p className="text-xl font-bold text-warning">{fmt(data.parcelas.filter(p => p.status !== "pago").reduce((s, p) => s + p.valor, 0))}</p>
-            </div>
-          </>
-        ) : data.fornecedor.tipo === "tecnico" ? (
+        {data.fornecedor.tipo === "arquiteto" ? (() => {
+          const rtTotal = data.comissoes?.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0) ?? 0;
+          const rtPago = data.comissoes?.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0) ?? 0;
+          const rtPendente = rtTotal - rtPago;
+
+          return (
+            <>
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total RT</p>
+                <p className="text-xl font-bold">{fmt(rtTotal)}</p>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pago</p>
+                <p className="text-xl font-bold text-success">{fmt(rtPago)}</p>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pendente</p>
+                <p className="text-xl font-bold text-warning">{fmt(rtPendente)}</p>
+              </div>
+            </>
+          );
+        })() : data.fornecedor.tipo === "tecnico" ? (
           <>
             <div className="bg-card border border-border rounded-xl p-4 shadow-sm col-span-1">
               <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total Projetos</p>
