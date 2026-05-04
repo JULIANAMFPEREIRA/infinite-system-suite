@@ -73,15 +73,14 @@ const Dashboard = () => {
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
       const [receber, pagar, projetos, clientes, visitas, compras] = await Promise.all([
-        supabase.from("financeiro_receber").select("valor, valor_recebido, status, data_vencimento, cliente_id, projeto_id, descricao").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("financeiro_pagar").select("valor, status, data_vencimento").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("projetos").select("id, status, nome, venda_total, custo_real, custo_previsto, lucro_real, cliente_id").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("clientes").select("id, nome").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("visitas_tecnicas").select("id, data, hora, descricao, status_visita, projeto_id, google_event_id").eq("deletado", false).then(r => r.data ?? []),
-        supabase.from("compras").select("id, valor_total, data_compra, status").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("financeiro_receber").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("financeiro_pagar").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("projetos").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("clientes").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("visitas_tecnicas").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("compras").select("*").eq("deletado", false).then(r => r.data ?? []),
       ]);
 
-        
       // Buscar orçamentos aprovados com frete/imposto
       const { data: orcAprovados } = await supabase
         .from("crm_orcamentos")
