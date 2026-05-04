@@ -399,7 +399,7 @@ const PortalParceiros = () => {
     </div>
   );};
 
-  const renderList = () => (
+  const renderProjectList = () => (
     <div className="space-y-6 animate-fade-in">
       {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = data.comissoes?.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0) ?? 0;
@@ -519,39 +519,57 @@ const PortalParceiros = () => {
   const iniciais = data.fornecedor.nome.split(" ").slice(0, 2).map((n: string) => n[0]?.toUpperCase()).join("");
   const primeiroNome = data.fornecedor.nome.split(" ")[0];
 
+  const header = (
+    <header className="border-b border-border bg-gradient-to-r from-slate-900 to-slate-800 sticky top-0 z-10">
+      <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+            {iniciais}
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
+              INFINIT NETWORK
+            </p>
+            <h1 className="text-sm font-bold text-white">
+              Olá, {primeiroNome} 👋
+            </h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
+            {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
+          </span>
+          {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
+          <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
+            <LogOut size={14} /> Sair
+          </button>
+        </div>
+      </div>
+      <div className="max-w-4xl mx-auto px-4 pb-3">
+        <p className="text-[11px] text-slate-500 italic">
+          "Construindo juntos, crescendo juntos."
+        </p>
+      </div>
+    </header>
+  );
+
+  const footer = (
+    <footer className="mt-8 px-4 pb-6 text-center space-y-1">
+      <p className="text-xs font-bold text-muted-foreground">
+        INFINIT NETWORK
+      </p>
+      <p className="text-[10px] text-muted-foreground">
+        Sistema Inteligente de Gestão Comercial e Projetos
+      </p>
+      <p className="text-[10px] text-muted-foreground italic mt-2">
+        "O Senhor é o meu pastor, nada me faltará." — Salmos 23
+      </p>
+    </footer>
+  );
+
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="border-b border-border bg-gradient-to-r from-slate-900 to-slate-800 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-              {iniciais}
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
-                INFINIT NETWORK
-              </p>
-              <h1 className="text-sm font-bold text-white">
-                Olá, {primeiroNome} 👋
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
-              {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
-            </span>
-            {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
-            <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
-              <LogOut size={14} /> Sair
-            </button>
-          </div>
-        </div>
-        <div className="max-w-4xl mx-auto px-4 pb-3">
-          <p className="text-[11px] text-slate-500 italic">
-            "Construindo juntos, crescendo juntos."
-          </p>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      {header}
       <main className="max-w-4xl mx-auto p-4">
         {selectedProjeto && activeProjeto
           ? renderProjectDetail()
@@ -569,20 +587,10 @@ const PortalParceiros = () => {
               </button>
             </div>
           )
-          : renderList()
+          : renderProjectList()
         }
       </main>
-      <footer className="mt-8 px-4 pb-6 text-center space-y-1">
-        <p className="text-xs font-bold text-muted-foreground">
-          INFINIT NETWORK
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          Sistema Inteligente de Gestão Comercial e Projetos
-        </p>
-        <p className="text-[10px] text-muted-foreground italic mt-2">
-          "O Senhor é o meu pastor, nada me faltará." — Salmos 23
-        </p>
-      </footer>
+      {footer}
     </div>
   );
 };
