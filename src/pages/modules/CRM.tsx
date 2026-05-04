@@ -413,7 +413,7 @@ const CRM = () => {
   const { data: produtosCatalogo } = useQuery({
     queryKey: ["produtos_autocomplete_crm", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda, cor").eq("deletado", false).order("nome");
+      const { data, error } = await supabase.from("produtos").select("id, nome, preco_custo, preco_venda, cor").eq("deletado", false).order("nome", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -426,7 +426,7 @@ const CRM = () => {
   const { data: allProjetos } = useQuery({
     queryKey: ["all_projetos_kanban", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").eq("deletado", false).neq("status", "cancelado").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("projetos").select("id, nome, status, venda_total, cliente_id").eq("deletado", false).neq("status", "cancelado").order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -436,7 +436,7 @@ const CRM = () => {
   const { data: interacoes, refetch: refetchInteracoes } = useQuery({
     queryKey: ["crm_interacoes", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
