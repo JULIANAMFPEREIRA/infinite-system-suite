@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, User, LogOut, Menu, Link2, Copy, Check } from "lucide-react";
+ import { Bell, User, LogOut, Menu, Link2, Copy, Check, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useFinanceiroPagar, useFinanceiroReceber } from "@/hooks/useFinanceiro";
@@ -108,10 +108,23 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
           )}
         </div>
         <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-border">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-medium text-foreground">{profile?.full_name ?? "Usuário"}</p>
-            <p className="text-[11px] text-muted-foreground">{roles[0] ?? "—"}</p>
-          </div>
+           <div className="flex flex-col items-end hidden sm:flex">
+             <div className="text-right">
+               <p className="text-xs font-medium text-foreground leading-tight">{profile?.full_name ?? "Usuário"}</p>
+               <p className="text-[11px] text-muted-foreground leading-tight">{roles[0] ?? "—"}</p>
+             </div>
+             {roles.includes('admin') && (
+               <a
+                 href="/portal/parceiro"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:border-primary/40"
+               >
+                 <ExternalLink size={12} />
+                 Portal
+               </a>
+             )}
+           </div>
           <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center border border-primary/30">
             <User size={14} className="text-primary" />
           </div>
