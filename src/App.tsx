@@ -80,8 +80,8 @@ const App = () => (
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
-            <Route path="/portal/parceiro" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RouteRoute>} />
-            <Route path="/portal/tecnico" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RouteRoute>} />
+            <Route path="/portal/parceiro" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
+            <Route path="/portal/tecnico" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<ModuleRoute module="crm"><CRM /></ModuleRoute>} />
