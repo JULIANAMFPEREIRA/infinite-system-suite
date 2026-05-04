@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload } from "lucide-react";
+ import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
@@ -128,6 +128,12 @@ const FinanceiroPagar = () => {
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
   const [baixaForma, setBaixaForma] = useState("");
   const [baixaObs, setBaixaObs] = useState("");
+
+  // Parcelamento
+  const [showParcelar, setShowParcelar] = useState(false);
+  const [contaParaParcelar, setContaParaParcelar] = useState<any>(null);
+  const [numParcelas, setNumParcelas] = useState(2);
+  const [parcelasForm, setParcelasForm] = useState<any[]>([]);
 
   const [detailConta, setDetailConta] = useState<any>(null);
 
@@ -309,6 +315,8 @@ const FinanceiroPagar = () => {
 
   const handleBaixa = async () => {
     if (!baixaId) return;
+    const contaOriginal = (contas ?? []).find((c: any) => c.id === baixaId);
+    
     try {
       await updateConta.mutateAsync({ 
         id: baixaId, 
@@ -321,6 +329,26 @@ const FinanceiroPagar = () => {
       await qc.invalidateQueries({
         queryKey: ["financeiro_pagar"]
       });
+
+      // Se for comissão, sincronizar com parcelas_parceiros
+      if (contaOriginal?.origem === "comissao") {
+        const hoje = new Date().toISOString().split("T")[0];
+        await supabase
+          .from("parcelas_parceiros")
+          .update({
+            status: "pago",
+            data_pagamento: hoje
+          })
+          .eq("projeto_id", contaOriginal.projeto_id)
+          .eq("parceiro_id", contaOriginal.fornecedor_id)
+          .eq("valor", contaOriginal.valor)
+          .eq("data_vencimento", contaOriginal.data_vencimento);
+          
+        await qc.invalidateQueries({
+          queryKey: ["parcelas_parceiros"]
+        });
+      }
+
       refetch();
 
       toast.success("Pago!");
@@ -387,6 +415,112 @@ const FinanceiroPagar = () => {
   const getCatName = (catId: string | null) => {
     if (!catId || !categorias) return null;
     return categorias.find(c => c.id === catId)?.nome ?? null;
+  };
+
+  const openParcelar = (conta: any) => {
+    setContaParaParcelar(conta);
+    setNumParcelas(2);
+    const valorParcela = (conta.valor ?? 0) / 2;
+    const dataBase = new Date(conta.data_vencimento || new Date());
+    
+    const initialParcelas = Array.from({ length: 2 }).map((_, i) => {
+      const data = new Date(dataBase);
+      data.setMonth(data.getMonth() + i);
+      return {
+        valor: Number(valorParcela.toFixed(2)),
+        data_vencimento: data.toISOString().split("T")[0]
+      };
+    });
+    
+    setParcelasForm(initialParcelas);
+    setShowParcelar(true);
+  };
+
+  const handleNumParcelasChange = (n: number) => {
+    setNumParcelas(n);
+    if (!contaParaParcelar) return;
+    
+    const valorParcela = (contaParaParcelar.valor ?? 0) / n;
+    const dataBase = new Date(contaParaParcelar.data_vencimento || new Date());
+    
+    const newParcelas = Array.from({ length: n }).map((_, i) => {
+      const data = new Date(dataBase);
+      data.setMonth(data.getMonth() + i);
+      return {
+        valor: Number(valorParcela.toFixed(2)),
+        data_vencimento: data.toISOString().split("T")[0]
+      };
+    });
+    
+    setParcelasForm(newParcelas);
+  };
+
+  const handleConfirmarParcelamento = async () => {
+    if (!contaParaParcelar || !empresaId) return;
+    
+    try {
+      const totalParcelas = parcelasForm.length;
+      const fornecedorNome = (contaParaParcelar.fornecedores as any)?.nome ?? "Parceiro";
+
+      // 1. Deletar original
+      const { error: delErr } = await supabase
+        .from("financeiro_pagar")
+        .delete()
+        .eq("id", contaParaParcelar.id);
+      
+      if (delErr) throw delErr;
+
+      // 2. Inserir novas em financeiro_pagar
+      const parcelasPagar = parcelasForm.map((p, i) => ({
+        empresa_id: empresaId,
+        projeto_id: contaParaParcelar.projeto_id,
+        fornecedor_id: contaParaParcelar.fornecedor_id,
+        categoria_id: contaParaParcelar.categoria_id,
+        comissao_id: contaParaParcelar.comissao_id,
+        descricao: `Parcela ${i + 1}/${totalParcelas} — ${contaParaParcelar.descricao}`,
+        valor: p.valor,
+        data_vencimento: p.data_vencimento,
+        status: "pendente" as "pendente",
+        origem: "comissao",
+        tipo_manual: "comissao"
+      }));
+
+      const { error: insErr } = await supabase
+        .from("financeiro_pagar")
+        .insert(parcelasPagar);
+      
+      if (insErr) throw insErr;
+
+      // 3. Inserir em parcelas_parceiros
+      const parcelasParceiros = parcelasForm.map((p, i) => ({
+        empresa_id: empresaId,
+        projeto_id: contaParaParcelar.projeto_id,
+        parceiro_id: contaParaParcelar.fornecedor_id,
+        parceiro_nome: fornecedorNome,
+        tipo_parceiro: "arquiteto",
+        descricao: `Parcela ${i + 1}/${totalParcelas} — RT`,
+        valor: p.valor,
+        data_vencimento: p.data_vencimento,
+        status: "pendente" as "pendente"
+      }));
+
+      const { error: insParErr } = await supabase
+        .from("parcelas_parceiros")
+        .insert(parcelasParceiros);
+      
+      if (insParErr) throw insParErr;
+
+      // 4. Invalidações
+      await qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+      await qc.invalidateQueries({ queryKey: ["parcelas_parceiros"] });
+      refetch();
+      
+      toast.success("Comissão parcelada com sucesso!");
+      setShowParcelar(false);
+      setContaParaParcelar(null);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao parcelar");
+    }
   };
 
   return (
@@ -666,6 +800,11 @@ const FinanceiroPagar = () => {
                               <Check size={14} />
                             </button>
                           )}
+                          {c.origem === "comissao" && c.status === "pendente" && (
+                            <button onClick={() => openParcelar(c)} title="Parcelar" className="p-1.5 rounded-md hover:bg-purple-500/15 text-muted-foreground hover:text-purple-500 transition-colors">
+                              <Layers size={14} />
+                            </button>
+                          )}
                           <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
                             <Search size={14} />
                           </button>
@@ -717,6 +856,91 @@ const FinanceiroPagar = () => {
           <DialogFooter>
             <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
             <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showParcelar} onOpenChange={setShowParcelar}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Parcelar Comissão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Valor Total</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={fmtBRL(contaParaParcelar?.valor ?? 0)} 
+                  className="w-full h-9 px-3 text-sm bg-muted border border-border rounded cursor-not-allowed" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Número de Parcelas</label>
+                <select 
+                  value={numParcelas} 
+                  onChange={(e) => handleNumParcelasChange(Number(e.target.value))}
+                  className="w-full h-9 px-3 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}x</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+              {parcelasForm.map((p, i) => (
+                <div key={i} className="flex items-end gap-2 p-2 rounded border border-border bg-muted/30">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase font-semibold">Parcela {i + 1}/{numParcelas}</label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5 ml-1">Valor</span>
+                        <input 
+                          type="number" 
+                          value={p.valor} 
+                          onChange={(e) => {
+                            const newForm = [...parcelasForm];
+                            newForm[i].valor = Number(e.target.value);
+                            setParcelasForm(newForm);
+                          }}
+                          className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5 ml-1">Vencimento</span>
+                        <input 
+                          type="date" 
+                          value={p.data_vencimento} 
+                          onChange={(e) => {
+                            const newForm = [...parcelasForm];
+                            newForm[i].data_vencimento = e.target.value;
+                            setParcelasForm(newForm);
+                          }}
+                          className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <button 
+              onClick={() => setShowParcelar(false)} 
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleConfirmarParcelamento} 
+              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded hover:brightness-110 transition-all btn-press"
+            >
+              Confirmar Parcelamento
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
