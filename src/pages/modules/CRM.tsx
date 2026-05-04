@@ -42,7 +42,7 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
   const { data: tecnicos } = useQuery({
     queryKey: ["tecnicos_select", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -375,9 +375,26 @@ const CRM = () => {
   const { data: clientes, isLoading, isError } = useQuery({
     queryKey: ["clientes", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("*, fornecedores:arquiteto_id(nome)").eq("deletado", false).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const { data: clientesData, error: clientesError } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("deletado", false)
+        .order("created_at", { ascending: false, nullsFirst: false });
+
+      if (clientesError) throw clientesError;
+
+      // Buscar fornecedores (arquitetos) separadamente para evitar erro de join
+      const { data: fornecedoresData } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("deletado", false);
+
+      const result = clientesData?.map(cliente => ({
+        ...cliente,
+        fornecedores: fornecedoresData?.find(f => f.id === cliente.arquiteto_id) || null
+      }));
+
+      return result;
     },
     enabled: !!empresaId,
   });
@@ -386,7 +403,7 @@ const CRM = () => {
   const { data: allOrcamentos } = useQuery({
     queryKey: ["all_crm_orcamentos", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true });
+      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
