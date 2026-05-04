@@ -235,12 +235,16 @@ const PortalParceiros = () => {
     if (!activeProjeto) return null;
     return (
       <div className="space-y-5 animate-fade-in">
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 mb-5 space-y-4">
-          <button onClick={() => setSelectedProjeto(null)}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors">
-            <ChevronLeft size={14} />
-            Voltar aos projetos
+        <div className="mb-4">
+          <button
+            onClick={() => setSelectedProjeto(null)}
+            className="flex items-center gap-1.5
+              text-sm text-primary hover:underline
+              font-medium">
+            ← Voltar aos projetos
           </button>
+        </div>
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 mb-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-white">
