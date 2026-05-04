@@ -73,6 +73,7 @@ const Configuracoes = () => {
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
+  const [isUploading, setIsUploading] = useState(false);
 
   // --- Data hooks ---
   const { data: empresa } = useQuery({
@@ -88,10 +89,11 @@ const Configuracoes = () => {
   const { data: users, refetch: refetchUsers } = useQuery({
     queryKey: ["profiles_config", empresaId],
     queryFn: async () => {
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, empresa_id").eq("empresa_id", empresaId!);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, empresa_id, is_active").eq("empresa_id", empresaId!);
       const { data: allRoles } = await supabase.from("user_roles").select("user_id, role").eq("empresa_id", empresaId!);
       return (profiles ?? []).map(p => ({
         ...p,
+        is_active: p.is_active !== false,
         roles: (allRoles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
       }));
     },
