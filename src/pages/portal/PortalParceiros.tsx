@@ -390,90 +390,171 @@ const PortalParceiros = () => {
 
   const renderList = () => (
     <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {data.fornecedor.tipo === "arquiteto" ? (() => {
-          const rtTotal = data.comissoes?.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0) ?? 0;
-          const rtPago = data.comissoes?.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0) ?? 0;
-          const rtPendente = rtTotal - rtPago;
+      {data.fornecedor.tipo === "arquiteto" ? (() => {
+        const rtTotal = data.comissoes?.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0) ?? 0;
+        const rtPago = data.comissoes?.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0) ?? 0;
+        const rtPendente = rtTotal - rtPago;
 
-          return (
-            <>
-              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total RT</p>
-                <p className="text-xl font-bold">{fmt(rtTotal)}</p>
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -translate-y-6 translate-x-6" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total RT</p>
+              <p className="text-3xl font-black text-white tracking-tight">{fmt(rtTotal)}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-slate-700">
+                  <div className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: rtTotal > 0 ? `${Math.min((rtPago / rtTotal) * 100, 100)}%` : "0%" }} />
+                </div>
+                <span className="text-[10px] text-slate-400">{rtTotal > 0 ? Math.round((rtPago / rtTotal) * 100) : 0}%</span>
               </div>
-              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pago</p>
-                <p className="text-xl font-bold text-success">{fmt(rtPago)}</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pendente</p>
-                <p className="text-xl font-bold text-warning">{fmt(rtPendente)}</p>
-              </div>
-            </>
-          );
-        })() : data.fornecedor.tipo === "tecnico" ? (
-          <>
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm col-span-1">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total Projetos</p>
-              <p className="text-xl font-bold">{data.projetos.length}</p>
+              <p className="text-[10px] text-slate-500 mt-1">{data.comissoes?.length ?? 0} projeto(s) com RT</p>
             </div>
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm col-span-1">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Visitas</p>
-              <p className="text-xl font-bold text-primary">{visitas?.length ?? 0}</p>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recebido</p>
+                <div className="w-8 h-8 rounded-lg bg-success/15 flex items-center justify-center">
+                  <CheckCircle2 size={16} className="text-success" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-success">{fmt(rtPago)}</p>
+              <p className="text-[11px] text-muted-foreground mt-2">Já depositado</p>
             </div>
-          </>
-        ) : (
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pendente</p>
+                <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
+                  <Hourglass size={16} className="text-warning" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-warning">{fmt(rtPendente)}</p>
+              <p className="text-[11px] text-muted-foreground mt-2">A receber</p>
+            </div>
+          </div>
+        );
+      })() : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total Projetos</p>
             <p className="text-xl font-bold">{data.projetos.length}</p>
           </div>
-        )}
-      </div>
+          {data.fornecedor.tipo === "tecnico" && (
+            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Visitas</p>
+              <p className="text-xl font-bold text-primary">{visitas?.length ?? 0}</p>
+            </div>
+          )}
+        </div>
+      )}
       <div className="space-y-4">
         <h2 className="text-sm font-bold">Meus Projetos</h2>
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4">
           {data.projetos.map((p: any) => (
-            <button key={p.id} onClick={() => setSelectedProjeto(p.id)} className="w-full text-left bg-card border border-border rounded-xl p-4 shadow-sm hover:border-primary/50 transition-all flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">{p.nome}</p>
-                <p className="text-[11px] text-muted-foreground">{p.clientes?.nome}</p>
+            <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+              className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                  {p.clientes?.nome && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                  )}
+                  {p.endereco_obra && (
+                    <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                    {statusLabel[p.status] ?? p.status}
+                  </span>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>{statusLabel[p.status] ?? p.status}</span>
-                <ChevronRight size={16} className="text-muted-foreground" />
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>Progresso</span>
+                  <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+                </div>
+                <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
               </div>
-            </button>
+              {data.fornecedor.tipo === "arquiteto" && (() => {
+                const projComissoes = data.comissoes?.filter((c: any) => c.projeto_id === p.id) ?? [];
+                const projRtTotal = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+                const projRtPago = projComissoes.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0);
+                if (projRtTotal === 0) return null;
+                return (
+                  <div className="pt-2 border-t border-border/60 grid grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">RT Total</p>
+                      <p className="font-bold text-foreground">{fmt(projRtTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">Pago</p>
+                      <p className="font-bold text-success">{fmt(projRtPago)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">Pendente</p>
+                      <p className="font-bold text-warning">{fmt(projRtTotal - projRtPago)}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           ))}
         </div>
       </div>
     </div>
   );
 
+  const iniciais = data.fornecedor.nome.split(" ").slice(0, 2).map((n: string) => n[0]?.toUpperCase()).join("");
+  const primeiroNome = data.fornecedor.nome.split(" ")[0];
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <header className="border-b border-border bg-gradient-to-r from-slate-900 to-slate-800 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm">
-              {data.fornecedor.nome.split(" ").slice(0, 2).map((n: string) => n[0]?.toUpperCase()).join("")}
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+              {iniciais}
             </div>
             <div>
-              <h1 className="text-sm font-bold">Olá, {data.fornecedor.nome.split(" ")[0]}</h1>
-              <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+              <p className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
+                INFINIT NETWORK
+              </p>
+              <h1 className="text-sm font-bold text-white">
+                Olá, {primeiroNome} 👋
+              </h1>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
+              {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
+            </span>
             {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
-            <button onClick={handleLogout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+            <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
               <LogOut size={14} /> Sair
             </button>
           </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-4 pb-3">
+          <p className="text-[11px] text-slate-500 italic">
+            "Construindo juntos, crescendo juntos."
+          </p>
         </div>
       </header>
       <main className="max-w-4xl mx-auto p-4">
         {selectedProjeto ? renderDetail() : renderList()}
       </main>
+      <footer className="mt-8 px-4 pb-6 text-center space-y-1">
+        <p className="text-xs font-bold text-muted-foreground">
+          INFINIT NETWORK
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          Sistema Inteligente de Gestão Comercial e Projetos
+        </p>
+        <p className="text-[10px] text-muted-foreground italic mt-2">
+          "O Senhor é o meu pastor, nada me faltará." — Salmos 23
+        </p>
+      </footer>
     </div>
   );
 };
