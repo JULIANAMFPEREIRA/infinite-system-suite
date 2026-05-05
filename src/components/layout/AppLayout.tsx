@@ -19,7 +19,7 @@ const AppLayout = () => {
       <AppSidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
       <div className="md:ml-56 flex flex-col min-h-screen transition-all duration-300">
         <TopBar onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 p-3 md:p-5 overflow-auto">
+        <main className="flex-1 p-3 md:p-5 pt-5 md:pt-7 overflow-auto">
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>
