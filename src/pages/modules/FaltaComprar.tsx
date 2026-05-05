@@ -64,19 +64,29 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
       queryFn: async () => {
         const { data: orcs } = await supabase
           .from("crm_orcamentos")
-          .select("id, nome, cliente_id, frete, imposto, clientes(nome), projetos!inner(id, status, deletado)")
+          .select("id, nome, cliente_id, frete, imposto, clientes(nome)")
           .eq("empresa_id", empresaId!)
           .eq("aprovado", true)
 
         if (!orcs?.length) return []
 
-        const validOrcs = (orcs ?? [])
-          .filter(o => (o as any).projetos?.deletado === false)
-          .map(o => ({
+        // Buscar projetos separadamente
+        const { data: projetosData } = await supabase
+          .from("projetos")
+          .select("id, orcamento_id, status, deletado")
+          .eq("empresa_id", empresaId!)
+          .eq("deletado", false)
+
+        // Cruzar manualmente
+        const validOrcs = (orcs ?? []).map(o => {
+          const proj = (projetosData ?? [])
+            .find(p => p.orcamento_id === o.id)
+          return {
             ...o,
-            projeto_id: (o as any).projetos?.id,
-            projeto_status: (o as any).projetos?.status
-          }))
+            projeto_id: proj?.id ?? null,
+            projeto_status: proj?.status ?? null
+          }
+        }).filter(o => o.projeto_id !== null)
 
         const orcIds = validOrcs.map(o => o.id)
         const { data: todosItens } = await supabase
@@ -130,7 +140,8 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             inadimplenteProjeto,
           }
         })
-        .filter(r => r.faltaComprar > 0)
+        // Mostrar todos os projetos aprovados, não apenas os com falta comprar > 0
+        // .filter(r => r.faltaComprar > 0)
         .sort((a, b) => b.faltaComprar - a.faltaComprar)
      },
      enabled: !!empresaId,
