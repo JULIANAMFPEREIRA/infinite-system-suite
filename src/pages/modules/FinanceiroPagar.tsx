@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-  import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors } from "lucide-react";
+   import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors, RotateCcw } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
@@ -461,6 +461,49 @@ const FinanceiroPagar = () => {
   const handleAbrirParcelar = (c: any) => openParcelar(c);
   const handleVisualizar = (c: any) => setDetailConta(c);
 
+  const handleReverterPagamento = async (c: any) => {
+    const confirmar = window.confirm(
+      `Reverter pagamento de ${fmtBRL(c.valor)} para PENDENTE?`
+    )
+    if (!confirmar) return
+
+    try {
+      await supabase
+        .from("financeiro_pagar")
+        .update({
+          status: "pendente",
+          data_pagamento: null,
+        })
+        .eq("id", c.id)
+
+      // Se for comissão, reverter também em comissoes e parcelas_parceiros
+      if (c.comissao_id) {
+        await supabase
+          .from("comissoes")
+          .update({ status: "pendente" })
+          .eq("id", c.comissao_id)
+
+        await supabase
+          .from("parcelas_parceiros")
+          .update({
+            status: "pendente",
+            data_pagamento: null
+          })
+          .eq("parceiro_id", c.fornecedor_id)
+          .eq("projeto_id", c.projeto_id)
+          .eq("valor", c.valor)
+      }
+
+      toast.success("Pagamento revertido para pendente!")
+      qc.invalidateQueries({
+        queryKey: ["financeiro_pagar"]
+      })
+      refetch()
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reverter pagamento")
+    }
+  }
+
   const handleConfirmarParcelamento = async () => {
     if (!contaParaParcelar || !empresaId) return;
     
@@ -835,7 +878,18 @@ const FinanceiroPagar = () => {
                             <Pencil size={14} />
                           </button>
 
-                          {/* 6. Lixeira */}
+                           {/* Reverter pagamento */}
+                           {c.status === "pago" && (
+                             <button
+                               onClick={() => handleReverterPagamento(c)}
+                               title="Reverter para pendente"
+                               className="p-1.5 rounded hover:bg-warning/10 text-warning transition-colors"
+                             >
+                               <RotateCcw size={14} />
+                             </button>
+                           )}
+
+                           {/* 6. Lixeira */}
                           <button
                             onClick={() => handleExcluir(c.id)}
                             title="Excluir"
