@@ -12,7 +12,7 @@ const FaltaComprar = () => {
   const [busca, setBusca] = useState("")
   const hoje = new Date().toISOString().split("T")[0]
 
-  const { data: receberRaw } = useQuery({
+  const { data: receberRaw, isLoading: isLoadingReceber } = useQuery({
     queryKey: ["fc_receber", empresaId],
     queryFn: async () => {
       const { data } = await supabase
@@ -44,8 +44,8 @@ const FaltaComprar = () => {
     return s
   }, 0)
 
-  const { data: projetos, isLoading } = useQuery({
-    queryKey: ["falta_comprar", empresaId],
+  const { data: projetos, isLoading: isLoadingProjetos } = useQuery({
+    queryKey: ["falta_comprar", empresaId, receberRaw],
     queryFn: async () => {
       const { data: orcs } = await supabase
         .from("crm_orcamentos")
@@ -117,8 +117,10 @@ const FaltaComprar = () => {
       .filter(r => r.faltaComprar > 0)
       .sort((a, b) => b.faltaComprar - a.faltaComprar)
     },
-    enabled: !!empresaId,
+    enabled: !!empresaId && !isLoadingReceber && receberRaw !== undefined,
   })
+
+  const isLoading = isLoadingReceber || isLoadingProjetos
 
   const filtered = useMemo(() => {
     if (!busca.trim()) return projetos ?? []
