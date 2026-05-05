@@ -115,10 +115,10 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
              </div>
              {roles.includes('admin') && (
                <a
-                 href="/portal/parceiro"
+                 href="https://system.infinitnetwork.com.br/portal/parceiro"
                  target="_blank"
                  rel="noopener noreferrer"
-                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:border-primary/40"
+                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                >
                  <ExternalLink size={12} />
                  Portal
