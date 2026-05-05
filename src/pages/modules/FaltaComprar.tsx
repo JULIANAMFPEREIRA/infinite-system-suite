@@ -30,34 +30,36 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
    const totalRecebido = receber?.reduce(
      (s, r) => s + (Number(r.valor_recebido) || 0), 0) ?? 0
 
-   const totalInadimplente = receber?.reduce(
-     (s, r) => {
-       if (
-         r.status === "pendente" &&
-         r.data_vencimento &&
-         r.data_vencimento < hoje
-       ) {
-         return s + Math.max(
-           (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0),
-           0
-         )
-       }
-       return s
-     }, 0) ?? 0
+    const totalInadimplente = receber?.reduce(
+      (s, r) => {
+        if (
+          (r.status === "pendente" &&
+           r.data_vencimento &&
+           r.data_vencimento < hoje) ||
+          r.status === "parcial"
+        ) {
+          return s + Math.max(
+            (Number(r.valor) || 0) -
+            (Number(r.valor_recebido) || 0), 0
+          )
+        }
+        return s
+      }, 0) ?? 0
 
-   const totalAReceber = receber?.reduce(
-     (s, r) => {
-       if (r.status !== "pago") {
-         const isInadimplente = r.status === "pendente" && r.data_vencimento && r.data_vencimento < hoje
-         if (!isInadimplente) {
-           return s + Math.max(
-             (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0),
-             0
-           )
-         }
-       }
-       return s
-     }, 0) ?? 0
+    const totalAReceber = receber?.reduce(
+      (s, r) => {
+        if (
+          r.status === "pendente" &&
+          r.data_vencimento &&
+          r.data_vencimento >= hoje
+        ) {
+          return s + Math.max(
+            (Number(r.valor) || 0) -
+            (Number(r.valor_recebido) || 0), 0
+          )
+        }
+        return s
+      }, 0) ?? 0
 
     const { data: projetos, isLoading } = useQuery({
       queryKey: ["falta_comprar", empresaId],
