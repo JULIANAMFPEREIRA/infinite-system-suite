@@ -333,11 +333,6 @@ const FinanceiroPagar = () => {
         observacao: baixaForma ? `Forma: ${baixaForma}${baixaObs ? ` | ${baixaObs}` : ""}` : (baixaObs || null)
       } as any);
 
-      // Invalidar e refazer a query
-      await qc.invalidateQueries({
-        queryKey: ["financeiro_pagar"]
-      });
-
       // Se for comissão, sincronizar com parcelas_parceiros
       if (contaOriginal?.origem === "comissao") {
         const hoje = new Date().toISOString().split("T")[0];
@@ -357,16 +352,20 @@ const FinanceiroPagar = () => {
         });
       }
 
-      refetch();
-
-      toast.success("Pagamento registrado!");
-      // Fechar modal e resetar estados
+      // GARANTIR que o modal fecha e estados são limpos
       setShowBaixa(false);
       setBaixaId(null);
       setBaixaData(new Date().toISOString().split("T")[0]);
       setBaixaForma("");
       setBaixaObs("");
-      setDetailConta(null); // Também fecha o painel de detalhes se estiver aberto
+      setDetailConta(null);
+      
+      toast.success("Pagamento registrado!");
+      
+      await qc.invalidateQueries({
+        queryKey: ["financeiro_pagar"]
+      });
+      refetch();
     } catch (err: any) { toast.error(err.message); }
   };
 
