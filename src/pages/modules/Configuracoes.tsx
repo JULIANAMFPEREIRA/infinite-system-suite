@@ -874,15 +874,14 @@ const Configuracoes = () => {
   };
 
   const renderStatusProjeto = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <ListChecks size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Status de Projeto</h2>
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div>
+        <h2 className="text-lg font-bold text-foreground">Status do Projeto</h2>
+        <p className="text-xs text-muted-foreground">Status disponíveis no fluxo operacional</p>
       </div>
-      <p className="text-[11px] text-muted-foreground">Status disponíveis no fluxo operacional do projeto:</p>
-      <div className="flex flex-wrap gap-2 mt-1">
+      <div className="flex flex-wrap gap-2 pt-2">
         {(Object.entries(statusProjetoLabels) as [string, string][]).map(([key, label]) => (
-          <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-medium ${statusProjetoColors[key as keyof typeof statusProjetoColors]}`}>
+          <span key={key} className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${statusProjetoColors[key as keyof typeof statusProjetoColors]}`}>
             {label}
           </span>
         ))}
