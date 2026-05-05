@@ -153,10 +153,15 @@ const FinanceiroPagar = () => {
       setUploadingFile(true);
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `${empresaId}/financeiro-pagar/${editId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file, { upsert: true });
+       const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
-      await updateConta.mutateAsync({ id: editId, arquivo_url: pub.publicUrl, arquivo_nome: file.name } as any);
+       const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
+       await updateConta.mutateAsync({ 
+         id: editId, 
+         arquivo_url: pub.publicUrl, 
+         arquivo_nome: file.name,
+         observacao: observacao || null
+       } as any);
       toast.success("Documento anexado");
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
