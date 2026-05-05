@@ -461,14 +461,35 @@ const Configuracoes = () => {
     );
   };
 
-  const renderUsuarios = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Usuários da Empresa</h2>
-        <button onClick={() => setShowNewUser(!showNewUser)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105">
-          <UserPlus size={14} /> Criar Usuário
-        </button>
+  const renderUsuarios = () => {
+    const filtered = (users ?? []).filter(u => 
+      u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Usuários</h2>
+          <p className="text-xs text-muted-foreground">Gerencie o acesso dos usuários à empresa</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar usuário..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button size="sm" onClick={() => setShowNewUser(!showNewUser)} className="gap-1.5 h-9">
+            <UserPlus size={14} /> Novo
+          </Button>
+        </div>
       </div>
+
+      {isLoadingUsers && <div className="text-center py-8 text-sm text-muted-foreground">Carregando usuários...</div>}
       {showNewUser && (
         <div className="border border-border rounded p-3 space-y-3 bg-background">
           <h3 className="text-xs font-semibold text-foreground">Novo Usuário</h3>
@@ -490,7 +511,7 @@ const Configuracoes = () => {
           </div>
         </div>
       )}
-      {users && users.length > 0 ? (
+      {!isLoadingUsers && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -554,9 +575,15 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground">Nenhum usuário encontrado.</p>}
+      ) : !isLoadingUsers && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <UserCog className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum usuário encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   const renderFuncionarios = () => (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
