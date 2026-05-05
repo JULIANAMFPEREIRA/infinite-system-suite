@@ -800,11 +800,18 @@ const FinanceiroPagar = () => {
                               <Check size={14} />
                             </button>
                           )}
-                          {c.origem === "comissao" && c.status === "pendente" && (
-                            <button onClick={() => openParcelar(c)} title="Parcelar" className="p-1.5 rounded-md hover:bg-purple-500/15 text-muted-foreground hover:text-purple-500 transition-colors">
-                              <Layers size={14} />
-                            </button>
-                          )}
+                           {(c.origem === "comissao" || c.comissao_id) && c.status !== "pago" && (
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 openParcelar(c);
+                               }}
+                               title="Parcelar comissão"
+                               className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                             >
+                               <Scissors size={14} />
+                             </button>
+                           )}
                           <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
                             <Search size={14} />
                           </button>
