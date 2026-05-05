@@ -802,25 +802,76 @@ const Configuracoes = () => {
     );
   };
 
-  const renderTiposFinanceiros = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Wallet size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Tipos Financeiros</h2>
+  const renderTiposFinanceiros = () => {
+    const filtered = allTipos.filter(t => 
+      t.label?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Tipos Financeiros</h2>
+          <p className="text-xs text-muted-foreground">Classificação mestre para suas categorias</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar tipo..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Novo tipo..." 
+              className="h-9 text-xs w-40" 
+              value={novoTipo} 
+              onChange={e => setNovoTipo(e.target.value)} 
+            />
+            <Button size="sm" onClick={() => {
+              const val = novoTipo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (!val) { toast.error("Digite o nome do tipo"); return; }
+              if (allTiposSet.has(val)) { toast.error("Tipo já existe"); return; }
+              createCat.mutateAsync({ nome: `CATEGORIA ${novoTipo.trim().toUpperCase()}`, tipo: val });
+              setNovoTipo(""); toast.success("Tipo criado com categoria inicial");
+            }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">Tipos usados para classificar as categorias financeiras. Cada categoria deve estar vinculada a um tipo.</p>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Novo Tipo</label><input value={novoTipo} onChange={e => setNovoTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Saída Administrativa" /></div>
-        <button onClick={() => {
-          const val = novoTipo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          if (!val) { toast.error("Digite o nome do tipo"); return; }
-          if (allTiposSet.has(val)) { toast.error("Tipo já existe"); return; }
-          // Create a placeholder category so the type persists
-          createCat.mutateAsync({ nome: `CATEGORIA ${novoTipo.trim().toUpperCase()}`, tipo: val });
-          setNovoTipo(""); toast.success("Tipo criado com categoria inicial");
-        }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
+
+      <div className="border border-border rounded overflow-hidden">
+        <table className="w-full text-xs">
+          <thead><tr className="bg-secondary/60">
+            <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Tipo</th>
+            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-28">Categorias</th>
+            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
+          </tr></thead>
+          <tbody>
+            {filtered.map(t => (
+              <tr key={t.value} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                <td className="px-2.5 py-1.5 font-medium">{t.label}</td>
+                <td className="px-2.5 py-1.5 text-center text-muted-foreground">{categoriasCount(t.value)}</td>
+                <td className="px-2.5 py-1.5 text-center">
+                  <button onClick={() => setEditTipo({ original: t.value, novo: t.label })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-2.5 py-8 text-center text-muted-foreground">Nenhum registro encontrado</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-      <div className="border border-border rounded overflow-hidden mt-2">
+    </div>
+    );
+  };
         <table className="w-full text-xs">
           <thead><tr className="bg-secondary/60">
             <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Tipo</th>
