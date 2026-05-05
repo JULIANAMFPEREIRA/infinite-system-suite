@@ -627,17 +627,45 @@ const Configuracoes = () => {
     </div>
   );
 
-  const renderFormasPagamento = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <CreditCard size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Formas de Pagamento</h2>
+  const renderFormasPagamento = () => {
+    const filtered = (formas ?? []).filter(f => 
+      f.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Formas de Pagamento</h2>
+          <p className="text-xs text-muted-foreground">Configure as opções de pagamento aceitas</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar forma..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nova forma..." 
+              className="h-9 text-xs w-40" 
+              value={novaForma} 
+              onChange={e => setNovaForma(e.target.value)} 
+            />
+            <Button size="sm" onClick={async () => { if (!novaForma.trim()) return; await createForma.mutateAsync({ nome: novaForma }); setNovaForma(""); toast.success("Forma criada"); }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaForma} onChange={e => setNovaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <button onClick={async () => { if (!novaForma.trim()) return; await createForma.mutateAsync({ nome: novaForma }); setNovaForma(""); toast.success("Forma criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
-      </div>
-      {formas && formas.length > 0 ? (
+
+      {isLoadingFormas && <div className="text-center py-8 text-sm text-muted-foreground">Carregando formas...</div>}
+
+      {!isLoadingFormas && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -659,9 +687,15 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma forma de pagamento cadastrada.</p>}
+      ) : !isLoadingFormas && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <CreditCard className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   const renderCategorias = () => (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
