@@ -585,19 +585,43 @@ const Configuracoes = () => {
     );
   };
 
-  const renderFuncionarios = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Users size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Equipe / Funcionários</h2>
+  const renderFuncionarios = () => {
+    const filtered = (equipe ?? []).filter((m: any) => 
+      m.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Funcionários</h2>
+          <p className="text-xs text-muted-foreground">Gerencie sua equipe interna</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar funcionário..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nome..." 
+              className="h-9 text-xs w-32" 
+              value={eqNome} 
+              onChange={e => setEqNome(e.target.value)} 
+            />
+            <Button size="sm" onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-2 items-end flex-wrap">
-        <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={eqNome} onChange={e => setEqNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Função</label><input value={eqFuncao} onChange={e => setEqFuncao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Contato</label><input value={eqContato} onChange={e => setEqContato(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <button onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"><Plus size={14} /></button>
-      </div>
-      {equipe && equipe.length > 0 ? (
+
+      {filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -623,9 +647,15 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground">Nenhum membro cadastrado.</p>}
+      ) : (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   const renderFormasPagamento = () => {
     const filtered = (formas ?? []).filter(f => 
