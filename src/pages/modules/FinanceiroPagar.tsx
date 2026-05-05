@@ -323,50 +323,66 @@ const FinanceiroPagar = () => {
 
   const handleBaixa = async () => {
     if (!baixaId) return;
-    const contaOriginal = (contas ?? []).find((c: any) => c.id === baixaId);
-    
-    try {
-      await updateConta.mutateAsync({ 
-        id: baixaId, 
-        status: "pago", 
-        data_pagamento: baixaData,
-        observacao: baixaForma ? `Forma: ${baixaForma}${baixaObs ? ` | ${baixaObs}` : ""}` : (baixaObs || null)
-      } as any);
+    const contaOriginal = (contas ?? [])
+      .find((c: any) => c.id === baixaId);
 
-      // Se for comissão, sincronizar com parcelas_parceiros
-      if (contaOriginal?.origem === "comissao") {
-        const hoje = new Date().toISOString().split("T")[0];
+    try {
+      // Usar supabase direto em vez de mutation
+      const { error } = await (supabase
+        .from("financeiro_pagar")
+        .update({
+          status: "pago",
+          data_pagamento: baixaData,
+          observacao: baixaForma
+            ? `Forma: ${baixaForma}${baixaObs
+              ? ` | ${baixaObs}` : ""}`
+            : (baixaObs || null)
+        } as any) as any)
+        .eq("id", baixaId);
+      if (error) throw error
+
+      // Se for comissão sincronizar
+      if (contaOriginal?.origem === "comissao"
+          || contaOriginal?.comissao_id) {
+
+        if (contaOriginal?.comissao_id) {
+          await supabase
+            .from("comissoes")
+            .update({ status: "pago" })
+            .eq("id", contaOriginal.comissao_id)
+        }
         await supabase
           .from("parcelas_parceiros")
           .update({
             status: "pago",
-            data_pagamento: hoje
+            data_pagamento: baixaData
           })
-          .eq("projeto_id", contaOriginal.projeto_id)
-          .eq("parceiro_id", contaOriginal.fornecedor_id)
+          .eq("projeto_id",
+            contaOriginal.projeto_id)
+          .eq("parceiro_id",
+            contaOriginal.fornecedor_id)
           .eq("valor", contaOriginal.valor)
-          .eq("data_vencimento", contaOriginal.data_vencimento);
-          
-        await qc.invalidateQueries({
-          queryKey: ["parcelas_parceiros"]
-        });
       }
 
-      // GARANTIR que o modal fecha e estados são limpos
-      setShowBaixa(false);
-      setBaixaId(null);
-      setBaixaData(new Date().toISOString().split("T")[0]);
-      setBaixaForma("");
-      setBaixaObs("");
-      setDetailConta(null);
-      
-      toast.success("Pagamento registrado!");
-      
-      await qc.invalidateQueries({
+      // Fechar modal
+      setShowBaixa(false)
+      setBaixaId(null)
+      setBaixaData(new Date()
+        .toISOString().split("T")[0])
+      setBaixaForma("")
+      setBaixaObs("")
+      setDetailConta(null)
+      toast.success("Pagamento registrado!")
+
+      qc.invalidateQueries({
         queryKey: ["financeiro_pagar"]
-      });
-      refetch();
-    } catch (err: any) { toast.error(err.message); }
+      })
+    } catch (err: any) {
+      console.error("Erro baixa:", err)
+      toast.error(
+        err.message ?? "Erro ao registrar pagamento"
+      )
+    }
   };
 
   const remove = useMutation({
