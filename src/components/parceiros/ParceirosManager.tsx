@@ -91,12 +91,12 @@ const ParceirosManager = () => {
           empresa_id: empresaId,
           nome: form.nome.toUpperCase(),
           email: form.email?.toLowerCase() || null,
-          tipo: form.subtipo,
+          tipo: form.subtipo as any,
           subtipo_parceiro: form.subtipo,
           rt_percentual: Number(form.rt_percentual) || 0,
           ativo: true,
           deletado: false
-        });
+        } as any);
         if (error) throw error;
       }
 
@@ -809,7 +809,7 @@ const ParceirosManager = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-medium">Email *</label>
+              <label className="text-xs font-medium">Email</label>
               <input
                 type="email"
                 value={form.email}
@@ -817,14 +817,45 @@ const ParceirosManager = () => {
                 className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium">Senha *</label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium">Tipo de Parceiro</label>
+                <select
+                  value={form.subtipo}
+                  onChange={(e) => setForm({ ...form, subtipo: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                >
+                  {SUBTIPOS_PARCEIRO.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium">RT Percentual (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.rt_percentual}
+                  onChange={(e) => setForm({ ...form, rt_percentual: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-border mt-2">
+              <p className="text-[10px] text-muted-foreground mb-2">Para criar um acesso ao sistema para o parceiro, preencha também uma senha:</p>
+              <div>
+                <label className="text-xs font-medium">Senha de acesso (opcional)</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-medium">Tipo de Parceiro</label>
