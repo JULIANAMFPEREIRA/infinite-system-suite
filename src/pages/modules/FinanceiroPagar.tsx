@@ -778,47 +778,54 @@ const FinanceiroPagar = () => {
                           {statusLabel(c.status ?? "pendente")}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-0.5">
-                          {(c as any).arquivo_url ? (
-                            <a
-                              href={(c as any).arquivo_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title={(c as any).arquivo_nome ?? "Ver documento"}
-                              className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                      <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Anexo */}
+                          <button
+                            title="Anexar documento"
+                            onClick={() => (c as any).arquivo_url ? window.open((c as any).arquivo_url, '_blank') : openEdit(c)}
+                            className={`p-1.5 rounded hover:bg-secondary transition-colors ${(c as any).arquivo_url ? "text-primary" : "text-muted-foreground"}`}
+                          >
+                            <Paperclip size={14} />
+                          </button>
+
+                          {/* Confirmar pagamento */}
+                          {c.status !== "pago" && (
+                            <button
+                              onClick={() => openBaixa(c.id)}
+                              title="Confirmar pagamento"
+                              className="p-1.5 rounded hover:bg-success/10 text-success transition-colors"
                             >
-                              <Paperclip size={14} />
-                            </a>
-                          ) : (
-                            <span title="Sem documento" className="p-1.5 text-muted-foreground/40 cursor-not-allowed">
-                              <Paperclip size={14} />
-                            </span>
-                          )}
-                          {c.status === "pendente" && (
-                            <button onClick={() => openBaixa(c.id)} title="Registrar pagamento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
                               <Check size={14} />
                             </button>
                           )}
-                           {(c.origem === "comissao" || c.comissao_id) && c.status !== "pago" && (
-                             <button
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 openParcelar(c);
-                               }}
-                               title="Parcelar comissão"
-                               className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
-                             >
-                               <Scissors size={14} />
-                             </button>
-                           )}
-                          <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                            <Search size={14} />
-                          </button>
-                          <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors">
+
+                          {/* Parcelar — só comissão */}
+                          {(c.origem === "comissao" || c.comissao_id) && c.status !== "pago" && (
+                            <button
+                              onClick={() => openParcelar(c)}
+                              title="Parcelar comissão"
+                              className="p-1.5 rounded hover:bg-primary/10 text-primary transition-colors"
+                            >
+                              <Scissors size={14} />
+                            </button>
+                          )}
+
+                          {/* Editar */}
+                          <button
+                            onClick={() => openEdit(c)}
+                            title="Editar"
+                            className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          >
                             <Pencil size={14} />
                           </button>
-                          <button onClick={() => { if (window.confirm("Excluir conta?")) remove.mutate(c.id); }} title="Excluir" className="p-1.5 rounded-md hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors">
+
+                          {/* Excluir */}
+                          <button
+                            onClick={() => { if (window.confirm("Excluir conta?")) remove.mutate(c.id); }}
+                            title="Excluir"
+                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
                             <Trash2 size={14} />
                           </button>
                         </div>
