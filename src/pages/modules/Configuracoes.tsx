@@ -115,7 +115,20 @@ const Configuracoes = () => {
   });
 
   // Categorias
-  const { data: categorias } = useCategorias();
+  const { data: categorias, isLoading: isLoadingCategorias } = useQuery({
+    queryKey: ["config_categorias", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categorias")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "categorias",
+  });
   const createCat = useCreateCategoria();
   const updateCat = useUpdateCategoria();
   const deleteCat = useDeleteCategoria();
@@ -151,7 +164,19 @@ const Configuracoes = () => {
   const categoriasCount = (tipo: string) => (categorias ?? []).filter(c => c.tipo === tipo).length;
 
   // Formas de pagamento
-  const { data: formas } = useFormasPagamento();
+  const { data: formas, isLoading: isLoadingFormas } = useQuery({
+    queryKey: ["config_formas", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("formas_pagamento")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "formas_pagamento",
+  });
   const createForma = useCreateFormaPagamento();
   const updateForma = useUpdateFormaPagamento();
   const deleteForma = useDeleteFormaPagamento();
@@ -159,7 +184,19 @@ const Configuracoes = () => {
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
 
   // Transportadoras
-  const { data: transportadoras } = useTransportadoras();
+  const { data: transportadoras, isLoading: isLoadingTransp } = useQuery({
+    queryKey: ["config_transp", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transportadoras")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "transportadoras",
+  });
   const createTransp = useCreateTransportadora();
   const deleteTransp = useDeleteTransportadora();
   const [novaTranspNome, setNovaTranspNome] = useState("");
