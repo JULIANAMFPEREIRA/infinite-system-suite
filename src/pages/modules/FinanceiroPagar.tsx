@@ -328,7 +328,7 @@ const FinanceiroPagar = () => {
 
     try {
       // Usar supabase direto em vez de mutation
-      const { error } = await supabase
+      const { error } = await (supabase
         .from("financeiro_pagar")
         .update({
           status: "pago",
@@ -337,8 +337,8 @@ const FinanceiroPagar = () => {
             ? `Forma: ${baixaForma}${baixaObs
               ? ` | ${baixaObs}` : ""}`
             : (baixaObs || null)
-        })
-        .eq("id", baixaId)
+        } as any) as any)
+        .eq("id", baixaId);
       if (error) throw error
 
       // Se for comissão sincronizar
