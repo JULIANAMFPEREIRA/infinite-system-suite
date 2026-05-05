@@ -1,210 +1,380 @@
-import { useState } from "react";
-import { UserCheck, Pencil, Check, Plus } from "lucide-react";
-import { useComissoes } from "@/hooks/useFinanceiro";
-import { supabase as sbClient } from "@/integrations/supabase/client";
-import { useFormasPagamento } from "@/hooks/useCategorias";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { UserCheck, Check, Search, Filter, Wallet, Clock, CheckCircle2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
+const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 const Comissoes = () => {
   const empresaId = useEmpresa();
-  const { data: comissoes, isLoading } = useComissoes();
-  const { data: formasPgto } = useFormasPagamento();
   const qc = useQueryClient();
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editPercentual, setEditPercentual] = useState(0);
-  const [editValor, setEditValor] = useState(0);
 
-  // Modal baixa
+  // Filtros
+  const [filtroParceiro, setFiltroParceiro] = useState("");
+  const [filtroProjeto, setFiltroProjeto] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [busca, setBusca] = useState("");
+
+  // Modal de pagamento
   const [showBaixa, setShowBaixa] = useState(false);
-  const [baixaId, setBaixaId] = useState<string | null>(null);
+  const [selectedComissao, setSelectedComissao] = useState<any>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
-  const [baixaForma, setBaixaForma] = useState("");
+  const [baixaValor, setBaixaValor] = useState(0);
   const [baixaObs, setBaixaObs] = useState("");
 
-  // Nova comissão form
-  const [showNew, setShowNew] = useState(false);
-  const [newProjetoId, setNewProjetoId] = useState("");
-  const [newFornecedorId, setNewFornecedorId] = useState("");
-  const [newPercentual, setNewPercentual] = useState(0);
-  const [newValor, setNewValor] = useState(0);
-  const [newVencimento, setNewVencimento] = useState("");
+  // Query principal
+  const { data: comissoes, isLoading } = useQuery({
+    queryKey: ["comissoes_rt", empresaId, filtroParceiro, filtroStatus, filtroProjeto],
+    queryFn: async () => {
+      let query = supabase
+        .from("comissoes")
+        .select(`
+          *,
+          fornecedores(id, nome),
+          projetos(id, nome)
+        `)
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("created_at", { ascending: false });
 
-  const { data: projetos } = useQuery({
-    queryKey: ["projetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("projetos").select("id, nome").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
-  const { data: fornecedores } = useQuery({
-    queryKey: ["arquitetos_select", empresaId],
-    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("tipo", "arquiteto").eq("deletado", false).order("nome"); return data ?? []; },
-    enabled: !!empresaId,
-  });
+      if (filtroParceiro) {
+        query = query.eq("fornecedor_id", filtroParceiro);
+      }
+      if (filtroStatus && filtroStatus !== "todos") {
+        query = query.eq("status", filtroStatus);
+      }
+      if (filtroProjeto) {
+        query = query.eq("projeto_id", filtroProjeto);
+      }
 
-  const updateComissao = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; percentual?: number; valor?: number; status?: "pendente" | "pago"; data_vencimento?: string }) => {
-      const { error } = await supabase.from("comissoes").update(updates).eq("id", id);
+      const { data, error } = await query;
       if (error) throw error;
+      return data ?? [];
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["comissoes"] }); },
+    enabled: !!empresaId,
   });
 
-  const handleSaveEdit = async (id: string) => {
-    try {
-      await updateComissao.mutateAsync({ id, percentual: editPercentual, valor: editValor });
-      await supabase.from("financeiro_pagar").update({ valor: editValor }).eq("comissao_id", id);
-      setEditId(null);
-      toast.success("Comissão atualizada");
-    } catch (err: any) { toast.error(err.message); }
+  // Queries para os selects de filtro
+  const { data: parceirosList } = useQuery({
+    queryKey: ["parceiros_comissoes", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("nome");
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+
+  const { data: projetosList } = useQuery({
+    queryKey: ["projetos_comissoes", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("nome");
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+
+  const filteredComissoes = useMemo(() => {
+    if (!comissoes) return [];
+    return comissoes.filter(c => {
+      const searchStr = busca.toLowerCase();
+      const parceiroNome = (c.fornecedores as any)?.nome?.toLowerCase() || "";
+      const projetoNome = (c.projetos as any)?.nome?.toLowerCase() || "";
+      return parceiroNome.includes(searchStr) || projetoNome.includes(searchStr);
+    });
+  }, [comissoes, busca]);
+
+  // Resumos
+  const totais = useMemo(() => {
+    if (!comissoes) return { total: 0, pago: 0, pendente: 0 };
+    return comissoes.reduce((acc, c) => {
+      acc.total += c.valor || 0;
+      if (c.status === "pago") acc.pago += c.valor || 0;
+      else acc.pendente += c.valor || 0;
+      return acc;
+    }, { total: 0, pago: 0, pendente: 0 });
+  }, [comissoes]);
+
+  const handleOpenBaixa = (c: any) => {
+    setSelectedComissao(c);
+    setBaixaValor(c.valor || 0);
+    setBaixaData(new Date().toISOString().split("T")[0]);
+    setBaixaObs("");
+    setShowBaixa(true);
   };
 
-  const openBaixa = (c: any) => {
-    setBaixaId(c.id); setBaixaData(new Date().toISOString().split("T")[0]); setBaixaForma(""); setBaixaObs(""); setShowBaixa(true);
-  };
-
-  const handleBaixa = async () => {
-    if (!baixaId) return;
+  const handleConfirmarPagamento = async () => {
+    if (!selectedComissao) return;
     try {
-      await updateComissao.mutateAsync({ id: baixaId, status: "pago" });
-      await supabase.from("financeiro_pagar").update({ status: "pago", data_pagamento: baixaData }).eq("comissao_id", baixaId);
-      toast.success("Comissão marcada como paga");
+      // 1. Atualizar comissoes
+      const { error: errorComissao } = await supabase
+        .from("comissoes")
+        .update({ status: "pago" })
+        .eq("id", selectedComissao.id);
+      
+      if (errorComissao) throw errorComissao;
+
+      // 2. Atualizar financeiro_pagar
+      const { error: errorFinanceiro } = await supabase
+        .from("financeiro_pagar")
+        .update({ 
+          status: "pago", 
+          data_pagamento: baixaData,
+          observacao: baixaObs 
+        })
+        .eq("comissao_id", selectedComissao.id);
+
+      // 3. Atualizar parcelas_parceiros
+      await supabase
+        .from("parcelas_parceiros")
+        .update({ status: "pago" })
+        .eq("parceiro_id", selectedComissao.fornecedor_id)
+        .eq("projeto_id", selectedComissao.projeto_id)
+        .eq("status", "pendente");
+
+      toast.success("Pagamento registrado com sucesso");
       setShowBaixa(false);
-    } catch (err: any) { toast.error(err.message); }
+      qc.invalidateQueries({ queryKey: ["comissoes_rt"] });
+      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+    } catch (error: any) {
+      toast.error("Erro ao registrar pagamento: " + error.message);
+    }
   };
-
-  const handleCreateComissao = async () => {
-    if (!newProjetoId || !newFornecedorId) { toast.error("Projeto e arquiteto são obrigatórios"); return; }
-    if (!empresaId) return;
-    try {
-      const { error } = await supabase.from("comissoes").insert({
-        empresa_id: empresaId, projeto_id: newProjetoId, fornecedor_id: newFornecedorId,
-        percentual: newPercentual, valor: newValor,
-        data_vencimento: newVencimento || null, status: "pendente",
-      });
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["comissoes"] });
-      toast.success("Comissão criada");
-      setShowNew(false); setNewProjetoId(""); setNewFornecedorId(""); setNewPercentual(0); setNewValor(0); setNewVencimento("");
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const openEdit = (c: any) => {
-    setEditId(c.id); setEditPercentual(c.percentual ?? 0); setEditValor(c.valor ?? 0);
-  };
-
-  const statusColor = (s: string) => s === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning";
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <UserCheck size={18} className="text-primary" />
-          <h1 className="text-lg font-bold text-foreground">Comissões (RT)</h1>
+          <UserCheck size={20} className="text-primary" />
+          <h1 className="text-xl font-bold text-foreground">Comissões RT</h1>
         </div>
-        <button onClick={() => setShowNew(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
-          <Plus size={14} /> Nova Comissão
-        </button>
       </div>
-      <p className="text-xs text-muted-foreground">Comissões geradas automaticamente ou manualmente. Edite valores ou dê baixa.</p>
 
-      {showNew && (
-        <div className="bg-card border border-border rounded p-3 space-y-3">
-          <h2 className="text-xs font-semibold text-foreground">Nova Comissão Manual</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto *</label>
-              <select value={newProjetoId} onChange={e => setNewProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="">Selecionar...</option>
-                {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto *</label>
-              <select value={newFornecedorId} onChange={e => setNewFornecedorId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="">Selecionar...</option>
-                {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Percentual</label><input type="number" value={newPercentual} onChange={e => setNewPercentual(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Valor</label><input type="number" value={newValor} onChange={e => setNewValor(Number(e.target.value))} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Vencimento</label><input type="date" value={newVencimento} onChange={e => setNewVencimento(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-card border border-border p-4 rounded-lg flex items-center gap-4">
+          <div className="p-3 rounded-full bg-primary/10 text-primary">
+            <Wallet size={20} />
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleCreateComissao} className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105">Criar</button>
-            <button onClick={() => setShowNew(false)} className="px-4 py-1.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80">Cancelar</button>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase font-semibold">Total de Comissões</p>
+            <p className="text-lg font-bold">{fmt(totais.total)}</p>
           </div>
         </div>
-      )}
+        <div className="bg-card border border-border p-4 rounded-lg flex items-center gap-4">
+          <div className="p-3 rounded-full bg-green-500/10 text-green-500">
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase font-semibold">Total Pago</p>
+            <p className="text-lg font-bold text-green-600">{fmt(totais.pago)}</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border p-4 rounded-lg flex items-center gap-4">
+          <div className="p-3 rounded-full bg-orange-500/10 text-orange-500">
+            <Clock size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase font-semibold">Total Pendente</p>
+            <p className="text-lg font-bold text-orange-600">{fmt(totais.pendente)}</p>
+          </div>
+        </div>
+      </div>
 
-      {isLoading ? <p className="text-xs text-muted-foreground text-center py-8">Carregando...</p> : (
-        <div className="border border-border rounded overflow-hidden">
+      {/* Filtros */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-1">
+          <Filter size={16} /> Filtros
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground">Parceiro</label>
+            <select 
+              value={filtroParceiro} 
+              onChange={e => setFiltroParceiro(e.target.value)}
+              className="w-full h-9 px-3 text-xs bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none"
+            >
+              <option value="">Todos os parceiros</option>
+              {parceirosList?.map(p => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground">Projeto</label>
+            <select 
+              value={filtroProjeto} 
+              onChange={e => setFiltroProjeto(e.target.value)}
+              className="w-full h-9 px-3 text-xs bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none"
+            >
+              <option value="">Todos os projetos</option>
+              {projetosList?.map(p => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground">Status</label>
+            <select 
+              value={filtroStatus} 
+              onChange={e => setFiltroStatus(e.target.value)}
+              className="w-full h-9 px-3 text-xs bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none"
+            >
+              <option value="todos">Todos</option>
+              <option value="pendente">Pendente</option>
+              <option value="pago">Pago</option>
+            </select>
+          </div>
+          <div className="space-y-1 md:col-span-2 lg:col-span-2">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground">Busca</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+              <input 
+                type="text"
+                placeholder="Nome do parceiro ou projeto..."
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                className="w-full h-9 pl-9 pr-3 text-xs bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
+        <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-secondary/60">
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Arquiteto</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Projeto</th>
-                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Cliente</th>
-                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">%</th>
-                <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Ações</th>
+              <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-left">Parceiro</th>
+                <th className="px-4 py-3 text-left">Projeto</th>
+                <th className="px-4 py-3 text-right">Valor</th>
+                <th className="px-4 py-3 text-center">%</th>
+                <th className="px-4 py-3 text-right">Pago</th>
+                <th className="px-4 py-3 text-right">Pendente</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center">Ações</th>
               </tr>
             </thead>
-            <tbody>
-              {comissoes?.map(c => (
-                <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
-                  <td className="px-2.5 py-1.5">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5">{(c.projetos as any)?.clientes?.nome ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-right">
-                    {editId === c.id ? <input type="number" value={editPercentual} onChange={e => setEditPercentual(Number(e.target.value))} className="w-14 h-6 px-1 text-xs bg-background border border-border rounded" /> : `${c.percentual ?? 0}%`}
-                  </td>
-                  <td className="px-2.5 py-1.5 text-right font-medium">
-                    {editId === c.id ? <input type="number" value={editValor} onChange={e => setEditValor(Number(e.target.value))} className="w-20 h-6 px-1 text-xs bg-background border border-border rounded" /> : `R$ ${(c.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center">{c.data_vencimento ?? "—"}</td>
-                  <td className="px-2.5 py-1.5 text-center">
-                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(c.status ?? "pendente")}`}>{c.status}</span>
-                  </td>
-                  <td className="px-2.5 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {editId === c.id ? (
-                        <button onClick={() => handleSaveEdit(c.id)} className="px-2 py-0.5 rounded bg-primary text-primary-foreground text-[11px]">Salvar</button>
-                      ) : (
-                        <>
-                          <button onClick={() => openEdit(c)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={13} /></button>
-                          {c.status !== "pago" && <button onClick={() => openBaixa(c)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success" title="Dar baixa"><Check size={13} /></button>}
-                        </>
-                      )}
-                    </div>
-                  </td>
+            <tbody className="divide-y divide-border">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Carregando comissões...</td>
                 </tr>
-              ))}
-              {(!comissoes || comissoes.length === 0) && <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Nenhuma comissão encontrada.</td></tr>}
+              ) : filteredComissoes.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
+                </tr>
+              ) : (
+                filteredComissoes.map(c => (
+                  <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmt(c.valor || 0)}</td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
+                    <td className="px-4 py-3 text-right text-green-600">
+                      {c.status === "pago" ? fmt(c.valor || 0) : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-orange-600">
+                      {c.status === "pendente" ? fmt(c.valor || 0) : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                      }`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {c.status === "pendente" && (
+                        <button 
+                          onClick={() => handleOpenBaixa(c)}
+                          className="px-2 py-1 rounded bg-primary text-primary-foreground text-[10px] font-semibold hover:brightness-105 transition shadow-sm flex items-center gap-1 mx-auto"
+                        >
+                          <Check size={12} /> Registrar Pagamento
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
+      {/* Modal de Pagamento */}
       <Dialog open={showBaixa} onOpenChange={setShowBaixa}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle className="text-sm">Registrar Pagamento de Comissão</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Data Pagamento</label><input type="date" value={baixaData} onChange={e => setBaixaData(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Forma de Pagamento</label>
-              <select value={baixaForma} onChange={e => setBaixaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-                <option value="">Selecionar...</option>
-                {formasPgto?.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
-                <option value="Pix">Pix</option><option value="Boleto">Boleto</option><option value="Transferência">Transferência</option>
-              </select>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground">Valor Pago</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                  <input 
+                    type="number" 
+                    value={baixaValor} 
+                    onChange={e => setBaixaValor(Number(e.target.value))}
+                    className="w-full h-10 pl-9 pr-3 text-sm bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none font-semibold"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground">Data do Pagamento</label>
+                <input 
+                  type="date" 
+                  value={baixaData} 
+                  onChange={e => setBaixaData(e.target.value)}
+                  className="w-full h-10 px-3 text-sm bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
             </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Observação</label><input value={baixaObs} onChange={e => setBaixaObs(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground">Observação (opcional)</label>
+              <textarea 
+                value={baixaObs} 
+                onChange={e => setBaixaObs(e.target.value)}
+                placeholder="Alguma nota sobre o pagamento..."
+                className="w-full min-h-[80px] p-3 text-sm bg-background border border-border rounded-md focus:ring-1 focus:ring-primary outline-none resize-none"
+              />
+            </div>
+            {selectedComissao && (
+              <div className="p-3 bg-secondary/30 rounded-md border border-border/50 text-xs space-y-1 text-muted-foreground">
+                <p><strong>Parceiro:</strong> {(selectedComissao.fornecedores as any)?.nome}</p>
+                <p><strong>Projeto:</strong> {(selectedComissao.projetos as any)?.nome}</p>
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <button onClick={() => setShowBaixa(false)} className="px-3 py-1.5 text-xs rounded bg-secondary text-secondary-foreground">Cancelar</button>
-            <button onClick={handleBaixa} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground">Confirmar Pagamento</button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <button 
+              onClick={() => setShowBaixa(false)} 
+              className="flex-1 sm:flex-none px-4 py-2 text-sm rounded-md border border-border hover:bg-secondary transition"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleConfirmarPagamento}
+              className="flex-1 sm:flex-none px-6 py-2 text-sm rounded-md bg-primary text-primary-foreground font-semibold hover:brightness-105 transition"
+            >
+              Confirmar Pagamento
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
