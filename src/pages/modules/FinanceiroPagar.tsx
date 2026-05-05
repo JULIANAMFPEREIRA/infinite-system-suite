@@ -293,11 +293,12 @@ const FinanceiroPagar = () => {
         valor,
         data_vencimento: vencimento || null,
         fornecedor_id: fornecedorId || null,
-        projeto_id: projetoId || null,
-        categoria_id: categoriaId || null,
-        origem: origem,
-        tipo_manual: tipo
-      };
+         projeto_id: projetoId || null,
+         categoria_id: categoriaId || null,
+         observacao: observacao || null,
+         origem: origem,
+         tipo_manual: tipo
+       };
 
       if (editId) {
         await updateConta.mutateAsync({ id: editId, ...payload } as any);
