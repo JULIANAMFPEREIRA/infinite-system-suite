@@ -399,9 +399,19 @@ const FinanceiroPagar = () => {
      return list;
    }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
 
-  const totalPendente = filtered.filter(c => c.status === "pendente").reduce((s, c) => s + (c.valor ?? 0), 0);
-  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (c.valor ?? 0), 0);
-  const totalVencido = filtered.filter(c => c.status === "vencido").reduce((s, c) => s + (c.valor ?? 0), 0);
+  const hoje = new Date().toISOString().split("T")[0];
+  const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalPago = (contas ?? []).filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalVencido = (contas ?? []).reduce((s, c) => {
+    if (
+      c.status === "pendente" &&
+      c.data_vencimento &&
+      c.data_vencimento < hoje
+    ) {
+      return s + (Number(c.valor) || 0);
+    }
+    return s;
+  }, 0);
 
   const selectCls = "h-7 px-2 text-[11px] bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary";
 
