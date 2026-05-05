@@ -139,9 +139,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             faltaReceberProjeto,
             inadimplenteProjeto,
           }
-        })
-        // Mostrar todos os projetos aprovados, não apenas os com falta comprar > 0
-        // .filter(r => r.faltaComprar > 0)
+        }).filter(r => r.faltaComprar > 0)
         .sort((a, b) => b.faltaComprar - a.faltaComprar)
      },
      enabled: !!empresaId,
