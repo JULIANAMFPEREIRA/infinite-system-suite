@@ -59,45 +59,47 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
        return s
      }, 0) ?? 0
 
-   const { data, isLoading } = useQuery({
-     queryKey: ["falta_comprar_pagina", empresaId],
-     queryFn: async () => {
-        const { data: orcAprovados } = await supabase
+    const { data: projetos, isLoading } = useQuery({
+      queryKey: ["falta_comprar", empresaId],
+      queryFn: async () => {
+        const { data: orcs } = await supabase
           .from("crm_orcamentos")
-          .select("id, nome, cliente_id, frete, imposto, simulacao_pagamento, clientes(nome)")
+          .select("id, nome, cliente_id, frete, imposto, clientes(nome), projetos!inner(id, status, deletado)")
+          .eq("empresa_id", empresaId!)
           .eq("aprovado", true)
- 
-       if (!orcAprovados?.length) return []
- 
-       const orcIds = orcAprovados.map(o => o.id)
- 
+
+        if (!orcs?.length) return []
+
+        const validOrcs = (orcs ?? [])
+          .filter(o => (o as any).projetos?.deletado === false)
+          .map(o => ({
+            ...o,
+            projeto_id: (o as any).projetos?.id,
+            projeto_status: (o as any).projetos?.status
+          }))
+
+        const orcIds = validOrcs.map(o => o.id)
         const { data: todosItens } = await supabase
           .from("crm_itens")
           .select("id, descricao, quantidade, preco_custo, preco_venda, rt_comissao, rt_valor_pago, status_compra, orcamento_id, tipo")
           .in("orcamento_id", orcIds)
 
-        return orcAprovados.map(orc => {
-          const itens = (todosItens ?? []).filter(i => i.orcamento_id === orc.id)
-          const frete = Number(orc.frete) || 0
-          const imposto = Number(orc.imposto) || 0
+        return validOrcs.map(projeto => {
+          const itens = (todosItens ?? []).filter(i => i.orcamento_id === projeto.id)
+          const frete = Number(projeto.frete) || 0
+          const imposto = Number(projeto.imposto) || 0
 
           const stats = calcFaltaComprar(itens, frete, imposto)
           const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda) || 0) * (Number(i.quantidade) || 1), 0)
           const itensPendentesCount = itens.filter(i => i.status_compra === "pendente").length
 
           const recebidoProjeto = (receber ?? [])
-            .filter(r => r.projeto_id === orc.id)
+            .filter(r => r.projeto_id === projeto.projeto_id)
             .reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0)
-
-          const faltaReceberProjeto = (receber ?? [])
-            .filter(r => r.projeto_id === orc.id && r.status !== "pago")
-            .reduce((s, r) => s + Math.max(
-              (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0), 0
-            ), 0)
 
           const inadimplenteProjeto = (receber ?? [])
             .filter(r =>
-              r.projeto_id === orc.id &&
+              r.projeto_id === projeto.projeto_id &&
               r.status === "pendente" &&
               r.data_vencimento &&
               r.data_vencimento < hoje
@@ -106,9 +108,18 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
               (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0), 0
             ), 0)
 
+          const faltaReceberProjeto = (receber ?? [])
+            .filter(r =>
+              r.projeto_id === projeto.projeto_id &&
+              r.status !== "pago"
+            )
+            .reduce((s, r) => s + Math.max(
+              (Number(r.valor) || 0) - (Number(r.valor_recebido) || 0), 0
+            ), 0)
+
           return {
-            clienteNome: (orc.clientes as any)?.nome ?? "—",
-            orcamentoNome: orc.nome,
+            clienteNome: (projeto.clientes as any)?.nome ?? "—",
+            orcamentoNome: projeto.nome,
             totalVenda,
             totalCusto: stats.totalCusto,
             totalComprado: stats.totalComprado,
@@ -125,14 +136,14 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
      enabled: !!empresaId,
    })
  
-   const filtered = useMemo(() => {
-     if (!busca.trim()) return data ?? []
-     const q = busca.toLowerCase()
-     return (data ?? []).filter(r =>
-       r.clienteNome.toLowerCase().includes(q) ||
-       r.orcamentoNome.toLowerCase().includes(q)
-     )
-   }, [data, busca])
+    const filtered = useMemo(() => {
+      if (!busca.trim()) return projetos ?? []
+      const q = busca.toLowerCase()
+      return (projetos ?? []).filter(r =>
+        r.clienteNome.toLowerCase().includes(q) ||
+        r.orcamentoNome.toLowerCase().includes(q)
+      )
+    }, [projetos, busca])
  
     const totalGeral = filtered.reduce((s, r) => s + r.faltaComprar, 0)
     const totalCustoGeral = filtered.reduce((s, r) => s + r.totalCusto, 0)
