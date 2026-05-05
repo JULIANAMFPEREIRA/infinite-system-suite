@@ -122,7 +122,8 @@ const FinanceiroPagar = () => {
   const [fornecedorId, setFornecedorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
-  const [descRetirada, setDescRetirada] = useState("");
+   const [descRetirada, setDescRetirada] = useState("");
+   const [observacao, setObservacao] = useState("");
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
@@ -153,10 +154,15 @@ const FinanceiroPagar = () => {
       setUploadingFile(true);
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `${empresaId}/financeiro-pagar/${editId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file, { upsert: true });
+       const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
-      await updateConta.mutateAsync({ id: editId, arquivo_url: pub.publicUrl, arquivo_nome: file.name } as any);
+       const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
+       await updateConta.mutateAsync({ 
+         id: editId, 
+         arquivo_url: pub.publicUrl, 
+         arquivo_nome: file.name,
+         observacao: observacao || null
+       } as any);
       toast.success("Documento anexado");
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
@@ -221,8 +227,9 @@ const FinanceiroPagar = () => {
     setValor(c.valor ?? 0); 
     setVencimento(c.data_vencimento ?? ""); 
     setFornecedorId(c.fornecedor_id ?? ""); 
-    setProjetoId(c.projeto_id ?? ""); 
-    setCategoriaId(c.categoria_id ?? "");
+     setProjetoId(c.projeto_id ?? "");
+     setCategoriaId(c.categoria_id ?? "");
+     setObservacao(c.observacao ?? "");
     setOrigem(c.origem ?? "manual");
     setTipo(c.tipo_manual ?? "");
     // Parse descRetirada from description if it's a retirada
@@ -287,11 +294,12 @@ const FinanceiroPagar = () => {
         valor,
         data_vencimento: vencimento || null,
         fornecedor_id: fornecedorId || null,
-        projeto_id: projetoId || null,
-        categoria_id: categoriaId || null,
-        origem: origem,
-        tipo_manual: tipo
-      };
+         projeto_id: projetoId || null,
+         categoria_id: categoriaId || null,
+         observacao: observacao || null,
+         origem: origem,
+         tipo_manual: tipo
+       };
 
       if (editId) {
         await updateConta.mutateAsync({ id: editId, ...payload } as any);
@@ -725,12 +733,21 @@ const FinanceiroPagar = () => {
                 {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select>
             </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto (opcional)</label>
-              <select value={projetoId} onChange={e => setProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="">Selecionar...</option>
-                {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </div>
+             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto (opcional)</label>
+               <select value={projetoId} onChange={e => setProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                 <option value="">Selecionar...</option>
+                 {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+               </select>
+             </div>
+             <div className="space-y-1 col-span-1">
+               <label className="text-[11px] text-muted-foreground">Observação (opcional)</label>
+               <input 
+                 value={observacao} 
+                 onChange={e => setObservacao(e.target.value)} 
+                 placeholder="Notas internas..."
+                 className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" 
+               />
+             </div>
           </div>
           {editId && (
             <div className="space-y-1 pt-1 border-t border-border">
