@@ -455,6 +455,12 @@ const FinanceiroPagar = () => {
     setParcelasForm(newParcelas);
   };
 
+  const handleEditar = (c: any) => openEdit(c);
+  const handlePagar = (c: any) => openBaixa(c.id);
+  const handleExcluir = (id: string) => { if (window.confirm("Excluir conta?")) remove.mutate(id); };
+  const handleAbrirParcelar = (c: any) => openParcelar(c);
+  const handleVisualizar = (c: any) => setDetailConta(c);
+
   const handleConfirmarParcelamento = async () => {
     if (!contaParaParcelar || !empresaId) return;
     
@@ -780,30 +786,10 @@ const FinanceiroPagar = () => {
                       </td>
                       <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          {/* Anexo */}
-                          <button
-                            title="Anexar documento"
-                            onClick={() => (c as any).arquivo_url ? window.open((c as any).arquivo_url, '_blank') : openEdit(c)}
-                            className={`p-1.5 rounded hover:bg-secondary transition-colors ${(c as any).arquivo_url ? "text-primary" : "text-muted-foreground"}`}
-                          >
-                            <Paperclip size={14} />
-                          </button>
-
-                          {/* Confirmar pagamento */}
-                          {c.status !== "pago" && (
-                            <button
-                              onClick={() => openBaixa(c.id)}
-                              title="Confirmar pagamento"
-                              className="p-1.5 rounded hover:bg-success/10 text-success transition-colors"
-                            >
-                              <Check size={14} />
-                            </button>
-                          )}
-
-                          {/* Parcelar — só comissão */}
+                          {/* 1. Tesoura — só comissão */}
                           {(c.origem === "comissao" || c.comissao_id) && c.status !== "pago" && (
                             <button
-                              onClick={() => openParcelar(c)}
+                              onClick={() => handleAbrirParcelar(c)}
                               title="Parcelar comissão"
                               className="p-1.5 rounded hover:bg-primary/10 text-primary transition-colors"
                             >
@@ -811,18 +797,47 @@ const FinanceiroPagar = () => {
                             </button>
                           )}
 
-                          {/* Editar */}
+                          {/* 2. Clipe */}
                           <button
-                            onClick={() => openEdit(c)}
+                            onClick={() => (c as any).arquivo_url ? window.open((c as any).arquivo_url, '_blank') : openEdit(c)}
+                            title="Anexar documento"
+                            className={`p-1.5 rounded hover:bg-secondary transition-colors ${(c as any).arquivo_url ? "text-primary" : "text-muted-foreground"}`}
+                          >
+                            <Paperclip size={14} />
+                          </button>
+
+                          {/* 3. Check */}
+                          {c.status !== "pago" && (
+                            <button
+                              onClick={() => handlePagar(c)}
+                              title="Confirmar pagamento"
+                              className="p-1.5 rounded hover:bg-success/10 text-success transition-colors"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
+
+                          {/* 4. Lupa — visualizar */}
+                          <button
+                            onClick={() => handleVisualizar(c)}
+                            title="Visualizar detalhes"
+                            className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Search size={14} />
+                          </button>
+
+                          {/* 5. Lápis */}
+                          <button
+                            onClick={() => handleEditar(c)}
                             title="Editar"
                             className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                           >
                             <Pencil size={14} />
                           </button>
 
-                          {/* Excluir */}
+                          {/* 6. Lixeira */}
                           <button
-                            onClick={() => { if (window.confirm("Excluir conta?")) remove.mutate(c.id); }}
+                            onClick={() => handleExcluir(c.id)}
                             title="Excluir"
                             className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                           >

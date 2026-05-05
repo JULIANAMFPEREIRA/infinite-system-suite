@@ -44,7 +44,7 @@ const Comissoes = () => {
         query = query.eq("fornecedor_id", filtroParceiro);
       }
       if (filtroStatus && filtroStatus !== "todos") {
-        query = query.eq("status", filtroStatus);
+        query = query.eq("status", filtroStatus as any);
       }
       if (filtroProjeto) {
         query = query.eq("projeto_id", filtroProjeto);
@@ -130,10 +130,10 @@ const Comissoes = () => {
       const { error: errorFinanceiro } = await supabase
         .from("financeiro_pagar")
         .update({ 
-          status: "pago", 
+          status: "pago" as any, 
           data_pagamento: baixaData,
           observacao: baixaObs 
-        })
+        } as any)
         .eq("comissao_id", selectedComissao.id);
 
       // 3. Atualizar parcelas_parceiros
