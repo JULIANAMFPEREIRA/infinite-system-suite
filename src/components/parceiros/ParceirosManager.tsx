@@ -5,7 +5,7 @@ import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Save, Pencil, KeyRound, Copy } from "lucide-react";
+ import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 const ParceirosManager = () => {
