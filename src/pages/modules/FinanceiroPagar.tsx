@@ -227,8 +227,9 @@ const FinanceiroPagar = () => {
     setValor(c.valor ?? 0); 
     setVencimento(c.data_vencimento ?? ""); 
     setFornecedorId(c.fornecedor_id ?? ""); 
-    setProjetoId(c.projeto_id ?? ""); 
-    setCategoriaId(c.categoria_id ?? "");
+     setProjetoId(c.projeto_id ?? "");
+     setCategoriaId(c.categoria_id ?? "");
+     setObservacao(c.observacao ?? "");
     setOrigem(c.origem ?? "manual");
     setTipo(c.tipo_manual ?? "");
     // Parse descRetirada from description if it's a retirada
