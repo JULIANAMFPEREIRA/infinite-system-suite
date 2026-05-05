@@ -353,6 +353,94 @@ const ParceirosManager = () => {
     );
   };
 
+  const GerenciarFinanceiroModal = ({ parceiroId }: { parceiroId: string }) => {
+    const parceiro = parceiros.find(p => p.id === parceiroId);
+    const { data: comissoes, isLoading } = useQuery({
+      queryKey: ["parceiro_comissoes", parceiroId],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("comissoes")
+          .select("*, projetos(nome, status)")
+          .eq("fornecedor_id", parceiroId)
+          .eq("deletado", false);
+        if (error) throw error;
+        return data ?? [];
+      },
+      enabled: !!parceiroId
+    });
+
+    // Agrupar por projeto
+    const resumo = useMemo(() => {
+      const map: Record<string, { nome: string, status: string, total: number, pago: number, pendente: number }> = {};
+      (comissoes ?? []).forEach((c: any) => {
+        const pid = c.projeto_id;
+        if (!map[pid]) {
+          map[pid] = { 
+            nome: c.projetos?.nome ?? "Projeto s/ nome", 
+            status: c.projetos?.status ?? "indefinido",
+            total: 0, 
+            pago: 0, 
+            pendente: 0 
+          };
+        }
+        const valor = Number(c.valor) || 0;
+        map[pid].total += valor;
+        if (c.status === "pago") map[pid].pago += valor;
+        else map[pid].pendente += valor;
+      });
+      return Object.values(map);
+    }, [comissoes]);
+
+    return (
+      <Dialog open onOpenChange={(o) => !o && setOpenGerenciar(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Financeiro: {parceiro?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border border-border rounded overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary/60">
+                  <tr>
+                    <th className="text-left px-3 py-2">Projeto</th>
+                    <th className="text-left px-3 py-2">Status</th>
+                    <th className="text-right px-3 py-2">RT Total</th>
+                    <th className="text-right px-3 py-2 text-success">Pago</th>
+                    <th className="text-right px-3 py-2 text-warning">Pendente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading && (
+                    <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Carregando comissões...</td></tr>
+                  )}
+                  {!isLoading && resumo.length === 0 && (
+                    <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma comissão encontrada para este parceiro.</td></tr>
+                  )}
+                  {resumo.map((r, i) => (
+                    <tr key={i} className="border-t border-border hover:bg-secondary/20">
+                      <td className="px-3 py-2 font-medium">{r.nome}</td>
+                      <td className="px-3 py-2">
+                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-secondary text-secondary-foreground capitalize">
+                           {r.status}
+                         </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold">R$ {r.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-2 text-right text-success">R$ {r.pago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-2 text-right text-warning">R$ {r.pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setOpenGerenciar(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   const VincularModal = ({ parceiroId }: { parceiroId: string }) => {
     const { data: vinculos = [], isLoading: loadingVinc } = useParceiroProjetos(parceiroId);
     type RTConfig = { rt_tipo: "percentual" | "fixo"; rt_base: "venda_total" | "itens" | "rt_itens"; rt_percentual: number; rt_valor: number };
