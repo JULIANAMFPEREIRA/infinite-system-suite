@@ -697,22 +697,48 @@ const Configuracoes = () => {
     );
   };
 
-  const renderCategorias = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Tag size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Categorias</h2>
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaCat} onChange={e => setNovaCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-40"><label className="text-[11px] text-muted-foreground">Tipo *</label>
-          <select value={tipoCat} onChange={e => setTipoCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-            {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+  const renderCategorias = () => {
+    const filtered = (categorias ?? []).filter(c => 
+      c.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Categorias</h2>
+          <p className="text-xs text-muted-foreground">Organize suas movimentações financeiras</p>
         </div>
-        <button onClick={async () => { if (!novaCat.trim() || !tipoCat) { toast.error("Nome e Tipo são obrigatórios"); return; } await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar categoria..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nova categoria..." 
+              className="h-9 text-xs w-40" 
+              value={novaCat} 
+              onChange={e => setNovaCat(e.target.value)} 
+            />
+            <select value={tipoCat} onChange={e => setTipoCat(e.target.value)} className="h-9 px-2 text-xs bg-background border border-border rounded">
+              {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <Button size="sm" onClick={async () => { if (!novaCat.trim() || !tipoCat) { toast.error("Nome e Tipo são obrigatórios"); return; } await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      {categorias && categorias.length > 0 ? (
+
+      {isLoadingCategorias && <div className="text-center py-8 text-sm text-muted-foreground">Carregando categorias...</div>}
+
+      {!isLoadingCategorias && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -736,9 +762,15 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma categoria cadastrada.</p>}
+      ) : !isLoadingCategorias && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   const renderTiposFinanceiros = () => (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
