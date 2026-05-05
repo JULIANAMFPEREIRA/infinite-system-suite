@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil,
+  Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil, Search,
   CreditCard, Tag, ListChecks, Building2, UserCog, Wallet, FolderKanban, PackageCheck,
   ChevronDown, ChevronRight, Shield, RefreshCw, Key, Power, PowerOff
 } from "lucide-react";
@@ -70,6 +70,7 @@ const menuGroups = [
 
 const Configuracoes = () => {
   const [activeSection, setActiveSection] = useState<Section>("empresa");
+  const [searchTerm, setSearchTerm] = useState("");
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
@@ -86,22 +87,48 @@ const Configuracoes = () => {
     enabled: !!empresaId,
   });
 
-  const { data: users, refetch: refetchUsers } = useQuery({
-    queryKey: ["profiles_config", empresaId],
+  const { data: users, refetch: refetchUsers, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["config_usuarios", empresaId],
     queryFn: async () => {
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, empresa_id, is_active").eq("empresa_id", empresaId!);
-      const { data: allRoles } = await supabase.from("user_roles").select("user_id, role").eq("empresa_id", empresaId!);
+      const { data: profiles, error: pError } = await supabase
+        .from("profiles")
+        .select("id, full_name, empresa_id, is_active, updated_at")
+        .eq("empresa_id", empresaId!)
+        .order("full_name");
+      
+      if (pError) throw pError;
+
+      const { data: allRoles, error: rError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("empresa_id", empresaId!);
+      
+      if (rError) throw rError;
+
       return (profiles ?? []).map(p => ({
         ...p,
         is_active: p.is_active !== false,
         roles: (allRoles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
       }));
     },
-    enabled: !!empresaId,
+    enabled: !!empresaId && activeSection === "usuarios",
   });
 
   // Categorias
-  const { data: categorias } = useCategorias();
+  const { data: categorias, isLoading: isLoadingCategorias } = useQuery({
+    queryKey: ["config_categorias", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categorias")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "categorias",
+  });
   const createCat = useCreateCategoria();
   const updateCat = useUpdateCategoria();
   const deleteCat = useDeleteCategoria();
@@ -137,7 +164,19 @@ const Configuracoes = () => {
   const categoriasCount = (tipo: string) => (categorias ?? []).filter(c => c.tipo === tipo).length;
 
   // Formas de pagamento
-  const { data: formas } = useFormasPagamento();
+  const { data: formas, isLoading: isLoadingFormas } = useQuery({
+    queryKey: ["config_formas", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("formas_pagamento")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "formas_pagamento",
+  });
   const createForma = useCreateFormaPagamento();
   const updateForma = useUpdateFormaPagamento();
   const deleteForma = useDeleteFormaPagamento();
@@ -145,7 +184,19 @@ const Configuracoes = () => {
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
 
   // Transportadoras
-  const { data: transportadoras } = useTransportadoras();
+  const { data: transportadoras, isLoading: isLoadingTransp } = useQuery({
+    queryKey: ["config_transp", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transportadoras")
+        .select("*")
+        .eq("empresa_id", empresaId!)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId && activeSection === "transportadoras",
+  });
   const createTransp = useCreateTransportadora();
   const deleteTransp = useDeleteTransportadora();
   const [novaTranspNome, setNovaTranspNome] = useState("");
@@ -410,14 +461,35 @@ const Configuracoes = () => {
     );
   };
 
-  const renderUsuarios = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Usuários da Empresa</h2>
-        <button onClick={() => setShowNewUser(!showNewUser)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105">
-          <UserPlus size={14} /> Criar Usuário
-        </button>
+  const renderUsuarios = () => {
+    const filtered = (users ?? []).filter(u => 
+      u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Usuários</h2>
+          <p className="text-xs text-muted-foreground">Gerencie o acesso dos usuários à empresa</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar usuário..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button size="sm" onClick={() => setShowNewUser(!showNewUser)} className="gap-1.5 h-9">
+            <UserPlus size={14} /> Novo
+          </Button>
+        </div>
       </div>
+
+      {isLoadingUsers && <div className="text-center py-8 text-sm text-muted-foreground">Carregando usuários...</div>}
       {showNewUser && (
         <div className="border border-border rounded p-3 space-y-3 bg-background">
           <h3 className="text-xs font-semibold text-foreground">Novo Usuário</h3>
@@ -439,7 +511,7 @@ const Configuracoes = () => {
           </div>
         </div>
       )}
-      {users && users.length > 0 ? (
+      {!isLoadingUsers && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -503,23 +575,53 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground">Nenhum usuário encontrado.</p>}
+      ) : !isLoadingUsers && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <UserCog className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum usuário encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
-  const renderFuncionarios = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Users size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Equipe / Funcionários</h2>
+  const renderFuncionarios = () => {
+    const filtered = (equipe ?? []).filter((m: any) => 
+      m.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Funcionários</h2>
+          <p className="text-xs text-muted-foreground">Gerencie sua equipe interna</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar funcionário..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nome..." 
+              className="h-9 text-xs w-32" 
+              value={eqNome} 
+              onChange={e => setEqNome(e.target.value)} 
+            />
+            <Button size="sm" onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-2 items-end flex-wrap">
-        <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={eqNome} onChange={e => setEqNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Função</label><input value={eqFuncao} onChange={e => setEqFuncao(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Contato</label><input value={eqContato} onChange={e => setEqContato(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <button onClick={() => addEquipeMember.mutate()} disabled={!eqNome.trim()} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"><Plus size={14} /></button>
-      </div>
-      {equipe && equipe.length > 0 ? (
+
+      {filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -545,21 +647,55 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground">Nenhum membro cadastrado.</p>}
+      ) : (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
-  const renderFormasPagamento = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <CreditCard size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Formas de Pagamento</h2>
+  const renderFormasPagamento = () => {
+    const filtered = (formas ?? []).filter(f => 
+      f.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Formas de Pagamento</h2>
+          <p className="text-xs text-muted-foreground">Configure as opções de pagamento aceitas</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar forma..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nova forma..." 
+              className="h-9 text-xs w-40" 
+              value={novaForma} 
+              onChange={e => setNovaForma(e.target.value)} 
+            />
+            <Button size="sm" onClick={async () => { if (!novaForma.trim()) return; await createForma.mutateAsync({ nome: novaForma }); setNovaForma(""); toast.success("Forma criada"); }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaForma} onChange={e => setNovaForma(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <button onClick={async () => { if (!novaForma.trim()) return; await createForma.mutateAsync({ nome: novaForma }); setNovaForma(""); toast.success("Forma criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
-      </div>
-      {formas && formas.length > 0 ? (
+
+      {isLoadingFormas && <div className="text-center py-8 text-sm text-muted-foreground">Carregando formas...</div>}
+
+      {!isLoadingFormas && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -581,26 +717,58 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma forma de pagamento cadastrada.</p>}
-    </div>
-  );
-
-  const renderCategorias = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Tag size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Categorias</h2>
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={novaCat} onChange={e => setNovaCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" /></div>
-        <div className="space-y-1 w-40"><label className="text-[11px] text-muted-foreground">Tipo *</label>
-          <select value={tipoCat} onChange={e => setTipoCat(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-            {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+      ) : !isLoadingFormas && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <CreditCard className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
         </div>
-        <button onClick={async () => { if (!novaCat.trim() || !tipoCat) { toast.error("Nome e Tipo são obrigatórios"); return; } await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
+      )}
+    </div>
+    );
+  };
+
+  const renderCategorias = () => {
+    const filtered = (categorias ?? []).filter(c => 
+      c.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Categorias</h2>
+          <p className="text-xs text-muted-foreground">Organize suas movimentações financeiras</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar categoria..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nova categoria..." 
+              className="h-9 text-xs w-40" 
+              value={novaCat} 
+              onChange={e => setNovaCat(e.target.value)} 
+            />
+            <select value={tipoCat} onChange={e => setTipoCat(e.target.value)} className="h-9 px-2 text-xs bg-background border border-border rounded">
+              {allTipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <Button size="sm" onClick={async () => { if (!novaCat.trim() || !tipoCat) { toast.error("Nome e Tipo são obrigatórios"); return; } await createCat.mutateAsync({ nome: novaCat, tipo: tipoCat }); setNovaCat(""); toast.success("Categoria criada"); }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      {categorias && categorias.length > 0 ? (
+
+      {isLoadingCategorias && <div className="text-center py-8 text-sm text-muted-foreground">Carregando categorias...</div>}
+
+      {!isLoadingCategorias && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -624,29 +792,59 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma categoria cadastrada.</p>}
+      ) : !isLoadingCategorias && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
-  const renderTiposFinanceiros = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Wallet size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Tipos Financeiros</h2>
+  const renderTiposFinanceiros = () => {
+    const filtered = allTipos.filter(t => 
+      t.label?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Tipos Financeiros</h2>
+          <p className="text-xs text-muted-foreground">Classificação mestre para suas categorias</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar tipo..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Novo tipo..." 
+              className="h-9 text-xs w-40" 
+              value={novoTipo} 
+              onChange={e => setNovoTipo(e.target.value)} 
+            />
+            <Button size="sm" onClick={() => {
+              const val = novoTipo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (!val) { toast.error("Digite o nome do tipo"); return; }
+              if (allTiposSet.has(val)) { toast.error("Tipo já existe"); return; }
+              createCat.mutateAsync({ nome: `CATEGORIA ${novoTipo.trim().toUpperCase()}`, tipo: val });
+              setNovoTipo(""); toast.success("Tipo criado com categoria inicial");
+            }} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">Tipos usados para classificar as categorias financeiras. Cada categoria deve estar vinculada a um tipo.</p>
-      <div className="flex gap-2 items-end">
-        <div className="space-y-1 flex-1"><label className="text-[11px] text-muted-foreground">Novo Tipo</label><input value={novoTipo} onChange={e => setNovoTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Saída Administrativa" /></div>
-        <button onClick={() => {
-          const val = novoTipo.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          if (!val) { toast.error("Digite o nome do tipo"); return; }
-          if (allTiposSet.has(val)) { toast.error("Tipo já existe"); return; }
-          // Create a placeholder category so the type persists
-          createCat.mutateAsync({ nome: `CATEGORIA ${novoTipo.trim().toUpperCase()}`, tipo: val });
-          setNovoTipo(""); toast.success("Tipo criado com categoria inicial");
-        }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs"><Plus size={14} /></button>
-      </div>
-      <div className="border border-border rounded overflow-hidden mt-2">
+
+      <div className="border border-border rounded overflow-hidden">
         <table className="w-full text-xs">
           <thead><tr className="bg-secondary/60">
             <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Tipo</th>
@@ -654,7 +852,7 @@ const Configuracoes = () => {
             <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
           </tr></thead>
           <tbody>
-            {allTipos.map(t => (
+            {filtered.map(t => (
               <tr key={t.value} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
                 <td className="px-2.5 py-1.5 font-medium">{t.label}</td>
                 <td className="px-2.5 py-1.5 text-center text-muted-foreground">{categoriasCount(t.value)}</td>
@@ -663,22 +861,27 @@ const Configuracoes = () => {
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-2.5 py-8 text-center text-muted-foreground">Nenhum registro encontrado</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderStatusProjeto = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <ListChecks size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Status de Projeto</h2>
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div>
+        <h2 className="text-lg font-bold text-foreground">Status do Projeto</h2>
+        <p className="text-xs text-muted-foreground">Status disponíveis no fluxo operacional</p>
       </div>
-      <p className="text-[11px] text-muted-foreground">Status disponíveis no fluxo operacional do projeto:</p>
-      <div className="flex flex-wrap gap-2 mt-1">
+      <div className="flex flex-wrap gap-2 pt-2">
         {(Object.entries(statusProjetoLabels) as [string, string][]).map(([key, label]) => (
-          <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-medium ${statusProjetoColors[key as keyof typeof statusProjetoColors]}`}>
+          <span key={key} className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${statusProjetoColors[key as keyof typeof statusProjetoColors]}`}>
             {label}
           </span>
         ))}
@@ -686,22 +889,48 @@ const Configuracoes = () => {
     </div>
   );
 
-  const renderTransportadoras = () => (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Truck size={14} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Transportadoras / Tipos de Envio</h2>
-      </div>
-      <div className="flex gap-2 items-end flex-wrap">
-        <div className="space-y-1 flex-1 min-w-[150px]"><label className="text-[11px] text-muted-foreground">Nome *</label><input value={novaTranspNome} onChange={e => setNovaTranspNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none" placeholder="Ex: Jadlog, Correios" /></div>
-        <div className="space-y-1 w-36"><label className="text-[11px] text-muted-foreground">Tipo</label>
-          <select value={novaTranspTipo} onChange={e => setNovaTranspTipo(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
-            {tiposTransportadora.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+  const renderTransportadoras = () => {
+    const filtered = (transportadoras ?? []).filter((t: any) => 
+      t.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Transportadoras</h2>
+          <p className="text-xs text-muted-foreground">Gerencie seus parceiros de logística</p>
         </div>
-        <button onClick={async () => { if (!novaTranspNome.trim()) return; await createTransp.mutateAsync({ nome: novaTranspNome, tipo: novaTranspTipo }); setNovaTranspNome(""); toast.success("Transportadora cadastrada"); }} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50" disabled={!novaTranspNome.trim()}><Plus size={14} /></button>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar transportadora..." 
+              className="pl-9 h-9 text-xs"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Novo nome..." 
+              className="h-9 text-xs w-40" 
+              value={novaTranspNome} 
+              onChange={e => setNovaTranspNome(e.target.value)} 
+            />
+            <select value={novaTranspTipo} onChange={e => setNovaTranspTipo(e.target.value)} className="h-9 px-2 text-xs bg-background border border-border rounded">
+              {tiposTransportadora.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <Button size="sm" onClick={async () => { if (!novaTranspNome.trim()) return; await createTransp.mutateAsync({ nome: novaTranspNome, tipo: novaTranspTipo }); setNovaTranspNome(""); toast.success("Transportadora cadastrada"); }} disabled={!novaTranspNome.trim()} className="h-9">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
       </div>
-      {transportadoras && transportadoras.length > 0 ? (
+
+      {isLoadingTransp && <div className="text-center py-8 text-sm text-muted-foreground">Carregando transportadoras...</div>}
+
+      {!isLoadingTransp && filtered.length > 0 ? (
         <div className="border border-border rounded overflow-hidden mt-2">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
@@ -725,9 +954,15 @@ const Configuracoes = () => {
             </tbody>
           </table>
         </div>
-      ) : <p className="text-xs text-muted-foreground mt-2">Nenhuma transportadora cadastrada.</p>}
+      ) : !isLoadingTransp && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+          <Truck className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   const sectionMap: Record<Section, () => JSX.Element> = {
     empresa: renderEmpresa,
