@@ -113,17 +113,21 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
                <p className="text-xs font-medium text-foreground leading-tight">{profile?.full_name ?? "Usuário"}</p>
                <p className="text-[11px] text-muted-foreground leading-tight">{roles[0] ?? "—"}</p>
              </div>
-             {roles.includes('admin') && (
-               <a
-                 href="https://system.infinitnetwork.com.br/portal/parceiro"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-               >
-                 <ExternalLink size={12} />
-                 Portal
-               </a>
-             )}
+              {roles.includes('admin') && (
+                <a
+                  href="/portal/parceiro"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open("/portal/parceiro", "_blank");
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink size={12} />
+                  Portal
+                </a>
+              )}
            </div>
           <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center border border-primary/30">
             <User size={14} className="text-primary" />
