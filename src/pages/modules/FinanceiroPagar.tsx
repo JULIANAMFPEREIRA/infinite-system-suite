@@ -359,8 +359,12 @@ const FinanceiroPagar = () => {
 
       refetch();
 
-      toast.success("Pago!");
-      setShowBaixa(false);
+       toast.success("Pagamento registrado!");
+       setShowBaixa(false);
+       setBaixaId(null);
+       setBaixaData(new Date().toISOString().split("T")[0]);
+       setBaixaForma("");
+       setBaixaObs("");
     } catch (err: any) { toast.error(err.message); }
   };
 
