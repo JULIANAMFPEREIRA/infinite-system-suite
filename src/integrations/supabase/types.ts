@@ -849,6 +849,7 @@ export type Database = {
           empresa_id: string
           fornecedor_id: string | null
           id: string
+          observacao: string | null
           origem: string | null
           projeto_id: string | null
           status: Database["public"]["Enums"]["status_financeiro"] | null
@@ -868,6 +869,7 @@ export type Database = {
           empresa_id: string
           fornecedor_id?: string | null
           id?: string
+          observacao?: string | null
           origem?: string | null
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null
@@ -887,6 +889,7 @@ export type Database = {
           empresa_id?: string
           fornecedor_id?: string | null
           id?: string
+          observacao?: string | null
           origem?: string | null
           projeto_id?: string | null
           status?: Database["public"]["Enums"]["status_financeiro"] | null

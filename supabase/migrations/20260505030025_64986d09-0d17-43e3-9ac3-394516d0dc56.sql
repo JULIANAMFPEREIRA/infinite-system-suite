@@ -1,0 +1,1 @@
+ALTER TABLE public.financeiro_pagar ADD COLUMN observacao TEXT;
