@@ -16,8 +16,9 @@ const ParceirosManager = () => {
 
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
+  const [openGerenciar, setOpenGerenciar] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState<string | null>(null);
-  const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto" });
+  const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
   const [creating, setCreating] = useState(false);
 
   // Projetos da empresa para vincular
@@ -56,31 +57,85 @@ const ParceirosManager = () => {
   });
 
   const handleCreate = async () => {
-    if (!form.nome || !form.email || !form.password) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!form.nome) {
+      toast.error("Nome é obrigatório");
       return;
     }
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-user", {
-        body: {
-          full_name: form.nome.toUpperCase(),
-          email: form.email.toLowerCase(),
-          password: form.password,
-          role: "parceiro",
+      // If email and password provided, create user account
+      if (form.email && form.password) {
+        const { data, error } = await supabase.functions.invoke("create-user", {
+          body: {
+            full_name: form.nome.toUpperCase(),
+            email: form.email.toLowerCase(),
+            password: form.password,
+            role: "parceiro",
+            subtipo_parceiro: form.subtipo,
+          },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
+
+        // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
+        // But we need to update the rt_percentual if provided.
+        if (form.rt_percentual) {
+          const { data: p } = await supabase.from("fornecedores").select("id").eq("email", form.email.toLowerCase()).single();
+          if (p) {
+            await supabase.from("fornecedores").update({ rt_percentual: Number(form.rt_percentual) }).eq("id", p.id);
+          }
+        }
+      } else {
+        // Just create the partner in fornecedores table
+        const { error } = await supabase.from("fornecedores").insert({
+          empresa_id: empresaId,
+          nome: form.nome.toUpperCase(),
+          email: form.email?.toLowerCase() || null,
+          tipo: form.subtipo,
           subtipo_parceiro: form.subtipo,
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
+          rt_percentual: Number(form.rt_percentual) || 0,
+          ativo: true,
+          deletado: false
+        });
+        if (error) throw error;
+      }
+
       toast.success("Parceiro cadastrado com sucesso");
       setOpenNew(false);
-      setForm({ nome: "", email: "", password: "", subtipo: "arquiteto" });
+      setForm({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
       qc.invalidateQueries({ queryKey: ["parceiros"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao criar parceiro");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (parceiro: any) => {
+    if (!window.confirm(`Deseja realmente excluir o parceiro ${parceiro.nome}?`)) return;
+    
+    try {
+      const { data: projVinc } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("arquiteto_id", parceiro.id)
+        .eq("deletado", false);
+
+      if (projVinc && projVinc.length > 0) {
+        toast.error(`Não é possível excluir — ${projVinc.length} projeto(s) vinculado(s)`);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("fornecedores")
+        .update({ deletado: true })
+        .eq("id", parceiro.id);
+
+      if (error) throw error;
+      toast.success("Parceiro excluído com sucesso");
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 
