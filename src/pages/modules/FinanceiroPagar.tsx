@@ -85,7 +85,7 @@ const FinanceiroPagar = () => {
          .select("*, fornecedores(nome), projetos(nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
-         .order("created_at", { ascending: false });
+          .order("data_vencimento", { ascending: true, nullsFirst: false });
  
        const { data, error } = await query;
        if (error) {
