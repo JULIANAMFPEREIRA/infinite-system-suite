@@ -382,16 +382,30 @@ const Configuracoes = () => {
 
   // --- Section renderers ---
 
-  const renderEmpresa = () => {
-    const [formData, setFormData] = useState({
-      nome: empresa?.nome || "",
-      nome_fantasia: empresa?.nome_fantasia || "",
-      cnpj: empresa?.cnpj || "",
-      telefone: empresa?.telefone || "",
-      email: empresa?.email || "",
-      endereco: empresa?.endereco || "",
-    });
+   const [empresaFormData, setEmpresaFormData] = useState({
+     nome: "",
+     nome_fantasia: "",
+     cnpj: "",
+     telefone: "",
+     email: "",
+     endereco: "",
+   });
 
+   // Sync initial state once data loads
+   useMemo(() => {
+     if (empresa) {
+       setEmpresaFormData({
+         nome: empresa.nome || "",
+         nome_fantasia: empresa.nome_fantasia || "",
+         cnpj: empresa.cnpj || "",
+         telefone: empresa.telefone || "",
+         email: empresa.email || "",
+         endereco: empresa.endereco || "",
+       });
+     }
+   }, [empresa]);
+
+   const renderEmpresa = () => {
     return (
       <div className="space-y-6">
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
@@ -403,7 +417,7 @@ const Configuracoes = () => {
             <div className="flex-shrink-0 space-y-2">
               <Label>Logo</Label>
               <div className="relative w-32 h-32 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-secondary/20">
-                {empresa?.logo_url ? (
+                 {empresa?.logo_url ? (
                   <img src={empresa.logo_url} alt="Logo" className="w-full h-full object-contain" />
                 ) : (
                   <Building2 className="w-12 h-12 text-muted-foreground opacity-20" />
@@ -416,35 +430,35 @@ const Configuracoes = () => {
               </Button>
             </div>
 
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Razão Social</Label>
-                <Input value={formData.nome} onChange={e => setFormData({ ...formData, nome: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Nome Fantasia</Label>
-                <Input value={formData.nome_fantasia} onChange={e => setFormData({ ...formData, nome_fantasia: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">CNPJ</Label>
-                <Input value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Telefone</Label>
-                <Input value={formData.telefone} onChange={e => setFormData({ ...formData, telefone: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">E-mail Corporativo</Label>
-                <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-              </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <Label className="text-xs">Endereço Completo</Label>
-                <Input value={formData.endereco} onChange={e => setFormData({ ...formData, endereco: e.target.value })} />
-              </div>
-            </div>
+             <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                 <Label className="text-xs">Razão Social</Label>
+                 <Input value={empresaFormData.nome} onChange={e => setEmpresaFormData({ ...empresaFormData, nome: e.target.value })} />
+               </div>
+               <div className="space-y-1.5">
+                 <Label className="text-xs">Nome Fantasia</Label>
+                 <Input value={empresaFormData.nome_fantasia} onChange={e => setEmpresaFormData({ ...empresaFormData, nome_fantasia: e.target.value })} />
+               </div>
+               <div className="space-y-1.5">
+                 <Label className="text-xs">CNPJ</Label>
+                 <Input value={empresaFormData.cnpj} onChange={e => setEmpresaFormData({ ...empresaFormData, cnpj: e.target.value })} />
+               </div>
+               <div className="space-y-1.5">
+                 <Label className="text-xs">Telefone</Label>
+                 <Input value={empresaFormData.telefone} onChange={e => setEmpresaFormData({ ...empresaFormData, telefone: e.target.value })} />
+               </div>
+               <div className="space-y-1.5">
+                 <Label className="text-xs">E-mail Corporativo</Label>
+                 <Input value={empresaFormData.email} onChange={e => setEmpresaFormData({ ...empresaFormData, email: e.target.value })} />
+               </div>
+               <div className="space-y-1.5 md:col-span-2">
+                 <Label className="text-xs">Endereço Completo</Label>
+                 <Input value={empresaFormData.endereco} onChange={e => setEmpresaFormData({ ...empresaFormData, endereco: e.target.value })} />
+               </div>
+             </div>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={() => updateEmpresaMutation.mutate(formData)} disabled={updateEmpresaMutation.isPending}>
+           <div className="flex justify-end">
+             <Button onClick={() => updateEmpresaMutation.mutate(empresaFormData)} disabled={updateEmpresaMutation.isPending}>
               Salvar Alterações
             </Button>
           </div>
