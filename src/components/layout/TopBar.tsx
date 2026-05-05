@@ -114,15 +114,20 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
                <p className="text-[11px] text-muted-foreground leading-tight">{roles[0] ?? "—"}</p>
              </div>
               {roles.includes('admin') && (
-                <a
-                  href="/portal/parceiro"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+                <button
+                  onClick={() => window.open(
+                    "/portal/parceiro",
+                    "_blank",
+                    "noopener,noreferrer"
+                  )}
+                  className="flex items-center gap-1.5
+                    text-xs text-muted-foreground
+                    hover:text-foreground transition-colors
+                    px-2 py-1"
                 >
                   <ExternalLink size={12} />
                   Portal
-                </a>
+                </button>
               )}
            </div>
           <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center border border-primary/30">
