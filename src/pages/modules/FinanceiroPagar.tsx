@@ -122,7 +122,8 @@ const FinanceiroPagar = () => {
   const [fornecedorId, setFornecedorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
-  const [descRetirada, setDescRetirada] = useState("");
+   const [descRetirada, setDescRetirada] = useState("");
+   const [observacao, setObservacao] = useState("");
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
