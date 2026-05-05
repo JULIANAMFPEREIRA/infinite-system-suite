@@ -195,20 +195,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
        </div>
  
       {/* Painel Financeiro */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        {/* Recebido */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Recebido
-          </p>
-          <p className="text-2xl font-black text-green-600">
-            {fmt(totalRecebido)}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Total já recebido
-          </p>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* A Receber */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
@@ -247,41 +234,7 @@ import { ShoppingCart, Search, AlertTriangle } from "lucide-react"
             Custo pendente
           </p>
         </div>
-
-        {/* Saldo */}
-        <div className={`border rounded-xl p-4 ${
-          saldoDisponivel >= 0
-            ? "bg-green-500/10 border-green-500/30"
-            : "bg-destructive/10 border-destructive/30"
-        }`}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Saldo
-          </p>
-          <p className={`text-2xl font-black ${
-            saldoDisponivel >= 0
-              ? "text-green-600"
-              : "text-destructive"
-          }`}>
-            {fmt(saldoDisponivel)}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            {saldoDisponivel >= 0
-              ? "Recebido − Falta comprar"
-              : "⚠ Deficit de caixa"}
-          </p>
-        </div>
       </div>
-
-      {/* Alerta de Saldo Negativo */}
-      {saldoDisponivel < 0 && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2">
-          <AlertTriangle size={16} className="text-destructive shrink-0" />
-          <p className="text-sm text-destructive">
-            <strong>Atenção:</strong> Você precisa receber mais{" "}
-            <strong>{fmt(Math.abs(saldoDisponivel))}</strong> dos clientes ou usar recursos de outros projetos para cobrir as compras pendentes.
-          </p>
-        </div>
-      )}
  
        {isLoading ? (
          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground italic">
