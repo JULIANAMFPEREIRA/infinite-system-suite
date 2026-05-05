@@ -359,12 +359,14 @@ const FinanceiroPagar = () => {
 
       refetch();
 
-       toast.success("Pagamento registrado!");
-       setShowBaixa(false);
-       setBaixaId(null);
-       setBaixaData(new Date().toISOString().split("T")[0]);
-       setBaixaForma("");
-       setBaixaObs("");
+      toast.success("Pagamento registrado!");
+      // Fechar modal e resetar estados
+      setShowBaixa(false);
+      setBaixaId(null);
+      setBaixaData(new Date().toISOString().split("T")[0]);
+      setBaixaForma("");
+      setBaixaObs("");
+      setDetailConta(null); // Também fecha o painel de detalhes se estiver aberto
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -427,6 +429,17 @@ const FinanceiroPagar = () => {
   const getCatName = (catId: string | null) => {
     if (!catId || !categorias) return null;
     return categorias.find(c => c.id === catId)?.nome ?? null;
+  };
+
+  const getStatusDisplay = (c: any) => {
+    if (c.status === "pago") return "pago";
+    if (c.status === "cancelado") return "cancelado";
+
+    const hoje = new Date().toISOString().split("T")[0];
+    if (c.data_vencimento && c.data_vencimento < hoje && c.status === "pendente") {
+      return "vencido";
+    }
+    return c.status;
   };
 
   const openParcelar = (conta: any) => {
@@ -844,9 +857,25 @@ const FinanceiroPagar = () => {
                       <td className="px-3 py-2 text-xs text-center text-foreground/80 tabular-nums">{fmtDate(c.data_vencimento)}</td>
                       <td className="px-3 py-2 text-xs text-center text-foreground/80 tabular-nums">{c.data_pagamento ? fmtDate(c.data_pagamento) : "—"}</td>
                       <td className="px-3 py-2 text-xs text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClass(c.status ?? "pendente")}`}>
-                          {statusLabel(c.status ?? "pendente")}
-                        </span>
+                        {(() => {
+                          const statusDisplay = getStatusDisplay(c);
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                              statusDisplay === "pago"
+                                ? "bg-success/15 text-success"
+                              : statusDisplay === "vencido"
+                                ? "bg-destructive/15 text-destructive"
+                              : statusDisplay === "cancelado"
+                                ? "bg-secondary text-muted-foreground"
+                              : "bg-warning/15 text-warning"
+                            }`}>
+                              {statusDisplay === "pago" ? "PAGO"
+                              : statusDisplay === "vencido" ? "VENCIDO"
+                              : statusDisplay === "cancelado" ? "CANCELADO"
+                              : "PENDENTE"}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
