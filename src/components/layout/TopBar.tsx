@@ -118,11 +118,7 @@ const TopBar = ({ onToggleMobileMenu }: TopBarProps) => {
                   href="/portal/parceiro"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open("/portal/parceiro", "_blank");
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
                 >
                   <ExternalLink size={12} />
                   Portal
