@@ -872,27 +872,6 @@ const Configuracoes = () => {
     </div>
     );
   };
-        <table className="w-full text-xs">
-          <thead><tr className="bg-secondary/60">
-            <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Tipo</th>
-            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-28">Categorias</th>
-            <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
-          </tr></thead>
-          <tbody>
-            {allTipos.map(t => (
-              <tr key={t.value} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
-                <td className="px-2.5 py-1.5 font-medium">{t.label}</td>
-                <td className="px-2.5 py-1.5 text-center text-muted-foreground">{categoriasCount(t.value)}</td>
-                <td className="px-2.5 py-1.5 text-center">
-                  <button onClick={() => setEditTipo({ original: t.value, novo: t.label })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   const renderStatusProjeto = () => (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
