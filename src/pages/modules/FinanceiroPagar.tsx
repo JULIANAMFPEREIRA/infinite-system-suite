@@ -732,12 +732,21 @@ const FinanceiroPagar = () => {
                 {fornecedores?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select>
             </div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto (opcional)</label>
-              <select value={projetoId} onChange={e => setProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
-                <option value="">Selecionar...</option>
-                {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </div>
+             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Projeto (opcional)</label>
+               <select value={projetoId} onChange={e => setProjetoId(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none">
+                 <option value="">Selecionar...</option>
+                 {projetos?.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+               </select>
+             </div>
+             <div className="space-y-1 col-span-1">
+               <label className="text-[11px] text-muted-foreground">Observação (opcional)</label>
+               <input 
+                 value={observacao} 
+                 onChange={e => setObservacao(e.target.value)} 
+                 placeholder="Notas internas..."
+                 className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" 
+               />
+             </div>
           </div>
           {editId && (
             <div className="space-y-1 pt-1 border-t border-border">
