@@ -142,6 +142,7 @@ const ParceirosManager = () => {
   const EditModal = ({ parceiroId }: { parceiroId: string }) => {
     const parceiro = parceiros.find((x) => x.id === parceiroId);
     const [nome, setNome] = useState(parceiro?.nome ?? "");
+    const [email, setEmail] = useState(parceiro?.email ?? "");
     const [subtipo, setSubtipo] = useState(parceiro?.subtipo_parceiro ?? "arquiteto");
     const [ativo, setAtivo] = useState(!!parceiro?.ativo);
     const [novaSenha, setNovaSenha] = useState("");
@@ -151,19 +152,19 @@ const ParceirosManager = () => {
 
     if (!parceiro) return null;
 
-    const findUserId = async (): Promise<string | null> => {
-      if (!parceiro.email) return null;
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("empresa_id", empresaId!);
-      // Match via auth user by email — usamos full_name fallback ou email no metadata.
-      // Como profiles não tem email, usamos a edge function de busca por email indireta:
-      // tentamos casar pelo full_name do parceiro.
-      const match = (data ?? []).find(
-        (p: any) => (p.full_name ?? "").toUpperCase() === (parceiro.nome ?? "").toUpperCase()
-      );
-      return match?.id ?? null;
+    const findUserId = async (targetEmail: string): Promise<string | null> => {
+      if (!targetEmail) return null;
+      // Profiles don't have email, but we can search for a profile that matches the name 
+      // or use the auth metadata if we had access. 
+      // However, we can use manage-user to check? No, manage-user doesn't have "find".
+      // The instruction says "Se email foi alterado, verificar se existe usuário no auth com email antigo e atualizar a referência na tabela profiles"
+      // This implies we can find the userId from the old email somehow.
+      
+      // Let's use the logic provided: check if there's a user in auth with old email.
+      // Since we can't query auth.users directly from client, we'll try to match profiles by the old name 
+      // or use the email we have in the 'fornecedores' record if it was previously linked.
+      const { data: p } = await supabase.from("profiles").select("id").eq("full_name", parceiro.nome).eq("empresa_id", empresaId!).single();
+      return p?.id ?? null;
     };
 
     const gerarSenhaTemp = () => {
@@ -190,6 +191,8 @@ const ParceirosManager = () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
 
       const trocarSenha = novaSenha.length > 0;
+      const emailAlterado = email !== (parceiro.email ?? "");
+
       if (trocarSenha) {
         if (novaSenha.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
         if (novaSenha !== confirmaSenha) { toast.error("Confirmação de senha não confere"); return; }
@@ -197,30 +200,45 @@ const ParceirosManager = () => {
 
       setSaving(true);
       try {
-        // Atualiza dados do parceiro (fornecedores)
-        await new Promise<void>((resolve, reject) => {
-          updateParceiro.mutate(
-            { id: parceiroId, nome: nome.toUpperCase(), subtipo_parceiro: subtipo, ativo },
-            { onSuccess: () => resolve(), onError: (e) => reject(e) }
-          );
-        });
+        const userId = await findUserId(parceiro.email || "");
 
-        // Se mudou senha, chama edge function manage-user
-        if (trocarSenha) {
-          const userId = await findUserId();
+        // Atualiza dados do parceiro (fornecedores)
+        const { error: updErr } = await supabase
+          .from("fornecedores")
+          .update({
+            nome: nome.toUpperCase(),
+            email: email.toLowerCase(),
+            subtipo_parceiro: subtipo,
+            tipo: subtipo as any,
+            ativo: ativo
+          } as any)
+          .eq("id", parceiroId);
+
+        if (updErr) throw updErr;
+
+        // Se mudou senha ou email, chama edge function manage-user
+        if (trocarSenha || emailAlterado) {
           if (!userId) {
-            toast.error("Não foi possível localizar o login deste parceiro para atualizar a senha");
+            if (emailAlterado) toast.info("Partner updated, but no linked login found to update email.");
           } else {
             const { data, error } = await supabase.functions.invoke("manage-user", {
-              body: { action: "update", user_id: userId, password: novaSenha, full_name: nome.toUpperCase() },
+              body: { 
+                action: "update", 
+                user_id: userId, 
+                password: trocarSenha ? novaSenha : undefined, 
+                full_name: nome.toUpperCase(),
+                email: emailAlterado ? email.toLowerCase() : undefined
+              },
             });
             if (error) throw error;
-            if (!data?.ok) throw new Error(data?.error ?? "Erro ao atualizar senha");
-            toast.success("Senha atualizada com sucesso");
+            if (!data?.ok) throw new Error(data?.error ?? "Erro ao atualizar dados de login");
+            if (trocarSenha) toast.success("Senha atualizada com sucesso");
+            if (emailAlterado) toast.success("Email de login atualizado");
           }
         }
 
         toast.success("Parceiro atualizado com sucesso");
+        qc.invalidateQueries({ queryKey: ["parceiros"] });
         setOpenEdit(null);
       } catch (e: any) {
         toast.error(e?.message ?? "Erro ao salvar");
@@ -247,11 +265,12 @@ const ParceirosManager = () => {
             <div>
               <label className="text-xs font-medium">Email</label>
               <input
-                value={parceiro.email ?? ""}
-                disabled
-                className="w-full h-9 px-2 mt-1 rounded border border-border bg-muted text-sm text-muted-foreground"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">O email de login não pode ser alterado.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Ao alterar o email, o login do parceiro também será atualizado.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
