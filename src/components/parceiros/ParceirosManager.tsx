@@ -760,10 +760,27 @@ const ParceirosManager = () => {
                       <Pencil size={12} /> Editar
                     </button>
                     <button
-                      onClick={() => setOpenVincular(p.id)}
-                      className="text-primary hover:underline text-[11px]"
+                      onClick={() => setOpenGerenciar(p.id)}
+                      className="text-primary hover:underline text-[11px] flex items-center gap-1"
+                      title="Ver financeiro"
                     >
-                      Gerenciar
+                      <Search size={12} /> Gerenciar
+                    </button>
+
+                    <button
+                      onClick={() => setOpenVincular(p.id)}
+                      className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
+                      title="Vincular projetos"
+                    >
+                      <ExternalLink size={12} /> Vincular
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(p)}
+                      className="text-muted-foreground hover:text-destructive text-[11px] flex items-center gap-1"
+                      title="Excluir parceiro"
+                    >
+                      <Trash2 size={12} /> Excluir
                     </button>
                   </div>
                 </td>
@@ -774,6 +791,7 @@ const ParceirosManager = () => {
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
+      {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
       {openEdit && <EditModal parceiroId={openEdit} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
