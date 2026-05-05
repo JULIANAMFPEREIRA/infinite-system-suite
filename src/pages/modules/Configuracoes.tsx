@@ -70,6 +70,7 @@ const menuGroups = [
 
 const Configuracoes = () => {
   const [activeSection, setActiveSection] = useState<Section>("empresa");
+  const [searchTerm, setSearchTerm] = useState("");
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
@@ -86,18 +87,22 @@ const Configuracoes = () => {
     enabled: !!empresaId,
   });
 
-  const { data: users, refetch: refetchUsers } = useQuery({
-    queryKey: ["profiles_config", empresaId],
+  const { data: users, refetch: refetchUsers, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["config_usuarios", empresaId],
     queryFn: async () => {
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, empresa_id, is_active").eq("empresa_id", empresaId!);
-      const { data: allRoles } = await supabase.from("user_roles").select("user_id, role").eq("empresa_id", empresaId!);
-      return (profiles ?? []).map(p => ({
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, updated_at, is_active, user_roles(role)")
+        .eq("empresa_id", empresaId!)
+        .order("full_name");
+      if (error) throw error;
+      return (data ?? []).map(p => ({
         ...p,
         is_active: p.is_active !== false,
-        roles: (allRoles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
+        roles: (p.user_roles as any[] ?? []).map(r => r.role),
       }));
     },
-    enabled: !!empresaId,
+    enabled: !!empresaId && activeSection === "usuarios",
   });
 
   // Categorias
