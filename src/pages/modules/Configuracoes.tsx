@@ -90,16 +90,25 @@ const Configuracoes = () => {
   const { data: users, refetch: refetchUsers, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["config_usuarios", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: profiles, error: pError } = await supabase
         .from("profiles")
-        .select("id, full_name, updated_at, is_active, user_roles(role)")
+        .select("id, full_name, empresa_id, is_active, updated_at")
         .eq("empresa_id", empresaId!)
         .order("full_name");
-      if (error) throw error;
-      return (data ?? []).map(p => ({
+      
+      if (pError) throw pError;
+
+      const { data: allRoles, error: rError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("empresa_id", empresaId!);
+      
+      if (rError) throw rError;
+
+      return (profiles ?? []).map(p => ({
         ...p,
         is_active: p.is_active !== false,
-        roles: (p.user_roles as any[] ?? []).map(r => r.role),
+        roles: (allRoles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
       }));
     },
     enabled: !!empresaId && activeSection === "usuarios",
