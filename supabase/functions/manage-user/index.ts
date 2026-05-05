@@ -54,12 +54,18 @@ Deno.serve(async (req) => {
 
     if (action === "update") {
       const full_name = body?.full_name != null ? String(body.full_name).trim() : null;
+      const email = body?.email != null ? String(body.email).trim() : null;
       const password = body?.password ? String(body.password) : null;
 
       if (full_name) {
         const { error: pErr } = await supabaseAdmin.from("profiles").update({ full_name }).eq("id", user_id);
         if (pErr) return respond(false, { error: "Erro ao atualizar nome.", detail: pErr.message });
         await supabaseAdmin.auth.admin.updateUserById(user_id, { user_metadata: { full_name } });
+      }
+
+      if (email) {
+        const { error: aErr } = await supabaseAdmin.auth.admin.updateUserById(user_id, { email });
+        if (aErr) return respond(false, { error: "Erro ao atualizar email.", detail: aErr.message });
       }
 
       if (password) {

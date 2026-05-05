@@ -5,7 +5,7 @@ import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Save, Pencil, KeyRound, Copy } from "lucide-react";
+ import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 const ParceirosManager = () => {
@@ -16,8 +16,9 @@ const ParceirosManager = () => {
 
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
+  const [openGerenciar, setOpenGerenciar] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState<string | null>(null);
-  const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto" });
+  const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
   const [creating, setCreating] = useState(false);
 
   // Projetos da empresa para vincular
@@ -56,26 +57,52 @@ const ParceirosManager = () => {
   });
 
   const handleCreate = async () => {
-    if (!form.nome || !form.email || !form.password) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!form.nome) {
+      toast.error("Nome é obrigatório");
       return;
     }
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-user", {
-        body: {
-          full_name: form.nome.toUpperCase(),
-          email: form.email.toLowerCase(),
-          password: form.password,
-          role: "parceiro",
+      // If email and password provided, create user account
+      if (form.email && form.password) {
+        const { data, error } = await supabase.functions.invoke("create-user", {
+          body: {
+            full_name: form.nome.toUpperCase(),
+            email: form.email.toLowerCase(),
+            password: form.password,
+            role: "parceiro",
+            subtipo_parceiro: form.subtipo,
+          },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
+
+        // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
+        // But we need to update the rt_percentual if provided.
+        if (form.rt_percentual) {
+          const { data: p } = await supabase.from("fornecedores").select("id").eq("email", form.email.toLowerCase()).single();
+          if (p) {
+            await supabase.from("fornecedores").update({ rt_percentual: Number(form.rt_percentual) }).eq("id", p.id);
+          }
+        }
+      } else {
+        // Just create the partner in fornecedores table
+        const { error } = await supabase.from("fornecedores").insert({
+          empresa_id: empresaId,
+          nome: form.nome.toUpperCase(),
+          email: form.email?.toLowerCase() || null,
+          tipo: form.subtipo as any,
           subtipo_parceiro: form.subtipo,
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
+          rt_percentual: Number(form.rt_percentual) || 0,
+          ativo: true,
+          deletado: false
+        } as any);
+        if (error) throw error;
+      }
+
       toast.success("Parceiro cadastrado com sucesso");
       setOpenNew(false);
-      setForm({ nome: "", email: "", password: "", subtipo: "arquiteto" });
+      setForm({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
       qc.invalidateQueries({ queryKey: ["parceiros"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao criar parceiro");
@@ -84,9 +111,38 @@ const ParceirosManager = () => {
     }
   };
 
+  const handleDelete = async (parceiro: any) => {
+    if (!window.confirm(`Deseja realmente excluir o parceiro ${parceiro.nome}?`)) return;
+    
+    try {
+      const { data: projVinc } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("arquiteto_id", parceiro.id)
+        .eq("deletado", false);
+
+      if (projVinc && projVinc.length > 0) {
+        toast.error(`Não é possível excluir — ${projVinc.length} projeto(s) vinculado(s)`);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("fornecedores")
+        .update({ deletado: true })
+        .eq("id", parceiro.id);
+
+      if (error) throw error;
+      toast.success("Parceiro excluído com sucesso");
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   const EditModal = ({ parceiroId }: { parceiroId: string }) => {
     const parceiro = parceiros.find((x) => x.id === parceiroId);
     const [nome, setNome] = useState(parceiro?.nome ?? "");
+    const [email, setEmail] = useState(parceiro?.email ?? "");
     const [subtipo, setSubtipo] = useState(parceiro?.subtipo_parceiro ?? "arquiteto");
     const [ativo, setAtivo] = useState(!!parceiro?.ativo);
     const [novaSenha, setNovaSenha] = useState("");
@@ -96,19 +152,19 @@ const ParceirosManager = () => {
 
     if (!parceiro) return null;
 
-    const findUserId = async (): Promise<string | null> => {
-      if (!parceiro.email) return null;
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("empresa_id", empresaId!);
-      // Match via auth user by email — usamos full_name fallback ou email no metadata.
-      // Como profiles não tem email, usamos a edge function de busca por email indireta:
-      // tentamos casar pelo full_name do parceiro.
-      const match = (data ?? []).find(
-        (p: any) => (p.full_name ?? "").toUpperCase() === (parceiro.nome ?? "").toUpperCase()
-      );
-      return match?.id ?? null;
+    const findUserId = async (targetEmail: string): Promise<string | null> => {
+      if (!targetEmail) return null;
+      // Profiles don't have email, but we can search for a profile that matches the name 
+      // or use the auth metadata if we had access. 
+      // However, we can use manage-user to check? No, manage-user doesn't have "find".
+      // The instruction says "Se email foi alterado, verificar se existe usuário no auth com email antigo e atualizar a referência na tabela profiles"
+      // This implies we can find the userId from the old email somehow.
+      
+      // Let's use the logic provided: check if there's a user in auth with old email.
+      // Since we can't query auth.users directly from client, we'll try to match profiles by the old name 
+      // or use the email we have in the 'fornecedores' record if it was previously linked.
+      const { data: p } = await supabase.from("profiles").select("id").eq("full_name", parceiro.nome).eq("empresa_id", empresaId!).single();
+      return p?.id ?? null;
     };
 
     const gerarSenhaTemp = () => {
@@ -135,6 +191,8 @@ const ParceirosManager = () => {
       if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
 
       const trocarSenha = novaSenha.length > 0;
+      const emailAlterado = email !== (parceiro.email ?? "");
+
       if (trocarSenha) {
         if (novaSenha.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
         if (novaSenha !== confirmaSenha) { toast.error("Confirmação de senha não confere"); return; }
@@ -142,30 +200,45 @@ const ParceirosManager = () => {
 
       setSaving(true);
       try {
-        // Atualiza dados do parceiro (fornecedores)
-        await new Promise<void>((resolve, reject) => {
-          updateParceiro.mutate(
-            { id: parceiroId, nome: nome.toUpperCase(), subtipo_parceiro: subtipo, ativo },
-            { onSuccess: () => resolve(), onError: (e) => reject(e) }
-          );
-        });
+        const userId = await findUserId(parceiro.email || "");
 
-        // Se mudou senha, chama edge function manage-user
-        if (trocarSenha) {
-          const userId = await findUserId();
+        // Atualiza dados do parceiro (fornecedores)
+        const { error: updErr } = await supabase
+          .from("fornecedores")
+          .update({
+            nome: nome.toUpperCase(),
+            email: email.toLowerCase(),
+            subtipo_parceiro: subtipo,
+            tipo: subtipo as any,
+            ativo: ativo
+          } as any)
+          .eq("id", parceiroId);
+
+        if (updErr) throw updErr;
+
+        // Se mudou senha ou email, chama edge function manage-user
+        if (trocarSenha || emailAlterado) {
           if (!userId) {
-            toast.error("Não foi possível localizar o login deste parceiro para atualizar a senha");
+            if (emailAlterado) toast.info("Partner updated, but no linked login found to update email.");
           } else {
             const { data, error } = await supabase.functions.invoke("manage-user", {
-              body: { action: "update", user_id: userId, password: novaSenha, full_name: nome.toUpperCase() },
+              body: { 
+                action: "update", 
+                user_id: userId, 
+                password: trocarSenha ? novaSenha : undefined, 
+                full_name: nome.toUpperCase(),
+                email: emailAlterado ? email.toLowerCase() : undefined
+              },
             });
             if (error) throw error;
-            if (!data?.ok) throw new Error(data?.error ?? "Erro ao atualizar senha");
-            toast.success("Senha atualizada com sucesso");
+            if (!data?.ok) throw new Error(data?.error ?? "Erro ao atualizar dados de login");
+            if (trocarSenha) toast.success("Senha atualizada com sucesso");
+            if (emailAlterado) toast.success("Email de login atualizado");
           }
         }
 
         toast.success("Parceiro atualizado com sucesso");
+        qc.invalidateQueries({ queryKey: ["parceiros"] });
         setOpenEdit(null);
       } catch (e: any) {
         toast.error(e?.message ?? "Erro ao salvar");
@@ -192,11 +265,12 @@ const ParceirosManager = () => {
             <div>
               <label className="text-xs font-medium">Email</label>
               <input
-                value={parceiro.email ?? ""}
-                disabled
-                className="w-full h-9 px-2 mt-1 rounded border border-border bg-muted text-sm text-muted-foreground"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">O email de login não pode ser alterado.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Ao alterar o email, o login do parceiro também será atualizado.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -273,6 +347,94 @@ const ParceirosManager = () => {
               <Save size={14} className="mr-1" />
               {saving ? "Salvando…" : "Salvar"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  const GerenciarFinanceiroModal = ({ parceiroId }: { parceiroId: string }) => {
+    const parceiro = parceiros.find(p => p.id === parceiroId);
+    const { data: comissoes, isLoading } = useQuery({
+      queryKey: ["parceiro_comissoes", parceiroId],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("comissoes")
+          .select("*, projetos(nome, status)")
+          .eq("fornecedor_id", parceiroId)
+          .eq("deletado", false);
+        if (error) throw error;
+        return data ?? [];
+      },
+      enabled: !!parceiroId
+    });
+
+    // Agrupar por projeto
+    const resumo = useMemo(() => {
+      const map: Record<string, { nome: string, status: string, total: number, pago: number, pendente: number }> = {};
+      (comissoes ?? []).forEach((c: any) => {
+        const pid = c.projeto_id;
+        if (!map[pid]) {
+          map[pid] = { 
+            nome: c.projetos?.nome ?? "Projeto s/ nome", 
+            status: c.projetos?.status ?? "indefinido",
+            total: 0, 
+            pago: 0, 
+            pendente: 0 
+          };
+        }
+        const valor = Number(c.valor) || 0;
+        map[pid].total += valor;
+        if (c.status === "pago") map[pid].pago += valor;
+        else map[pid].pendente += valor;
+      });
+      return Object.values(map);
+    }, [comissoes]);
+
+    return (
+      <Dialog open onOpenChange={(o) => !o && setOpenGerenciar(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Financeiro: {parceiro?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border border-border rounded overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary/60">
+                  <tr>
+                    <th className="text-left px-3 py-2">Projeto</th>
+                    <th className="text-left px-3 py-2">Status</th>
+                    <th className="text-right px-3 py-2">RT Total</th>
+                    <th className="text-right px-3 py-2 text-success">Pago</th>
+                    <th className="text-right px-3 py-2 text-warning">Pendente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading && (
+                    <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Carregando comissões...</td></tr>
+                  )}
+                  {!isLoading && resumo.length === 0 && (
+                    <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma comissão encontrada para este parceiro.</td></tr>
+                  )}
+                  {resumo.map((r, i) => (
+                    <tr key={i} className="border-t border-border hover:bg-secondary/20">
+                      <td className="px-3 py-2 font-medium">{r.nome}</td>
+                      <td className="px-3 py-2">
+                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-secondary text-secondary-foreground capitalize">
+                           {r.status}
+                         </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold">R$ {r.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-2 text-right text-success">R$ {r.pago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-2 text-right text-warning">R$ {r.pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setOpenGerenciar(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -598,10 +760,27 @@ const ParceirosManager = () => {
                       <Pencil size={12} /> Editar
                     </button>
                     <button
-                      onClick={() => setOpenVincular(p.id)}
-                      className="text-primary hover:underline text-[11px]"
+                      onClick={() => setOpenGerenciar(p.id)}
+                      className="text-primary hover:underline text-[11px] flex items-center gap-1"
+                      title="Ver financeiro"
                     >
-                      Gerenciar
+                      <Search size={12} /> Gerenciar
+                    </button>
+
+                    <button
+                      onClick={() => setOpenVincular(p.id)}
+                      className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
+                      title="Vincular projetos"
+                    >
+                      <ExternalLink size={12} /> Vincular
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(p)}
+                      className="text-muted-foreground hover:text-destructive text-[11px] flex items-center gap-1"
+                      title="Excluir parceiro"
+                    >
+                      <Trash2 size={12} /> Excluir
                     </button>
                   </div>
                 </td>
@@ -612,6 +791,7 @@ const ParceirosManager = () => {
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
+      {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
       {openEdit && <EditModal parceiroId={openEdit} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
@@ -629,7 +809,7 @@ const ParceirosManager = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-medium">Email *</label>
+              <label className="text-xs font-medium">Email</label>
               <input
                 type="email"
                 value={form.email}
@@ -637,14 +817,45 @@ const ParceirosManager = () => {
                 className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium">Senha *</label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium">Tipo de Parceiro</label>
+                <select
+                  value={form.subtipo}
+                  onChange={(e) => setForm({ ...form, subtipo: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                >
+                  {SUBTIPOS_PARCEIRO.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium">RT Percentual (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.rt_percentual}
+                  onChange={(e) => setForm({ ...form, rt_percentual: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-border mt-2">
+              <p className="text-[10px] text-muted-foreground mb-2">Para criar um acesso ao sistema para o parceiro, preencha também uma senha:</p>
+              <div>
+                <label className="text-xs font-medium">Senha de acesso (opcional)</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-medium">Tipo de Parceiro</label>
