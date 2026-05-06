@@ -342,26 +342,31 @@ const FinanceiroPagar = () => {
       if (error) throw error
 
       // Se for comissão sincronizar
-      if (contaOriginal?.origem === "comissao"
-          || contaOriginal?.comissao_id) {
-
+      if (contaOriginal?.comissao_id || contaOriginal?.origem === "comissao") {
+        // 1. Atualizar comissoes
         if (contaOriginal?.comissao_id) {
           await supabase
             .from("comissoes")
-            .update({ status: "pago" })
-            .eq("id", contaOriginal.comissao_id)
+            .update({
+              status: "pago",
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", contaOriginal.comissao_id);
         }
-        await supabase
-          .from("parcelas_parceiros")
-          .update({
-            status: "pago",
-            data_pagamento: baixaData
-          })
-          .eq("projeto_id",
-            contaOriginal.projeto_id)
-          .eq("parceiro_id",
-            contaOriginal.fornecedor_id)
-          .eq("valor", contaOriginal.valor)
+
+        // 2. Atualizar parcelas_parceiros
+        // Buscar por projeto + parceiro + pendente
+        if (contaOriginal?.fornecedor_id && contaOriginal?.projeto_id) {
+          await supabase
+            .from("parcelas_parceiros")
+            .update({
+              status: "pago",
+              data_pagamento: baixaData
+            })
+            .eq("parceiro_id", contaOriginal.fornecedor_id)
+            .eq("projeto_id", contaOriginal.projeto_id)
+            .eq("status", "pendente");
+        }
       }
 
       // Fechar modal
@@ -374,9 +379,22 @@ const FinanceiroPagar = () => {
       setDetailConta(null)
       toast.success("Pagamento registrado!")
 
-      qc.invalidateQueries({
+      // 3. Invalidar TODAS as queries relevantes
+      await qc.invalidateQueries({
         queryKey: ["financeiro_pagar"]
-      })
+      });
+      await qc.invalidateQueries({
+        queryKey: ["comissoes_rt"]
+      });
+      await qc.invalidateQueries({
+        queryKey: ["parcelas_parceiros"]
+      });
+      await qc.invalidateQueries({
+        queryKey: ["portal_parceiros"]
+      });
+      await qc.invalidateQueries({
+        queryKey: ["comissoes"]
+      });
     } catch (err: any) {
       console.error("Erro baixa:", err)
       toast.error(
