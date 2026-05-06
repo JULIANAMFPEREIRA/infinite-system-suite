@@ -360,7 +360,7 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredComissoes.map(c => (
+                filteredComissoes.map((c: any) => (
                   <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
