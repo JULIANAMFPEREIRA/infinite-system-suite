@@ -82,7 +82,7 @@ const FinanceiroPagar = () => {
      queryFn: async () => {
        let query = supabase
          .from("financeiro_pagar")
-         .select("*, fornecedores(nome), projetos(nome)")
+         .select("*, comissao_id, fornecedores(nome), projetos(nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
           .order("data_vencimento", { ascending: true, nullsFirst: false });
