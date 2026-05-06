@@ -341,6 +341,19 @@ const FinanceiroPagar = () => {
         .eq("id", baixaId);
       if (error) throw error
 
+      const conta = (contas ?? []).find(
+        (c: any) => c.id === baixaId
+      )
+      if (conta?.comissao_id) {
+        await (supabase
+          .from("comissoes")
+          .update({
+            status: "pago",
+            data_pagamento: baixaData
+          } as any) as any)
+          .eq("id", conta.comissao_id)
+      }
+
       // Se for comissão sincronizar
       if (contaOriginal?.comissao_id || contaOriginal?.origem === "comissao") {
         // 1. Atualizar comissoes
