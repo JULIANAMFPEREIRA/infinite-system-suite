@@ -353,15 +353,7 @@ const PortalParceiros = () => {
                           </tr>
                         </thead>
                         <tbody>
-                        <tbody>
-<td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
-                              <td className="px-3 py-2">
-                                {(() => {
-                                  if (c.status === "pago" && c.data_pagamento) {
-                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
-                                  }
-                                  if (c.status === "pendente" && c.data_vencimento) {
-{projComissoes.map((c: any) => (
+                          {projComissoes.map((c: any) => (
                             <tr key={c.id} className="border-b border-border last:border-b-0">
                               <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
                               <td className="px-3 py-2">
@@ -372,7 +364,20 @@ const PortalParceiros = () => {
                                   if (c.status === "pendente" && c.data_vencimento) {
                                     const hoje = new Date().toISOString().split("T")[0];
                                     const venceu = c.data_vencimento < hoje;
-<td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
+                                    return (
+                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
+                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
+                                      </span>
+                                    );
+                                  }
+                                  return "—";
+                                })()}
+                              </td>
+                              <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
+                                  {c.status === "pago" ? "Pago" : "Pendente"}
+                                </span>
                               </td>
                             </tr>
                           ))}
