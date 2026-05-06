@@ -341,26 +341,18 @@ const PortalParceiros = () => {
                     <p className="text-xs text-muted-foreground text-center py-4">
                       Nenhuma comissão registrada.
                     </p>
-                  ) : (
-                              <td className="px-3 py-2">
-                                {(() => {
-<th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+) : (
+                    <div className="border border-border rounded-lg overflow-hidden mb-4">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-secondary/60">
+                            <th className="text-left px-3 py-2 border-b border-border">Projeto</th>
                             <th className="text-left px-3 py-2 border-b border-border">Data</th>
-                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
-                                  }
-                                  if (c.status === "pendente" && c.data_vencimento) {
-                                    const hoje = new Date().toISOString().split("T")[0];
-                                    const venceu = c.data_vencimento < hoje;
-                                    return (
-                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
-                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
-                                      </span>
-                                    );
-                                  }
-                                  return "—";
-                                })()}
-                              </td>
+                            <th className="text-right px-3 py-2 border-b border-border">Valor</th>
+                            <th className="text-center px-3 py-2 border-b border-border">Status</th>
+                          </tr>
                         </thead>
+                        <tbody>
                         <tbody>
 <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
                               <td className="px-3 py-2">
@@ -369,16 +361,18 @@ const PortalParceiros = () => {
                                     return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
                                   }
                                   if (c.status === "pendente" && c.data_vencimento) {
+{projComissoes.map((c: any) => (
+                            <tr key={c.id} className="border-b border-border last:border-b-0">
+                              <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2">
+                                {(() => {
+                                  if (c.status === "pago" && c.data_pagamento) {
+                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
+                                  }
+                                  if (c.status === "pendente" && c.data_vencimento) {
                                     const hoje = new Date().toISOString().split("T")[0];
                                     const venceu = c.data_vencimento < hoje;
-                                    return (
-                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
-                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
-                                      </span>
-                                    );
-                                  }
-                                  return "—";
-                                })()}
+<td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
                               </td>
                             </tr>
                           ))}
