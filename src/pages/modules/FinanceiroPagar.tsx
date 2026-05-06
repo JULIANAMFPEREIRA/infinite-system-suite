@@ -345,12 +345,12 @@ const FinanceiroPagar = () => {
       if (contaOriginal?.comissao_id || contaOriginal?.origem === "comissao") {
         // 1. Atualizar comissoes
         if (contaOriginal?.comissao_id) {
-          await supabase
+          await (supabase
             .from("comissoes")
             .update({
               status: "pago",
               updated_at: new Date().toISOString()
-            })
+            } as any) as any)
             .eq("id", contaOriginal.comissao_id);
         }
 
