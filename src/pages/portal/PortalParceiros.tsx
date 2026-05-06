@@ -19,6 +19,8 @@ const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
+const formatDate = (date: string) => {\n  if (!date) return "—";\n  const [y, m, d] = date.split("-");\n  return d + "/" + m + "/" + y;\n};
+
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
   em_andamento: 35, infraestrutura: 45, cabeamento: 55, instalacao: 65,
@@ -94,7 +96,7 @@ const PortalParceiros = () => {
       if (forn.tipo === "arquiteto") {
         const { data: com } = await supabase
           .from("comissoes")
-          .select("*, data_vencimento, data_pagamento, parcelado, num_parcelas, projetos(nome)")
+          .select("*, data_vencimento, data_pagamento, parcelado, num_parcelas, fornecedores(id, nome), projetos(id, nome)")
           .eq("fornecedor_id", forn.id)
           .eq("deletado", false);
         comissoes = com ?? [];
@@ -340,7 +342,7 @@ const PortalParceiros = () => {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="bg-secondary/60">
-                            <th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+                            <th className="text-left px-3 py-2 border-b border-border">Projeto</th>\n                            <th className="text-left px-3 py-2 border-b border-border">Data</th>
                             <th className="text-right px-3 py-2 border-b border-border">Valor</th>
                             <th className="text-center px-3 py-2 border-b border-border">Status</th>
                           </tr>
@@ -348,7 +350,7 @@ const PortalParceiros = () => {
                         <tbody>
                           {projComissoes.map((c: any) => (
                             <tr key={c.id} className="border-b border-border last:border-b-0">
-                              <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>\n                              <td className="px-3 py-2">\n                                {(() => {\n                                  if (c.status === "pago" && c.data_pagamento) {\n                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;\n                                  }\n                                  if (c.status === "pendente" && c.data_vencimento) {\n                                    const hoje = new Date().toISOString().split("T")[0];\n                                    const venceu = c.data_vencimento < hoje;\n                                    return (\n                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>\n                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}\n                                      </span>\n                                    );\n                                  }\n                                  return "—";\n                                })()}\n                              </td>
                               <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
                               <td className="px-3 py-2 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
