@@ -362,6 +362,7 @@ const FinanceiroPagar = () => {
             .from("comissoes")
             .update({
               status: "pago",
+              data_pagamento: baixaData,
               updated_at: new Date().toISOString()
             } as any) as any)
             .eq("id", contaOriginal.comissao_id);
