@@ -345,12 +345,12 @@ const FinanceiroPagar = () => {
         (c: any) => c.id === baixaId
       )
       if (conta?.comissao_id) {
-        await supabase
+        await (supabase
           .from("comissoes")
           .update({
             status: "pago",
             data_pagamento: baixaData
-          })
+          } as any) as any)
           .eq("id", conta.comissao_id)
       }
 
