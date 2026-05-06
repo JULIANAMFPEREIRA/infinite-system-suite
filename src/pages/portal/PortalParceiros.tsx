@@ -19,6 +19,12 @@ const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
+const formatDate = (date: string) => {
+  if (!date) return "—";
+  const [y, m, d] = date.split("-");
+  return d + "/" + m + "/" + y;
+};
+
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
   em_andamento: 35, infraestrutura: 45, cabeamento: 55, instalacao: 65,
@@ -94,7 +100,7 @@ const PortalParceiros = () => {
       if (forn.tipo === "arquiteto") {
         const { data: com } = await supabase
           .from("comissoes")
-          .select("*, data_vencimento, data_pagamento, parcelado, num_parcelas, projetos(nome)")
+          .select("*, data_vencimento, data_pagamento, parcelado, num_parcelas, fornecedores(id, nome), projetos(id, nome)")
           .eq("fornecedor_id", forn.id)
           .eq("deletado", false);
         comissoes = com ?? [];
@@ -335,12 +341,13 @@ const PortalParceiros = () => {
                     <p className="text-xs text-muted-foreground text-center py-4">
                       Nenhuma comissão registrada.
                     </p>
-                  ) : (
+) : (
                     <div className="border border-border rounded-lg overflow-hidden mb-4">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="bg-secondary/60">
                             <th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+                            <th className="text-left px-3 py-2 border-b border-border">Data</th>
                             <th className="text-right px-3 py-2 border-b border-border">Valor</th>
                             <th className="text-center px-3 py-2 border-b border-border">Status</th>
                           </tr>
@@ -349,6 +356,23 @@ const PortalParceiros = () => {
                           {projComissoes.map((c: any) => (
                             <tr key={c.id} className="border-b border-border last:border-b-0">
                               <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2">
+                                {(() => {
+                                  if (c.status === "pago" && c.data_pagamento) {
+                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
+                                  }
+                                  if (c.status === "pendente" && c.data_vencimento) {
+                                    const hoje = new Date().toISOString().split("T")[0];
+                                    const venceu = c.data_vencimento < hoje;
+                                    return (
+                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
+                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
+                                      </span>
+                                    );
+                                  }
+                                  return "—";
+                                })()}
+                              </td>
                               <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
                               <td className="px-3 py-2 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
