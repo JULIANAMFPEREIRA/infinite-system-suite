@@ -174,7 +174,9 @@ export type Database = {
           forma_pagamento: string | null
           fornecedor_id: string
           id: string
+          num_parcelas: number | null
           observacao: string | null
+          parcelado: boolean | null
           percentual: number | null
           projeto_id: string
           projeto_item_id: string | null
@@ -189,7 +191,9 @@ export type Database = {
           forma_pagamento?: string | null
           fornecedor_id: string
           id?: string
+          num_parcelas?: number | null
           observacao?: string | null
+          parcelado?: boolean | null
           percentual?: number | null
           projeto_id: string
           projeto_item_id?: string | null
@@ -204,7 +208,9 @@ export type Database = {
           forma_pagamento?: string | null
           fornecedor_id?: string
           id?: string
+          num_parcelas?: number | null
           observacao?: string | null
+          parcelado?: boolean | null
           percentual?: number | null
           projeto_id?: string
           projeto_item_id?: string | null
