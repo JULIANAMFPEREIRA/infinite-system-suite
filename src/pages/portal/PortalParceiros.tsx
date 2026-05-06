@@ -19,7 +19,11 @@ const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-const formatDate = (date: string) => {\n  if (!date) return "—";\n  const [y, m, d] = date.split("-");\n  return d + "/" + m + "/" + y;\n};
+const formatDate = (date: string) => {
+  if (!date) return "—";
+  const [y, m, d] = date.split("-");
+  return d + "/" + m + "/" + y;
+};
 
 const progressMap: Record<StatusProjeto, number> = {
   lead: 0, proposta: 5, orcamento: 10, aprovado: 15, vendido: 25,
@@ -338,14 +342,32 @@ const PortalParceiros = () => {
                       Nenhuma comissão registrada.
                     </p>
                   ) : (
-                    <div className="border border-border rounded-lg overflow-hidden mb-4">
+<th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+                            <th className="text-left px-3 py-2 border-b border-border">Data</th>
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="bg-secondary/60">
                             <th className="text-left px-3 py-2 border-b border-border">Projeto</th>\n                            <th className="text-left px-3 py-2 border-b border-border">Data</th>
                             <th className="text-right px-3 py-2 border-b border-border">Valor</th>
                             <th className="text-center px-3 py-2 border-b border-border">Status</th>
-                          </tr>
+<td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2">
+                                {(() => {
+                                  if (c.status === "pago" && c.data_pagamento) {
+                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
+                                  }
+                                  if (c.status === "pendente" && c.data_vencimento) {
+                                    const hoje = new Date().toISOString().split("T")[0];
+                                    const venceu = c.data_vencimento < hoje;
+                                    return (
+                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
+                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
+                                      </span>
+                                    );
+                                  }
+                                  return "—";
+                                })()}
+                              </td>
                         </thead>
                         <tbody>
                           {projComissoes.map((c: any) => (
