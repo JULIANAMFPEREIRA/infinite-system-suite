@@ -19,7 +19,7 @@ const Comissoes = () => {
   const [busca, setBusca] = useState("");
 
   // Query principal
-  const { data: comissoes, isLoading } = useQuery({
+  const { data: comissoes, isLoading: isLoadingComissoes } = useQuery({
     queryKey: ["comissoes_rt", empresaId, filtroParceiro, filtroStatus, filtroProjeto],
     queryFn: async () => {
       let query = supabase
@@ -50,6 +50,43 @@ const Comissoes = () => {
     enabled: !!empresaId,
   });
 
+  const { data: parcelas, isLoading: isLoadingParcelas } = useQuery({
+    queryKey: ["comissoes_parcelas", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financeiro_pagar")
+        .select("id, comissao_id, descricao, valor, status, data_vencimento, data_pagamento")
+        .eq("empresa_id", empresaId!)
+        .not("comissao_id", "is", null);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+
+  const isLoading = isLoadingComissoes || isLoadingParcelas;
+
+  const linhas = useMemo(() => {
+    if (!comissoes) return [];
+    return comissoes.flatMap((c: any) => {
+      const fps = (parcelas ?? []).filter(
+        (fp: any) => fp.comissao_id === c.id
+      );
+
+      if (fps.length > 1) {
+        return fps.map((fp: any, i: number) => ({
+          ...c,
+          _fp: fp,
+          _label: `Parcela ${i + 1}/${fps.length}`
+        }));
+      }
+
+      const fp = fps[0];
+      return [{ ...c, _fp: fp ?? null, _label: null }];
+    });
+  }, [comissoes, parcelas]);
+
   // Queries para os selects de filtro
   const { data: parceirosList } = useQuery({
     queryKey: ["parceiros_comissoes", empresaId],
@@ -79,9 +116,9 @@ const Comissoes = () => {
     enabled: !!empresaId,
   });
 
-  const filteredComissoes = useMemo(() => {
-    if (!comissoes) return [];
-    return comissoes.filter(c => {
+  const filteredLinhas = useMemo(() => {
+    if (!linhas) return [];
+    return linhas.filter((c: any) => {
       const searchStr = busca.toLowerCase();
       const parceiroNome = (c.fornecedores as any)?.nome?.toLowerCase() || "";
       const projetoNome = (c.projetos as any)?.nome?.toLowerCase() || "";
@@ -90,20 +127,22 @@ const Comissoes = () => {
   }, [comissoes, busca]);
 
   const totais = useMemo(() => {
-    const totalComissoes = (comissoes ?? []).reduce((acc, curr) => acc + Number(curr.valor), 0);
-    const totalPago = (comissoes ?? [])
-      .filter((c) => c.status === "pago")
-      .reduce((acc, curr) => acc + Number(curr.valor), 0);
-    const totalPendente = (comissoes ?? [])
-      .filter((c) => c.status === "pendente")
-      .reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const totalComissoes = (linhas ?? []).reduce(
+      (s: number, row: any) => s + Number(row._fp?.valor ?? row.valor),
+      0
+    );
+    const totalPago = (linhas ?? [])
+      .filter((row: any) => row._fp?.status === "pago")
+      .reduce((s: number, row: any) => s + Number(row._fp?.valor ?? row.valor), 0);
+
+    const totalPendente = totalComissoes - totalPago;
 
     return {
       total: totalComissoes,
       pago: totalPago,
       pendente: totalPendente,
     };
-  }, [comissoes]);
+  }, [linhas]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -226,25 +265,63 @@ const Comissoes = () => {
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Carregando comissões...</td>
                 </tr>
-              ) : filteredComissoes.length === 0 ? (
+              ) : filteredLinhas.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredComissoes.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{c.fornecedores?.nome}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.projetos?.nome}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{fmt(Number(c.valor))}</td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(c.percentual).toFixed(2)}%</td>
-                    <td className="px-4 py-3 text-right text-green-600">{c.status === "pago" ? fmt(Number(c.valor)) : "R$ 0,00"}</td>
-                    <td className="px-4 py-3 text-right text-orange-500">{c.status === "pendente" ? fmt(Number(c.valor)) : "R$ 0,00"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">—</td>
+                filteredLinhas.map((row: any) => (
+                  <tr key={row._fp?.id ?? row.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {row._label && (
+                        <span className="text-xs text-muted-foreground mr-1">
+                          {row._label} —
+                        </span>
+                      )}
+                      {row.projetos?.nome}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold">
+                      {fmt(Number(row._fp?.valor ?? row.valor))}
+                    </td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(row.percentual).toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right text-green-600">
+                      {row._fp?.status === "pago"
+                        ? fmt(Number(row._fp.valor))
+                        : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-orange-500">
+                      {row._fp?.status !== "pago"
+                        ? fmt(Number(row._fp?.valor ?? row.valor))
+                        : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {row._fp?.data_pagamento
+                        ? <span className="text-green-600 text-sm">
+                            Pago em: {row._fp.data_pagamento.split("-").reverse().join("/")}
+                          </span>
+                        : row._fp?.data_vencimento
+                        ? <span className={`text-sm ${
+                            row._fp.data_vencimento < new Date().toISOString().split("T")[0]
+                              ? "text-red-500" : "text-yellow-600"
+                          }`}>
+                            {row._fp.data_vencimento < new Date().toISOString().split("T")[0]
+                              ? "Venceu em: " : "Vence em: "}
+                            {row._fp.data_vencimento.split("-").reverse().join("/")}
+                          </span>
+                        : "—"}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                        row._fp?.status === "pago"
+                          ? "bg-green-100 text-green-700"
+                          : row._fp?.data_vencimento && row._fp.data_vencimento < new Date().toISOString().split("T")[0]
+                            ? "bg-red-100 text-red-700"
+                            : "bg-orange-100 text-orange-700"
                       }`}>
-                        {c.status}
+                        {row._fp?.status === "pago" ? "PAGO"
+                          : row._fp?.data_vencimento && row._fp.data_vencimento < new Date().toISOString().split("T")[0]
+                          ? "VENCIDO" : "PENDENTE"}
                       </span>
                     </td>
                   </tr>
