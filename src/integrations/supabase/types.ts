@@ -58,6 +58,89 @@ export type Database = {
           },
         ]
       }
+      authorization_items: {
+        Row: {
+          authorization_id: string
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          observation: string | null
+          order_index: number
+          response: string | null
+          updated_at: string
+        }
+        Insert: {
+          authorization_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          observation?: string | null
+          order_index?: number
+          response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authorization_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          observation?: string | null
+          order_index?: number
+          response?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authorization_items_authorization_id_fkey"
+            columns: ["authorization_id"]
+            isOneToOne: false
+            referencedRelation: "authorizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authorizations: {
+        Row: {
+          client_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          recipient_name: string
+          recipient_role: string
+          responded_at: string | null
+          slug: string
+          status: string
+          title: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          recipient_name: string
+          recipient_role: string
+          responded_at?: string | null
+          slug: string
+          status?: string
+          title: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          recipient_name?: string
+          recipient_role?: string
+          responded_at?: string | null
+          slug?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
       categorias: {
         Row: {
           created_at: string
