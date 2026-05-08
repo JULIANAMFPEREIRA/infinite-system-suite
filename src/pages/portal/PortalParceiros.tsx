@@ -100,7 +100,15 @@ const PortalParceiros = () => {
       if (forn.tipo === "arquiteto") {
         const { data: com } = await supabase
           .from("comissoes")
-          .select("*, data_vencimento, data_pagamento, parcelado, num_parcelas, fornecedores(id, nome), projetos(id, nome)")
+          .select(`
+            *,
+            fornecedores(id, nome),
+            projetos(id, nome),
+            financeiro_pagar!comissao_id(
+              id, status, data_vencimento,
+              data_pagamento
+            )
+          `)
           .eq("fornecedor_id", forn.id)
           .eq("deletado", false);
         comissoes = com ?? [];
