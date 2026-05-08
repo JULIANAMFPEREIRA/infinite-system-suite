@@ -27,7 +27,11 @@ const Comissoes = () => {
         .select(`
           *,
           fornecedores(id, nome),
-          projetos(id, nome)
+          projetos(id, nome),
+          financeiro_pagar!comissao_id(
+            id, descricao, valor, status,
+            data_vencimento, data_pagamento
+          )
         `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
@@ -93,9 +97,20 @@ const Comissoes = () => {
   const totais = useMemo(() => {
     if (!comissoes) return { total: 0, pago: 0, pendente: 0 };
     return comissoes.reduce((acc, c) => {
-      acc.total += c.valor || 0;
-      if (c.status === "pago") acc.pago += c.valor || 0;
-      else acc.pendente += c.valor || 0;
+      const parcelas = c.financeiro_pagar || [];
+      if (parcelas.length > 1) {
+        parcelas.forEach((p: any) => {
+          const valor = p.valor || 0;
+          acc.total += valor;
+          if (p.status === "pago") acc.pago += valor;
+          else acc.pendente += valor;
+        });
+      } else {
+        const valor = c.valor || 0;
+        acc.total += valor;
+        if (c.status === "pago") acc.pago += valor;
+        else acc.pendente += valor;
+      }
       return acc;
     }, { total: 0, pago: 0, pendente: 0 });
   }, [comissoes]);
@@ -225,36 +240,64 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredComissoes.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      <div className="flex flex-col items-end">
-                        <span>{fmt(c.parcelado ? (c.valor / c.num_parcelas) : (c.valor || 0))}</span>
-                        {c.parcelado && (
-                          <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded font-bold">
-                            Parcelado {c.num_parcelas}x
+                filteredComissoes.flatMap((c: any) => {
+                  const parcelas = c.financeiro_pagar || [];
+                  if (parcelas.length > 1) {
+                    return parcelas.map((p: any) => (
+                      <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
+                        <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
+                        <td className="px-4 py-3 text-right font-semibold">
+                          <div className="flex flex-col items-end">
+                            <span>{fmt(p.valor || 0)}</span>
+                            <span className="text-[10px] text-muted-foreground italic">
+                              {p.descricao}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
+                        <td className="px-4 py-3 text-right text-green-600">
+                          {p.status === "pago" ? fmt(p.valor || 0) : "R$ 0,00"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-orange-600">
+                          {p.status !== "pago" ? fmt(p.valor || 0) : "R$ 0,00"}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            p.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {p.status}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
-                    <td className="px-4 py-3 text-right text-green-600">
-                      {c.status === "pago" ? fmt(c.valor || 0) : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-orange-600">
-                      {c.status === "pendente" ? fmt(c.valor || 0) : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                      }`}>
-                        {c.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                        </td>
+                      </tr>
+                    ));
+                  }
+                  return (
+                    <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
+                      <td className="px-4 py-3 text-right font-semibold">
+                        <div className="flex flex-col items-end">
+                          <span>{fmt(c.valor || 0)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
+                      <td className="px-4 py-3 text-right text-green-600">
+                        {c.status === "pago" ? fmt(c.valor || 0) : "R$ 0,00"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-orange-600">
+                        {c.status === "pendente" ? fmt(c.valor || 0) : "R$ 0,00"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {c.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
