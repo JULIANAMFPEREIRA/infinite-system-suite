@@ -37,6 +37,11 @@ import PortalParceiros from "./pages/portal/PortalParceiros";
 import NotFound from "./pages/NotFound";
 import FormularioCliente from "./pages/FormularioCliente";
 import CadastroLivre from "./pages/CadastroLivre";
+import InfinitLogin from "./pages/infinit/Login";
+import AdminDashboard from "./pages/infinit/admin/AdminDashboard";
+import NewAuthorization from "./pages/infinit/admin/NewAuthorization";
+import AuthorizationDetail from "./pages/infinit/admin/AuthorizationDetail";
+import PublicAuthorization from "./pages/infinit/public/PublicAuthorization";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +80,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/infinit/login" element={<InfinitLogin />} />
+            <Route path="/auth/:slug" element={<PublicAuthorization />} />
             <Route path="/formulario" element={<FormularioCliente />} />
             <Route path="/cadastro" element={<CadastroLivre />} />
             {/* Portal routes - no AppLayout */}
@@ -83,6 +90,9 @@ const App = () => (
             <Route path="/portal/parceiro" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
             <Route path="/portal/tecnico" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/new" element={<NewAuthorization />} />
+              <Route path="/admin/:id" element={<AuthorizationDetail />} />
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<ModuleRoute module="crm"><CRM /></ModuleRoute>} />
               <Route path="/orcamentos" element={<ModuleRoute module="crm"><Orcamentos /></ModuleRoute>} />
