@@ -6,7 +6,7 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (v: number) => \`R$ \${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\`;
 
 const Comissoes = () => {
   const empresaId = useEmpresa();
@@ -19,16 +19,16 @@ const Comissoes = () => {
   const [busca, setBusca] = useState("");
 
   // Query principal
-  const { data: comissoes, isLoading: isLoadingComissoes } = useQuery({
+  const { data: comissoes, isLoading } = useQuery({
     queryKey: ["comissoes_rt", empresaId, filtroParceiro, filtroStatus, filtroProjeto],
     queryFn: async () => {
       let query = supabase
         .from("comissoes")
-        .select(`
+        .select(\`
           *,
           fornecedores(id, nome),
           projetos(id, nome)
-        `)
+        \`)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
         .order("created_at", { ascending: false });
@@ -50,12 +50,12 @@ const Comissoes = () => {
     enabled: !!empresaId,
   });
 
-  const { data: parcelas, isLoading: isLoadingParcelas } = useQuery({
-    queryKey: ["comissoes_parcelas", empresaId],
+  const { data: pagamentos } = useQuery({
+    queryKey: ["portal_parcelas", empresaId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financeiro_pagar")
-        .select("id, comissao_id, descricao, valor, status, data_vencimento, data_pagamento")
+        .select("id, comissao_id, status, data_vencimento, data_pagamento, valor")
         .eq("empresa_id", empresaId!)
         .not("comissao_id", "is", null);
 
@@ -64,28 +64,6 @@ const Comissoes = () => {
     },
     enabled: !!empresaId,
   });
-
-  const isLoading = isLoadingComissoes || isLoadingParcelas;
-
-  const linhas = useMemo(() => {
-    if (!comissoes) return [];
-    return comissoes.flatMap((c: any) => {
-      const fps = (parcelas ?? []).filter(
-        (fp: any) => fp.comissao_id === c.id
-      );
-
-      if (fps.length > 1) {
-        return fps.map((fp: any, i: number) => ({
-          ...c,
-          _fp: fp,
-          _label: `Parcela ${i + 1}/${fps.length}`
-        }));
-      }
-
-      const fp = fps[0];
-      return [{ ...c, _fp: fp ?? null, _label: null }];
-    });
-  }, [comissoes, parcelas]);
 
   // Queries para os selects de filtro
   const { data: parceirosList } = useQuery({
@@ -117,8 +95,8 @@ const Comissoes = () => {
   });
 
   const filteredLinhas = useMemo(() => {
-    if (!linhas) return [];
-    return linhas.filter((c: any) => {
+    if (!comissoes) return [];
+    return comissoes.filter((c: any) => {
       const searchStr = busca.toLowerCase();
       const parceiroNome = (c.fornecedores as any)?.nome?.toLowerCase() || "";
       const projetoNome = (c.projetos as any)?.nome?.toLowerCase() || "";
@@ -127,13 +105,16 @@ const Comissoes = () => {
   }, [comissoes, busca]);
 
   const totais = useMemo(() => {
-    const totalComissoes = (linhas ?? []).reduce(
-      (s: number, row: any) => s + Number(row._fp?.valor ?? row.valor),
-      0
-    );
-    const totalPago = (linhas ?? [])
-      .filter((row: any) => row._fp?.status === "pago")
-      .reduce((s: number, row: any) => s + Number(row._fp?.valor ?? row.valor), 0);
+    const todasComissoes = comissoes ?? [];
+    const totalComissoes = todasComissoes.reduce((s, c) => {
+      const fp = pagamentos?.find((p: any) => p.comissao_id === c.id);
+      return s + Number(fp?.valor ?? c.valor);
+    }, 0);
+
+    const totalPago = todasComissoes.reduce((s, c) => {
+      const fp = pagamentos?.find((p: any) => p.comissao_id === c.id);
+      return s + (fp?.status === "pago" ? Number(fp.valor) : 0);
+    }, 0);
 
     const totalPendente = totalComissoes - totalPago;
 
@@ -142,7 +123,7 @@ const Comissoes = () => {
       pago: totalPago,
       pendente: totalPendente,
     };
-  }, [linhas]);
+  }, [comissoes, pagamentos]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -270,62 +251,42 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredLinhas.map((row: any) => (
-                  <tr key={row._fp?.id ?? row.id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {row._label && (
-                        <span className="text-xs text-muted-foreground mr-1">
-                          {row._label} —
+                filteredLinhas.map((comissao: any) => {
+                  const fp = pagamentos?.find((p: any) => p.comissao_id === comissao.id);
+                  return (
+                    <tr key={comissao.id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-4 py-3 font-medium">{comissao.fornecedores?.nome}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{comissao.projetos?.nome}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{fmt(Number(fp?.valor ?? comissao.valor))}</td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">{Number(comissao.percentual).toFixed(2)}%</td>
+                      <td className="px-4 py-3 text-right text-green-600">
+                        {fp?.status === "pago" ? fmt(Number(fp.valor)) : "R$ 0,00"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-orange-500">
+                        {fp?.status !== "pago" ? fmt(Number(fp?.valor ?? comissao.valor)) : "R$ 0,00"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {fp?.data_pagamento ? (
+                          <span className="text-green-600">Pago em: {fp.data_pagamento.split("-").reverse().join("/")}</span>
+                        ) : fp?.data_vencimento ? (
+                          <span className={fp.data_vencimento < new Date().toISOString().split("T")[0] ? "text-red-500" : "text-yellow-600"}>
+                            {fp.data_vencimento < new Date().toISOString().split("T")[0] ? "Venceu em: " : "Vence em: "}
+                            {fp.data_vencimento.split("-").reverse().join("/")}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase \${
+                          fp?.status === "pago" ? "bg-green-100 text-green-700" : 
+                          fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "bg-red-100 text-red-700" : 
+                          "bg-orange-100 text-orange-700"
+                        }\`}>
+                          {fp?.status === "pago" ? "PAGO" : fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "VENCIDO" : "PENDENTE"}
                         </span>
-                      )}
-                      {row.projetos?.nome}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {fmt(Number(row._fp?.valor ?? row.valor))}
-                    </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(row.percentual).toFixed(2)}%</td>
-                    <td className="px-4 py-3 text-right text-green-600">
-                      {row._fp?.status === "pago"
-                        ? fmt(Number(row._fp.valor))
-                        : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-orange-500">
-                      {row._fp?.status !== "pago"
-                        ? fmt(Number(row._fp?.valor ?? row.valor))
-                        : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {row._fp?.data_pagamento
-                        ? <span className="text-green-600 text-sm">
-                            Pago em: {row._fp.data_pagamento.split("-").reverse().join("/")}
-                          </span>
-                        : row._fp?.data_vencimento
-                        ? <span className={`text-sm ${
-                            row._fp.data_vencimento < new Date().toISOString().split("T")[0]
-                              ? "text-red-500" : "text-yellow-600"
-                          }`}>
-                            {row._fp.data_vencimento < new Date().toISOString().split("T")[0]
-                              ? "Venceu em: " : "Vence em: "}
-                            {row._fp.data_vencimento.split("-").reverse().join("/")}
-                          </span>
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        row._fp?.status === "pago"
-                          ? "bg-green-100 text-green-700"
-                          : row._fp?.data_vencimento && row._fp.data_vencimento < new Date().toISOString().split("T")[0]
-                            ? "bg-red-100 text-red-700"
-                            : "bg-orange-100 text-orange-700"
-                      }`}>
-                        {row._fp?.status === "pago" ? "PAGO"
-                          : row._fp?.data_vencimento && row._fp.data_vencimento < new Date().toISOString().split("T")[0]
-                          ? "VENCIDO" : "PENDENTE"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
