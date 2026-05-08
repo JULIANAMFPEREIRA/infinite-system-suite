@@ -27,11 +27,7 @@ const Comissoes = () => {
         .select(`
           *,
           fornecedores(id, nome),
-          projetos(id, nome),
-          financeiro_pagar!comissao_id(
-            id, descricao, valor, status,
-            data_vencimento, data_pagamento
-          )
+          projetos(id, nome)
         `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
@@ -96,8 +92,8 @@ const Comissoes = () => {
   // Resumos
   const totais = useMemo(() => {
     if (!comissoes) return { total: 0, pago: 0, pendente: 0 };
-    return comissoes.reduce((acc, c) => {
-      const parcelas = c.financeiro_pagar || [];
+    return comissoes.reduce((acc, c: any) => {
+      const parcelas = (c as any).financeiro_pagar || [];
       if (parcelas.length > 1) {
         parcelas.forEach((p: any) => {
           const valor = p.valor || 0;
