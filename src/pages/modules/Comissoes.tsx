@@ -27,7 +27,11 @@ const Comissoes = () => {
         .select(`
           *,
           fornecedores(id, nome),
-          projetos(id, nome)
+          projetos(id, nome),
+          financeiro_pagar!financeiro_pagar_comissao_id_fkey(
+            id, descricao, valor, status,
+            data_vencimento, data_pagamento
+          )
         `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
@@ -91,24 +95,18 @@ const Comissoes = () => {
 
   // Resumos
   const totais = useMemo(() => {
-    if (!comissoes) return { total: 0, pago: 0, pendente: 0 };
-    return comissoes.reduce((acc, c: any) => {
-      const parcelas = (c as any).financeiro_pagar || [];
-      if (parcelas.length > 1) {
-        parcelas.forEach((p: any) => {
-          const valor = p.valor || 0;
-          acc.total += valor;
-          if (p.status === "pago") acc.pago += valor;
-          else acc.pendente += valor;
-        });
-      } else {
-        const valor = c.valor || 0;
-        acc.total += valor;
-        if (c.status === "pago") acc.pago += valor;
-        else acc.pendente += valor;
-      }
-      return acc;
-    }, { total: 0, pago: 0, pendente: 0 });
+    const todasParcelas = (comissoes ?? []).flatMap(
+      (c: any) => c.financeiro_pagar?.length > 0
+        ? c.financeiro_pagar
+        : [{ valor: c.valor, status: c.status }]
+    )
+    const totalComissoes = todasParcelas
+      .reduce((s: number, fp: any) => s + Number(fp.valor), 0)
+    const totalPago = todasParcelas
+      .filter((fp: any) => fp.status === "pago")
+      .reduce((s: number, fp: any) => s + Number(fp.valor), 0)
+    const totalPendente = totalComissoes - totalPago
+    return { total: totalComissoes, pago: totalPago, pendente: totalPendente };
   }, [comissoes]);
 
   return (
@@ -223,6 +221,7 @@ const Comissoes = () => {
                 <th className="px-4 py-3 text-center">%</th>
                 <th className="px-4 py-3 text-right">Pago</th>
                 <th className="px-4 py-3 text-right">Pendente</th>
+                <th className="px-4 py-3 text-left">Data</th>
                 <th className="px-4 py-3 text-center">Status</th>
               </tr>
             </thead>
@@ -236,64 +235,81 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredComissoes.flatMap((c: any) => {
-                  const parcelas = c.financeiro_pagar || [];
-                  if (parcelas.length > 1) {
-                    return parcelas.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
-                        <td className="px-4 py-3 text-right font-semibold">
-                          <div className="flex flex-col items-end">
-                            <span>{fmt(p.valor || 0)}</span>
-                            <span className="text-[10px] text-muted-foreground italic">
-                              {p.descricao}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
-                        <td className="px-4 py-3 text-right text-green-600">
-                          {p.status === "pago" ? fmt(p.valor || 0) : "R$ 0,00"}
-                        </td>
-                        <td className="px-4 py-3 text-right text-orange-600">
-                          {p.status !== "pago" ? fmt(p.valor || 0) : "R$ 0,00"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            p.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                          }`}>
-                            {p.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ));
+                filteredComissoes?.flatMap((c: any) => {
+                  const parcelas = c.financeiro_pagar
+                  if (parcelas && parcelas.length > 1) {
+                    return parcelas.map((fp: any, i: number) => ({
+                      ...c,
+                      _fp: fp,
+                      _label: `Parcela ${i+1}/${parcelas.length}`
+                    }))
                   }
-                  return (
-                    <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
-                      <td className="px-4 py-3 font-medium">{(c.fornecedores as any)?.nome ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{(c.projetos as any)?.nome ?? "—"}</td>
-                      <td className="px-4 py-3 text-right font-semibold">
-                        <div className="flex flex-col items-end">
-                          <span>{fmt(c.valor || 0)}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">{c.percentual || 0}%</td>
-                      <td className="px-4 py-3 text-right text-green-600">
-                        {c.status === "pago" ? fmt(c.valor || 0) : "R$ 0,00"}
-                      </td>
-                      <td className="px-4 py-3 text-right text-orange-600">
-                        {c.status === "pendente" ? fmt(c.valor || 0) : "R$ 0,00"}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                        }`}>
-                          {c.status}
+                  return [{ ...c, _fp: parcelas?.[0], _label: null }]
+                }).map((row: any) => (
+                  <tr key={row._fp?.id ?? row.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {row._label && (
+                        <span className="text-xs text-muted-foreground">
+                          {row._label} —
                         </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                      )}
+                      {row.projetos?.nome}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold">
+                      R$ {Number(row._fp?.valor ?? row.valor)
+                        .toLocaleString("pt-BR",{minimumFractionDigits:2})}
+                    </td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(row.percentual).toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right text-green-600">
+                      {row._fp?.status === "pago"
+                        ? `R$ ${Number(row._fp.valor)
+                            .toLocaleString("pt-BR",{minimumFractionDigits:2})}`
+                        : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-orange-500">
+                      {row._fp?.status !== "pago"
+                        ? `R$ ${Number(row._fp?.valor ?? row.valor)
+                            .toLocaleString("pt-BR",{minimumFractionDigits:2})}`
+                        : "R$ 0,00"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row._fp?.data_pagamento
+                        ? <span className="text-green-600">
+                            Pago em: {row._fp.data_pagamento
+                              .split("-").reverse().join("/")}
+                          </span>
+                        : row._fp?.data_vencimento
+                        ? <span className={
+                            row._fp.data_vencimento <
+                            new Date().toISOString().split("T")[0]
+                              ? "text-red-500" : "text-yellow-600"
+                          }>
+                            {row._fp.data_vencimento <
+                            new Date().toISOString().split("T")[0]
+                              ? "Venceu em: " : "Vence em: "}
+                            {row._fp.data_vencimento
+                              .split("-").reverse().join("/")}
+                          </span>
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={
+                        row._fp?.status === "pago"
+                          ? "text-green-600 font-bold"
+                          : row._fp?.data_vencimento <
+                            new Date().toISOString().split("T")[0]
+                          ? "text-red-500 font-bold"
+                          : "text-orange-500 font-bold"
+                      }>
+                        {row._fp?.status === "pago" ? "PAGO"
+                          : row._fp?.data_vencimento <
+                            new Date().toISOString().split("T")[0]
+                          ? "VENCIDO" : "PENDENTE"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
