@@ -24,11 +24,11 @@ const Comissoes = () => {
     queryFn: async () => {
       let query = supabase
         .from("comissoes")
-        .select(\`
+        .select(`
           *,
           fornecedores(id, nome),
           projetos(id, nome)
-        \`)
+        `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
         .order("created_at", { ascending: false });
@@ -276,11 +276,11 @@ const Comissoes = () => {
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase \${
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           fp?.status === "pago" ? "bg-green-100 text-green-700" : 
                           fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "bg-red-100 text-red-700" : 
                           "bg-orange-100 text-orange-700"
-                        }\`}>
+                        }`}>
                           {fp?.status === "pago" ? "PAGO" : fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "VENCIDO" : "PENDENTE"}
                         </span>
                       </td>
