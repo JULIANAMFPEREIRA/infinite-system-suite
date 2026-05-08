@@ -1850,6 +1850,7 @@ const CRM = () => {
     contato: clientes?.filter(c => c.status_crm === "contato").length ?? 0,
     proposta: clientes?.filter(c => c.status_crm === "proposta").length ?? 0,
     projeto: clientes?.filter(c => c.status_crm === "projeto").length ?? 0,
+    concluido: clientes?.filter(c => c.status_crm === "concluido").length ?? 0,
   };
 
   const isProjeto = detailClient?.status_crm === "projeto";
@@ -3490,6 +3491,7 @@ const CRM = () => {
                   { key: "contato" as const, label: "Em Contato", count: statusCounts.contato, color: "bg-warning/15 text-warning" },
                   { key: "proposta" as const, label: "Proposta Enviada", count: statusCounts.proposta, color: "bg-primary/15 text-primary" },
                   { key: "projeto" as const, label: "Projeto", count: statusCounts.projeto, color: "bg-success/15 text-success" },
+                  { key: "concluido" as const, label: "Concluído", count: statusCounts.concluido, color: "bg-indigo-900 text-white" },
                 ]).map(s => (
                   <button key={s.key} onClick={() => setFilterStatus(s.key)} className={`rounded p-2 text-center transition ${filterStatus === s.key ? "ring-2 ring-primary" : "hover:opacity-80"} ${s.color}`}>
                     <div className="text-lg font-bold">{s.count}</div>
@@ -3548,6 +3550,7 @@ const CRM = () => {
                             <option value="contato">Em Contato</option>
                             <option value="proposta">Proposta Enviada</option>
                             <option value="projeto">Projeto</option>
+                            <option value="concluido">Concluído</option>
                           </select>
                         </td>
                         <td className="px-3 py-2 text-xs text-center" onClick={e => e.stopPropagation()}>
