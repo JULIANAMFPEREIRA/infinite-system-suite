@@ -2148,7 +2148,7 @@ export type Database = {
         | "em_compra"
         | "comprado"
         | "instalado"
-      status_crm: "lead" | "contato" | "proposta" | "projeto"
+      status_crm: "lead" | "contato" | "proposta" | "projeto" | "concluido"
       status_estoque: "disponivel" | "reservado" | "instalado"
       status_financeiro:
         | "pendente"
@@ -2326,7 +2326,7 @@ export const Constants = {
         "comprado",
         "instalado",
       ],
-      status_crm: ["lead", "contato", "proposta", "projeto"],
+      status_crm: ["lead", "contato", "proposta", "projeto", "concluido"],
       status_estoque: ["disponivel", "reservado", "instalado"],
       status_financeiro: [
         "pendente",
