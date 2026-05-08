@@ -27,11 +27,7 @@ const Comissoes = () => {
         .select(`
           *,
           fornecedores(id, nome),
-          projetos(id, nome),
-          financeiro_pagar!comissao_id(
-            id, descricao, valor, status,
-            data_vencimento, data_pagamento
-          )
+          projetos(id, nome)
         `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
