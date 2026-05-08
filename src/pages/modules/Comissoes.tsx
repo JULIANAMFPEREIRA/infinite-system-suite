@@ -27,11 +27,7 @@ const Comissoes = () => {
         .select(`
           *,
           fornecedores(id, nome),
-          projetos(id, nome),
-          financeiro_pagar!financeiro_pagar_comissao_id_fkey(
-            id, descricao, valor, status,
-            data_vencimento, data_pagamento
-          )
+          projetos(id, nome)
         `)
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
@@ -93,20 +89,20 @@ const Comissoes = () => {
     });
   }, [comissoes, busca]);
 
-  // Resumos
   const totais = useMemo(() => {
-    const todasParcelas = (comissoes ?? []).flatMap(
-      (c: any) => c.financeiro_pagar?.length > 0
-        ? c.financeiro_pagar
-        : [{ valor: c.valor, status: c.status }]
-    )
-    const totalComissoes = todasParcelas
-      .reduce((s: number, fp: any) => s + Number(fp.valor), 0)
-    const totalPago = todasParcelas
-      .filter((fp: any) => fp.status === "pago")
-      .reduce((s: number, fp: any) => s + Number(fp.valor), 0)
-    const totalPendente = totalComissoes - totalPago
-    return { total: totalComissoes, pago: totalPago, pendente: totalPendente };
+    const totalComissoes = (comissoes ?? []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const totalPago = (comissoes ?? [])
+      .filter((c) => c.status === "pago")
+      .reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const totalPendente = (comissoes ?? [])
+      .filter((c) => c.status === "pendente")
+      .reduce((acc, curr) => acc + Number(curr.valor), 0);
+
+    return {
+      total: totalComissoes,
+      pago: totalPago,
+      pendente: totalPendente,
+    };
   }, [comissoes]);
 
   return (
@@ -235,77 +231,20 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredComissoes?.flatMap((c: any) => {
-                  const parcelas = c.financeiro_pagar
-                  if (parcelas && parcelas.length > 1) {
-                    return parcelas.map((fp: any, i: number) => ({
-                      ...c,
-                      _fp: fp,
-                      _label: `Parcela ${i+1}/${parcelas.length}`
-                    }))
-                  }
-                  return [{ ...c, _fp: parcelas?.[0], _label: null }]
-                }).map((row: any) => (
-                  <tr key={row._fp?.id ?? row.id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {row._label && (
-                        <span className="text-xs text-muted-foreground">
-                          {row._label} —
-                        </span>
-                      )}
-                      {row.projetos?.nome}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      R$ {Number(row._fp?.valor ?? row.valor)
-                        .toLocaleString("pt-BR",{minimumFractionDigits:2})}
-                    </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(row.percentual).toFixed(2)}%</td>
-                    <td className="px-4 py-3 text-right text-green-600">
-                      {row._fp?.status === "pago"
-                        ? `R$ ${Number(row._fp.valor)
-                            .toLocaleString("pt-BR",{minimumFractionDigits:2})}`
-                        : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-orange-500">
-                      {row._fp?.status !== "pago"
-                        ? `R$ ${Number(row._fp?.valor ?? row.valor)
-                            .toLocaleString("pt-BR",{minimumFractionDigits:2})}`
-                        : "R$ 0,00"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row._fp?.data_pagamento
-                        ? <span className="text-green-600">
-                            Pago em: {row._fp.data_pagamento
-                              .split("-").reverse().join("/")}
-                          </span>
-                        : row._fp?.data_vencimento
-                        ? <span className={
-                            row._fp.data_vencimento <
-                            new Date().toISOString().split("T")[0]
-                              ? "text-red-500" : "text-yellow-600"
-                          }>
-                            {row._fp.data_vencimento <
-                            new Date().toISOString().split("T")[0]
-                              ? "Venceu em: " : "Vence em: "}
-                            {row._fp.data_vencimento
-                              .split("-").reverse().join("/")}
-                          </span>
-                        : "—"}
-                    </td>
+                filteredComissoes.map((c: any) => (
+                  <tr key={c.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">{c.fornecedores?.nome}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.projetos?.nome}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmt(Number(c.valor))}</td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">{Number(c.percentual).toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right text-green-600">{c.status === "pago" ? fmt(Number(c.valor)) : "R$ 0,00"}</td>
+                    <td className="px-4 py-3 text-right text-orange-500">{c.status === "pendente" ? fmt(Number(c.valor)) : "R$ 0,00"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">—</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={
-                        row._fp?.status === "pago"
-                          ? "text-green-600 font-bold"
-                          : row._fp?.data_vencimento <
-                            new Date().toISOString().split("T")[0]
-                          ? "text-red-500 font-bold"
-                          : "text-orange-500 font-bold"
-                      }>
-                        {row._fp?.status === "pago" ? "PAGO"
-                          : row._fp?.data_vencimento <
-                            new Date().toISOString().split("T")[0]
-                          ? "VENCIDO" : "PENDENTE"}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        c.status === "pago" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                      }`}>
+                        {c.status}
                       </span>
                     </td>
                   </tr>
