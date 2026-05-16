@@ -92,7 +92,7 @@ const Configuracoes = () => {
     queryFn: async () => {
       const { data: profiles, error: pError } = await supabase
         .from("profiles")
-        .select("id, full_name, empresa_id, is_active, updated_at")
+        .select("id, full_name, empresa_id, is_active, updated_at, email")
         .eq("empresa_id", empresaId!)
         .order("full_name");
       
@@ -107,7 +107,7 @@ const Configuracoes = () => {
 
       return (profiles ?? []).map(p => ({
         ...p,
-        is_active: p.is_active !== false,
+        is_active: p.is_active ?? true,
         roles: (allRoles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
       }));
     },
@@ -529,10 +529,11 @@ const Configuracoes = () => {
         <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead><tr className="bg-secondary/60">
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-8"></th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
-              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Roles</th>
-              <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-44">Ações</th>
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">NOME</th>
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">EMAIL</th>
+              <th className="text-left px-2.5 py-2 font-semibold border-b border-border">PERFIL (roles)</th>
+              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">STATUS</th>
+              <th className="text-center px-2.5 py-2 font-semibold border-b border-border">AÇÕES</th>
             </tr></thead>
             <tbody>
               {users.map(u => {
@@ -540,11 +541,9 @@ const Configuracoes = () => {
                 const isExpanded = expandedUserId === u.id;
                 return (
                   <>
-                    <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30 cursor-pointer" onClick={() => setExpandedUserId(isExpanded ? null : u.id)}>
-                      <td className="px-2 py-1.5 text-muted-foreground">
-                        {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                      </td>
+                    <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
                       <td className="px-2.5 py-1.5 font-medium">{u.full_name ?? "—"}</td>
+                      <td className="px-2.5 py-1.5 text-muted-foreground">{u.email ?? "—"}</td>
                       <td className="px-2.5 py-1.5">
                         <div className="flex flex-wrap gap-1">
                           {u.roles.map(r => (
@@ -557,18 +556,30 @@ const Configuracoes = () => {
                         </div>
                       </td>
                       <td className="px-2.5 py-1.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={(e) => { e.stopPropagation(); toggleUserStatus(u.id, u.is_active); }} className={`p-1 rounded ${u.is_active ? 'text-green-600 hover:bg-green-50' : 'text-red-500 hover:bg-red-50'}`} title={u.is_active ? 'Ativo - Clique para desativar' : 'Inativo - Clique para ativar'}>
-                            {u.is_active ? <Power size={13} /> : <PowerOff size={13} />}
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-medium",
+                          u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                        )}>
+                          {u.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                      <td className="px-2.5 py-1.5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openEditUser(u); }} 
+                            className="flex items-center gap-1 text-primary hover:underline font-medium"
+                          >
+                            <Pencil size={12} /> Editar
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); openEditUser(u); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Resetar Senha">
-                            <Key size={13} />
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); toggleUserStatus(u.id, u.is_active); }} 
+                            className={cn("flex items-center gap-1 hover:underline font-medium", u.is_active ? "text-orange-600" : "text-green-600")}
+                          >
+                            {u.is_active ? <PowerOff size={12} /> : <Power size={12} />}
+                            {u.is_active ? "Desativar" : "Ativar"}
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); setExpandedUserId(isExpanded ? null : u.id); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Gerenciar permissões">
                             <Shield size={13} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); openEditUser(u); }} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Editar usuário">
-                            <Pencil size={13} />
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} disabled={u.id === user?.id} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed" title={u.id === user?.id ? "Não é possível excluir sua própria conta" : "Excluir usuário"}>
                             <Trash2 size={13} />
