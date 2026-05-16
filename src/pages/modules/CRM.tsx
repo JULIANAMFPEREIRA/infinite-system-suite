@@ -1044,9 +1044,17 @@ const CRM = () => {
       if (delErr) throw delErr;
     },
     onSuccess: () => {
-      refetchOrcamentos(); refetchCrmItens();
+      refetchOrcamentos(); 
+      refetchCrmItens();
       setActiveOrcamentoId(null);
       toast.success("Orçamento excluído. Projeto vinculado foi cancelado.");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir orçamento:", error);
+      toast.error(
+        "Erro ao excluir orçamento: " + 
+        (error?.message ?? "Erro desconhecido")
+      );
     },
   });
 
