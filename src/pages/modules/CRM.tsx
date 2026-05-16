@@ -2876,6 +2876,7 @@ const CRM = () => {
               {activeOrcamentoId && crmItens && crmItens.length > 0 && (() => {
                 const allProdutos = (crmItens ?? []).filter((i: any) => i.tipo !== "servico" && i.tipo !== "adicional");
                 const allServicos = (crmItens ?? []).filter((i: any) => i.tipo === "servico");
+                const adicionais = (crmItens ?? []).filter((i: any) => i.tipo === "adicional");
                 // Cost-based valuation — item cost only (RT handled separately below)
                 const custoItem = (i: any) => (Number(i.preco_custo) || 0) * (Number(i.quantidade) || 1);
 
@@ -2884,6 +2885,22 @@ const CRM = () => {
 
                 const servicosCompradoCusto = allServicos.filter((i: any) => ["comprado", "pago"].includes(i.status_compra ?? "pendente")).reduce((s, i) => s + custoItem(i), 0);
                 const servicosPendenteCusto = allServicos.filter((i: any) => (i.status_compra ?? "pendente") === "pendente").reduce((s, i) => s + custoItem(i), 0);
+
+                const adicionaisCompradoCusto = adicionais
+                  .filter((i: any) =>
+                    ["comprado", "pago"].includes(
+                      i.status_compra ?? "pendente"
+                    )
+                  )
+                  .reduce((s: number, i: any) =>
+                    s + custoItem(i), 0);
+
+                const adicionaisPendenteCusto = adicionais
+                  .filter((i: any) =>
+                    (i.status_compra ?? "pendente") === "pendente"
+                  )
+                  .reduce((s: number, i: any) =>
+                    s + custoItem(i), 0);
 
                 const impostoValor = Number(orcImposto) || 0;
 
@@ -2906,12 +2923,14 @@ const CRM = () => {
                 const totalCusto =
                   produtosCompradoCusto + produtosPendenteCusto +
                   servicosCompradoCusto + servicosPendenteCusto +
+                  adicionaisCompradoCusto + adicionaisPendenteCusto +
                   fretePrevisto + impostoValor + rtTotal;
 
                 // TOTAL COMPRADO = itens comprados/pagos + FRETE REALIZADO (lançamentos) + IMPOSTO PAGO + RT PAGA
                 const totalComprado =
                   produtosCompradoCusto +
                   servicosCompradoCusto +
+                  adicionaisCompradoCusto +
                   freteRealizado +
                   impostoPagoValor +
                   rtPago;
