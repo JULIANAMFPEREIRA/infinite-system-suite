@@ -286,14 +286,21 @@ const PortalParceiros = () => {
           </div>
         </div>
 
-      <Tabs defaultValue="cronograma" className="space-y-4">
-        <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
-          <TabsTrigger value="cronograma" className="gap-1.5 text-xs"><CalendarDays size={14} /> Cronograma</TabsTrigger>
-          {data.fornecedor.tipo === "arquiteto" && <TabsTrigger value="rt" className="gap-1.5 text-xs"><DollarSign size={14} /> RT e Parcelas</TabsTrigger>}
-          {data.fornecedor.tipo === "tecnico" && <TabsTrigger value="diario" className="gap-1.5 text-xs"><Activity size={14} /> Diário de Obra</TabsTrigger>}
-          <TabsTrigger value="visitas" className="gap-1.5 text-xs"><Activity size={14} /> Visitas</TabsTrigger>
-          <TabsTrigger value="imagens" className="gap-1.5 text-xs"><ImageIcon size={14} /> Imagens</TabsTrigger>
-          {data.fornecedor.tipo !== "tecnico" && <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><MessageSquare size={14} /> Anotações</TabsTrigger>}
+      <Tabs defaultValue="rt" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border h-12 p-1">
+          <TabsTrigger value="cronograma" className="gap-2 text-sm h-10 px-4"><CalendarDays size={18} /> Cronograma</TabsTrigger>
+          {data.fornecedor.tipo === "arquiteto" && (
+            <TabsTrigger 
+              value="rt" 
+              className="gap-2 text-sm h-10 px-4 bg-primary/5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border-x border-primary/10"
+            >
+              <DollarSign size={18} /> RT e Parcelas
+            </TabsTrigger>
+          )}
+          {data.fornecedor.tipo === "tecnico" && <TabsTrigger value="diario" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Diário de Obra</TabsTrigger>}
+          <TabsTrigger value="visitas" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Visitas</TabsTrigger>
+          <TabsTrigger value="imagens" className="gap-2 text-sm h-10 px-4"><ImageIcon size={18} /> Imagens</TabsTrigger>
+          {data.fornecedor.tipo !== "tecnico" && <TabsTrigger value="anotacoes" className="gap-2 text-sm h-10 px-4"><MessageSquare size={18} /> Anotações</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="cronograma" className="space-y-4">
