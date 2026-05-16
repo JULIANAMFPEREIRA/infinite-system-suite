@@ -1029,18 +1029,31 @@ const CRM = () => {
 
   const deleteOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
-      // Soft delete: cancel linked project if exists
-      const { data: linkedProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+      // 1. Cancela projetos vinculados
+      const { data: linkedProjects } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("orcamento_id", orcId);
+      
       if (linkedProjects && linkedProjects.length > 0) {
         for (const proj of linkedProjects) {
-          await supabase.from("projetos").update({ status: "cancelado" }).eq("id", proj.id);
+          await supabase
+            .from("projetos")
+            .update({ status: "cancelado" })
+            .eq("id", proj.id);
         }
       }
-      // Mark orcamento as not approved (soft cancel)
-      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
-      if (error) throw error;
-      // Actually delete (keeping data in project)
-      const { error: delErr } = await supabase.from("crm_orcamentos").delete().eq("id", orcId);
+      // 2. Deleta itens vinculados ao orçamento
+      const { error: itensErr } = await supabase
+        .from("crm_itens")
+        .delete()
+        .eq("orcamento_id", orcId);
+      if (itensErr) throw itensErr;
+      // 3. Deleta o orçamento
+      const { error: delErr } = await supabase
+        .from("crm_orcamentos")
+        .delete()
+        .eq("id", orcId);
       if (delErr) throw delErr;
     },
     onSuccess: () => {
