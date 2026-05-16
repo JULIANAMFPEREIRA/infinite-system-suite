@@ -2153,7 +2153,12 @@ const CRM = () => {
                           <button onClick={(e) => { e.stopPropagation(); duplicateOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[11px] font-medium transition">
                             <Copy size={11} /> Duplicar
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Excluir este orçamento? Isso cancelará o projeto vinculado.")) deleteOrcamento.mutate(orc.id); }} className="flex items-center gap-1 h-7 px-2 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 text-[11px] font-medium border border-destructive/30 transition">
+                          <button onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (window.confirm("Tem certeza que deseja excluir este orçamento? O projeto vinculado será cancelado.")) {
+                              deleteOrcamento.mutate(orc.id);
+                            } 
+                          }} className="flex items-center gap-1 h-7 px-2 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 text-[11px] font-medium border border-destructive/30 transition">
                             <Trash2 size={11} /> Excluir
                           </button>
                         </div>
