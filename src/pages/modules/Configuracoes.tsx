@@ -92,7 +92,7 @@ const Configuracoes = () => {
     queryFn: async () => {
       const { data: profiles, error: pError } = await supabase
         .from("profiles")
-        .select("id, full_name, empresa_id, is_active, updated_at")
+        .select("id, full_name, empresa_id, is_active, updated_at, email")
         .eq("empresa_id", empresaId!)
         .order("full_name");
       
