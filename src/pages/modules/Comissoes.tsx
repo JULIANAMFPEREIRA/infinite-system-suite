@@ -33,9 +33,9 @@ const Comissoes = () => {
           projetos(id, nome),
           comissoes(id, percentual)
         `)
-        .eq("empresa_id", empresaId!)
-        .eq("tipo", "Comissão")
-        .eq("deletado", false)
+      .eq("empresa_id", empresaId!)
+      .eq("tipo" as any, "Comissão")
+      .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
 
       if (filtroParceiro) {
