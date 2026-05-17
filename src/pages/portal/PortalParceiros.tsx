@@ -109,8 +109,7 @@ const PortalParceiros = () => {
               data_pagamento
             )
           `)
-          .eq("fornecedor_id", forn.id)
-          .eq("deletado", false);
+          .eq("fornecedor_id", forn.id);
         comissoes = com ?? [];
       }
 
@@ -129,7 +128,6 @@ const PortalParceiros = () => {
               comissao_id, projeto_id,
               projetos(id, nome)
             `)
-            .eq("empresa_id", (forn as any).empresa_id)
             .eq("origem", "comissao")
             .in("comissao_id", comissaoIds)
             .order("data_vencimento");
