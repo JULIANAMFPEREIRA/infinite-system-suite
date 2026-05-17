@@ -341,6 +341,11 @@ const ParceirosManager = () => {
                   onChange={(e) => { setNovaSenha(e.target.value); setTempSenha(null); }}
                   placeholder="Deixe em branco para manter a atual"
                   className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  style={{ textTransform: "none" }}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
               <div className="mt-2">
@@ -350,6 +355,11 @@ const ParceirosManager = () => {
                   value={confirmaSenha}
                   onChange={(e) => setConfirmaSenha(e.target.value)}
                   className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                  style={{ textTransform: "none" }}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
               {tempSenha && (
