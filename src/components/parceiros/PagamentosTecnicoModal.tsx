@@ -12,9 +12,10 @@ import { ptBR } from "date-fns/locale";
 interface PagamentosTecnicoModalProps {
   parceiroId: string;
   onClose: () => void;
+  inline?: boolean;
 }
 
-const PagamentosTecnicoModal = ({ parceiroId, onClose }: PagamentosTecnicoModalProps) => {
+const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: PagamentosTecnicoModalProps) => {
   const empresaId = useEmpresa();
   const qc = useQueryClient();
   const [openAddProjeto, setOpenAddProjeto] = useState(false);
@@ -156,15 +157,23 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose }: PagamentosTecnicoModalP
 
   const fmtMoeda = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+  const content = (
+    <div className={inline ? "space-y-6" : "space-y-6 pt-4"}>
+      {!inline && (
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="text-success" />
             Pagamentos do Técnico: {parceiro?.nome}
           </DialogTitle>
         </DialogHeader>
+      )}
+
+      {inline && (
+        <div className="flex items-center gap-2 mb-4">
+          <DollarSign className="text-success" />
+          <h2 className="text-xl font-bold">Pagamentos do Técnico: {parceiro?.nome}</h2>
+        </div>
+      )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-secondary/30 p-4 rounded-lg border border-border">
@@ -338,6 +347,15 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose }: PagamentosTecnicoModalP
             </DialogFooter>
           </DialogContent>
         </Dialog>
+    </div>
+  );
+
+  if (inline) return content;
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );
