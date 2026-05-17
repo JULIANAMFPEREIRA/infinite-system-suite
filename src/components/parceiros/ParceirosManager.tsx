@@ -703,8 +703,8 @@ const ParceirosManager = () => {
         </Button>
       </div>
 
-      <div className="border border-border rounded overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="border border-border rounded overflow-x-auto">
+        <table className="w-full text-xs min-w-[800px]">
           <thead className="bg-secondary/60">
             <tr>
               <th className="text-left px-2.5 py-2 font-semibold">Nome</th>
