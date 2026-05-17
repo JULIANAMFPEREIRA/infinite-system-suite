@@ -143,7 +143,7 @@ const PortalParceiros = () => {
 
         const { data: lanc } = await supabase
           .from("pagamentos_tecnico_lancamentos")
-          .select("*, projetos(nome)")
+          .select("*, projetos(nome, clientes(nome))")
           .eq("tecnico_id", forn.id)
           .eq("tipo", "realizado")
           .order("data_pagamento", { ascending: false });
@@ -151,7 +151,7 @@ const PortalParceiros = () => {
 
         const { data: prev } = await supabase
           .from("pagamentos_tecnico_lancamentos")
-          .select("*, projetos(nome)")
+          .select("*, projetos(nome, clientes(nome))")
           .eq("tecnico_id", forn.id)
           .eq("tipo", "previsto")
           .order("data_prevista");
@@ -665,7 +665,8 @@ const PortalParceiros = () => {
                           {l.data_prevista ? formatDate(l.data_prevista) : "—"}
                         </td>
                         <td className="p-3">
-                          <p className="font-medium text-foreground">{l.projetos?.nome || "Sem projeto"}</p>
+                          <p className="font-medium text-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</p>
+                          {l.projetos?.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {l.projetos.clientes.nome}</p>}
                         </td>
                         <td className="p-3 text-right font-bold text-warning">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
