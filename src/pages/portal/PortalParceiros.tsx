@@ -133,6 +133,7 @@ const PortalParceiros = () => {
 
       let ptecnico = [];
       let lancamentos = [];
+      let previstos = [];
       if (forn.tipo === "tecnico") {
         const { data: pt } = await supabase
           .from("pagamentos_tecnico")
@@ -144,8 +145,17 @@ const PortalParceiros = () => {
           .from("pagamentos_tecnico_lancamentos")
           .select("*, projetos(nome)")
           .eq("tecnico_id", forn.id)
+          .eq("tipo", "realizado")
           .order("data_pagamento", { ascending: false });
         lancamentos = lanc ?? [];
+
+        const { data: prev } = await supabase
+          .from("pagamentos_tecnico_lancamentos")
+          .select("*, projetos(nome)")
+          .eq("tecnico_id", forn.id)
+          .eq("tipo", "previsto")
+          .order("data_prevista");
+        previstos = prev ?? [];
       }
 
       return { 
@@ -155,7 +165,8 @@ const PortalParceiros = () => {
         comissoes,
         parcelasRT,
         ptecnico,
-        lancamentos
+        lancamentos,
+        previstos
       };
     },
     enabled: !!user?.email
@@ -620,6 +631,43 @@ const PortalParceiros = () => {
                           {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
                         </td>
                         <td className="p-3 text-right font-bold text-success">{fmt(Number(l.valor))}</td>
+                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold">PRÓXIMOS PAGAMENTOS</h2>
+            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data Prevista</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
+                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(data.previstos ?? []).length === 0 && (
+                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
+                    )}
+                    {(data.previstos ?? []).map((l: any) => (
+                      <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
+                        <td className="p-3 text-muted-foreground">
+                          {l.data_prevista ? formatDate(l.data_prevista) : "—"}
+                        </td>
+                        <td className="p-3">
+                          <p className="font-medium text-foreground">{l.projetos?.nome || "Sem projeto"}</p>
+                        </td>
+                        <td className="p-3 text-right font-bold text-warning">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
                         <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
                       </tr>
