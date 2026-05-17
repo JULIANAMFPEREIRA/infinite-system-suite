@@ -537,6 +537,7 @@ const PortalParceiros = () => {
       </Tabs>
     </div>
   );
+  };
 
   const renderProjectList = () => {
     if (data.fornecedor.tipo === "tecnico") {
@@ -726,7 +727,7 @@ const PortalParceiros = () => {
             <p className="text-[11px] font-semibold uppercase text-muted-foreground">Total Projetos</p>
             <p className="text-xl font-bold">{data.projetos.length}</p>
           </div>
-          {data.fornecedor.tipo === "tecnico" && (
+          {(data.fornecedor.tipo as string) === "tecnico" && (
             <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
               <p className="text-[11px] font-semibold uppercase text-muted-foreground">Visitas</p>
               <p className="text-xl font-bold text-primary">{visitas?.length ?? 0}</p>
@@ -794,6 +795,7 @@ const PortalParceiros = () => {
       </div>
     </div>
   );
+  };
 
   const iniciais = data.fornecedor.nome.split(" ").slice(0, 2).map((n: string) => n[0]?.toUpperCase()).join("");
   const primeiroNome = data.fornecedor.nome.split(" ")[0];
@@ -879,4 +881,3 @@ const PortalParceiros = () => {
 };
 
 export default PortalParceiros;
-};
