@@ -85,6 +85,18 @@ const Comissoes = () => {
     enabled: !!empresaId,
   });
 
+  const { data: percentuais } = useQuery({
+    queryKey: ["comissoes_percentuais", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("comissoes")
+        .select("id, percentual")
+        .eq("empresa_id", empresaId!);
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+
   const filteredLinhas = useMemo(() => {
     if (!comissoes) return [];
     return comissoes.filter((c: any) => {
@@ -214,6 +226,7 @@ const Comissoes = () => {
             <thead>
               <tr className="bg-secondary/30 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3 text-left">Parceiro</th>
+                <th className="px-4 py-3 text-left">Descrição</th>
                 <th className="px-4 py-3 text-left">Projeto</th>
                 <th className="px-4 py-3 text-right">Valor</th>
                 <th className="px-4 py-3 text-center">%</th>
@@ -240,9 +253,15 @@ const Comissoes = () => {
                   return (
                     <tr key={row.id} className="hover:bg-secondary/20 transition-colors">
                       <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{row.descricao}</td>
                       <td className="px-4 py-3 text-muted-foreground">{row.projetos?.nome}</td>
                       <td className="px-4 py-3 text-right font-semibold">{fmt(Number(row.valor))}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">—</td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">
+                        {(() => {
+                          const perc = percentuais?.find((p: any) => p.id === row.comissao_id);
+                          return perc ? `${Number(perc.percentual).toFixed(2)}%` : "—";
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-right text-green-600">
                         {isPago ? fmt(Number(row.valor)) : "R$ 0,00"}
                       </td>
@@ -276,7 +295,7 @@ const Comissoes = () => {
           </table>
         </div>
       </div>
-
+      <div className="h-10" />
     </div>
   );
 };
