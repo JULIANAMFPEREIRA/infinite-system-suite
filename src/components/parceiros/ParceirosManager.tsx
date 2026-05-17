@@ -73,7 +73,7 @@ const ParceirosManager = () => {
               email: form.email.toLowerCase(),
               password: form.password,
               role: "parceiro",
-              subtipo_parceiro: form.tipo,
+              subtipo_parceiro: form.subtipo,
             }
           }
         )
