@@ -148,6 +148,12 @@ const PortalParceiros = () => {
     enabled: !!user?.email
   });
 
+  if (data) {
+    console.log("parcelasRT:", data.parcelasRT);
+    console.log("comissoes:", data.comissoes);
+    console.log("fornecedor:", data.fornecedor);
+  }
+
   const activeProjeto = (data?.projetos as any[])?.find(
     (p: any) => p.id === selectedProjeto
   ) ?? (data?.projetos as any[])?.find(
