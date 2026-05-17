@@ -234,31 +234,25 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                 <thead className="bg-secondary/50">
                   <tr>
                     <th className="text-left p-2 font-semibold">Projeto</th>
-                    <th className="text-right p-2 font-semibold">Combinado</th>
-                    <th className="text-right p-2 font-semibold">Total Pago</th>
-                    <th className="text-right p-2 font-semibold">Saldo</th>
+                    <th className="text-right p-2 font-semibold">Valor Combinado</th>
                     <th className="w-20"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pagamentos.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-4 text-muted-foreground">Nenhum projeto vinculado.</td></tr>
-                  )}
-                  {pagamentos.map(p => {
-                    const pagoNoProjeto = lancamentos.filter(l => l.projeto_id === p.projeto_id).reduce((acc, cur) => acc + Number(cur.valor), 0);
-                    return (
+                  {pagamentos.length === 0 ? (
+                    <tr><td colSpan={3} className="text-center py-4 text-muted-foreground">Nenhum item vinculado.</td></tr>
+                  ) : (
+                    pagamentos.map(p => (
                       <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
                         <td className="p-2 font-medium">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</td>
                         <td className="p-2 text-right">{fmtMoeda(p.valor_combinado)}</td>
-                        <td className="p-2 text-right text-success">{fmtMoeda(pagoNoProjeto)}</td>
-                        <td className="p-2 text-right font-bold text-destructive">{fmtMoeda(p.valor_combinado - pagoNoProjeto)}</td>
                         <td className="p-2 flex items-center justify-end gap-2">
                           <button onClick={() => { setEditingProjeto(p); setFormProj({ projeto_id: p.projeto_id || "", cliente_id: p.cliente_id || "", tipo: p.projeto_id ? "projeto" : "cliente", valor_combinado: p.valor_combinado.toString(), descricao: p.descricao || "" }); setOpenAddProjeto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
                           <button onClick={() => handleDeleteProjeto(p.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
                         </td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
