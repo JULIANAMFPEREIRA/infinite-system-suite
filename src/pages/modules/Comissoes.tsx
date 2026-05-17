@@ -30,8 +30,7 @@ const Comissoes = () => {
           comissao_id, fornecedor_id,
           projeto_id,
           fornecedores:fornecedor_id(id, nome),
-          projetos:projeto_id(id, nome),
-          comissoes:comissao_id(id, percentual)
+          projetos:projeto_id(id, nome)
         `);
 
       query = query
@@ -243,9 +242,7 @@ const Comissoes = () => {
                       <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
                       <td className="px-4 py-3 text-muted-foreground">{row.projetos?.nome}</td>
                       <td className="px-4 py-3 text-right font-semibold">{fmt(Number(row.valor))}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">
-                        {row.comissoes?.percentual ? `${Number(row.comissoes.percentual).toFixed(2)}%` : "—"}
-                      </td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">—</td>
                       <td className="px-4 py-3 text-right text-green-600">
                         {isPago ? fmt(Number(row.valor)) : "R$ 0,00"}
                       </td>
