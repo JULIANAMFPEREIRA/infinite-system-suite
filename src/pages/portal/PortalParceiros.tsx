@@ -56,7 +56,7 @@ const PortalParceiros = () => {
         .eq("email", user!.email!)
         .maybeSingle();
 
-      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [] };
+      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [] };
 
       let projetos = [];
       if (forn.tipo === "arquiteto") {
@@ -114,11 +114,35 @@ const PortalParceiros = () => {
         comissoes = com ?? [];
       }
 
+      let parcelasRT = [];
+      if (forn.tipo === "arquiteto") {
+        const comissaoIds = (comissoes ?? [])
+          .map((c: any) => c.id)
+          .filter(Boolean);
+
+        if (comissaoIds.length > 0) {
+          const { data: parc } = await supabase
+            .from("financeiro_pagar")
+            .select(`
+              id, descricao, valor, status,
+              data_vencimento, data_pagamento,
+              comissao_id, projeto_id,
+              projetos(id, nome)
+            `)
+            .eq("empresa_id", (forn as any).empresa_id)
+            .eq("origem", "comissao")
+            .in("comissao_id", comissaoIds)
+            .order("data_vencimento");
+          parcelasRT = parc ?? [];
+        }
+      }
+
       return { 
         fornecedor: forn, 
         projetos, 
         parcelas, 
-        comissoes 
+        comissoes,
+        parcelasRT
       };
     },
     enabled: !!user?.email
@@ -323,13 +347,12 @@ const PortalParceiros = () => {
         {data.fornecedor.tipo === "arquiteto" && (
           <TabsContent value="rt" className="space-y-4">
             {(() => {
-              const projComissoes = (data?.comissoes ?? [])
-                .filter((c: any) => c.projeto_id === selectedProjeto);
-              const projRtTotal = projComissoes.reduce(
-                (s, c: any) => s + (Number(c.valor) || 0), 0);
-              const projRtPago = projComissoes.reduce(
-                (s, c: any) => c.status === "pago"
-                  ? s + (Number(c.valor) || 0) : s, 0);
+              const pRT = (data?.parcelasRT ?? []).filter((p: any) => p.projeto_id === selectedProjeto);
+              const useParcelasRT = pRT.length > 0;
+
+              const projComissoes = useParcelasRT ? pRT : (data?.comissoes ?? []).filter((c: any) => c.projeto_id === selectedProjeto);
+              const projRtTotal = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
+              const projRtPago = projComissoes.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0);
               const projRtPendente = projRtTotal - projRtPago;
 
               return (
@@ -350,18 +373,19 @@ const PortalParceiros = () => {
                   </div>
 
                   <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                    Comissões
+                    {useParcelasRT ? "Comissões (Financeiro)" : "Comissões"}
                   </h4>
                   {projComissoes.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-4">
                       Nenhuma comissão registrada.
                     </p>
-) : (
+                  ) : (
                     <div className="border border-border rounded-lg overflow-hidden mb-4">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="bg-secondary/60">
                             <th className="text-left px-3 py-2 border-b border-border">Projeto</th>
+                            {useParcelasRT && <th className="text-left px-3 py-2 border-b border-border">Descrição</th>}
                             <th className="text-left px-3 py-2 border-b border-border">Data</th>
                             <th className="text-right px-3 py-2 border-b border-border">Valor</th>
                             <th className="text-center px-3 py-2 border-b border-border">Status</th>
@@ -370,18 +394,23 @@ const PortalParceiros = () => {
                         <tbody>
                           {projComissoes.map((c: any) => (
                             <tr key={c.id} className="border-b border-border last:border-b-0">
-                              <td className="px-3 py-2">{c.observacao || "Comissão RT"}</td>
+                              <td className="px-3 py-2">{useParcelasRT ? (c.projetos?.nome) : (c.observacao || "Comissão RT")}</td>
+                              {useParcelasRT && <td className="px-3 py-2">{c.descricao}</td>}
                               <td className="px-3 py-2">
                                 {(() => {
-                                  if (c.status === "pago" && c.data_pagamento) {
-                                    return <span className="text-success font-medium">Pago em: {formatDate(c.data_pagamento)}</span>;
+                                  const status = c.status;
+                                  const dataPagamento = c.data_pagamento;
+                                  const dataVencimento = c.data_vencimento;
+
+                                  if (status === "pago" && dataPagamento) {
+                                    return <span className="text-success font-medium">Pago em: {formatDate(dataPagamento)}</span>;
                                   }
-                                  if (c.status === "pendente" && c.data_vencimento) {
+                                  if (dataVencimento) {
                                     const hoje = new Date().toISOString().split("T")[0];
-                                    const venceu = c.data_vencimento < hoje;
+                                    const venceu = dataVencimento < hoje;
                                     return (
                                       <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
-                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(c.data_vencimento)}
+                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(dataVencimento)}
                                       </span>
                                     );
                                   }
@@ -390,9 +419,16 @@ const PortalParceiros = () => {
                               </td>
                               <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
                               <td className="px-3 py-2 text-center">
-                                <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
-                                  {c.status === "pago" ? "Pago" : "Pendente"}
-                                </span>
+                                {(() => {
+                                  const isPago = c.status === "pago";
+                                  const hoje = new Date().toISOString().split("T")[0];
+                                  const isVencido = !isPago && c.data_vencimento && c.data_vencimento < hoje;
+                                  return (
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${isPago ? "bg-success/15 text-success" : isVencido ? "bg-destructive/15 text-destructive" : "bg-warning/15 text-warning"}`}>
+                                      {isPago ? "PAGO" : isVencido ? "VENCIDO" : "PENDENTE"}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           ))}
