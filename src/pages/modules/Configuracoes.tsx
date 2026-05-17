@@ -283,25 +283,11 @@ const Configuracoes = () => {
     if (!nuNome.trim() || !nuEmail.trim() || !nuSenha.trim()) { toast.error("Preencha todos os campos"); return; }
     setNuLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            full_name: nuNome.toUpperCase(),
-            email: nuEmail.toLowerCase(),
-            password: nuSenha,
-            role: nuRole,
-          }),
-        }
-      )
-
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error)
+      const res = await supabase.functions.invoke("create-user", {
+        body: { email: nuEmail, password: nuSenha, full_name: nuNome, role: nuRole },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro ao criar usuário");
+      if (res.data?.error) throw new Error(res.data.error);
       toast.success("Usuário criado com sucesso!");
       setNuNome(""); setNuEmail(""); setNuSenha(""); setNuRole("administrativo"); setShowNewUser(false);
       refetchUsers();

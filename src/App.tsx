@@ -1,4 +1,3 @@
-import ResetPassword from "./pages/ResetPassword";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -81,7 +80,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/infinit/login" element={<InfinitLogin />} />
             <Route path="/auth/:slug" element={<PublicAuthorization />} />
             <Route path="/formulario" element={<FormularioCliente />} />
