@@ -98,18 +98,14 @@ const PortalParceiros = () => {
 
       let comissoes = [];
       if (forn.tipo === "arquiteto") {
-        const { data: com } = await supabase
+        const { data: com, error: comError } = await supabase
           .from("comissoes")
-          .select(`
-            *,
-            fornecedores(id, nome),
-            projetos(id, nome),
-            financeiro_pagar!comissao_id(
-              id, status, data_vencimento,
-              data_pagamento
-            )
-          `)
-          .eq("fornecedor_id", forn.id);
+          .select("id, valor, status, percentual, projeto_id")
+          .eq("fornecedor_id", forn.id)
+          .eq("deletado", false);
+        
+        console.log("comissoes error:", comError);
+        console.log("comissoes data:", com);
         comissoes = com ?? [];
       }
 
