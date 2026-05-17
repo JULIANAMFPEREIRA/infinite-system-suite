@@ -1498,6 +1498,119 @@ export type Database = {
           },
         ]
       }
+      pagamentos_tecnico: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          empresa_id: string
+          id: string
+          projeto_id: string
+          tecnico_id: string
+          updated_at: string
+          valor_combinado: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          projeto_id: string
+          tecnico_id: string
+          updated_at?: string
+          valor_combinado?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          projeto_id?: string
+          tecnico_id?: string
+          updated_at?: string
+          valor_combinado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_tecnico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_tecnico_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_tecnico_tecnico_id_fkey"
+            columns: ["tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos_tecnico_lancamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          empresa_id: string
+          id: string
+          mes_referencia: string | null
+          observacao: string | null
+          projeto_id: string | null
+          tecnico_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          empresa_id: string
+          id?: string
+          mes_referencia?: string | null
+          observacao?: string | null
+          projeto_id?: string | null
+          tecnico_id: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          empresa_id?: string
+          id?: string
+          mes_referencia?: string | null
+          observacao?: string | null
+          projeto_id?: string | null
+          tecnico_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_tecnico_lancamentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_tecnico_lancamentos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_tecnico_lancamentos_tecnico_id_fkey"
+            columns: ["tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcelas_parceiros: {
         Row: {
           created_at: string | null
