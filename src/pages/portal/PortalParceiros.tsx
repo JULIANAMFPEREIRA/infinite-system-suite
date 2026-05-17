@@ -615,23 +615,21 @@ const PortalParceiros = () => {
                 <table className="w-full text-xs">
                   <thead className="bg-secondary/50">
                     <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
-                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
                       <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(data.lancamentos ?? []).length === 0 && (
-                      <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
                     )}
                     {(data.lancamentos ?? []).map((l: any) => (
                       <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground">
+                        <td className="p-3 text-muted-foreground w-[120px]">
                           {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
                         </td>
-                        <td className="p-3 text-right font-bold text-success">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
                       </tr>
                     ))}
