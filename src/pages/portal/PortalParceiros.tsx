@@ -559,8 +559,11 @@ const PortalParceiros = () => {
   const renderProjectList = () => (
     <div className="space-y-6 animate-fade-in">
       {data.fornecedor.tipo === "arquiteto" ? (() => {
-        const rtTotal = data.comissoes?.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0) ?? 0;
-        const rtPago = data.comissoes?.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0) ?? 0;
+        const rtTotal = (data.parcelasRT ?? [])
+          .reduce((s: number, p: any) => s + Number(p.valor), 0);
+        const rtPago = (data.parcelasRT ?? [])
+          .filter((p: any) => p.status === "pago")
+          .reduce((s: number, p: any) => s + Number(p.valor), 0);
         const rtPendente = rtTotal - rtPago;
 
         return (
@@ -645,10 +648,12 @@ const PortalParceiros = () => {
                 <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
               </div>
               {data.fornecedor.tipo === "arquiteto" && (() => {
-                const projComissoes = (data?.comissoes ?? []).filter((c: any) => c.projeto_id === p.id);
-                const projRtTotal = projComissoes.reduce((s: number, c: any) => s + (Number(c.valor) || 0), 0);
-                const projRtPago = projComissoes.reduce((s: number, c: any) => c.status === "pago" ? s + (Number(c.valor) || 0) : s, 0);
+                const projParcelasRT = (data?.parcelasRT ?? []).filter((prt: any) => prt.projeto_id === p.id);
+                const projRtTotal = projParcelasRT.reduce((s: number, prt: any) => s + (Number(prt.valor) || 0), 0);
+                const projRtPago = projParcelasRT.reduce((s: number, prt: any) => prt.status === "pago" ? s + (Number(prt.valor) || 0) : s, 0);
+                
                 if (projRtTotal === 0) return null;
+                
                 return (
                   <div className="pt-2 border-t border-border/60 grid grid-cols-3 gap-2 text-[11px]">
                     <div>
