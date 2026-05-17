@@ -835,6 +835,7 @@ const CRM = () => {
             descricao: `Comissão RT — ${detailClient.nome}`,
             valor: totalRt,
             status: "pendente" as const,
+            origem: "comissao",
           } as any);
         }
 
