@@ -234,8 +234,8 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                 <thead className="bg-secondary/50">
                   <tr>
                     <th className="text-left p-2 font-semibold">Projeto</th>
-                    <th className="text-right p-2 font-semibold">Valor Combinado</th>
-                    <th className="w-20"></th>
+                    <th className="text-right p-2 font-semibold">Combinado</th>
+                    <th className="text-right p-2 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
