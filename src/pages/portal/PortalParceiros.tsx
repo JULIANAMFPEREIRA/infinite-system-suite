@@ -559,16 +559,16 @@ const PortalParceiros = () => {
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
-              <p className="text-3xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Total Recebido</p>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Total Recebido</p>
               <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Saldo Devedor</p>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Saldo Devedor</p>
               <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
             </div>
           </div>
