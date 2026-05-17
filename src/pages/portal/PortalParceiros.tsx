@@ -559,16 +559,16 @@ const PortalParceiros = () => {
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
-              <p className="text-3xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Total Recebido</p>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Total Recebido</p>
               <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Saldo Devedor</p>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Saldo Devedor</p>
               <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
             </div>
           </div>
@@ -615,23 +615,21 @@ const PortalParceiros = () => {
                 <table className="w-full text-xs">
                   <thead className="bg-secondary/50">
                     <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
-                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
                       <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(data.lancamentos ?? []).length === 0 && (
-                      <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
                     )}
                     {(data.lancamentos ?? []).map((l: any) => (
                       <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground">
+                        <td className="p-3 text-muted-foreground w-[120px]">
                           {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
                         </td>
-                        <td className="p-3 text-right font-bold text-success">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
                       </tr>
                     ))}
@@ -648,28 +646,21 @@ const PortalParceiros = () => {
                 <table className="w-full text-xs">
                   <thead className="bg-secondary/50">
                     <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data Prevista</th>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
-                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data Prevista</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
                       <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(data.previstos ?? []).length === 0 && (
-                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
                     )}
                     {(data.previstos ?? []).map((l: any) => (
                       <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground">
+                        <td className="p-3 text-muted-foreground w-[120px]">
                           {l.data_prevista ? formatDate(l.data_prevista) : "—"}
                         </td>
-                        <td className="p-3">
-                          <p className="font-medium text-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</p>
-                          {l.projetos?.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {l.projetos.clientes.nome}</p>}
-                        </td>
-                        <td className="p-3 text-right font-bold text-warning">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-right font-bold text-warning w-[150px]">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
                       </tr>
                     ))}
