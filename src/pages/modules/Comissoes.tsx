@@ -22,7 +22,7 @@ const Comissoes = () => {
   const { data: comissoes, isLoading } = useQuery({
     queryKey: ["comissoes_rt", empresaId, filtroParceiro, filtroStatus, filtroProjeto],
     queryFn: async () => {
-      let query = supabase
+      let query: any = supabase
         .from("financeiro_pagar")
         .select(`
           id, descricao, valor, status,
@@ -32,25 +32,27 @@ const Comissoes = () => {
           fornecedores:fornecedor_id(id, nome),
           projetos:projeto_id(id, nome),
           comissoes:comissao_id(id, percentual)
-        `)
+        `);
+
+      query = query
         .eq("empresa_id", empresaId!)
-        .eq("tipo" as any, "Comissão")
+        .eq("tipo", "Comissão")
         .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
 
       if (filtroParceiro) {
-        query = (query as any).eq("fornecedor_id", filtroParceiro);
+        query = query.eq("fornecedor_id", filtroParceiro);
       }
       if (filtroStatus && filtroStatus !== "todos") {
-        query = (query as any).eq("status", filtroStatus);
+        query = query.eq("status", filtroStatus);
       }
       if (filtroProjeto) {
-        query = (query as any).eq("projeto_id", filtroProjeto);
+        query = query.eq("projeto_id", filtroProjeto);
       }
 
-      const { data, error } = await (query as any);
+      const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
+      return (data as any[]) ?? [];
     },
     enabled: !!empresaId,
   });
