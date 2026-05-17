@@ -841,33 +841,37 @@ const CRM = () => {
 
         // ── Auto-vincular arquiteto em projeto_parceiros ──
         if (arquitetoId && totalRt > 0 && projId && empresaId) {
-          // Verificar se já existe vínculo
-          const { data: vinculoExistente } = await supabase
+          // Verificar se já existe vínculo antes de inserir
+          const { data: existing } = await supabase
             .from("projeto_parceiros")
-            .select("id, rt_total")
+            .select("id")
             .eq("projeto_id", projId)
             .eq("parceiro_id", arquitetoId)
             .maybeSingle();
 
-          if (!vinculoExistente) {
-            // Criar vínculo novo
-            await supabase.from("projeto_parceiros").insert({
-              empresa_id: empresaId,
-              projeto_id: projId,
-              parceiro_id: arquitetoId,
-              rt_tipo: "fixo",
-              rt_base: "rt_itens",
-              rt_percentual: percentualMedio,
-              rt_valor: totalRt,
-              rt_total: totalRt,
-              rt_recebido: 0,
-            });
+          if (!existing) {
+            await supabase
+              .from("projeto_parceiros")
+              .insert({
+                empresa_id: empresaId,
+                projeto_id: projId,
+                parceiro_id: arquitetoId,
+                rt_tipo: "fixo",
+                rt_base: "rt_itens",
+                rt_percentual: percentualMedio,
+                rt_valor: totalRt,
+                rt_total: totalRt,
+                rt_recebido: 0,
+              });
           } else {
             // Atualizar RT total se já existir
-            await supabase.from("projeto_parceiros").update({
-              rt_valor: totalRt,
-              rt_total: totalRt,
-            }).eq("id", vinculoExistente.id);
+            await supabase
+              .from("projeto_parceiros")
+              .update({
+                rt_valor: totalRt,
+                rt_total: totalRt,
+              })
+              .eq("id", existing.id);
           }
         }
 
