@@ -5,7 +5,8 @@ import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
- import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink } from "lucide-react";
+ import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink, DollarSign } from "lucide-react";
+ import PagamentosTecnicoModal from "./PagamentosTecnicoModal";
 import { toast } from "sonner";
 
 const ParceirosManager = () => {
@@ -16,7 +17,8 @@ const ParceirosManager = () => {
 
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
-  const [openGerenciar, setOpenGerenciar] = useState<string | null>(null);
+   const [openGerenciar, setOpenGerenciar] = useState<string | null>(null);
+   const [openPagamentos, setOpenPagamentos] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
   const [creating, setCreating] = useState(false);
@@ -798,13 +800,23 @@ const ParceirosManager = () => {
                     >
                       <Pencil size={12} /> Editar
                     </button>
-                    <button
-                      onClick={() => setOpenGerenciar(p.id)}
-                      className="text-primary hover:underline text-[11px] flex items-center gap-1"
-                      title="Ver financeiro"
-                    >
-                      <Search size={12} /> Gerenciar
-                    </button>
+                     {p.tipo === "tecnico" ? (
+                       <button
+                         onClick={() => setOpenPagamentos(p.id)}
+                         className="text-success hover:underline text-[11px] flex items-center gap-1"
+                         title="Pagamentos"
+                       >
+                         <DollarSign size={12} /> Pagamentos
+                       </button>
+                     ) : (
+                       <button
+                         onClick={() => setOpenGerenciar(p.id)}
+                         className="text-primary hover:underline text-[11px] flex items-center gap-1"
+                         title="Ver financeiro"
+                       >
+                         <Search size={12} /> Gerenciar
+                       </button>
+                     )}
 
                     <button
                       onClick={() => setOpenVincular(p.id)}
@@ -830,7 +842,8 @@ const ParceirosManager = () => {
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
-      {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
+       {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
+       {openPagamentos && <PagamentosTecnicoModal parceiroId={openPagamentos} onClose={() => setOpenPagamentos(null)} />}
       {openEdit && <EditModal parceiroId={openEdit} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
