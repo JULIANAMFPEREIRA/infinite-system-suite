@@ -277,17 +277,17 @@ const PortalParceiros = () => {
     if (!activeProjeto) return null;
     return (
       <div className="space-y-5 animate-fade-in">
+        <button
+          onClick={() => setSelectedProjeto(null)}
+          className="flex items-center gap-2
+            text-slate-500 hover:text-slate-700
+            transition-colors mb-2 text-sm font-medium
+            bg-slate-100 hover:bg-slate-200
+            px-3 py-2 rounded-lg w-fit">
+          <ChevronLeft size={16} />
+          Voltar aos projetos
+        </button>
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 mb-5 space-y-4">
-          <button
-            onClick={() => setSelectedProjeto(null)}
-            className="flex items-center gap-2
-              text-slate-300 hover:text-white
-              transition-colors mb-4 text-sm font-medium
-              bg-slate-700/50 hover:bg-slate-700
-              px-3 py-2 rounded-lg w-fit">
-            <ChevronLeft size={16} />
-            Voltar aos projetos
-          </button>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-white">
@@ -377,7 +377,7 @@ const PortalParceiros = () => {
                   </div>
 
                   <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                    {useParcelasRT ? "Comissões (Financeiro)" : "Comissões"}
+                    Comissões
                   </h4>
                   {projComissoes.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-4">
@@ -401,25 +401,19 @@ const PortalParceiros = () => {
                               <td className="px-3 py-2">{useParcelasRT ? (c.projetos?.nome) : (c.observacao || "Comissão RT")}</td>
                               {useParcelasRT && <td className="px-3 py-2">{c.descricao}</td>}
                               <td className="px-3 py-2">
-                                {(() => {
-                                  const status = c.status;
-                                  const dataPagamento = c.data_pagamento;
-                                  const dataVencimento = c.data_vencimento;
-
-                                  if (status === "pago" && dataPagamento) {
-                                    return <span className="text-success font-medium">Pago em: {formatDate(dataPagamento)}</span>;
-                                  }
-                                  if (dataVencimento) {
-                                    const hoje = new Date().toISOString().split("T")[0];
-                                    const venceu = dataVencimento < hoje;
-                                    return (
-                                      <span className={venceu ? "text-destructive font-medium" : "text-warning font-medium"}>
-                                        {venceu ? "Venceu em: " : "Vence em: "}{formatDate(dataVencimento)}
-                                      </span>
-                                    );
-                                  }
-                                  return "—";
-                                })()}
+                                <div className="flex flex-col gap-0.5">
+                                  {c.data_vencimento && (
+                                    <span className="text-slate-500">
+                                      Vence em: {formatDate(c.data_vencimento)}
+                                    </span>
+                                  )}
+                                  {c.status === "pago" && c.data_pagamento && (
+                                    <span className="text-success font-medium">
+                                      Pago em: {formatDate(c.data_pagamento)}
+                                    </span>
+                                  )}
+                                  {!c.data_vencimento && !c.data_pagamento && "—"}
+                                </div>
                               </td>
                               <td className="px-3 py-2 text-right font-medium">{fmt(Number(c.valor) || 0)}</td>
                               <td className="px-3 py-2 text-center">
