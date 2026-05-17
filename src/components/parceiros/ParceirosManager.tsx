@@ -127,7 +127,7 @@ const ParceirosManager = () => {
       toast.success("Parceiro cadastrado com sucesso");
       setOpenNew(false);
       setForm({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
-      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["parceiros", empresaId] });
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao criar parceiro");
     } finally {
@@ -157,7 +157,7 @@ const ParceirosManager = () => {
 
       if (error) throw error;
       toast.success("Parceiro excluído com sucesso");
-      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["parceiros", empresaId] });
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -262,7 +262,7 @@ const ParceirosManager = () => {
         }
 
         toast.success("Parceiro atualizado com sucesso");
-        qc.invalidateQueries({ queryKey: ["parceiros"] });
+        qc.invalidateQueries({ queryKey: ["parceiros", empresaId] });
         setOpenEdit(null);
       } catch (e: any) {
         toast.error(e?.message ?? "Erro ao salvar");
