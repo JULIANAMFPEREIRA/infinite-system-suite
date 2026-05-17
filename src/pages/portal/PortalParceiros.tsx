@@ -150,6 +150,10 @@ const PortalParceiros = () => {
     console.log("parcelasRT:", data.parcelasRT);
     console.log("comissoes:", data.comissoes);
     console.log("fornecedor:", data.fornecedor);
+    console.log("fornecedor id:", data.fornecedor?.id);
+    console.log("fornecedor email:", user?.email);
+    console.log("fornecedor tipo:", data.fornecedor?.tipo);
+    console.log("comissaoIds:", (data.comissoes ?? []).map((c: any) => c.id));
   }
 
   const activeProjeto = (data?.projetos as any[])?.find(
