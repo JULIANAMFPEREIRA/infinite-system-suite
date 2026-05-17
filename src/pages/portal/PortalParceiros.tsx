@@ -879,3 +879,4 @@ const PortalParceiros = () => {
 };
 
 export default PortalParceiros;
+};
