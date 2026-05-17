@@ -435,41 +435,6 @@ const PortalParceiros = () => {
                     </div>
                   )}
 
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                    Parcelas Definidas
-                  </h4>
-                  {data.parcelas.filter(p => p.projeto_id === selectedProjeto).length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4 bg-secondary/20 rounded">
-                      Nenhuma parcela definida ainda. As parcelas são definidas pelo administrador.
-                    </p>
-                  ) : (
-                    <div className="border border-border rounded overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="bg-secondary/60">
-                            <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Descrição</th>
-                            <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Valor</th>
-                            <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Vencimento</th>
-                            <th className="text-center px-2.5 py-2 font-semibold border-b border-border">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(data?.parcelas ?? []).filter(p => p.projeto_id === selectedProjeto).map(p => (
-                            <tr key={p.id} className="border-b border-border last:border-b-0">
-                              <td className="px-2.5 py-1.5">{p.descricao}</td>
-                              <td className="px-2.5 py-1.5 text-right font-medium">{fmt(p.valor)}</td>
-                              <td className="px-2.5 py-1.5 text-right">{new Date(p.data_vencimento).toLocaleDateString("pt-BR")}</td>
-                              <td className="px-2.5 py-1.5 text-center">
-                                <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${p.status === "pago" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
-                                  {p.status === "pago" ? "Pago" : "Pendente"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
                 </>
               );
             })()}
