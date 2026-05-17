@@ -30,7 +30,7 @@ export const useParceiros = () => {
     queryFn: async (): Promise<Parceiro[]> => {
       const { data, error } = await supabase
         .from("fornecedores")
-        .select("id, nome, email, telefone, subtipo_parceiro, ativo, rt_percentual")
+        .select("id, nome, email, telefone, subtipo_parceiro, tipo, ativo, rt_percentual")
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
         .in("tipo", ["arquiteto", "tecnico", "engenheiro", "outro"] as any[])
