@@ -84,9 +84,9 @@ const ParceirosManager = () => {
             }
           }
         )
-        console.log("Retorno Edge Function:", { data, error })
-        if (error) throw error
-        if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
+        console.log("Retorno Edge Function:", { data, error });
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error ?? "Erro ao criar parceiro");
 
         try {
           // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
