@@ -104,18 +104,24 @@ const ParceirosManager = () => {
           console.log("Exception atualização fornecedor:", e);
         }
       } else {
-        // Just create the partner in fornecedores table
-        const { error } = await supabase.from("fornecedores").insert({
-          empresa_id: empresaId,
-          nome: form.nome.toUpperCase(),
-          email: form.email?.toLowerCase() || null,
-          tipo: form.subtipo as any,
-          subtipo_parceiro: form.subtipo,
-          rt_percentual: Number(form.rt_percentual) || 0,
-          ativo: true,
-          deletado: false
-        } as any);
-        if (error) throw error;
+        try {
+          // Just create the partner in fornecedores table
+          const { error: insertErr } = await supabase.from("fornecedores").insert({
+            empresa_id: empresaId,
+            nome: form.nome.toUpperCase(),
+            email: form.email?.toLowerCase() || null,
+            tipo: form.subtipo as any,
+            subtipo_parceiro: form.subtipo,
+            rt_percentual: Number(form.rt_percentual) || 0,
+            ativo: true,
+            deletado: false
+          } as any);
+          console.log("Erro insert fornecedor (sem conta):", insertErr);
+          if (insertErr) throw insertErr;
+        } catch (e) {
+          console.log("Exception insert fornecedor (sem conta):", e);
+          throw e;
+        }
       }
 
       toast.success("Parceiro cadastrado com sucesso");
