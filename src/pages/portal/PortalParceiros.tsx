@@ -56,7 +56,7 @@ const PortalParceiros = () => {
         .eq("email", user!.email!)
         .maybeSingle();
 
-      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [] };
+      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [] };
 
       let projetos = [];
       if (forn.tipo === "arquiteto") {
@@ -131,12 +131,31 @@ const PortalParceiros = () => {
         }
       }
 
+      let ptecnico = [];
+      let lancamentos = [];
+      if (forn.tipo === "tecnico") {
+        const { data: pt } = await supabase
+          .from("pagamentos_tecnico")
+          .select("*, projetos(nome), clientes(nome)")
+          .eq("tecnico_id", forn.id);
+        ptecnico = pt ?? [];
+
+        const { data: lanc } = await supabase
+          .from("pagamentos_tecnico_lancamentos")
+          .select("*, projetos(nome)")
+          .eq("tecnico_id", forn.id)
+          .order("data_pagamento", { ascending: false });
+        lancamentos = lanc ?? [];
+      }
+
       return { 
         fornecedor: forn, 
         projetos, 
         parcelas, 
         comissoes,
-        parcelasRT
+        parcelasRT,
+        ptecnico,
+        lancamentos
       };
     },
     enabled: !!user?.email
