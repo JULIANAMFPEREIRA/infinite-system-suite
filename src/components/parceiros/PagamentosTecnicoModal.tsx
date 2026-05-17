@@ -21,6 +21,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   const [openAddProjeto, setOpenAddProjeto] = useState(false);
   const [openAddLancamento, setOpenAddLancamento] = useState(false);
   const [editingProjeto, setEditingProjeto] = useState<any>(null);
+  const [editingLancamento, setEditingLancamento] = useState<any>(null);
 
     const [formProj, setFormProj] = useState({ projeto_id: "", cliente_id: "", tipo: "projeto" as "projeto" | "cliente", valor_combinado: "", descricao: "" });
    const [buscaProjeto, setBuscaProjeto] = useState("");
@@ -143,18 +144,31 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
       return;
     }
     try {
-      const { error } = await supabase.from("pagamentos_tecnico_lancamentos").insert({
-        empresa_id: empresaId,
-        tecnico_id: parceiroId,
-        projeto_id: formLanc.projeto_id || null,
-        valor: Number(formLanc.valor),
-        data_pagamento: formLanc.data_pagamento,
-        observacao: formLanc.observacao,
-        mes_referencia: formLanc.mes_referencia
-      });
-      if (error) throw error;
-      toast.success("Pagamento registrado");
+      if (editingLancamento) {
+        const { error } = await supabase.from("pagamentos_tecnico_lancamentos").update({
+          projeto_id: formLanc.projeto_id || null,
+          valor: Number(formLanc.valor),
+          data_pagamento: formLanc.data_pagamento,
+          observacao: formLanc.observacao,
+          mes_referencia: formLanc.mes_referencia
+        }).eq("id", editingLancamento.id);
+        if (error) throw error;
+        toast.success("Lançamento atualizado");
+      } else {
+        const { error } = await supabase.from("pagamentos_tecnico_lancamentos").insert({
+          empresa_id: empresaId,
+          tecnico_id: parceiroId,
+          projeto_id: formLanc.projeto_id || null,
+          valor: Number(formLanc.valor),
+          data_pagamento: formLanc.data_pagamento,
+          observacao: formLanc.observacao,
+          mes_referencia: formLanc.mes_referencia
+        });
+        if (error) throw error;
+        toast.success("Pagamento registrado");
+      }
       setOpenAddLancamento(false);
+      setEditingLancamento(null);
       setFormLanc({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
       refetchLancamentos();
     } catch (e: any) {
@@ -291,7 +305,8 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                       <td className="p-2 text-right font-medium text-success">{fmtMoeda(l.valor)}</td>
                       <td className="p-2 text-center">{l.mes_referencia}</td>
                       <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
-                      <td className="p-2 text-right">
+                      <td className="p-2 text-right flex items-center justify-end gap-2">
+                        <button onClick={() => { setEditingLancamento(l); setFormLanc({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_pagamento: l.data_pagamento, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddLancamento(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
                         <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
                       </td>
                     </tr>
@@ -369,9 +384,9 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
         </Dialog>
 
         {/* Mini Modal Registrar Pagamento */}
-        <Dialog open={openAddLancamento} onOpenChange={setOpenAddLancamento}>
+        <Dialog open={openAddLancamento} onOpenChange={(o) => { setOpenAddLancamento(o); if (!o) { setEditingLancamento(null); setFormLanc({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") }); } }}>
           <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Registrar Pagamento</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingLancamento ? "Editar Pagamento" : "Registrar Pagamento"}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-2">
               <div>
                 <label className="text-xs font-medium">Projeto (opcional)</label>
@@ -401,7 +416,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
             </div>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setOpenAddLancamento(false)}>Cancelar</Button>
-              <Button size="sm" onClick={handleAddLancamento}>Registrar</Button>
+              <Button size="sm" onClick={handleAddLancamento}>{editingLancamento ? "Salvar Alterações" : "Registrar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
