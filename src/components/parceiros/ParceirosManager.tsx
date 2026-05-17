@@ -732,16 +732,21 @@ const ParceirosManager = () => {
               <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
                 <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
                 <td className="px-2.5 py-1.5 text-muted-foreground">{p.email ?? "—"}</td>
-                <td className="px-2.5 py-1.5">
-                  <select
-                    value={p.subtipo_parceiro ?? "arquiteto"}
-                    onChange={(e) => updateParceiro.mutate({ id: p.id, subtipo_parceiro: e.target.value })}
-                    className="h-7 px-1.5 rounded border border-border bg-background text-xs"
-                  >
-                    {SUBTIPOS_PARCEIRO.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
+                <td className="px-2.5 py-1.5 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium min-w-[65px] capitalize">
+                      {p.tipo === "tecnico" ? "Técnico" : p.tipo || "—"}
+                    </span>
+                    <select
+                      value={p.tipo ?? "arquiteto"}
+                      onChange={(e) => updateParceiro.mutate({ id: p.id, tipo: e.target.value })}
+                      className="h-7 px-1 rounded border border-border bg-background text-[11px]"
+                    >
+                      {SUBTIPOS_PARCEIRO.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </td>
                 <td className="px-2.5 py-1.5 text-center">
                   <button
