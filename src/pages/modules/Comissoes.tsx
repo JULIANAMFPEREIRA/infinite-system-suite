@@ -36,7 +36,7 @@ const Comissoes = () => {
 
       query = query
         .eq("empresa_id", empresaId!)
-        .eq("tipo", "Comissão")
+        .eq("origem", "comissao")
         .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
 
