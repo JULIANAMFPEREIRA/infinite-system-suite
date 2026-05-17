@@ -391,13 +391,18 @@ const ParceirosManager = () => {
 
   const GerenciarFinanceiroModal = ({ parceiroId }: { parceiroId: string }) => {
     const parceiro = parceiros.find(p => p.id === parceiroId);
-    const { data: comissoes, isLoading } = useQuery({
-      queryKey: ["parceiro_comissoes", parceiroId],
+    const { data: parcelas, isLoading } = useQuery({
+      queryKey: ["parceiro_fp", parceiroId],
       queryFn: async () => {
         const { data, error } = await supabase
-          .from("comissoes")
-          .select("*, projetos(nome, status)")
+          .from("financeiro_pagar")
+          .select(`
+            id, valor, status, origem,
+            comissao_id, projeto_id,
+            projetos(id, nome, status)
+          `)
           .eq("fornecedor_id", parceiroId)
+          .eq("origem", "comissao")
           .eq("deletado", false);
         if (error) throw error;
         return data ?? [];
@@ -405,27 +410,28 @@ const ParceirosManager = () => {
       enabled: !!parceiroId
     });
 
-    // Agrupar por projeto
     const resumo = useMemo(() => {
-      const map: Record<string, { nome: string, status: string, total: number, pago: number, pendente: number }> = {};
-      (comissoes ?? []).forEach((c: any) => {
-        const pid = c.projeto_id;
+      const map: Record<string, {
+        nome: string, status: string,
+        total: number, pago: number, pendente: number
+      }> = {};
+
+      (parcelas ?? []).forEach((fp: any) => {
+        const pid = fp.projeto_id;
         if (!map[pid]) {
-          map[pid] = { 
-            nome: c.projetos?.nome ?? "Projeto s/ nome", 
-            status: c.projetos?.status ?? "indefinido",
-            total: 0, 
-            pago: 0, 
-            pendente: 0 
+          map[pid] = {
+            nome: fp.projetos?.nome ?? "Projeto s/ nome",
+            status: fp.projetos?.status ?? "indefinido",
+            total: 0, pago: 0, pendente: 0
           };
         }
-        const valor = Number(c.valor) || 0;
+        const valor = Number(fp.valor) || 0;
         map[pid].total += valor;
-        if (c.status === "pago") map[pid].pago += valor;
+        if (fp.status === "pago") map[pid].pago += valor;
         else map[pid].pendente += valor;
       });
       return Object.values(map);
-    }, [comissoes]);
+    }, [parcelas]);
 
     return (
       <Dialog open onOpenChange={(o) => !o && setOpenGerenciar(null)}>
