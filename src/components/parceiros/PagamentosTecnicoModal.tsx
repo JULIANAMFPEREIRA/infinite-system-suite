@@ -22,7 +22,8 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   const [openAddLancamento, setOpenAddLancamento] = useState(false);
   const [editingProjeto, setEditingProjeto] = useState<any>(null);
 
-  const [formProj, setFormProj] = useState({ projeto_id: "", valor_combinado: "", descricao: "" });
+   const [formProj, setFormProj] = useState({ projeto_id: "", valor_combinado: "", descricao: "" });
+   const [buscaProjeto, setBuscaProjeto] = useState("");
   const [formLanc, setFormLanc] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
 
   const { data: parceiro } = useQuery({
@@ -155,7 +156,13 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
     }
   };
 
-  const fmtMoeda = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+   const fmtMoeda = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+ 
+   const projetosFiltrados = useMemo(() => {
+     if (!buscaProjeto) return projetosEmpresa;
+     const termo = buscaProjeto.toLowerCase();
+     return projetosEmpresa.filter(p => p.nome.toLowerCase().includes(termo));
+   }, [projetosEmpresa, buscaProjeto]);
 
   const content = (
     <div className={inline ? "space-y-6" : "space-y-6 pt-4"}>
@@ -283,17 +290,32 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
         {/* Mini Modal Add Projeto */}
         <Dialog open={openAddProjeto} onOpenChange={setOpenAddProjeto}>
           <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>{editingProjeto ? "Editar Valor" : "Adicionar Projeto"}</DialogTitle></DialogHeader>
-            <div className="space-y-3 py-2">
-              {!editingProjeto && (
-                <div>
-                  <label className="text-xs font-medium">Projeto</label>
-                  <select value={formProj.projeto_id} onChange={e => setFormProj({...formProj, projeto_id: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm">
-                    <option value="">Selecione...</option>
-                    {projetosEmpresa.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                </div>
-              )}
+             <DialogHeader><DialogTitle>{editingProjeto ? "Editar Valor" : "Adicionar Projeto"}</DialogTitle></DialogHeader>
+             <div className="space-y-3 py-2">
+               {!editingProjeto && (
+                 <div className="space-y-1.5">
+                   <label className="text-xs font-medium">Projeto</label>
+                   <input
+                     type="text"
+                     placeholder="Buscar projeto..."
+                     value={buscaProjeto}
+                     onChange={(e) => setBuscaProjeto(e.target.value)}
+                     className="w-full h-8 px-2 rounded border border-border bg-background text-xs"
+                   />
+                   <select
+                     value={formProj.projeto_id}
+                     onChange={(e) => setFormProj({ ...formProj, projeto_id: e.target.value })}
+                     className="w-full h-9 px-2 rounded border border-border bg-background text-sm"
+                   >
+                     <option value="">Selecione...</option>
+                     {projetosFiltrados.map((p) => (
+                       <option key={p.id} value={p.id}>
+                         {p.nome}
+                       </option>
+                     ))}
+                   </select>
+                 </div>
+               )}
               <div>
                 <label className="text-xs font-medium">Valor Combinado</label>
                 <input type="number" value={formProj.valor_combinado} onChange={e => setFormProj({...formProj, valor_combinado: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
