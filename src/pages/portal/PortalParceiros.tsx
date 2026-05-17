@@ -646,28 +646,21 @@ const PortalParceiros = () => {
                 <table className="w-full text-xs">
                   <thead className="bg-secondary/50">
                     <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data Prevista</th>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
-                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data Prevista</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
                       <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(data.previstos ?? []).length === 0 && (
-                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
                     )}
                     {(data.previstos ?? []).map((l: any) => (
                       <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground">
+                        <td className="p-3 text-muted-foreground w-[120px]">
                           {l.data_prevista ? formatDate(l.data_prevista) : "—"}
                         </td>
-                        <td className="p-3">
-                          <p className="font-medium text-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</p>
-                          {l.projetos?.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {l.projetos.clientes.nome}</p>}
-                        </td>
-                        <td className="p-3 text-right font-bold text-warning">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-right font-bold text-warning w-[150px]">{fmt(Number(l.valor))}</td>
                         <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
                       </tr>
                     ))}
