@@ -32,7 +32,7 @@ export const useParceiros = () => {
         .select("id, nome, email, telefone, subtipo_parceiro, ativo, rt_percentual")
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
-        .not("subtipo_parceiro", "is", null)
+        .in("tipo", ["arquiteto", "tecnico", "engenheiro", "outro"] as any[])
         .order("nome");
       if (error) throw error;
       return (data ?? []) as Parceiro[];
