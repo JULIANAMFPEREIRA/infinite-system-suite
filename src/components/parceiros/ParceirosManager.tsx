@@ -65,6 +65,13 @@ const ParceirosManager = () => {
     try {
       // If email and password provided, create user account
       if (form.email && form.password) {
+        console.log("Enviando para Edge Function:", {
+          full_name: form.nome.toUpperCase(),
+          email: form.email.toLowerCase(),
+          password: form.password ? "***" : "VAZIO",
+          role: "parceiro",
+          subtipo_parceiro: form.subtipo,
+        })
         const { data, error } = await supabase.functions.invoke(
           "create-user",
           {
