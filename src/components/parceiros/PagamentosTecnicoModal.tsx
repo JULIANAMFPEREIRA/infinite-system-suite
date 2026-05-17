@@ -85,18 +85,18 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
      }
    });
  
-   const lancamentosRealizados = useMemo(() => allLancamentos.filter(l => l.tipo !== "previsto"), [allLancamentos]);
-   const lancamentosPrevistos = useMemo(() => allLancamentos.filter(l => l.tipo === "previsto"), [allLancamentos]);
+    const lancamentosRealizados = useMemo(() => allLancamentos.filter((l: any) => l.tipo !== "previsto"), [allLancamentos]);
+    const lancamentosPrevistos = useMemo(() => allLancamentos.filter((l: any) => l.tipo === "previsto"), [allLancamentos]);
 
-  const resumo = useMemo(() => {
-    const totalCombinado = pagamentos.reduce((acc, p) => acc + Number(p.valor_combinado), 0);
+   const resumo = useMemo(() => {
+     const totalCombinado = pagamentos.reduce((acc, p) => acc + Number(p.valor_combinado), 0);
      const totalPago = lancamentosRealizados.reduce((acc, l) => acc + Number(l.valor), 0);
-    return {
-      totalCombinado,
-      totalPago,
-      saldoDevedor: totalCombinado - totalPago
-    };
-  }, [pagamentos, lancamentos]);
+     return {
+       totalCombinado,
+       totalPago,
+       saldoDevedor: totalCombinado - totalPago
+     };
+   }, [pagamentos, lancamentosRealizados]);
 
   const handleAddProjeto = async () => {
     const id = formProj.tipo === "projeto" ? formProj.projeto_id : formProj.cliente_id;
@@ -317,7 +317,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                    {lancamentosRealizados.length === 0 && (
                      <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum pagamento registrado.</td></tr>
                    )}
-                   {lancamentosRealizados.map(l => (
+                    {lancamentosRealizados.map((l: any) => (
                      <tr key={l.id} className="border-t border-border hover:bg-secondary/20">
                        <td className="p-2">{l.data_pagamento ? format(new Date(l.data_pagamento + 'T12:00:00'), 'dd/MM/yyyy') : "-"}</td>
                        <td className="p-2 text-muted-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</td>
@@ -358,7 +358,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                    {lancamentosPrevistos.length === 0 && (
                      <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum pagamento previsto.</td></tr>
                    )}
-                   {lancamentosPrevistos.map(l => (
+                    {lancamentosPrevistos.map((l: any) => (
                      <tr key={l.id} className="border-t border-border hover:bg-amber-50/30">
                        <td className="p-2">{l.data_prevista ? format(new Date(l.data_prevista + 'T12:00:00'), 'dd/MM/yyyy') : "-"}</td>
                        <td className="p-2 text-muted-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</td>
@@ -477,43 +477,44 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setOpenAddLancamento(false)}>Cancelar</Button>
                <Button size="sm" onClick={() => handleAddLancamento("realizado")}>{editingLancamento ? "Salvar Alterações" : "Registrar"}</Button>
-         {/* Mini Modal Agendar Pagamento */}
-         <Dialog open={openAddPrevisto} onOpenChange={(o) => { setOpenAddPrevisto(o); if (!o) { setEditingLancamento(null); setFormPrev({ projeto_id: "", valor: "", data_prevista: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") }); } }}>
-           <DialogContent className="max-w-sm">
-             <DialogHeader><DialogTitle>{editingLancamento ? "Editar Pagamento Previsto" : "Agendar Pagamento"}</DialogTitle></DialogHeader>
-             <div className="space-y-3 py-2">
-               <div>
-                 <label className="text-xs font-medium">Projeto (opcional)</label>
-                 <select value={formPrev.projeto_id} onChange={e => setFormPrev({...formPrev, projeto_id: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm">
-                   <option value="">Geral / Sem Projeto</option>
-                   {pagamentos.map(p => <option key={p.projeto_id} value={p.projeto_id}>{p.projetos?.nome}</option>)}
-                 </select>
-               </div>
-               <div className="grid grid-cols-2 gap-2">
-                 <div>
-                   <label className="text-xs font-medium">Valor</label>
-                   <input type="number" value={formPrev.valor} onChange={e => setFormPrev({...formPrev, valor: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
-                 </div>
-                 <div>
-                   <label className="text-xs font-medium">Data Prevista</label>
-                   <input type="date" value={formPrev.data_prevista} onChange={e => setFormPrev({...formPrev, data_prevista: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
-                 </div>
-               </div>
-               <div>
-                 <label className="text-xs font-medium">Mês Referência (MM/AAAA)</label>
-                 <input type="text" value={formPrev.mes_referencia} onChange={e => setFormPrev({...formPrev, mes_referencia: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="05/2026" />
-               </div>
-               <div>
-                 <label className="text-xs font-medium">Observação</label>
-                 <input type="text" value={formPrev.observacao} onChange={e => setFormPrev({...formPrev, observacao: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
-               </div>
-             </div>
-             <DialogFooter>
-               <Button variant="outline" size="sm" onClick={() => setOpenAddPrevisto(false)}>Cancelar</Button>
-               <Button size="sm" onClick={() => handleAddLancamento("previsto")}>{editingLancamento ? "Salvar Alterações" : "Agendar"}</Button>
-             </DialogFooter>
-           </DialogContent>
-         </Dialog>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Mini Modal Agendar Pagamento */}
+        <Dialog open={openAddPrevisto} onOpenChange={(o) => { setOpenAddPrevisto(o); if (!o) { setEditingLancamento(null); setFormPrev({ projeto_id: "", valor: "", data_prevista: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") }); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>{editingLancamento ? "Editar Pagamento Previsto" : "Agendar Pagamento"}</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium">Projeto (opcional)</label>
+                <select value={formPrev.projeto_id} onChange={e => setFormPrev({...formPrev, projeto_id: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm">
+                  <option value="">Geral / Sem Projeto</option>
+                  {pagamentos.map(p => <option key={p.projeto_id || p.id} value={p.projeto_id || ""}>{p.projetos?.nome || p.clientes?.nome}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-medium">Valor</label>
+                  <input type="number" value={formPrev.valor} onChange={e => setFormPrev({...formPrev, valor: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Data Prevista</label>
+                  <input type="date" value={formPrev.data_prevista} onChange={e => setFormPrev({...formPrev, data_prevista: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Mês Referência (MM/AAAA)</label>
+                <input type="text" value={formPrev.mes_referencia} onChange={e => setFormPrev({...formPrev, mes_referencia: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="05/2026" />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Observação</label>
+                <input type="text" value={formPrev.observacao} onChange={e => setFormPrev({...formPrev, observacao: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setOpenAddPrevisto(false)}>Cancelar</Button>
+              <Button size="sm" onClick={() => handleAddLancamento("previsto")}>{editingLancamento ? "Salvar Alterações" : "Agendar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
