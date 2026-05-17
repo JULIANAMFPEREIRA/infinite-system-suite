@@ -22,7 +22,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   const [openAddLancamento, setOpenAddLancamento] = useState(false);
   const [editingProjeto, setEditingProjeto] = useState<any>(null);
 
-   const [formProj, setFormProj] = useState({ projeto_id: "", valor_combinado: "", descricao: "" });
+    const [formProj, setFormProj] = useState({ projeto_id: "", cliente_id: "", tipo: "projeto" as "projeto" | "cliente", valor_combinado: "", descricao: "" });
    const [buscaProjeto, setBuscaProjeto] = useState("");
   const [formLanc, setFormLanc] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
 
@@ -43,12 +43,26 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
     enabled: !!empresaId
   });
 
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes_crm", empresaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome, status_crm")
+        .eq("empresa_id", empresaId!)
+        .eq("deletado", false)
+        .order("nome");
+      return data ?? [];
+    },
+    enabled: !!empresaId
+  });
+
   const { data: pagamentos = [], refetch: refetchPagamentos } = useQuery({
     queryKey: ["pagamentos_tecnico", parceiroId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pagamentos_tecnico")
-        .select("*, projetos(nome)")
+        .select("*, projetos(nome), clientes(nome)")
         .eq("tecnico_id", parceiroId);
       if (error) throw error;
       return data ?? [];
@@ -79,8 +93,9 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   }, [pagamentos, lancamentos]);
 
   const handleAddProjeto = async () => {
-    if (!formProj.projeto_id || !formProj.valor_combinado) {
-      toast.error("Preencha projeto e valor combinado");
+    const id = formProj.tipo === "projeto" ? formProj.projeto_id : formProj.cliente_id;
+    if (!id || !formProj.valor_combinado) {
+      toast.error("Preencha o item e o valor combinado");
       return;
     }
     try {
@@ -95,16 +110,17 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
         const { error } = await supabase.from("pagamentos_tecnico").insert({
           empresa_id: empresaId,
           tecnico_id: parceiroId,
-          projeto_id: formProj.projeto_id,
+          projeto_id: formProj.tipo === "projeto" ? formProj.projeto_id : null,
+          cliente_id: formProj.tipo === "cliente" ? formProj.cliente_id : null,
           valor_combinado: Number(formProj.valor_combinado),
           descricao: formProj.descricao
         });
         if (error) throw error;
-        toast.success("Projeto adicionado");
+        toast.success("Item adicionado");
       }
       setOpenAddProjeto(false);
       setEditingProjeto(null);
-      setFormProj({ projeto_id: "", valor_combinado: "", descricao: "" });
+      setFormProj({ projeto_id: "", cliente_id: "", tipo: "projeto", valor_combinado: "", descricao: "" });
       refetchPagamentos();
     } catch (e: any) {
       toast.error(e.message);
@@ -158,11 +174,16 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
 
    const fmtMoeda = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
  
-   const projetosFiltrados = useMemo(() => {
-     if (!buscaProjeto) return projetosEmpresa;
+   const filteredItems = useMemo(() => {
      const termo = buscaProjeto.toLowerCase();
-     return projetosEmpresa.filter(p => p.nome.toLowerCase().includes(termo));
-   }, [projetosEmpresa, buscaProjeto]);
+     const filteredProjs = termo ? projetosEmpresa.filter(p => p.nome.toLowerCase().includes(termo)) : projetosEmpresa;
+     const filteredClis = termo ? clientes.filter(c => c.nome.toLowerCase().includes(termo)) : clientes;
+     
+     return {
+       projetos: filteredProjs,
+       clientes: filteredClis
+     };
+   }, [projetosEmpresa, clientes, buscaProjeto]);
 
   const content = (
     <div className={inline ? "space-y-6" : "space-y-6 pt-4"}>
@@ -204,7 +225,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                 <Calculator size={16} className="text-primary" />
                 Projetos e Valores Combinados
               </h3>
-              <Button size="sm" onClick={() => { setEditingProjeto(null); setFormProj({ projeto_id: "", valor_combinado: "", descricao: "" }); setOpenAddProjeto(true); }}>
+              <Button size="sm" onClick={() => { setEditingProjeto(null); setFormProj({ projeto_id: "", cliente_id: "", tipo: "projeto", valor_combinado: "", descricao: "" }); setOpenAddProjeto(true); }}>
                 <Plus size={14} className="mr-1" /> Adicionar Projeto
               </Button>
             </div>
@@ -227,12 +248,12 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                     const pagoNoProjeto = lancamentos.filter(l => l.projeto_id === p.projeto_id).reduce((acc, cur) => acc + Number(cur.valor), 0);
                     return (
                       <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
-                        <td className="p-2 font-medium">{p.projetos?.nome}</td>
+                        <td className="p-2 font-medium">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</td>
                         <td className="p-2 text-right">{fmtMoeda(p.valor_combinado)}</td>
                         <td className="p-2 text-right text-success">{fmtMoeda(pagoNoProjeto)}</td>
                         <td className="p-2 text-right font-bold text-destructive">{fmtMoeda(p.valor_combinado - pagoNoProjeto)}</td>
                         <td className="p-2 flex items-center justify-end gap-2">
-                          <button onClick={() => { setEditingProjeto(p); setFormProj({ projeto_id: p.projeto_id, valor_combinado: p.valor_combinado.toString(), descricao: p.descricao || "" }); setOpenAddProjeto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
+                          <button onClick={() => { setEditingProjeto(p); setFormProj({ projeto_id: p.projeto_id || "", cliente_id: p.cliente_id || "", tipo: p.projeto_id ? "projeto" : "cliente", valor_combinado: p.valor_combinado.toString(), descricao: p.descricao || "" }); setOpenAddProjeto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
                           <button onClick={() => handleDeleteProjeto(p.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
                         </td>
                       </tr>
@@ -290,7 +311,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
         {/* Mini Modal Add Projeto */}
         <Dialog open={openAddProjeto} onOpenChange={setOpenAddProjeto}>
           <DialogContent className="max-w-sm">
-             <DialogHeader><DialogTitle>{editingProjeto ? "Editar Valor" : "Adicionar Projeto"}</DialogTitle></DialogHeader>
+             <DialogHeader><DialogTitle>{editingProjeto ? "Editar Valor" : "Adicionar Projeto/Cliente"}</DialogTitle></DialogHeader>
              <div className="space-y-3 py-2">
                {!editingProjeto && (
                  <div className="space-y-1.5">
@@ -303,16 +324,37 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                      className="w-full h-8 px-2 rounded border border-border bg-background text-xs"
                    />
                    <select
-                     value={formProj.projeto_id}
-                     onChange={(e) => setFormProj({ ...formProj, projeto_id: e.target.value })}
+                     value={formProj.tipo === "projeto" ? formProj.projeto_id : formProj.cliente_id}
+                     onChange={(e) => {
+                        const selected = e.target.options[e.target.selectedIndex];
+                        const tipo = selected.getAttribute("data-tipo") as "projeto" | "cliente";
+                        if (tipo === "projeto") {
+                          setFormProj({ ...formProj, tipo: "projeto", projeto_id: e.target.value, cliente_id: "" });
+                        } else {
+                          setFormProj({ ...formProj, tipo: "cliente", cliente_id: e.target.value, projeto_id: "" });
+                        }
+                     }}
                      className="w-full h-9 px-2 rounded border border-border bg-background text-sm"
                    >
                      <option value="">Selecione...</option>
-                     {projetosFiltrados.map((p) => (
-                       <option key={p.id} value={p.id}>
-                         {p.nome}
-                       </option>
-                     ))}
+                     {filteredItems.projetos.length > 0 && (
+                       <optgroup label="PROJETOS">
+                         {filteredItems.projetos.map((p) => (
+                           <option key={p.id} value={p.id} data-tipo="projeto">
+                             {p.nome}
+                           </option>
+                         ))}
+                       </optgroup>
+                     )}
+                     {filteredItems.clientes.length > 0 && (
+                       <optgroup label="CLIENTES CRM">
+                         {filteredItems.clientes.map((c) => (
+                           <option key={c.id} value={c.id} data-tipo="cliente">
+                             {c.nome}
+                           </option>
+                         ))}
+                       </optgroup>
+                     )}
                    </select>
                  </div>
                )}
