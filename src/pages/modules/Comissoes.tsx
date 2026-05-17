@@ -29,26 +29,26 @@ const Comissoes = () => {
           data_vencimento, data_pagamento,
           comissao_id, fornecedor_id,
           projeto_id,
-          fornecedores(id, nome),
-          projetos(id, nome),
-          comissoes(id, percentual)
+          fornecedores:fornecedor_id(id, nome),
+          projetos:projeto_id(id, nome),
+          comissoes:comissao_id(id, percentual)
         `)
-      .eq("empresa_id", empresaId!)
-      .eq("tipo" as any, "Comissão")
-      .eq("deletado", false)
+        .eq("empresa_id", empresaId!)
+        .eq("tipo" as any, "Comissão")
+        .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
 
       if (filtroParceiro) {
-        query = query.eq("fornecedor_id", filtroParceiro);
+        query = (query as any).eq("fornecedor_id", filtroParceiro);
       }
       if (filtroStatus && filtroStatus !== "todos") {
-        query = query.eq("status", filtroStatus as any);
+        query = (query as any).eq("status", filtroStatus);
       }
       if (filtroProjeto) {
-        query = query.eq("projeto_id", filtroProjeto);
+        query = (query as any).eq("projeto_id", filtroProjeto);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await (query as any);
       if (error) throw error;
       return data ?? [];
     },
