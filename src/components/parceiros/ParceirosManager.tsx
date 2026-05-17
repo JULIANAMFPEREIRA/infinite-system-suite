@@ -88,27 +88,40 @@ const ParceirosManager = () => {
         if (error) throw error
         if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
 
-        // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
-        // But we need to update the rt_percentual if provided.
-        if (form.rt_percentual) {
-          const { data: p } = await supabase.from("fornecedores").select("id").eq("email", form.email.toLowerCase()).single();
-          if (p) {
-            await supabase.from("fornecedores").update({ rt_percentual: Number(form.rt_percentual) }).eq("id", p.id);
+        try {
+          // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
+          // But we need to update the rt_percentual if provided.
+          if (form.rt_percentual) {
+            const { data: p, error: selectErr } = await supabase.from("fornecedores").select("id").eq("email", form.email.toLowerCase()).single();
+            console.log("Busca fornecedor para atualização:", { p, error: selectErr });
+            
+            if (p) {
+              const { error: updateErr } = await supabase.from("fornecedores").update({ rt_percentual: Number(form.rt_percentual) }).eq("id", p.id);
+              console.log("Erro atualização fornecedor:", updateErr);
+            }
           }
+        } catch (e) {
+          console.log("Exception atualização fornecedor:", e);
         }
       } else {
-        // Just create the partner in fornecedores table
-        const { error } = await supabase.from("fornecedores").insert({
-          empresa_id: empresaId,
-          nome: form.nome.toUpperCase(),
-          email: form.email?.toLowerCase() || null,
-          tipo: form.subtipo as any,
-          subtipo_parceiro: form.subtipo,
-          rt_percentual: Number(form.rt_percentual) || 0,
-          ativo: true,
-          deletado: false
-        } as any);
-        if (error) throw error;
+        try {
+          // Just create the partner in fornecedores table
+          const { error: insertErr } = await supabase.from("fornecedores").insert({
+            empresa_id: empresaId,
+            nome: form.nome.toUpperCase(),
+            email: form.email?.toLowerCase() || null,
+            tipo: form.subtipo as any,
+            subtipo_parceiro: form.subtipo,
+            rt_percentual: Number(form.rt_percentual) || 0,
+            ativo: true,
+            deletado: false
+          } as any);
+          console.log("Erro insert fornecedor (sem conta):", insertErr);
+          if (insertErr) throw insertErr;
+        } catch (e) {
+          console.log("Exception insert fornecedor (sem conta):", e);
+          throw e;
+        }
       }
 
       toast.success("Parceiro cadastrado com sucesso");
