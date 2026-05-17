@@ -84,6 +84,7 @@ const ParceirosManager = () => {
             }
           }
         )
+        console.log("Retorno Edge Function:", { data, error })
         if (error) throw error
         if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
 
