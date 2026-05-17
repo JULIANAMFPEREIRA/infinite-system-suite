@@ -9,6 +9,7 @@ export interface Parceiro {
   email: string | null;
   telefone: string | null;
   subtipo_parceiro: string | null;
+  tipo: string | null;
   ativo: boolean;
   rt_percentual: number | null;
 }
@@ -29,7 +30,7 @@ export const useParceiros = () => {
     queryFn: async (): Promise<Parceiro[]> => {
       const { data, error } = await supabase
         .from("fornecedores")
-        .select("id, nome, email, telefone, subtipo_parceiro, ativo, rt_percentual")
+        .select("id, nome, email, telefone, subtipo_parceiro, tipo, ativo, rt_percentual")
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
         .in("tipo", ["arquiteto", "tecnico", "engenheiro", "outro"] as any[])
@@ -45,7 +46,7 @@ export const useUpdateParceiro = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<Parceiro> & { id: string }) => {
-      const { error } = await supabase.from("fornecedores").update(patch).eq("id", id);
+      const { error } = await supabase.from("fornecedores").update(patch as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
