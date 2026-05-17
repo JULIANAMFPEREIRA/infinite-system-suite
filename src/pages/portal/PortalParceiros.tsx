@@ -538,9 +538,144 @@ const PortalParceiros = () => {
     </div>
   );};
 
-  const renderProjectList = () => (
-    <div className="space-y-6 animate-fade-in">
-      {data.fornecedor.tipo === "arquiteto" ? (() => {
+  const renderProjectList = () => {
+    if (data.fornecedor.tipo === "tecnico") {
+      const totalContratado = (data.ptecnico ?? []).reduce((acc: number, p: any) => acc + Number(p.valor_combinado), 0);
+      const totalRecebido = (data.lancamentos ?? []).reduce((acc: number, l: any) => acc + Number(l.valor), 0);
+      const saldoDevedor = totalContratado - totalRecebido;
+
+      return (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
+              <p className="text-3xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Total Recebido</p>
+              <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Saldo Devedor</p>
+              <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold">Projetos</h2>
+            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Contratado</th>
+                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(data.ptecnico ?? []).length === 0 && (
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum projeto vinculado.</td></tr>
+                    )}
+                    {(data.ptecnico ?? []).map((p: any) => {
+                      const pagoNoProjeto = (data.lancamentos ?? []).filter((l: any) => l.projeto_id === p.projeto_id).reduce((acc: number, cur: any) => acc + Number(cur.valor), 0);
+                      const saldo = p.valor_combinado - pagoNoProjeto;
+                      const quitado = saldo <= 0;
+                      return (
+                        <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
+                          <td className="p-3">
+                            <p className="font-bold text-foreground">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</p>
+                            {p.projetos?.nome && p.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {p.clientes.nome}</p>}
+                          </td>
+                          <td className="p-3 text-right font-medium">{fmt(p.valor_combinado)}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${quitado ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
+                              {quitado ? "QUITADO" : "PENDENTE"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
+            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Data</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Valor</th>
+                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Mês Ref.</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(data.lancamentos ?? []).length === 0 && (
+                      <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
+                    )}
+                    {(data.lancamentos ?? []).map((l: any) => (
+                      <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
+                        <td className="p-3 text-muted-foreground">
+                          {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
+                        </td>
+                        <td className="p-3 text-right font-bold text-success">{fmt(Number(l.valor))}</td>
+                        <td className="p-3 text-center text-muted-foreground">{l.mes_referencia || "—"}</td>
+                        <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h2 className="text-sm font-bold">Visitas e Projetos</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {(data?.projetos ?? []).map((p: any) => (
+                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                      {p.clientes?.nome && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                      )}
+                      {p.endereco_obra && (
+                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                        {statusLabel[p.status] ?? p.status}
+                      </span>
+                      <ChevronRight size={16} className="text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                      <span>Progresso</span>
+                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+                    </div>
+                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = (data.parcelasRT ?? [])
           .reduce((s: number, p: any) => s + Number(p.valor), 0);
         const rtPago = (data.parcelasRT ?? [])
