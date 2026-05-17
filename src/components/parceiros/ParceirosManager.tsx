@@ -65,13 +65,17 @@ const ParceirosManager = () => {
     try {
       // If email and password provided, create user account
       if (form.email && form.password) {
+        const payload = JSON.stringify({
+          full_name: form.nome.toUpperCase(),
+          email: form.email.toLowerCase(),
+          password: form.password,
+          role: "parceiro",
+          subtipo_parceiro: form.subtipo,
+        })
         const { data, error } = await supabase.functions.invoke("create-user", {
-          body: {
-            full_name: form.nome.toUpperCase(),
-            email: form.email.toLowerCase(),
-            password: form.password,
-            role: "parceiro",
-            subtipo_parceiro: form.subtipo,
+          body: payload,
+          headers: {
+            "Content-Type": "application/json",
           },
         });
         if (error) throw error;
