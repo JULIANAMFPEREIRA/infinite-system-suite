@@ -65,33 +65,17 @@ const ParceirosManager = () => {
     try {
       // If email and password provided, create user account
       if (form.email && form.password) {
-        const payload = JSON.stringify({
-          full_name: form.nome.toUpperCase(),
-          email: form.email.toLowerCase(),
-          password: form.password,
-          role: "parceiro",
-          subtipo_parceiro: form.subtipo,
-        })
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              full_name: form.nome.toUpperCase(),
-              email: form.email.toLowerCase(),
-              password: form.password,
-              role: "parceiro",
-              subtipo_parceiro: form.subtipo,
-            }),
-          }
-        )
-
-        const result = await response.json()
-        if (!response.ok) throw new Error(result.error)
+        const { data, error } = await supabase.functions.invoke("create-user", {
+          body: {
+            full_name: form.nome.toUpperCase(),
+            email: form.email.toLowerCase(),
+            password: form.password,
+            role: "parceiro",
+            subtipo_parceiro: form.subtipo,
+          },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
 
         // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
         // But we need to update the rt_percentual if provided.
