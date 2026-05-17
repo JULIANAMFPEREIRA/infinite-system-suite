@@ -46,7 +46,7 @@ export const useUpdateParceiro = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<Parceiro> & { id: string }) => {
-      const { error } = await supabase.from("fornecedores").update(patch).eq("id", id);
+      const { error } = await supabase.from("fornecedores").update(patch as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
