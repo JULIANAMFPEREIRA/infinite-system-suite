@@ -18,26 +18,33 @@ const Comissoes = () => {
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [busca, setBusca] = useState("");
 
-  // Query principal
+  // Query principal que espelha o Contas a Pagar para registros de tipo "Comissão"
   const { data: comissoes, isLoading } = useQuery({
     queryKey: ["comissoes_rt", empresaId, filtroParceiro, filtroStatus, filtroProjeto],
     queryFn: async () => {
-      let query = supabase
-        .from("comissoes")
+      let query: any = supabase
+        .from("financeiro_pagar")
         .select(`
-          *,
-          fornecedores(id, nome),
-          projetos(id, nome)
-        `)
+          id, descricao, valor, status,
+          data_vencimento, data_pagamento,
+          comissao_id, fornecedor_id,
+          projeto_id,
+          fornecedores:fornecedor_id(id, nome),
+          projetos:projeto_id(id, nome),
+          comissoes:comissao_id(id, percentual)
+        `);
+
+      query = query
         .eq("empresa_id", empresaId!)
+        .eq("tipo", "Comissão")
         .eq("deletado", false)
-        .order("created_at", { ascending: false });
+        .order("data_vencimento", { ascending: true });
 
       if (filtroParceiro) {
         query = query.eq("fornecedor_id", filtroParceiro);
       }
       if (filtroStatus && filtroStatus !== "todos") {
-        query = query.eq("status", filtroStatus as any);
+        query = query.eq("status", filtroStatus);
       }
       if (filtroProjeto) {
         query = query.eq("projeto_id", filtroProjeto);
@@ -45,22 +52,7 @@ const Comissoes = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!empresaId,
-  });
-
-  const { data: pagamentos } = useQuery({
-    queryKey: ["portal_parcelas", empresaId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financeiro_pagar")
-        .select("id, comissao_id, status, data_vencimento, data_pagamento, valor")
-        .eq("empresa_id", empresaId!)
-        .not("comissao_id", "is", null);
-
-      if (error) throw error;
-      return data ?? [];
+      return (data as any[]) ?? [];
     },
     enabled: !!empresaId,
   });
@@ -105,25 +97,16 @@ const Comissoes = () => {
   }, [comissoes, busca]);
 
   const totais = useMemo(() => {
-    const todasComissoes = comissoes ?? [];
-    const totalComissoes = todasComissoes.reduce((s, c) => {
-      const fp = pagamentos?.find((p: any) => p.comissao_id === c.id);
-      return s + Number(fp?.valor ?? c.valor);
-    }, 0);
-
-    const totalPago = todasComissoes.reduce((s, c) => {
-      const fp = pagamentos?.find((p: any) => p.comissao_id === c.id);
-      return s + (fp?.status === "pago" ? Number(fp.valor) : 0);
-    }, 0);
-
-    const totalPendente = totalComissoes - totalPago;
-
+    const total = (comissoes ?? []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const pago = (comissoes ?? []).reduce((acc, curr) => 
+      curr.status === "pago" ? acc + Number(curr.valor) : acc, 0
+    );
     return {
-      total: totalComissoes,
-      pago: totalPago,
-      pendente: totalPendente,
+      total,
+      pago,
+      pendente: total - pago
     };
-  }, [comissoes, pagamentos]);
+  }, [comissoes]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -251,37 +234,41 @@ const Comissoes = () => {
                   <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma comissão encontrada.</td>
                 </tr>
               ) : (
-                filteredLinhas.map((comissao: any) => {
-                  const fp = pagamentos?.find((p: any) => p.comissao_id === comissao.id);
+                filteredLinhas.map((row: any) => {
+                  const isPago = row.status === "pago";
+                  const isVencido = !isPago && row.data_vencimento && row.data_vencimento < new Date().toISOString().split("T")[0];
+                  
                   return (
-                    <tr key={comissao.id} className="hover:bg-secondary/20 transition-colors">
-                      <td className="px-4 py-3 font-medium">{comissao.fornecedores?.nome}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{comissao.projetos?.nome}</td>
-                      <td className="px-4 py-3 text-right font-semibold">{fmt(Number(fp?.valor ?? comissao.valor))}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">{Number(comissao.percentual).toFixed(2)}%</td>
+                    <tr key={row.id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-4 py-3 font-medium">{row.fornecedores?.nome}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{row.projetos?.nome}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{fmt(Number(row.valor))}</td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">
+                        {row.comissoes?.percentual ? `${Number(row.comissoes.percentual).toFixed(2)}%` : "—"}
+                      </td>
                       <td className="px-4 py-3 text-right text-green-600">
-                        {fp?.status === "pago" ? fmt(Number(fp.valor)) : "R$ 0,00"}
+                        {isPago ? fmt(Number(row.valor)) : "R$ 0,00"}
                       </td>
                       <td className="px-4 py-3 text-right text-orange-500">
-                        {fp?.status !== "pago" ? fmt(Number(fp?.valor ?? comissao.valor)) : "R$ 0,00"}
+                        {!isPago ? fmt(Number(row.valor)) : "R$ 0,00"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {fp?.data_pagamento ? (
-                          <span className="text-green-600">Pago em: {fp.data_pagamento.split("-").reverse().join("/")}</span>
-                        ) : fp?.data_vencimento ? (
-                          <span className={fp.data_vencimento < new Date().toISOString().split("T")[0] ? "text-red-500" : "text-yellow-600"}>
-                            {fp.data_vencimento < new Date().toISOString().split("T")[0] ? "Venceu em: " : "Vence em: "}
-                            {fp.data_vencimento.split("-").reverse().join("/")}
+                        {isPago && row.data_pagamento ? (
+                          <span className="text-green-600">Pago em: {row.data_pagamento.split("-").reverse().join("/")}</span>
+                        ) : row.data_vencimento ? (
+                          <span className={isVencido ? "text-red-500" : "text-yellow-600"}>
+                            {isVencido ? "Venceu em: " : "Vence em: "}
+                            {row.data_vencimento.split("-").reverse().join("/")}
                           </span>
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          fp?.status === "pago" ? "bg-green-100 text-green-700" : 
-                          fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "bg-red-100 text-red-700" : 
+                          isPago ? "bg-green-100 text-green-700" : 
+                          isVencido ? "bg-red-100 text-red-700" : 
                           "bg-orange-100 text-orange-700"
                         }`}>
-                          {fp?.status === "pago" ? "PAGO" : fp?.data_vencimento && fp.data_vencimento < new Date().toISOString().split("T")[0] ? "VENCIDO" : "PENDENTE"}
+                          {isPago ? "PAGO" : isVencido ? "VENCIDO" : "PENDENTE"}
                         </span>
                       </td>
                     </tr>
