@@ -1500,6 +1500,7 @@ export type Database = {
       }
       pagamentos_tecnico: {
         Row: {
+          cliente_id: string | null
           created_at: string
           descricao: string | null
           empresa_id: string
@@ -1510,6 +1511,7 @@ export type Database = {
           valor_combinado: number
         }
         Insert: {
+          cliente_id?: string | null
           created_at?: string
           descricao?: string | null
           empresa_id: string
@@ -1520,6 +1522,7 @@ export type Database = {
           valor_combinado?: number
         }
         Update: {
+          cliente_id?: string | null
           created_at?: string
           descricao?: string | null
           empresa_id?: string
@@ -1530,6 +1533,13 @@ export type Database = {
           valor_combinado?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pagamentos_tecnico_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pagamentos_tecnico_empresa_id_fkey"
             columns: ["empresa_id"]
