@@ -794,6 +794,7 @@ const PortalParceiros = () => {
       </div>
     </div>
   );
+  };
 
   const iniciais = data.fornecedor.nome.split(" ").slice(0, 2).map((n: string) => n[0]?.toUpperCase()).join("");
   const primeiroNome = data.fornecedor.nome.split(" ")[0];
