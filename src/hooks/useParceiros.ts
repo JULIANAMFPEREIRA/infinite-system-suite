@@ -9,6 +9,7 @@ export interface Parceiro {
   email: string | null;
   telefone: string | null;
   subtipo_parceiro: string | null;
+  tipo: string | null;
   ativo: boolean;
   rt_percentual: number | null;
 }
