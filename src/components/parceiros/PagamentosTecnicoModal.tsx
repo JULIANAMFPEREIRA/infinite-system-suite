@@ -219,7 +219,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-secondary/30 p-4 rounded-lg border border-border">
-            <p className="text-xs text-muted-foreground uppercase font-semibold">Total Combinado</p>
+            <p className="text-xs text-muted-foreground uppercase font-semibold">Total Contratado</p>
             <p className="text-xl font-bold text-foreground">{fmtMoeda(resumo.totalCombinado)}</p>
           </div>
           <div className="bg-success/10 p-4 rounded-lg border border-success/20">
@@ -237,7 +237,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
                 <Calculator size={16} className="text-primary" />
-                Projetos e Valores Combinados
+                Projetos e Valores Contratados
               </h3>
               <Button size="sm" onClick={() => { setEditingProjeto(null); setFormProj({ projeto_id: "", cliente_id: "", tipo: "projeto", valor_combinado: "", descricao: "" }); setOpenAddProjeto(true); }}>
                 <Plus size={14} className="mr-1" /> Adicionar Projeto
@@ -248,7 +248,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                 <thead className="bg-secondary/50">
                   <tr>
                     <th className="text-left p-2 font-semibold">Projeto</th>
-                    <th className="text-right p-2 font-semibold">Combinado</th>
+                    <th className="text-right p-2 font-semibold">Contratado</th>
                     <th className="text-right p-2 font-semibold">Ações</th>
                   </tr>
                 </thead>
@@ -368,7 +368,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                  </div>
                )}
               <div>
-                <label className="text-xs font-medium">Valor Combinado</label>
+                <label className="text-xs font-medium">Valor Contratado</label>
                 <input type="number" value={formProj.valor_combinado} onChange={e => setFormProj({...formProj, valor_combinado: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
               </div>
               <div>
