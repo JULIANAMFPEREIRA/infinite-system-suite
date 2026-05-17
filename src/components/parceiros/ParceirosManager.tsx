@@ -883,6 +883,8 @@ const ParceirosManager = () => {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
                   placeholder="Mínimo 6 caracteres"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
               </div>
             </div>

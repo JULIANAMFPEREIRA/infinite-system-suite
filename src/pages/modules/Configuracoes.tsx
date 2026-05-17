@@ -510,7 +510,17 @@ const Configuracoes = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Nome</label><input value={nuNome} onChange={e => setNuNome(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">E-mail</label><input value={nuEmail} onChange={e => setNuEmail(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
-            <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Senha</label><input type="password" value={nuSenha} onChange={e => setNuSenha(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Senha</label>
+              <input
+                type="password"
+                value={nuSenha}
+                onChange={e => setNuSenha(e.target.value)}
+                className="w-full h-8 px-2 text-xs bg-background border border-border rounded"
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+            </div>
             <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Role</label>
               <select value={nuRole} onChange={e => setNuRole(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                 <option value="admin">Admin</option><option value="administrativo">Administrativo</option><option value="financeiro">Financeiro</option>
