@@ -5,7 +5,7 @@ import { useParceiros, useUpdateParceiro, useParceiroProjetos, SUBTIPOS_PARCEIRO
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
- import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink, DollarSign } from "lucide-react";
+ import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink, DollarSign, Wallet } from "lucide-react";
  import PagamentosTecnicoModal from "./PagamentosTecnicoModal";
 import { toast } from "sonner";
 
@@ -18,8 +18,8 @@ const ParceirosManager = () => {
   const [openNew, setOpenNew] = useState(false);
   const [openVincular, setOpenVincular] = useState<string | null>(null);
    const [openGerenciar, setOpenGerenciar] = useState<string | null>(null);
-   const [openPagamentos, setOpenPagamentos] = useState<string | null>(null);
-  const [openEdit, setOpenEdit] = useState<string | null>(null);
+   const [currentTecnicoPagamento, setCurrentTecnicoPagamento] = useState<string | null>(null);
+   const [openEdit, setOpenEdit] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", email: "", password: "", subtipo: "arquiteto", rt_percentual: "" });
   const [creating, setCreating] = useState(false);
 
@@ -703,6 +703,26 @@ const ParceirosManager = () => {
     );
   };
 
+  const arquitetos = useMemo(() => parceiros.filter(p => p.tipo !== "tecnico"), [parceiros]);
+  const tecnicos = useMemo(() => parceiros.filter(p => p.tipo === "tecnico"), [parceiros]);
+
+  if (currentTecnicoPagamento) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentTecnicoPagamento(null)}>
+            ← Voltar para Parceiros
+          </Button>
+        </div>
+        <PagamentosTecnicoModal 
+          parceiroId={currentTecnicoPagamento} 
+          onClose={() => setCurrentTecnicoPagamento(null)} 
+          inline={true}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -715,136 +735,132 @@ const ParceirosManager = () => {
         </Button>
       </div>
 
-      <div className="border border-border rounded overflow-x-auto">
-        <table className="w-full text-xs min-w-[800px]">
-          <thead className="bg-secondary/60">
-            <tr>
-              <th className="text-left px-2.5 py-2 font-semibold">Nome</th>
-              <th className="text-left px-2.5 py-2 font-semibold">Email</th>
-              <th className="text-left px-2.5 py-2 font-semibold">Tipo</th>
-              <th className="text-center px-2.5 py-2 font-semibold">Status</th>
-              <th className="text-left px-2.5 py-2 font-semibold">Projetos vinculados</th>
-              <th className="w-20"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr>
-                <td colSpan={6} className="text-center text-muted-foreground py-4">Carregando…</td>
-              </tr>
-            )}
-            {!isLoading && parceiros.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center text-muted-foreground py-4">
-                  Nenhum parceiro cadastrado.
-                </td>
-              </tr>
-            )}
-            {parceiros.map((p) => (
-              <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
-                <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
-                <td className="px-2.5 py-1.5 text-muted-foreground">{p.email ?? "—"}</td>
-                <td className="px-2.5 py-1.5 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-medium min-w-[65px] capitalize">
-                      {p.tipo === "tecnico" ? "Técnico" : p.tipo || "—"}
-                    </span>
-                    <select
-                      value={p.tipo ?? "arquiteto"}
-                      onChange={(e) => updateParceiro.mutate({ id: p.id, tipo: e.target.value })}
-                      className="h-7 px-1 rounded border border-border bg-background text-[11px]"
-                    >
-                      {SUBTIPOS_PARCEIRO.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </td>
-                <td className="px-2.5 py-1.5 text-center">
-                  <button
-                    onClick={() => updateParceiro.mutate({ id: p.id, ativo: !p.ativo })}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                      p.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {p.ativo ? "Ativo" : "Inativo"}
-                  </button>
-                </td>
-                <td className="px-2.5 py-1.5">
-                  {(() => {
-                    const nomes = vinculosResumo[p.id] ?? [];
-                    const count = nomes.length;
-                    if (count === 0) {
-                      return <span className="text-[11px] text-muted-foreground">Nenhum projeto</span>;
-                    }
-                    const preview = nomes.slice(0, 2).join(", ");
-                    const extra = count > 2 ? `, +${count - 2}…` : "";
-                    return (
-                      <div className="flex flex-col">
-                        <span className="text-[11px] font-medium text-foreground">
-                          {count} projeto{count > 1 ? "s" : ""} vinculado{count > 1 ? "s" : ""}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[260px]" title={nomes.join(", ")}>
-                          {preview}{extra}
-                        </span>
+      <div className="space-y-8">
+        <section>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Arquitetos e Parceiros</h3>
+          <div className="border border-border rounded overflow-x-auto">
+            <table className="w-full text-xs min-w-[800px]">
+              <thead className="bg-secondary/60">
+                <tr>
+                  <th className="text-left px-2.5 py-2 font-semibold">Nome</th>
+                  <th className="text-left px-2.5 py-2 font-semibold">Email</th>
+                  <th className="text-left px-2.5 py-2 font-semibold">Tipo</th>
+                  <th className="text-center px-2.5 py-2 font-semibold">Status</th>
+                  <th className="text-left px-2.5 py-2 font-semibold">Projetos vinculados</th>
+                  <th className="w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Carregando…</td></tr>
+                )}
+                {!isLoading && arquitetos.length === 0 && (
+                  <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Nenhum arquiteto ou parceiro cadastrado.</td></tr>
+                )}
+                {arquitetos.map((p) => (
+                  <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
+                    <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
+                    <td className="px-2.5 py-1.5 text-muted-foreground">{p.email ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-medium min-w-[65px] capitalize">{p.tipo || "—"}</span>
+                        <select
+                          value={p.tipo ?? "arquiteto"}
+                          onChange={(e) => updateParceiro.mutate({ id: p.id, tipo: e.target.value })}
+                          className="h-7 px-1 rounded border border-border bg-background text-[11px]"
+                        >
+                          {SUBTIPOS_PARCEIRO.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                          ))}
+                        </select>
                       </div>
-                    );
-                  })()}
-                </td>
-                <td className="px-2.5 py-1.5 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => setOpenEdit(p.id)}
-                      className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
-                      title="Editar parceiro"
-                    >
-                      <Pencil size={12} /> Editar
-                    </button>
-                     {p.tipo === "tecnico" ? (
-                       <button
-                         onClick={() => setOpenPagamentos(p.id)}
-                         className="text-success hover:underline text-[11px] flex items-center gap-1"
-                         title="Pagamentos"
-                       >
-                         <DollarSign size={12} /> Pagamentos
-                       </button>
-                     ) : (
-                       <button
-                         onClick={() => setOpenGerenciar(p.id)}
-                         className="text-primary hover:underline text-[11px] flex items-center gap-1"
-                         title="Ver financeiro"
-                       >
-                         <Search size={12} /> Gerenciar
-                       </button>
-                     )}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <button
+                        onClick={() => updateParceiro.mutate({ id: p.id, ativo: !p.ativo })}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium ${p.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {p.ativo ? "Ativo" : "Inativo"}
+                      </button>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      {(() => {
+                        const nomes = vinculosResumo[p.id] ?? [];
+                        const count = nomes.length;
+                        if (count === 0) return <span className="text-[11px] text-muted-foreground">Nenhum projeto</span>;
+                        const preview = nomes.slice(0, 2).join(", ");
+                        const extra = count > 2 ? `, +${count - 2}…` : "";
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-medium text-foreground">{count} projeto{count > 1 ? "s" : ""} vinculado{count > 1 ? "s" : ""}</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[260px]" title={nomes.join(", ")}>{preview}{extra}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setOpenEdit(p.id)} className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1" title="Editar parceiro"><Pencil size={12} /> Editar</button>
+                        <button onClick={() => setOpenGerenciar(p.id)} className="text-primary hover:underline text-[11px] flex items-center gap-1" title="Ver financeiro"><Search size={12} /> Gerenciar</button>
+                        <button onClick={() => setOpenVincular(p.id)} className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1" title="Vincular projetos"><ExternalLink size={12} /> Vincular</button>
+                        <button onClick={() => handleDelete(p)} className="text-muted-foreground hover:text-destructive text-[11px] flex items-center gap-1" title="Excluir parceiro"><Trash2 size={12} /> Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-                    <button
-                      onClick={() => setOpenVincular(p.id)}
-                      className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1"
-                      title="Vincular projetos"
-                    >
-                      <ExternalLink size={12} /> Vincular
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(p)}
-                      className="text-muted-foreground hover:text-destructive text-[11px] flex items-center gap-1"
-                      title="Excluir parceiro"
-                    >
-                      <Trash2 size={12} /> Excluir
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <section>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Técnicos</h3>
+          <div className="border border-border rounded overflow-x-auto">
+            <table className="w-full text-xs min-w-[800px]">
+              <thead className="bg-secondary/60">
+                <tr>
+                  <th className="text-left px-2.5 py-2 font-semibold">Nome</th>
+                  <th className="text-left px-2.5 py-2 font-semibold">Email</th>
+                  <th className="text-center px-2.5 py-2 font-semibold">Status</th>
+                  <th className="w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Carregando…</td></tr>
+                )}
+                {!isLoading && tecnicos.length === 0 && (
+                  <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Nenhum técnico cadastrado.</td></tr>
+                )}
+                {tecnicos.map((p) => (
+                  <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
+                    <td className="px-2.5 py-1.5 font-medium">{p.nome}</td>
+                    <td className="px-2.5 py-1.5 text-muted-foreground">{p.email ?? "—"}</td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <button
+                        onClick={() => updateParceiro.mutate({ id: p.id, ativo: !p.ativo })}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium ${p.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {p.ativo ? "Ativo" : "Inativo"}
+                      </button>
+                    </td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <button onClick={() => setOpenEdit(p.id)} className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1" title="Editar técnico"><Pencil size={12} /> Editar</button>
+                        <button onClick={() => setCurrentTecnicoPagamento(p.id)} className="text-success hover:underline text-[11px] flex items-center gap-1" title="Pagamentos"><Wallet size={12} /> Pagamentos</button>
+                        <button onClick={() => handleDelete(p)} className="text-muted-foreground hover:text-destructive text-[11px] flex items-center gap-1" title="Excluir técnico"><Trash2 size={12} /> Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
-       {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
-       {openPagamentos && <PagamentosTecnicoModal parceiroId={openPagamentos} onClose={() => setOpenPagamentos(null)} />}
-      {openEdit && <EditModal parceiroId={openEdit} />}
+      {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
         <DialogContent>
