@@ -225,7 +225,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                 <Calculator size={16} className="text-primary" />
                 Projetos e Valores Combinados
               </h3>
-              <Button size="sm" onClick={() => { setEditingProjeto(null); setFormProj({ projeto_id: "", valor_combinado: "", descricao: "" }); setOpenAddProjeto(true); }}>
+              <Button size="sm" onClick={() => { setEditingProjeto(null); setFormProj({ projeto_id: "", cliente_id: "", tipo: "projeto", valor_combinado: "", descricao: "" }); setOpenAddProjeto(true); }}>
                 <Plus size={14} className="mr-1" /> Adicionar Projeto
               </Button>
             </div>
@@ -253,7 +253,7 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                         <td className="p-2 text-right text-success">{fmtMoeda(pagoNoProjeto)}</td>
                         <td className="p-2 text-right font-bold text-destructive">{fmtMoeda(p.valor_combinado - pagoNoProjeto)}</td>
                         <td className="p-2 flex items-center justify-end gap-2">
-                          <button onClick={() => { setEditingProjeto(p); setFormProj({ projeto_id: p.projeto_id, valor_combinado: p.valor_combinado.toString(), descricao: p.descricao || "" }); setOpenAddProjeto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
+                          <button onClick={() => { setEditingProjeto(p); setFormProj({ projeto_id: p.projeto_id || "", cliente_id: p.cliente_id || "", tipo: p.projeto_id ? "projeto" : "cliente", valor_combinado: p.valor_combinado.toString(), descricao: p.descricao || "" }); setOpenAddProjeto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
                           <button onClick={() => handleDeleteProjeto(p.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
                         </td>
                       </tr>
