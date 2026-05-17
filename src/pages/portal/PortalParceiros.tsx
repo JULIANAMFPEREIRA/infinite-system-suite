@@ -570,14 +570,13 @@ const PortalParceiros = () => {
                   <thead className="bg-secondary/50">
                     <tr>
                       <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Contratado</th>
-                      <th className="text-center p-3 font-bold uppercase tracking-wider text-muted-foreground">Status</th>
-                    </tr>
+                       <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Contratado</th>
+                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {(data.ptecnico ?? []).length === 0 && (
-                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum projeto vinculado.</td></tr>
-                    )}
+                     {(data.ptecnico ?? []).length === 0 && (
+                       <tr><td colSpan={2} className="p-4 text-center text-muted-foreground">Nenhum projeto vinculado.</td></tr>
+                     )}
                     {(data.ptecnico ?? []).map((p: any) => {
                       const pagoNoProjeto = (data.lancamentos ?? []).filter((l: any) => l.projeto_id === p.projeto_id).reduce((acc: number, cur: any) => acc + Number(cur.valor), 0);
                       const saldo = p.valor_combinado - pagoNoProjeto;
@@ -588,13 +587,8 @@ const PortalParceiros = () => {
                             <p className="font-bold text-foreground">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</p>
                             {p.projetos?.nome && p.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {p.clientes.nome}</p>}
                           </td>
-                          <td className="p-3 text-right font-medium">{fmt(p.valor_combinado)}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${quitado ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
-                              {quitado ? "QUITADO" : "PENDENTE"}
-                            </span>
-                          </td>
-                        </tr>
+                           <td className="p-3 text-right font-medium">{fmt(p.valor_combinado)}</td>
+                         </tr>
                       );
                     })}
                   </tbody>
