@@ -65,20 +65,19 @@ const ParceirosManager = () => {
     try {
       // If email and password provided, create user account
       if (form.email && form.password) {
-        const payload = JSON.stringify({
-          full_name: form.nome.toUpperCase(),
-          email: form.email.toLowerCase(),
-          password: form.password,
-          role: "parceiro",
-          subtipo_parceiro: form.subtipo,
-        })
-        const { data, error } = await supabase.functions.invoke("create-user", {
-          body: payload,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (error) throw error;
+        const { data, error } = await supabase.functions.invoke(
+          "create-user",
+          {
+            body: {
+              full_name: form.nome.toUpperCase(),
+              email: form.email.toLowerCase(),
+              password: form.password,
+              role: "parceiro",
+              subtipo_parceiro: form.subtipo,
+            }
+          }
+        )
+        if (error) throw error
         if (!data?.ok) throw new Error(data?.error ?? "Erro ao criar parceiro");
 
         // The edge function already creates the record in 'fornecedores' if subtipo_parceiro is provided.
@@ -860,18 +859,6 @@ const ParceirosManager = () => {
                   placeholder="Mínimo 6 caracteres"
                 />
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium">Tipo de Parceiro</label>
-              <select
-                value={form.subtipo}
-                onChange={(e) => setForm({ ...form, subtipo: e.target.value })}
-                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
-              >
-                {SUBTIPOS_PARCEIRO.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
             </div>
           </div>
           <DialogFooter>
