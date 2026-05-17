@@ -536,7 +536,7 @@ const PortalParceiros = () => {
         </TabsContent>
       </Tabs>
     </div>
-  );};
+  );
 
   const renderProjectList = () => {
     if (data.fornecedor.tipo === "tecnico") {
