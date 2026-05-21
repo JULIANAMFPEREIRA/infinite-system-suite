@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
- import { Plus, Trash2, Pencil, DollarSign, Calculator, Calendar, MessageSquare, Clock } from "lucide-react";
+ import { Plus, Trash2, Pencil, DollarSign, Calculator, Calendar, MessageSquare, Clock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { format } from "date-fns";
@@ -200,6 +200,29 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
     }
   };
 
+   const handleMarcarComoPago = async (id: string) => {
+     if (!window.confirm("Confirmar pagamento realizado?")) return;
+     try {
+       const { error } = await supabase
+         .from("pagamentos_tecnico_lancamentos")
+         .update({
+           tipo: "realizado",
+           data_pagamento: new Date().toISOString().split("T")[0]
+         })
+         .eq("id", id);
+
+       if (error) throw error;
+       toast.success("Pagamento confirmado");
+       
+       // Invalida as queries para atualizar as duas tabelas automaticamente
+       qc.invalidateQueries({ queryKey: ["pagamentos_tecnico_lancamentos", parceiroId] });
+       // Também invalida o resumo se necessário (embora useMemo cuide disso se as tabelas atualizarem)
+       refetchLancamentos();
+     } catch (e: any) {
+       toast.error(e.message);
+     }
+   };
+
    const fmtMoeda = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
  
    const filteredItems = useMemo(() => {
@@ -365,10 +388,11 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                        <td className="p-2 text-right font-medium text-amber-600">{fmtMoeda(l.valor)}</td>
                        <td className="p-2 text-center">{l.mes_referencia}</td>
                        <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
-                       <td className="p-2 text-right flex items-center justify-end gap-2">
-                         <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
-                         <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
-                       </td>
+                        <td className="p-2 text-right flex items-center justify-end gap-2">
+                          <button onClick={() => handleMarcarComoPago(l.id)} className="text-success hover:text-success/80" title="Marcar como Pago"><Check size={14} /></button>
+                          <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
+                          <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                        </td>
                      </tr>
                    ))}
                  </tbody>
