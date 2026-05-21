@@ -21,13 +21,16 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   const [openAddProjeto, setOpenAddProjeto] = useState(false);
    const [openAddLancamento, setOpenAddLancamento] = useState(false);
    const [openAddPrevisto, setOpenAddPrevisto] = useState(false);
+   const [openConfirmarPagamento, setOpenConfirmarPagamento] = useState(false);
   const [editingProjeto, setEditingProjeto] = useState<any>(null);
   const [editingLancamento, setEditingLancamento] = useState<any>(null);
+  const [lancamentoParaConfirmar, setLancamentoParaConfirmar] = useState<any>(null);
 
     const [formProj, setFormProj] = useState({ projeto_id: "", cliente_id: "", tipo: "projeto" as "projeto" | "cliente", valor_combinado: "", descricao: "" });
    const [buscaProjeto, setBuscaProjeto] = useState("");
    const [formLanc, setFormLanc] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
    const [formPrev, setFormPrev] = useState({ projeto_id: "", valor: "", data_prevista: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
+   const [formConfirm, setFormConfirm] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: "" });
 
   const { data: parceiro } = useQuery({
     queryKey: ["parceiro_detalhe", parceiroId],
@@ -200,23 +203,25 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
     }
   };
 
-   const handleMarcarComoPago = async (id: string) => {
-     if (!window.confirm("Confirmar pagamento realizado?")) return;
+   const handleConfirmarPagamento = async () => {
+     if (!lancamentoParaConfirmar) return;
      try {
        const { error } = await supabase
          .from("pagamentos_tecnico_lancamentos")
          .update({
            tipo: "realizado",
-           data_pagamento: new Date().toISOString().split("T")[0]
+           data_pagamento: formConfirm.data_pagamento,
+           valor: Number(formConfirm.valor),
+           observacao: formConfirm.observacao,
+           mes_referencia: formConfirm.mes_referencia
          })
-         .eq("id", id);
+         .eq("id", lancamentoParaConfirmar.id);
 
        if (error) throw error;
        toast.success("Pagamento confirmado");
-       
-       // Invalida as queries para atualizar as duas tabelas automaticamente
+       setOpenConfirmarPagamento(false);
+       setLancamentoParaConfirmar(null);
        qc.invalidateQueries({ queryKey: ["pagamentos_tecnico_lancamentos", parceiroId] });
-       // Também invalida o resumo se necessário (embora useMemo cuide disso se as tabelas atualizarem)
        refetchLancamentos();
      } catch (e: any) {
        toast.error(e.message);
@@ -387,13 +392,29 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                        <td className="p-2 text-muted-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</td>
                        <td className="p-2 text-right font-medium text-amber-600">{fmtMoeda(l.valor)}</td>
                        <td className="p-2 text-center">{l.mes_referencia}</td>
-                       <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
-                        <td className="p-2 text-right flex items-center justify-end gap-2">
-                          <button onClick={() => handleMarcarComoPago(l.id)} className="text-success hover:text-success/80" title="Marcar como Pago"><Check size={14} /></button>
-                          <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
-                          <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
-                        </td>
-                     </tr>
+                        <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
+                         <td className="p-2 text-right flex items-center justify-end gap-2">
+                           <button 
+                             onClick={() => {
+                               setLancamentoParaConfirmar(l);
+                               setFormConfirm({
+                                 projeto_id: l.projeto_id || "",
+                                 valor: l.valor.toString(),
+                                 data_pagamento: format(new Date(), "yyyy-MM-dd"),
+                                 observacao: l.observacao || "",
+                                 mes_referencia: l.mes_referencia || ""
+                               });
+                               setOpenConfirmarPagamento(true);
+                             }} 
+                             className="text-success hover:text-success/80" 
+                             title="Confirmar Pagamento"
+                           >
+                             <Check size={14} />
+                           </button>
+                           <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
+                           <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                         </td>
+                      </tr>
                    ))}
                  </tbody>
                </table>
@@ -539,6 +560,44 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setOpenAddPrevisto(false)}>Cancelar</Button>
               <Button size="sm" onClick={() => handleAddLancamento("previsto")}>{editingLancamento ? "Salvar Alterações" : "Agendar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Confirmar Pagamento */}
+        <Dialog open={openConfirmarPagamento} onOpenChange={(o) => { setOpenConfirmarPagamento(o); if (!o) { setLancamentoParaConfirmar(null); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Confirmar Pagamento</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium">Projeto</label>
+                <select disabled value={formConfirm.projeto_id} className="w-full h-9 px-2 mt-1 rounded border border-border bg-muted text-sm cursor-not-allowed">
+                  <option value="">Geral / Sem Projeto</option>
+                  {pagamentos.map(p => <option key={p.projeto_id} value={p.projeto_id}>{p.projetos?.nome}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-medium">Valor</label>
+                  <input type="number" value={formConfirm.valor} onChange={e => setFormConfirm({...formConfirm, valor: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Data do Pagamento</label>
+                  <input type="date" value={formConfirm.data_pagamento} onChange={e => setFormConfirm({...formConfirm, data_pagamento: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Mês Referência (MM/AAAA)</label>
+                <input type="text" value={formConfirm.mes_referencia} onChange={e => setFormConfirm({...formConfirm, mes_referencia: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Observação</label>
+                <input type="text" value={formConfirm.observacao} onChange={e => setFormConfirm({...formConfirm, observacao: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setOpenConfirmarPagamento(false)}>Cancelar</Button>
+              <Button size="sm" onClick={handleConfirmarPagamento}>Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
