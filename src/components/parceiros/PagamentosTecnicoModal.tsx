@@ -563,6 +563,44 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal Confirmar Pagamento */}
+        <Dialog open={openConfirmarPagamento} onOpenChange={(o) => { setOpenConfirmarPagamento(o); if (!o) { setLancamentoParaConfirmar(null); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Confirmar Pagamento</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium">Projeto</label>
+                <select disabled value={formConfirm.projeto_id} className="w-full h-9 px-2 mt-1 rounded border border-border bg-muted text-sm cursor-not-allowed">
+                  <option value="">Geral / Sem Projeto</option>
+                  {pagamentos.map(p => <option key={p.projeto_id} value={p.projeto_id}>{p.projetos?.nome}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-medium">Valor</label>
+                  <input type="number" value={formConfirm.valor} onChange={e => setFormConfirm({...formConfirm, valor: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Data do Pagamento</label>
+                  <input type="date" value={formConfirm.data_pagamento} onChange={e => setFormConfirm({...formConfirm, data_pagamento: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Mês Referência (MM/AAAA)</label>
+                <input type="text" value={formConfirm.mes_referencia} onChange={e => setFormConfirm({...formConfirm, mes_referencia: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Observação</label>
+                <input type="text" value={formConfirm.observacao} onChange={e => setFormConfirm({...formConfirm, observacao: e.target.value})} className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setOpenConfirmarPagamento(false)}>Cancelar</Button>
+              <Button size="sm" onClick={handleConfirmarPagamento}>Confirmar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 
