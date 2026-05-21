@@ -21,13 +21,16 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
   const [openAddProjeto, setOpenAddProjeto] = useState(false);
    const [openAddLancamento, setOpenAddLancamento] = useState(false);
    const [openAddPrevisto, setOpenAddPrevisto] = useState(false);
+   const [openConfirmarPagamento, setOpenConfirmarPagamento] = useState(false);
   const [editingProjeto, setEditingProjeto] = useState<any>(null);
   const [editingLancamento, setEditingLancamento] = useState<any>(null);
+  const [lancamentoParaConfirmar, setLancamentoParaConfirmar] = useState<any>(null);
 
     const [formProj, setFormProj] = useState({ projeto_id: "", cliente_id: "", tipo: "projeto" as "projeto" | "cliente", valor_combinado: "", descricao: "" });
    const [buscaProjeto, setBuscaProjeto] = useState("");
    const [formLanc, setFormLanc] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
    const [formPrev, setFormPrev] = useState({ projeto_id: "", valor: "", data_prevista: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: format(new Date(), "MM/yyyy") });
+   const [formConfirm, setFormConfirm] = useState({ projeto_id: "", valor: "", data_pagamento: format(new Date(), "yyyy-MM-dd"), observacao: "", mes_referencia: "" });
 
   const { data: parceiro } = useQuery({
     queryKey: ["parceiro_detalhe", parceiroId],
