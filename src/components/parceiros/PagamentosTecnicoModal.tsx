@@ -392,13 +392,29 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
                        <td className="p-2 text-muted-foreground">{l.projetos?.nome || "Geral / Sem Projeto"}</td>
                        <td className="p-2 text-right font-medium text-amber-600">{fmtMoeda(l.valor)}</td>
                        <td className="p-2 text-center">{l.mes_referencia}</td>
-                       <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
-                        <td className="p-2 text-right flex items-center justify-end gap-2">
-                          <button onClick={() => handleMarcarComoPago(l.id)} className="text-success hover:text-success/80" title="Marcar como Pago"><Check size={14} /></button>
-                          <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
-                          <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
-                        </td>
-                     </tr>
+                        <td className="p-2 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao}</td>
+                         <td className="p-2 text-right flex items-center justify-end gap-2">
+                           <button 
+                             onClick={() => {
+                               setLancamentoParaConfirmar(l);
+                               setFormConfirm({
+                                 projeto_id: l.projeto_id || "",
+                                 valor: l.valor.toString(),
+                                 data_pagamento: format(new Date(), "yyyy-MM-dd"),
+                                 observacao: l.observacao || "",
+                                 mes_referencia: l.mes_referencia || ""
+                               });
+                               setOpenConfirmarPagamento(true);
+                             }} 
+                             className="text-success hover:text-success/80" 
+                             title="Confirmar Pagamento"
+                           >
+                             <Check size={14} />
+                           </button>
+                           <button onClick={() => { setEditingLancamento(l); setFormPrev({ projeto_id: l.projeto_id || "", valor: l.valor.toString(), data_prevista: l.data_prevista, observacao: l.observacao || "", mes_referencia: l.mes_referencia || "" }); setOpenAddPrevisto(true); }} className="text-muted-foreground hover:text-primary"><Pencil size={14} /></button>
+                           <button onClick={() => handleDeleteLancamento(l.id)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                         </td>
+                      </tr>
                    ))}
                  </tbody>
                </table>
