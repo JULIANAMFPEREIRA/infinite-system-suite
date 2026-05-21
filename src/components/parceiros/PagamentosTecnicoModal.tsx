@@ -203,23 +203,25 @@ const PagamentosTecnicoModal = ({ parceiroId, onClose, inline = false }: Pagamen
     }
   };
 
-   const handleMarcarComoPago = async (id: string) => {
-     if (!window.confirm("Confirmar pagamento realizado?")) return;
+   const handleConfirmarPagamento = async () => {
+     if (!lancamentoParaConfirmar) return;
      try {
        const { error } = await supabase
          .from("pagamentos_tecnico_lancamentos")
          .update({
            tipo: "realizado",
-           data_pagamento: new Date().toISOString().split("T")[0]
+           data_pagamento: formConfirm.data_pagamento,
+           valor: Number(formConfirm.valor),
+           observacao: formConfirm.observacao,
+           mes_referencia: formConfirm.mes_referencia
          })
-         .eq("id", id);
+         .eq("id", lancamentoParaConfirmar.id);
 
        if (error) throw error;
        toast.success("Pagamento confirmado");
-       
-       // Invalida as queries para atualizar as duas tabelas automaticamente
+       setOpenConfirmarPagamento(false);
+       setLancamentoParaConfirmar(null);
        qc.invalidateQueries({ queryKey: ["pagamentos_tecnico_lancamentos", parceiroId] });
-       // Também invalida o resumo se necessário (embora useMemo cuide disso se as tabelas atualizarem)
        refetchLancamentos();
      } catch (e: any) {
        toast.error(e.message);
