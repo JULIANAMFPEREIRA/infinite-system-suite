@@ -30,15 +30,76 @@ import { ptBR } from "date-fns/locale";
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const Dashboard = () => {
-   const { user } = useAuth();
-   const empresaId = useEmpresa();
-   const navigate = useNavigate();
-   const queryClient = useQueryClient();
-   const hoje = new Date();
-   const inicioMes = startOfMonth(hoje);
-   const fimMes = endOfMonth(hoje);
+  const { user } = useAuth();
+  const empresaId = useEmpresa();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const hoje = new Date();
+  const inicioMes = startOfMonth(hoje);
+  const fimMes = endOfMonth(hoje);
 
-   const { data: financasPessoais } = useQuery({
+  const [anotacoes, setAnotacoes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Buscar anotações do usuário
+  const { data: anotacoesData, isLoading: isLoadingAnotacoes } = useQuery({
+    queryKey: ["anotacoes_usuario", user?.id, empresaId],
+    queryFn: async () => {
+      if (!user?.id || !empresaId) return null;
+      const { data, error } = await supabase
+        .from("anotacoes_usuario" as any)
+        .select("conteudo")
+        .eq("user_id", user.id)
+        .eq("empresa_id", empresaId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!empresaId,
+  });
+
+  // Atualizar estado local quando os dados forem carregados
+  useEffect(() => {
+    if (anotacoesData?.conteudo !== undefined) {
+      setAnotacoes(anotacoesData.conteudo || "");
+    }
+  }, [anotacoesData]);
+
+  // Função para salvar anotações
+  const handleSaveAnotacoes = async (conteudo: string) => {
+    if (!user?.id || !empresaId) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("anotacoes_usuario" as any)
+        .upsert({
+          user_id: user.id,
+          empresa_id: empresaId,
+          conteudo: conteudo,
+        }, { onConflict: "user_id,empresa_id" });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao salvar anotações:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounce para auto-save
+  const debouncedSave = useCallback(
+    debounce((nextValue: string) => handleSaveAnotacoes(nextValue), 2000),
+    [user?.id, empresaId]
+  );
+
+  const handleAnotacoesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setAnotacoes(newValue);
+    debouncedSave(newValue);
+  };
+
+  const { data: financasPessoais } = useQuery({
      queryKey: ["financas_pessoais", user?.id],
      queryFn: async () => {
        if (!user?.id) return [];
