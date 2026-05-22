@@ -1,15 +1,16 @@
- import { useEffect, useState, useMemo, Fragment } from "react";
+import { useEffect, useState, useMemo, Fragment, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcFaltaComprar } from "@/lib/calcFaltaComprar";
+import { debounce } from "lodash";
 
- import {
-   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
-   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-    AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
-    PiggyBank, Info
- } from "lucide-react";
- import { useAuth } from "@/contexts/AuthContext";
- import { Separator } from "@/components/ui/separator";
+import {
+  DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
+  CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
+  AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
+  PiggyBank, Info, Save, StickyNote
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
  import { Skeleton } from "@/components/ui/skeleton";
