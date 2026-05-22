@@ -198,7 +198,7 @@ const FinanceiroReceber = () => {
         id: baixaId,
         status: novoStatus as any,
         valor_recebido: novoAcumulado as any,
-        data_pagamento: novoStatus === "pago" ? baixaData : (baixaContaAtual.data_pagamento ?? null),
+        data_recebimento: novoStatus === "pago" ? baixaData : (baixaContaAtual.data_recebimento ?? null),
       } as any);
 
       toast.success(novoStatus === "pago" ? "Totalmente recebido!" : "Recebimento parcial registrado");
