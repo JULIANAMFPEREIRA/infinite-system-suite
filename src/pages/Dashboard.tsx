@@ -1,15 +1,16 @@
- import { useEffect, useState, useMemo, Fragment } from "react";
+import { useEffect, useState, useMemo, Fragment, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcFaltaComprar } from "@/lib/calcFaltaComprar";
+import { debounce } from "lodash";
 
- import {
-   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
-   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
-    AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
-    PiggyBank, Info
- } from "lucide-react";
- import { useAuth } from "@/contexts/AuthContext";
- import { Separator } from "@/components/ui/separator";
+import {
+  DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
+  CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
+  AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
+  PiggyBank, Info, Save, StickyNote
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
  import { Skeleton } from "@/components/ui/skeleton";
@@ -29,15 +30,76 @@ import { ptBR } from "date-fns/locale";
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const Dashboard = () => {
-   const { user } = useAuth();
-   const empresaId = useEmpresa();
-   const navigate = useNavigate();
-   const queryClient = useQueryClient();
-   const hoje = new Date();
-   const inicioMes = startOfMonth(hoje);
-   const fimMes = endOfMonth(hoje);
+  const { user } = useAuth();
+  const empresaId = useEmpresa();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const hoje = new Date();
+  const inicioMes = startOfMonth(hoje);
+  const fimMes = endOfMonth(hoje);
 
-   const { data: financasPessoais } = useQuery({
+  const [anotacoes, setAnotacoes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Buscar anotações do usuário
+  const { data: anotacoesData, isLoading: isLoadingAnotacoes } = useQuery({
+    queryKey: ["anotacoes_usuario", user?.id, empresaId],
+    queryFn: async () => {
+      if (!user?.id || !empresaId) return null;
+      const { data, error } = await supabase
+        .from("anotacoes_usuario" as any)
+        .select("conteudo")
+        .eq("user_id", user.id)
+        .eq("empresa_id", empresaId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!empresaId,
+  });
+
+  // Atualizar estado local quando os dados forem carregados
+  useEffect(() => {
+    if (anotacoesData) {
+      setAnotacoes((anotacoesData as any).conteudo || "");
+    }
+  }, [anotacoesData]);
+
+  // Função para salvar anotações
+  const handleSaveAnotacoes = async (conteudo: string) => {
+    if (!user?.id || !empresaId) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("anotacoes_usuario" as any)
+        .upsert({
+          user_id: user.id,
+          empresa_id: empresaId,
+          conteudo: conteudo,
+        }, { onConflict: "user_id,empresa_id" });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao salvar anotações:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounce para auto-save
+  const debouncedSave = useCallback(
+    debounce((nextValue: string) => handleSaveAnotacoes(nextValue), 2000),
+    [user?.id, empresaId]
+  );
+
+  const handleAnotacoesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setAnotacoes(newValue);
+    debouncedSave(newValue);
+  };
+
+  const { data: financasPessoais } = useQuery({
      queryKey: ["financas_pessoais", user?.id],
      queryFn: async () => {
        if (!user?.id) return [];
@@ -397,7 +459,38 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
-       )}
+      )}
+
+      {/* BLOCO DE NOTAS */}
+      <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <StickyNote size={16} className="text-primary" />
+            📝 Minhas Anotações
+          </h3>
+          {isSaving && (
+            <span className="text-[10px] text-muted-foreground animate-pulse">
+              Salvando...
+            </span>
+          )}
+        </div>
+        <div className="relative">
+          <textarea
+            value={anotacoes}
+            onChange={handleAnotacoesChange}
+            placeholder="Escreva seus lembretes e anotações aqui..."
+            className="w-full h-40 p-3 text-sm bg-secondary/20 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/50 transition-all"
+          />
+          <button
+            onClick={() => handleSaveAnotacoes(anotacoes)}
+            disabled={isSaving}
+            className="absolute bottom-3 right-3 p-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
+            title="Salvar agora"
+          >
+            <Save size={14} />
+          </button>
+        </div>
+      </div>
 
        {/* NOVA SEÇÃO – FINANÇAS PESSOAIS */}
        <div className="relative py-4">
