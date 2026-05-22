@@ -61,8 +61,8 @@ const Dashboard = () => {
 
   // Atualizar estado local quando os dados forem carregados
   useEffect(() => {
-    if (anotacoesData?.conteudo !== undefined) {
-      setAnotacoes(anotacoesData.conteudo || "");
+    if (anotacoesData) {
+      setAnotacoes((anotacoesData as any).conteudo || "");
     }
   }, [anotacoesData]);
 
