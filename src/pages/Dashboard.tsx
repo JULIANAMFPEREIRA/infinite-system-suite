@@ -340,80 +340,115 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* LINHA 1 – PRINCIPAIS KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Saldo Atual */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet size={16} className="text-blue-600" />
-            <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
+      {/* CONTEÚDO SUPERIOR – KPIs & ANOTAÇÕES */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Lado Esquerdo: 6 Cards de Resumo em 2x3 */}
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+          {/* Saldo Atual */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet size={16} className="text-blue-600" />
+              <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
+            </div>
+            <p className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {fmt(stats?.saldoAtual ?? 0)}
+            </p>
+            <p className="text-[11px] text-blue-600/70 font-medium mt-1">Recebido − Pago</p>
           </div>
-          <p className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-            {fmt(stats?.saldoAtual ?? 0)}
-          </p>
-          <p className="text-[11px] text-blue-600/70 font-medium mt-1">Recebido − Pago</p>
+
+          {/* A Receber */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowDownRight size={16} className="text-blue-600" />
+              <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">A Receber</p>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{fmt(stats?.totalAReceber ?? 0)}</p>
+            <p className="text-[11px] text-blue-600/70 font-medium mt-1">Total pendente</p>
+          </div>
+
+          {/* Inadimplente */}
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <UserX size={16} className="text-red-600" />
+              <p className="text-[11px] text-red-800 font-bold uppercase tracking-wider">Inadimplente</p>
+            </div>
+            <p className="text-2xl font-bold text-red-600">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
+            <p className="text-[11px] text-red-600/70 font-medium mt-1">
+              {stats?.clientesInadimplentesUnicos ?? 0} clientes · {stats?.inadimplentesCount ?? 0} parcelas
+            </p>
+          </div>
+
+          {/* A Pagar */}
+          <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowUpRight size={16} className="text-green-600" />
+              <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">A Pagar</p>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{fmt(stats?.pagarGeral ?? 0)}</p>
+            <p className="text-[11px] text-green-600/70 font-medium mt-1">Total pendente</p>
+          </div>
+
+          {/* Projetos Ativos */}
+          <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <FolderKanban size={16} className="text-green-600" />
+              <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">Projetos Ativos</p>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
+            <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
+          </div>
+
+          {/* Falta Comprar */}
+          <div
+            className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
+            onClick={() => navigate("/falta-comprar")}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <ShoppingCart size={16} className="text-orange-600" />
+              <p className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">Falta Comprar</p>
+            </div>
+            <p className="text-2xl font-bold text-orange-600">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
+            <p className="text-[11px] text-orange-600/70 font-medium mt-1">
+              {stats?.itensPendentesCount ?? 0} itens pendentes
+            </p>
+          </div>
         </div>
 
-        {/* A Receber */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowDownRight size={16} className="text-blue-600" />
-            <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">A Receber</p>
+        {/* Lado Direito: Bloco de Anotações */}
+        <div className="md:col-span-1 h-full">
+          <div className="bg-card rounded-xl border border-border p-5 shadow-sm h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <StickyNote size={16} className="text-primary" />
+                📝 Minhas Anotações
+              </h3>
+              {isSaving && (
+                <span className="text-[10px] text-muted-foreground animate-pulse">
+                  Salvando...
+                </span>
+              )}
+            </div>
+            <div className="relative flex-1 flex flex-col">
+              <textarea
+                value={anotacoes}
+                onChange={handleAnotacoesChange}
+                placeholder="Escreva seus lembretes e anotações aqui..."
+                className="w-full flex-1 min-h-[300px] p-4 text-sm bg-secondary/20 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/50 transition-all leading-relaxed"
+                style={{ height: 'auto' }}
+              />
+              <button
+                onClick={() => handleSaveAnotacoes(anotacoes)}
+                disabled={isSaving}
+                className="absolute bottom-3 right-3 p-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
+                title="Salvar agora"
+              >
+                <Save size={14} />
+              </button>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-foreground">{fmt(stats?.totalAReceber ?? 0)}</p>
-          <p className="text-[11px] text-blue-600/70 font-medium mt-1">Total pendente</p>
-        </div>
-
-        {/* Inadimplente */}
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <UserX size={16} className="text-red-600" />
-            <p className="text-[11px] text-red-800 font-bold uppercase tracking-wider">Inadimplente</p>
-          </div>
-          <p className="text-2xl font-bold text-red-600">{fmt(stats?.inadimplentesValorTotal ?? 0)}</p>
-          <p className="text-[11px] text-red-600/70 font-medium mt-1">
-            {stats?.clientesInadimplentesUnicos ?? 0} clientes · {stats?.inadimplentesCount ?? 0} parcelas
-          </p>
         </div>
       </div>
 
-      {/* LINHA 2 – OPERACIONAL & COMPRAS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* A Pagar */}
-        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowUpRight size={16} className="text-green-600" />
-            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">A Pagar</p>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{fmt(stats?.pagarGeral ?? 0)}</p>
-          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total pendente</p>
-        </div>
-
-        {/* Projetos Ativos */}
-        <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <FolderKanban size={16} className="text-green-600" />
-            <p className="text-[11px] text-green-800 font-bold uppercase tracking-wider">Projetos Ativos</p>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats?.projetosAtivosCount ?? 0}</p>
-          <p className="text-[11px] text-green-600/70 font-medium mt-1">Total (excl. cancelados)</p>
-        </div>
-
-        {/* Falta Comprar */}
-        <div
-          className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm cursor-pointer hover:shadow-md transition"
-          onClick={() => navigate("/falta-comprar")}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <ShoppingCart size={16} className="text-orange-600" />
-            <p className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">Falta Comprar</p>
-          </div>
-          <p className="text-2xl font-bold text-orange-600">{fmt(stats?.itensComprarValorTotal ?? 0)}</p>
-          <p className="text-[11px] text-orange-600/70 font-medium mt-1">
-            {stats?.itensPendentesCount ?? 0} itens pendentes
-          </p>
-        </div>
-      </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
 
@@ -461,36 +496,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* BLOCO DE NOTAS */}
-      <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <StickyNote size={16} className="text-primary" />
-            📝 Minhas Anotações
-          </h3>
-          {isSaving && (
-            <span className="text-[10px] text-muted-foreground animate-pulse">
-              Salvando...
-            </span>
-          )}
-        </div>
-        <div className="relative">
-          <textarea
-            value={anotacoes}
-            onChange={handleAnotacoesChange}
-            placeholder="Escreva seus lembretes e anotações aqui..."
-            className="w-full h-40 p-3 text-sm bg-secondary/20 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/50 transition-all"
-          />
-          <button
-            onClick={() => handleSaveAnotacoes(anotacoes)}
-            disabled={isSaving}
-            className="absolute bottom-3 right-3 p-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
-            title="Salvar agora"
-          >
-            <Save size={14} />
-          </button>
-        </div>
-      </div>
 
        {/* NOVA SEÇÃO – FINANÇAS PESSOAIS */}
        <div className="relative py-4">
