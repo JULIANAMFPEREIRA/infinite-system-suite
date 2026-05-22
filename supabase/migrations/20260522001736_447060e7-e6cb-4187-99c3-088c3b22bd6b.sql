@@ -1,0 +1,1 @@
+ALTER TABLE public.financeiro_receber RENAME COLUMN data_pagamento TO data_recebimento;

@@ -30,7 +30,7 @@ const FluxoCaixa = () => {
     if (!manualDesc.trim()) { toast.error("Descrição obrigatória"); return; }
     try {
       if (manualTipo === "receita") {
-        await createReceber.mutateAsync({ descricao: `[Manual] ${manualDesc}`, valor: manualValor, data_vencimento: manualData, status: "pago", data_pagamento: manualData });
+        await createReceber.mutateAsync({ descricao: `[Manual] ${manualDesc}`, valor: manualValor, data_vencimento: manualData, status: "pago", data_recebimento: manualData });
       } else {
         await createPagar.mutateAsync({ descricao: `[Manual] ${manualDesc}`, valor: manualValor, data_vencimento: manualData, status: "pago", data_pagamento: manualData });
       }

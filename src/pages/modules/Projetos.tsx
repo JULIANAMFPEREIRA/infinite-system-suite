@@ -1315,7 +1315,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
   const handleBaixa = async () => {
     if (!baixaId) return;
     try {
-      const { error } = await supabase.from("financeiro_receber").update({ status: "pago", data_pagamento: baixaData }).eq("id", baixaId);
+      const { error } = await supabase.from("financeiro_receber").update({ status: "pago", data_recebimento: baixaData }).eq("id", baixaId);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["financeiro_receber_projeto", projetoId] });
       toast.success("Recebido!"); setShowBaixa(false);
@@ -1400,7 +1400,7 @@ const ProjetoFinanceiroSection = ({ projetoId, projetoNome, clienteId }: { proje
                     <td className="px-2 py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColor(p.status ?? "pendente")}`}>{p.status}</span></td>
                     <td className="px-2 py-1.5 text-center text-[10px] text-muted-foreground">
                       {p.status === "pago" ? (
-                        <span>{p.data_pagamento ?? "—"}</span>
+                        <span>{p.data_recebimento ?? "—"}</span>
                       ) : "—"}
                     </td>
                     <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>

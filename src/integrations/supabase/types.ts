@@ -1027,7 +1027,7 @@ export type Database = {
         Row: {
           cliente_id: string | null
           created_at: string
-          data_pagamento: string | null
+          data_recebimento: string | null
           data_vencimento: string | null
           deletado: boolean
           descricao: string | null
@@ -1042,7 +1042,7 @@ export type Database = {
         Insert: {
           cliente_id?: string | null
           created_at?: string
-          data_pagamento?: string | null
+          data_recebimento?: string | null
           data_vencimento?: string | null
           deletado?: boolean
           descricao?: string | null
@@ -1057,7 +1057,7 @@ export type Database = {
         Update: {
           cliente_id?: string | null
           created_at?: string
-          data_pagamento?: string | null
+          data_recebimento?: string | null
           data_vencimento?: string | null
           deletado?: boolean
           descricao?: string | null
