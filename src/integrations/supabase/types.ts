@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      anotacoes_usuario: {
+        Row: {
+          conteudo: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conteudo?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           acao: Database["public"]["Enums"]["acao_audit"]
