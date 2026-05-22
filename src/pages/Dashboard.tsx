@@ -496,36 +496,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* BLOCO DE NOTAS */}
-      <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <StickyNote size={16} className="text-primary" />
-            📝 Minhas Anotações
-          </h3>
-          {isSaving && (
-            <span className="text-[10px] text-muted-foreground animate-pulse">
-              Salvando...
-            </span>
-          )}
-        </div>
-        <div className="relative">
-          <textarea
-            value={anotacoes}
-            onChange={handleAnotacoesChange}
-            placeholder="Escreva seus lembretes e anotações aqui..."
-            className="w-full h-40 p-3 text-sm bg-secondary/20 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/50 transition-all"
-          />
-          <button
-            onClick={() => handleSaveAnotacoes(anotacoes)}
-            disabled={isSaving}
-            className="absolute bottom-3 right-3 p-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
-            title="Salvar agora"
-          >
-            <Save size={14} />
-          </button>
-        </div>
-      </div>
 
        {/* NOVA SEÇÃO – FINANÇAS PESSOAIS */}
        <div className="relative py-4">
