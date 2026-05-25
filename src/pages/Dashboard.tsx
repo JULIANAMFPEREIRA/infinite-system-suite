@@ -40,6 +40,7 @@ const Dashboard = () => {
 
   const [anotacoes, setAnotacoes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
 
   // Buscar anotações do usuário
   const { data: anotacoesData, isLoading: isLoadingAnotacoes } = useQuery({
@@ -70,6 +71,7 @@ const Dashboard = () => {
   const handleSaveAnotacoes = async (conteudo: string) => {
     if (!user?.id || !empresaId) return;
     setIsSaving(true);
+    setShowSaved(false);
     try {
       const { error } = await supabase
         .from("anotacoes_usuario" as any)
@@ -80,6 +82,8 @@ const Dashboard = () => {
         }, { onConflict: "user_id,empresa_id" });
 
       if (error) throw error;
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 3000);
     } catch (error) {
       console.error("Erro ao salvar anotações:", error);
     } finally {
@@ -87,9 +91,9 @@ const Dashboard = () => {
     }
   };
 
-  // Debounce para auto-save
+  // Debounce para auto-save (1.5 segundos)
   const debouncedSave = useCallback(
-    debounce((nextValue: string) => handleSaveAnotacoes(nextValue), 2000),
+    debounce((nextValue: string) => handleSaveAnotacoes(nextValue), 1500),
     [user?.id, empresaId]
   );
 
@@ -98,6 +102,14 @@ const Dashboard = () => {
     setAnotacoes(newValue);
     debouncedSave(newValue);
   };
+
+  // Correção: Invalidação manual se empresaId mudar
+  useEffect(() => {
+    if (empresaId) {
+      queryClient.invalidateQueries({ queryKey: ["empresa_config", empresaId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3", empresaId] });
+    }
+  }, [empresaId, queryClient]);
 
   const { data: empresa, isLoading: isLoadingEmpresa } = useQuery({
     queryKey: ["empresa_config", empresaId],
