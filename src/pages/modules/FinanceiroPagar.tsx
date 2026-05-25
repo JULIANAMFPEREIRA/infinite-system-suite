@@ -1,14 +1,17 @@
 import { useState, useMemo, useRef } from "react";
-   import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors, RotateCcw } from "lucide-react";
+import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors, RotateCcw, Settings } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
-import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
+import { useFormasPagamento, useCategorias, useCreateCategoria, useDeleteCategoria } from "@/hooks/useCategorias";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
