@@ -99,17 +99,12 @@ const FinanceiroPagar = () => {
   const createConta = useCreateContaPagar();
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
-  const { data: categorias } = useQuery({
-    queryKey: ["categorias", empresaId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("categorias")
-        .select("id, nome, tipo")
-        .order("nome");
-      return data ?? [];
-    },
-    enabled: !!empresaId
-  });
+  const { data: categorias } = useCategorias();
+  const createCategoria = useCreateCategoria();
+  const deleteCategoria = useDeleteCategoria();
+  const [showCatManager, setShowCatManager] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
   
 
   const [showForm, setShowForm] = useState(false);
@@ -703,14 +698,24 @@ const FinanceiroPagar = () => {
            <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
              {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
            </select>
-           <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
-             <option value="">Todas categorias</option>
-             {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-               <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
-                 {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-               </optgroup>
-             ))}
-           </select>
+            <div className="flex items-center gap-1">
+              <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
+                <option value="">Todas categorias</option>
+                {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                  <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                    {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <button 
+                onClick={() => setShowCatManager(true)}
+                title="Gerenciar Categorias"
+                className="h-7 w-7 flex items-center justify-center rounded border border-border bg-background hover:bg-muted text-muted-foreground transition-colors"
+              >
+                <Settings size={13} />
+              </button>
+            </div>
+
            <div className="relative flex-1 max-w-sm">
              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
              <input
@@ -1134,8 +1139,86 @@ const FinanceiroPagar = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Category Manager Modal */}
+      <Dialog open={showCatManager} onOpenChange={setShowCatManager}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Categorias</DialogTitle>
+            <DialogDescription>
+              Adicione ou remova categorias para organizar seus lançamentos.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* List Existing */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Categorias Existentes</h3>
+              <div className="max-h-[200px] overflow-y-auto border border-border rounded-md divide-y divide-border">
+                {categorias && categorias.length > 0 ? (
+                  categorias.map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
+                      <span className="text-xs font-medium">{cat.nome}</span>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
+                            deleteCategoria.mutate(cat.id);
+                          }
+                        }}
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-muted-foreground">
+                    Nenhuma categoria encontrada.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Add New */}
+            <div className="space-y-2 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground">Adicionar Nova Categoria</h3>
+              <div className="flex gap-2">
+                <Input
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="NOME DA CATEGORIA"
+                  className="h-9 text-xs uppercase"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newCatName.trim()) {
+                      createCategoria.mutate({ nome: newCatName.toUpperCase() });
+                      setNewCatName("");
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  disabled={!newCatName.trim() || createCategoria.isPending}
+                  onClick={() => {
+                    createCategoria.mutate({ nome: newCatName.toUpperCase() });
+                    setNewCatName("");
+                  }}
+                >
+                  <Plus size={14} className="mr-1" />
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowCatManager(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default FinanceiroPagar;
+
