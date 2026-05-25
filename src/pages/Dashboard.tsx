@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, Fragment, useCallback } from "react";
+import { useEffect, useState, useMemo, Fragment, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcFaltaComprar } from "@/lib/calcFaltaComprar";
 import { debounce } from "lodash";
@@ -67,41 +67,38 @@ const Dashboard = () => {
     }
   }, [anotacoesData]);
 
-  // Função para salvar anotações
-  const handleSaveAnotacoes = async (conteudo: string) => {
-    if (!user?.id || !empresaId) return;
-    setIsSaving(true);
-    setShowSaved(false);
-    try {
-      const { error } = await supabase
-        .from("anotacoes_usuario" as any)
-        .upsert({
-          user_id: user.id,
-          empresa_id: empresaId,
-          conteudo: conteudo,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "user_id,empresa_id" });
+  const saveTimerRef = useRef<NodeJS.Timeout>();
 
-      if (error) throw error;
-      setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 3000);
-    } catch (error) {
-      console.error("Erro ao salvar anotações:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Debounce para auto-save (1.5 segundos)
-  const debouncedSave = useCallback(
-    debounce((nextValue: string) => handleSaveAnotacoes(nextValue), 1500),
-    [user?.id, empresaId]
-  );
-
-  const handleAnotacoesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleAnotacoesChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     const newValue = e.target.value;
     setAnotacoes(newValue);
-    debouncedSave(newValue);
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(async () => {
+      if (!user?.id || !empresaId) return;
+      setIsSaving(true);
+      try {
+        await supabase
+          .from("anotacoes_usuario" as any)
+          .upsert({
+            user_id: user.id,
+            empresa_id: empresaId,
+            conteudo: newValue,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: "user_id,empresa_id"
+          });
+        setShowSaved(true);
+        setTimeout(() => setShowSaved(false), 3000);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1500);
   };
 
   // Correção: Invalidação manual se empresaId mudar
@@ -268,8 +265,8 @@ const Dashboard = () => {
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
       
-      const saldoInicial = empresa ? Number((empresa as any).saldo_inicial) || 0 : null;
-      const saldoAtual = saldoInicial === null ? null : saldoInicial + totalRecebido - totalPagoEfetivo;
+      const saldoInicial = Number((empresa as any)?.saldo_inicial) || 0;
+      const saldoAtual = saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
       // Status operacionais
@@ -382,12 +379,8 @@ const Dashboard = () => {
               <Wallet size={16} className="text-blue-600" />
               <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
             </div>
-            <div className={`text-2xl font-bold ${stats?.saldoAtual !== null && (stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-              {stats?.saldoAtual === null ? (
-                <span className="text-muted-foreground text-sm font-normal animate-pulse">Carregando...</span>
-              ) : (
-                fmt(stats?.saldoAtual ?? 0)
-              )}
+            <div className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {fmt(stats?.saldoAtual ?? 0)}
             </div>
             <p className="text-[11px] text-blue-600/70 font-medium mt-1">Recebido − Pago</p>
           </div>
