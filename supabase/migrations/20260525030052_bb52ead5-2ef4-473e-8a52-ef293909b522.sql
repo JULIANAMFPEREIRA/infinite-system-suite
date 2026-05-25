@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN saldo_inicial DECIMAL(12,2) DEFAULT 0;

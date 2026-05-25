@@ -775,6 +775,7 @@ export type Database = {
           logo_url: string | null
           nome: string
           nome_fantasia: string | null
+          saldo_inicial: number | null
           segmento: string | null
           telefone: string | null
         }
@@ -787,6 +788,7 @@ export type Database = {
           logo_url?: string | null
           nome: string
           nome_fantasia?: string | null
+          saldo_inicial?: number | null
           segmento?: string | null
           telefone?: string | null
         }
@@ -799,6 +801,7 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           nome_fantasia?: string | null
+          saldo_inicial?: number | null
           segmento?: string | null
           telefone?: string | null
         }
