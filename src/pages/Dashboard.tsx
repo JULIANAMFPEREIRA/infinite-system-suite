@@ -242,7 +242,9 @@ const Dashboard = () => {
       const totalPagoEfetivo = pagar
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
-      const saldoAtual = totalRecebido - totalPagoEfetivo;
+      
+      const saldoInicial = Number((empresa as any)?.saldo_inicial) || 0;
+      const saldoAtual = saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
       // Status operacionais
