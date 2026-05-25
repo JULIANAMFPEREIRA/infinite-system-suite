@@ -951,6 +951,126 @@ export type Database = {
           },
         ]
       }
+      financas_pessoais_categorias: {
+        Row: {
+          cor: string | null
+          created_at: string | null
+          empresa_id: string
+          id: string
+          nome: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          nome: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financas_pessoais_categorias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financas_pessoais_lancamentos: {
+        Row: {
+          categoria_id: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          empresa_id: string
+          id: string
+          lancamento_pai_id: string | null
+          mes_referencia: string
+          observacao: string | null
+          recorrente: boolean | null
+          status: string
+          tipo: string
+          updated_at: string | null
+          user_id: string
+          valor: number
+          valor_pago: number | null
+        }
+        Insert: {
+          categoria_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          lancamento_pai_id?: string | null
+          mes_referencia: string
+          observacao?: string | null
+          recorrente?: boolean | null
+          status?: string
+          tipo: string
+          updated_at?: string | null
+          user_id: string
+          valor?: number
+          valor_pago?: number | null
+        }
+        Update: {
+          categoria_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          lancamento_pai_id?: string | null
+          mes_referencia?: string
+          observacao?: string | null
+          recorrente?: boolean | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+          valor_pago?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financas_pessoais_lancamentos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "financas_pessoais_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financas_pessoais_lancamentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financas_pessoais_lancamentos_lancamento_pai_id_fkey"
+            columns: ["lancamento_pai_id"]
+            isOneToOne: false
+            referencedRelation: "financas_pessoais_lancamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financeiro_pagar: {
         Row: {
           arquivo_nome: string | null
