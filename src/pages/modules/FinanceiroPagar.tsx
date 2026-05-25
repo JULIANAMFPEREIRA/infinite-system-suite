@@ -110,7 +110,7 @@ const FinanceiroPagar = () => {
     },
     enabled: !!empresaId
   });
-  useSeedCategorias();
+  
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
