@@ -116,7 +116,7 @@ const Dashboard = () => {
   // Correção: Invalidação manual se empresaId mudar
   useEffect(() => {
     if (empresaId) {
-      queryClient.invalidateQueries({ queryKey: ["empresa_config", empresaId] });
+      
       queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3", empresaId] });
     }
   }, [empresaId, queryClient]);
