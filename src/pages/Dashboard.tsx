@@ -79,6 +79,7 @@ const Dashboard = () => {
           user_id: user.id,
           empresa_id: empresaId,
           conteudo: conteudo,
+          updated_at: new Date().toISOString()
         }, { onConflict: "user_id,empresa_id" });
 
       if (error) throw error;
