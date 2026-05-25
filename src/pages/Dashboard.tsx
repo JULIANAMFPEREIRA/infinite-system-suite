@@ -114,25 +114,36 @@ const Dashboard = () => {
   });
 
   const { data: financasPessoais } = useQuery({
+    queryKey: ["financas_pessoais", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("financas_pessoais" as any)
+        .select("*")
+        .eq("usuario_id", user.id);
+      return (data ?? []) as any[];
+    },
+    enabled: !!user?.id,
+  });
 
-   const saldoPessoal = useMemo(() => {
-     if (!financasPessoais) return 0;
-     return financasPessoais
-       .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes)
-       .reduce((acc, curr) => {
-         const v = Number(curr.valor) || 0;
-         if (curr.tipo === "receita" || curr.tipo === "devolucao") return acc + v;
-         if (curr.tipo === "despesa" || curr.tipo === "retirada") return acc - v;
-         return acc;
-       }, 0);
-   }, [financasPessoais, inicioMes, fimMes]);
+  const saldoPessoal = useMemo(() => {
+    if (!financasPessoais) return 0;
+    return financasPessoais
+      .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes)
+      .reduce((acc, curr) => {
+        const v = Number(curr.valor) || 0;
+        if (curr.tipo === "receita" || curr.tipo === "devolucao") return acc + v;
+        if (curr.tipo === "despesa" || curr.tipo === "retirada") return acc - v;
+        return acc;
+      }, 0);
+  }, [financasPessoais, inicioMes, fimMes]);
 
-   const pagarPessoal = useMemo(() => {
-     if (!financasPessoais) return 0;
-     return financasPessoais
-       .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes && f.tipo === "despesa")
-       .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-   }, [financasPessoais, inicioMes, fimMes]);
+  const pagarPessoal = useMemo(() => {
+    if (!financasPessoais) return 0;
+    return financasPessoais
+      .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes && f.tipo === "despesa")
+      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+  }, [financasPessoais, inicioMes, fimMes]);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
