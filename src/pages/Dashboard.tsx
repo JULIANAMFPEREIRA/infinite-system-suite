@@ -450,34 +450,33 @@ const Dashboard = () => {
 
         {/* Lado Direito: Bloco de Anotações */}
         <div className="md:col-span-1 h-full">
-          <div className="bg-card rounded-xl border border-border p-5 shadow-sm h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <StickyNote size={16} className="text-primary" />
-                📝 Minhas Anotações
+          <div className="bg-card rounded-xl border border-border p-5 shadow-sm h-full flex flex-col relative group">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 opacity-70">
+                <StickyNote size={12} className="text-muted-foreground" />
+                Minhas Anotações
               </h3>
-              {isSaving && (
-                <span className="text-[10px] text-muted-foreground animate-pulse">
-                  Salvando...
-                </span>
-              )}
             </div>
-            <div className="relative flex-1 flex flex-col">
+            
+            <div className="flex-1 flex flex-col relative">
               <textarea
                 value={anotacoes}
                 onChange={handleAnotacoesChange}
-                placeholder="Escreva seus lembretes e anotações aqui..."
-                className="w-full flex-1 min-h-[300px] p-4 text-sm bg-secondary/20 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/50 transition-all leading-relaxed"
-                style={{ height: 'auto' }}
+                placeholder="Escreva seus lembretes aqui..."
+                className="w-full flex-1 min-h-[160px] md:min-h-full p-3 text-sm bg-secondary/10 border-none rounded-lg focus:outline-none focus:ring-0 resize-none placeholder:text-muted-foreground/30 transition-all leading-relaxed"
               />
-              <button
-                onClick={() => handleSaveAnotacoes(anotacoes)}
-                disabled={isSaving}
-                className="absolute bottom-3 right-3 p-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
-                title="Salvar agora"
-              >
-                <Save size={14} />
-              </button>
+              
+              <div className="absolute bottom-2 right-2 flex items-center gap-1.5 pointer-events-none">
+                {isSaving ? (
+                  <span className="text-[10px] text-muted-foreground animate-pulse font-medium">
+                    Salvando...
+                  </span>
+                ) : showSaved ? (
+                  <span className="text-[10px] text-green-600 font-medium">
+                    Salvo ✓
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
