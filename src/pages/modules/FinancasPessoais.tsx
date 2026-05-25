@@ -468,7 +468,7 @@ const FinancasPessoais = () => {
                       <div className="flex items-center gap-2">
                         {l.descricao}
                         {l.recorrente && (
-                          <RefreshCcw size={12} className="text-muted-foreground" title="Lançamento Recorrente" />
+                          <RefreshCcw size={12} className="text-muted-foreground" />
                         )}
                       </div>
                     </TableCell>
