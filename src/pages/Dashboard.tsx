@@ -254,7 +254,7 @@ const Dashboard = () => {
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
       
-      const saldoInicial = empresa ? Number(empresa.saldo_inicial) || 0 : null;
+      const saldoInicial = empresa ? Number((empresa as any).saldo_inicial) || 0 : null;
       const saldoAtual = saldoInicial === null ? null : saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
