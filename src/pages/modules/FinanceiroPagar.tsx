@@ -3,7 +3,7 @@ import { useState, useMemo, useRef } from "react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
-import { useSeedCategorias } from "@/hooks/useSeedCategorias";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
