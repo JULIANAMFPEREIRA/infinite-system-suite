@@ -99,37 +99,51 @@ const Dashboard = () => {
     debouncedSave(newValue);
   };
 
+  const { data: empresa } = useQuery({
+    queryKey: ["empresa_config", empresaId],
+    queryFn: async () => {
+      if (!empresaId) return null;
+      const { data } = await supabase
+        .from("empresas")
+        .select("saldo_inicial")
+        .eq("id", empresaId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
   const { data: financasPessoais } = useQuery({
-     queryKey: ["financas_pessoais", user?.id],
-     queryFn: async () => {
-       if (!user?.id) return [];
-       const { data } = await supabase
-         .from("financas_pessoais" as any)
-         .select("*")
-         .eq("usuario_id", user.id);
-       return (data ?? []) as any[];
-     },
-     enabled: !!user?.id,
-   });
+    queryKey: ["financas_pessoais", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("financas_pessoais" as any)
+        .select("*")
+        .eq("usuario_id", user.id);
+      return (data ?? []) as any[];
+    },
+    enabled: !!user?.id,
+  });
 
-   const saldoPessoal = useMemo(() => {
-     if (!financasPessoais) return 0;
-     return financasPessoais
-       .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes)
-       .reduce((acc, curr) => {
-         const v = Number(curr.valor) || 0;
-         if (curr.tipo === "receita" || curr.tipo === "devolucao") return acc + v;
-         if (curr.tipo === "despesa" || curr.tipo === "retirada") return acc - v;
-         return acc;
-       }, 0);
-   }, [financasPessoais, inicioMes, fimMes]);
+  const saldoPessoal = useMemo(() => {
+    if (!financasPessoais) return 0;
+    return financasPessoais
+      .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes)
+      .reduce((acc, curr) => {
+        const v = Number(curr.valor) || 0;
+        if (curr.tipo === "receita" || curr.tipo === "devolucao") return acc + v;
+        if (curr.tipo === "despesa" || curr.tipo === "retirada") return acc - v;
+        return acc;
+      }, 0);
+  }, [financasPessoais, inicioMes, fimMes]);
 
-   const pagarPessoal = useMemo(() => {
-     if (!financasPessoais) return 0;
-     return financasPessoais
-       .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes && f.tipo === "despesa")
-       .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-   }, [financasPessoais, inicioMes, fimMes]);
+  const pagarPessoal = useMemo(() => {
+    if (!financasPessoais) return 0;
+    return financasPessoais
+      .filter(f => f.data && new Date(f.data) >= inicioMes && new Date(f.data) <= fimMes && f.tipo === "despesa")
+      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+  }, [financasPessoais, inicioMes, fimMes]);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
@@ -239,7 +253,9 @@ const Dashboard = () => {
       const totalPagoEfetivo = pagar
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
-      const saldoAtual = totalRecebido - totalPagoEfetivo;
+      
+      const saldoInicial = Number((empresa as any)?.saldo_inicial) || 0;
+      const saldoAtual = saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
       // Status operacionais
