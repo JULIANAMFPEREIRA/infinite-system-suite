@@ -254,8 +254,8 @@ const Dashboard = () => {
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
       
-      const saldoInicial = Number((empresa as any)?.saldo_inicial) || 0;
-      const saldoAtual = saldoInicial + totalRecebido - totalPagoEfetivo;
+      const saldoInicial = empresa ? Number(empresa.saldo_inicial) || 0 : null;
+      const saldoAtual = saldoInicial === null ? null : saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
       // Status operacionais
@@ -368,9 +368,9 @@ const Dashboard = () => {
               <Wallet size={16} className="text-blue-600" />
               <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
             </div>
-            <div className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-              {saldoCarregando ? (
-                <span className="text-muted-foreground text-sm font-normal italic">Calculando...</span>
+            <div className={`text-2xl font-bold ${stats?.saldoAtual !== null && (stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {stats?.saldoAtual === null ? (
+                <span className="text-muted-foreground text-sm font-normal animate-pulse">Carregando...</span>
               ) : (
                 fmt(stats?.saldoAtual ?? 0)
               )}
