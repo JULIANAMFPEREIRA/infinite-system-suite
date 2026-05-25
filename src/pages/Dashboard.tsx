@@ -79,6 +79,7 @@ const Dashboard = () => {
           user_id: user.id,
           empresa_id: empresaId,
           conteudo: conteudo,
+          updated_at: new Date().toISOString()
         }, { onConflict: "user_id,empresa_id" });
 
       if (error) throw error;
@@ -114,15 +115,16 @@ const Dashboard = () => {
   const { data: empresa, isLoading: isLoadingEmpresa } = useQuery({
     queryKey: ["empresa_config", empresaId],
     queryFn: async () => {
-      if (!empresaId) return null;
       const { data } = await supabase
         .from("empresas")
         .select("saldo_inicial")
-        .eq("id", empresaId)
+        .eq("id", empresaId!)
         .maybeSingle();
       return data;
     },
     enabled: !!empresaId,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: financasPessoais } = useQuery({
