@@ -654,78 +654,86 @@ const FinanceiroPagar = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <DollarSign size={18} className="text-destructive" />
-          <h1 className="text-lg font-bold text-foreground">Contas a Pagar</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <DollarSign className="text-primary w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Contas a Pagar</h1>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Gestão Financeira</p>
+          </div>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition btn-press">
-          <Plus size={14} /> Nova Conta
-        </button>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCatManager(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Categorias
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Conta
+          </Button>
+        </div>
       </div>
 
        {/* Filters */}
-       <div className="space-y-2">
-         <FinanceiroFilters
-           statusOptions={STATUS_OPTIONS}
-           statusFilter={statusFilter}
-           onStatusChange={setStatusFilter}
-           periodoFilter={periodoFilter}
-           onPeriodoChange={setPeriodoFilter}
-           mesFilter={mesFilter}
-           onMesChange={setMesFilter}
-           anoFilter={anoFilter}
-           onAnoChange={setAnoFilter}
-           extraFilters={
-             <div className="flex items-center gap-1.5 shrink-0">
-               <div className="flex items-center gap-1">
-                 <span className="text-[10px] text-muted-foreground">De:</span>
-                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-               </div>
-               <div className="flex items-center gap-1">
-                 <span className="text-[10px] text-muted-foreground">Até:</span>
-                 <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-               </div>
-               {(dataInicio || dataFim) && (
-                 <button 
-                   onClick={() => { setDataInicio(""); setDataFim(""); }}
-                   className="h-7 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/10 rounded border border-destructive/20 transition-colors"
-                 >
-                   Limpar datas
-                 </button>
-               )}
-             </div>
-           }
-         />
-         <div className="flex items-center gap-2">
-           <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-             {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-           </select>
-            <div className="flex items-center gap-1">
-              <select value={categoriaFilter} onChange={e => setCategoriaFilter(e.target.value)} className={selectCls}>
-                <option value="">Todas categorias</option>
-                {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                  <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
-                    {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-              <button 
-                onClick={() => setShowCatManager(true)}
-                title="Gerenciar Categorias"
-                className="h-7 w-7 flex items-center justify-center rounded border border-border bg-background hover:bg-muted text-muted-foreground transition-colors"
-              >
-                <Settings size={13} />
-              </button>
-            </div>
+       <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+         <div className="flex flex-col md:flex-row gap-3 items-end">
+           <div className="flex-1">
+             <FinanceiroFilters
+               statusOptions={STATUS_OPTIONS}
+               statusFilter={statusFilter}
+               onStatusChange={setStatusFilter}
+               periodoFilter={periodoFilter}
+               onPeriodoChange={setPeriodoFilter}
+               mesFilter={mesFilter}
+               onMesChange={setMesFilter}
+               anoFilter={anoFilter}
+               onAnoChange={setAnoFilter}
+               extraFilters={
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+                     {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                   </select>
+                   
+                   <div className="flex items-center gap-1">
+                     <select 
+                       value={categoriaFilter} 
+                       onChange={e => setCategoriaFilter(e.target.value)} 
+                       className={`${selectCls} max-w-[150px]`}
+                     >
+                       <option value="">Todas categorias</option>
+                       {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                         <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                           {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                         </optgroup>
+                       ))}
+                     </select>
+                   </div>
 
-           <div className="relative flex-1 max-w-sm">
+                   <div className="flex items-center gap-1.5 shrink-0">
+                     <div className="flex items-center gap-1">
+                       <span className="text-[10px] text-muted-foreground">De:</span>
+                       <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                     </div>
+                     <div className="flex items-center gap-1">
+                       <span className="text-[10px] text-muted-foreground">Até:</span>
+                       <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
+                     </div>
+                   </div>
+                 </div>
+               }
+             />
+           </div>
+
+           <div className="relative w-full md:w-64">
              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
              <input
                type="text"
                value={buscaFilter}
                onChange={e => setBuscaFilter(e.target.value)}
-               placeholder="Buscar por descrição ou fornecedor..."
+               placeholder="Descrição ou fornecedor..."
                className={`${selectCls} w-full pl-7`}
              />
            </div>
