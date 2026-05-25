@@ -82,8 +82,15 @@ const Dashboard = () => {
     saveTimerRef.current = setTimeout(async () => {
       if (!user?.id || !empresaId) return;
       setIsSaving(true);
+      
+      console.log("Tentando salvar:", {
+        userId: user?.id,
+        empresaId,
+        conteudo: newValue?.substring(0, 20)
+      });
+
       try {
-        await supabase
+        const { error } = await supabase
           .from("anotacoes_usuario" as any)
           .upsert({
             user_id: user.id,
@@ -93,6 +100,11 @@ const Dashboard = () => {
           }, {
             onConflict: "user_id,empresa_id"
           });
+
+        console.log("Resultado save:", { error });
+
+        if (error) throw error;
+        
         setShowSaved(true);
         setTimeout(() => setShowSaved(false), 3000);
       } finally {
@@ -104,25 +116,11 @@ const Dashboard = () => {
   // Correção: Invalidação manual se empresaId mudar
   useEffect(() => {
     if (empresaId) {
-      queryClient.invalidateQueries({ queryKey: ["empresa_config", empresaId] });
+      
       queryClient.invalidateQueries({ queryKey: ["dashboard_stats_v3", empresaId] });
     }
   }, [empresaId, queryClient]);
 
-  const { data: empresa, isLoading: isLoadingEmpresa } = useQuery({
-    queryKey: ["empresa_config", empresaId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("empresas")
-        .select("saldo_inicial")
-        .eq("id", empresaId!)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!empresaId,
-    staleTime: 0,
-    refetchOnMount: true,
-  });
 
   const { data: financasPessoais } = useQuery({
     queryKey: ["financas_pessoais", user?.id],
@@ -159,13 +157,14 @@ const Dashboard = () => {
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
-      const [receber, pagar, projetos, clientes, visitas, compras] = await Promise.all([
+      const [receber, pagar, projetos, clientes, visitas, compras, empresaData] = await Promise.all([
         supabase.from("financeiro_receber").select("*").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("financeiro_pagar").select("*").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("projetos").select("*").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("clientes").select("*").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("visitas_tecnicas").select("*").eq("deletado", false).then(r => r.data ?? []),
         supabase.from("compras").select("*").eq("deletado", false).then(r => r.data ?? []),
+        supabase.from("empresas").select("saldo_inicial").eq("id", empresaId!).maybeSingle().then(r => r.data)
       ]);
 
       // Buscar orçamentos aprovados com frete/imposto
@@ -265,7 +264,7 @@ const Dashboard = () => {
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
       
-      const saldoInicial = Number((empresa as any)?.saldo_inicial) || 0;
+      const saldoInicial = Number(empresaData?.saldo_inicial) || 0;
       const saldoAtual = saldoInicial + totalRecebido - totalPagoEfetivo;
       const saldoPrevisto = saldoAtual + totalReceberGeralParaSaldo - pagarGeral;
 
@@ -357,7 +356,7 @@ const Dashboard = () => {
     };
   }, [empresaId, queryClient]);
 
-  const saldoCarregando = isLoadingEmpresa || isLoadingStats;
+  const saldoCarregando = isLoadingStats;
 
   return (
     <div className="space-y-6 stagger-fade-in">
