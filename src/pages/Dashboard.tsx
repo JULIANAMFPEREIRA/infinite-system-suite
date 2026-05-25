@@ -99,18 +99,21 @@ const Dashboard = () => {
     debouncedSave(newValue);
   };
 
+  const { data: empresa } = useQuery({
+    queryKey: ["empresa_config", empresaId],
+    queryFn: async () => {
+      if (!empresaId) return null;
+      const { data } = await supabase
+        .from("empresas")
+        .select("saldo_inicial")
+        .eq("id", empresaId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!empresaId,
+  });
+
   const { data: financasPessoais } = useQuery({
-     queryKey: ["financas_pessoais", user?.id],
-     queryFn: async () => {
-       if (!user?.id) return [];
-       const { data } = await supabase
-         .from("financas_pessoais" as any)
-         .select("*")
-         .eq("usuario_id", user.id);
-       return (data ?? []) as any[];
-     },
-     enabled: !!user?.id,
-   });
 
    const saldoPessoal = useMemo(() => {
      if (!financasPessoais) return 0;
