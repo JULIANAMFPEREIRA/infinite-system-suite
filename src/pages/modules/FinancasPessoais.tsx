@@ -289,9 +289,12 @@ const FinancasPessoais = () => {
   const resumo = useMemo(() => {
     const receitas = lancamentos?.filter(l => l.tipo === "receita").reduce((acc, l) => acc + Number(l.valor), 0) || 0;
     const despesas = lancamentos?.filter(l => l.tipo === "despesa" || l.tipo === "retirada").reduce((acc, l) => acc + Number(l.valor), 0) || 0;
+    const aPagar = lancamentos?.filter(l => l.status === "pendente" && (l.tipo === "despesa" || l.tipo === "retirada")).reduce((acc, l) => acc + Number(l.valor), 0) || 0;
+    
     return {
       receitas,
       despesas,
+      aPagar,
       saldo: receitas - despesas
     };
   }, [lancamentos]);
@@ -343,7 +346,7 @@ const FinancasPessoais = () => {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Receitas do Mês</CardTitle>
@@ -367,6 +370,19 @@ const FinancasPessoais = () => {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
               R$ {resumo.despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">A PAGAR</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">
+              R$ {resumo.aPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
