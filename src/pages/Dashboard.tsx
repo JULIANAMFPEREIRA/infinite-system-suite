@@ -115,15 +115,16 @@ const Dashboard = () => {
   const { data: empresa, isLoading: isLoadingEmpresa } = useQuery({
     queryKey: ["empresa_config", empresaId],
     queryFn: async () => {
-      if (!empresaId) return null;
       const { data } = await supabase
         .from("empresas")
         .select("saldo_inicial")
-        .eq("id", empresaId)
+        .eq("id", empresaId!)
         .maybeSingle();
       return data;
     },
     enabled: !!empresaId,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: financasPessoais } = useQuery({
