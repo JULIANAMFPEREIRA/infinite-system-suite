@@ -99,7 +99,7 @@ const Dashboard = () => {
     debouncedSave(newValue);
   };
 
-  const { data: empresa } = useQuery({
+  const { data: empresa, isLoading: isLoadingEmpresa } = useQuery({
     queryKey: ["empresa_config", empresaId],
     queryFn: async () => {
       if (!empresaId) return null;
@@ -145,7 +145,7 @@ const Dashboard = () => {
       .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
   }, [financasPessoais, inicioMes, fimMes]);
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ["dashboard_stats_v3", empresaId],
     queryFn: async () => {
       const [receber, pagar, projetos, clientes, visitas, compras] = await Promise.all([
@@ -346,6 +346,8 @@ const Dashboard = () => {
     };
   }, [empresaId, queryClient]);
 
+  const saldoCarregando = isLoadingEmpresa || isLoadingStats;
+
   return (
     <div className="space-y-6 stagger-fade-in">
       {/* Header */}
@@ -366,9 +368,13 @@ const Dashboard = () => {
               <Wallet size={16} className="text-blue-600" />
               <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wider">Saldo Atual</p>
             </div>
-            <p className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
-              {fmt(stats?.saldoAtual ?? 0)}
-            </p>
+            <div className={`text-2xl font-bold ${(stats?.saldoAtual ?? 0) >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+              {saldoCarregando ? (
+                <span className="text-muted-foreground text-sm font-normal italic">Calculando...</span>
+              ) : (
+                fmt(stats?.saldoAtual ?? 0)
+              )}
+            </div>
             <p className="text-[11px] text-blue-600/70 font-medium mt-1">Recebido − Pago</p>
           </div>
 
