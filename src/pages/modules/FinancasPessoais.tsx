@@ -299,11 +299,6 @@ const FinancasPessoais = () => {
     };
   }, [lancamentos]);
 
-  console.log("Resumo:", resumo)
-  console.log("Lançamentos:", lancamentos?.length)
-  console.log("Pendentes:", lancamentos?.filter(
-    l => l.status === "pendente"
-  ).length)
 
 
   return (
