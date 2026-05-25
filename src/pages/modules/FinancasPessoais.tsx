@@ -299,6 +299,13 @@ const FinancasPessoais = () => {
     };
   }, [lancamentos]);
 
+  console.log("Resumo:", resumo)
+  console.log("Lançamentos:", lancamentos?.length)
+  console.log("Pendentes:", lancamentos?.filter(
+    l => l.status === "pendente"
+  ).length)
+
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header com Navegação */}
