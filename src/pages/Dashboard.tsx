@@ -256,10 +256,14 @@ const Dashboard = () => {
         )
         .reduce((a, r) => a + saldo(r), 0);
 
-      // Resumo Financeiro — somar valor_recebido (inclui parciais)
       const totalRecebido = receber
         .filter(r => r.status !== "cancelado")
-        .reduce((a, r) => a + (Number((r as any).valor_recebido) || 0), 0);
+        .reduce((a, r) => {
+          const recebido = Number((r as any).valor_recebido) || 0
+          const valor = Number(r.valor) || 0
+          return a + (recebido > 0 ? recebido : 
+            r.status === "pago" ? valor : 0)
+        }, 0);
       const totalPagoEfetivo = pagar
         .filter(p => p.status === "pago")
         .reduce((a, p) => a + (Number(p.valor) || 0), 0);
