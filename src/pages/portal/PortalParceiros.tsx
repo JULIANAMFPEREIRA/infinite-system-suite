@@ -7,8 +7,9 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass
+  CheckCircle2, Hourglass, Target
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -56,7 +57,18 @@ const PortalParceiros = () => {
         .eq("email", user!.email!)
         .maybeSingle();
 
-      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [] };
+      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [], leads: [] };
+
+      let leads = [];
+      if (forn.tipo === "arquiteto") {
+        const { data: leadsData } = await supabase
+          .from("clientes")
+          .select("id, nome, status_crm, origem")
+          .eq("arquiteto_id", forn.id)
+          .eq("deletado", false)
+          .in("status_crm", ["lead", "contato", "proposta"]);
+        leads = leadsData ?? [];
+      }
 
       let projetos = [];
       if (forn.tipo === "arquiteto") {
@@ -166,7 +178,8 @@ const PortalParceiros = () => {
         parcelasRT,
         ptecnico,
         lancamentos,
-        previstos
+        previstos,
+        leads
       };
     },
     enabled: !!user?.email
@@ -767,6 +780,47 @@ const PortalParceiros = () => {
               <p className="text-xl font-bold text-primary">{visitas?.length ?? 0}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {data.fornecedor.tipo === "arquiteto" && (data.leads?.length ?? 0) > 0 && (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Meus Leads
+            </h2>
+            <p className="text-[11px] text-muted-foreground">Clientes em negociação</p>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            {(data.leads as any[]).map((lead) => {
+              const status = lead.status_crm?.toLowerCase();
+              let badgeColor = "bg-blue-100 text-blue-700 border-blue-200";
+              let label = "LEAD";
+              
+              if (status === "contato") {
+                badgeColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
+                label = "EM CONTATO";
+              } else if (status === "proposta") {
+                badgeColor = "bg-orange-100 text-orange-700 border-orange-200";
+                label = "PROPOSTA";
+              }
+
+              return (
+                <div 
+                  key={lead.id}
+                  className="min-w-[200px] bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col gap-3"
+                >
+                  <p className="text-sm font-bold text-foreground truncate" title={lead.nome}>
+                    {lead.nome}
+                  </p>
+                  <Badge variant="outline" className={`w-fit text-[10px] font-bold px-2 py-0 ${badgeColor}`}>
+                    {label}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
       <div className="space-y-4">
