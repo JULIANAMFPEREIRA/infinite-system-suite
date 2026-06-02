@@ -792,34 +792,63 @@ const PortalParceiros = () => {
             <p className="text-[11px] text-muted-foreground">Clientes em negociação</p>
           </div>
           
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {(data.leads as any[]).map((lead) => {
-              const status = lead.status_crm?.toLowerCase();
-              let badgeColor = "bg-blue-100 text-blue-700 border-blue-200";
-              let label = "LEAD";
-              
-              if (status === "contato") {
-                badgeColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
-                label = "EM CONTATO";
-              } else if (status === "proposta") {
-                badgeColor = "bg-orange-100 text-orange-700 border-orange-200";
-                label = "PROPOSTA";
-              }
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Coluna 1 — Lead */}
+            <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
+                Lead ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "lead").length})
+              </h3>
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "lead");
+                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
+                  return items.map(lead => (
+                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
+                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-blue-100 text-blue-700 border-blue-200">LEAD</Badge>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
 
-              return (
-                <div 
-                  key={lead.id}
-                  className="min-w-[200px] bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col gap-3"
-                >
-                  <p className="text-sm font-bold text-foreground truncate" title={lead.nome}>
-                    {lead.nome}
-                  </p>
-                  <Badge variant="outline" className={`w-fit text-[10px] font-bold px-2 py-0 ${badgeColor}`}>
-                    {label}
-                  </Badge>
-                </div>
-              );
-            })}
+            {/* Coluna 2 — Em Contato */}
+            <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
+                Em Contato ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "contato").length})
+              </h3>
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "contato");
+                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
+                  return items.map(lead => (
+                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
+                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-yellow-100 text-yellow-700 border-yellow-200">EM CONTATO</Badge>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* Coluna 3 — Proposta Enviada */}
+            <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
+                Proposta ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta").length})
+              </h3>
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta");
+                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
+                  return items.map(lead => (
+                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
+                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-orange-100 text-orange-700 border-orange-200">PROPOSTA</Badge>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -847,8 +876,11 @@ const PortalParceiros = () => {
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-muted-foreground">
-                  <span>Progresso</span>
+                <div className="flex justify-between items-end text-[11px] text-muted-foreground">
+                  <div>
+                    <span>Progresso</span>
+                    <p className="text-[10px] text-slate-400 font-normal leading-tight mt-0.5">Clique para ver detalhes →</p>
+                  </div>
                   <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
                 </div>
                 <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
