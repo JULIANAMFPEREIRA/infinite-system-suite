@@ -7,8 +7,9 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass
+  CheckCircle2, Hourglass, Target
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
