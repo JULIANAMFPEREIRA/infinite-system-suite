@@ -57,7 +57,18 @@ const PortalParceiros = () => {
         .eq("email", user!.email!)
         .maybeSingle();
 
-      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [] };
+      if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [], leads: [] };
+
+      let leads = [];
+      if (forn.tipo === "arquiteto") {
+        const { data: leadsData } = await supabase
+          .from("clientes")
+          .select("id, nome, status_crm, origem")
+          .eq("arquiteto_id", forn.id)
+          .eq("deletado", false)
+          .in("status_crm", ["lead", "contato", "proposta"]);
+        leads = leadsData ?? [];
+      }
 
       let projetos = [];
       if (forn.tipo === "arquiteto") {
