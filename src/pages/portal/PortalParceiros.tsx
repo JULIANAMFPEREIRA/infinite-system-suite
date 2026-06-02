@@ -178,7 +178,8 @@ const PortalParceiros = () => {
         parcelasRT,
         ptecnico,
         lancamentos,
-        previstos
+        previstos,
+        leads
       };
     },
     enabled: !!user?.email
