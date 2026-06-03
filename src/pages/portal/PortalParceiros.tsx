@@ -876,7 +876,7 @@ const PortalParceiros = () => {
                 <div className="flex justify-between items-end text-[11px] text-muted-foreground">
                   <div>
                     <span>Progresso</span>
-                    <p className="text-[10px] text-slate-400 font-normal leading-tight mt-0.5">Clique para ver detalhes →</p>
+                    <p className="text-xs text-red-500 mt-1">Clique para ver detalhes →</p>
                   </div>
                   <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
                 </div>
