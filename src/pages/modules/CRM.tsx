@@ -827,16 +827,28 @@ const CRM = () => {
 
         // Criar lançamento em financeiro_pagar
         if (comissaoNova?.id) {
-          await supabase.from("financeiro_pagar").insert({
-            empresa_id: empresaId!,
-            projeto_id: projId,
-            fornecedor_id: arquitetoId,
-            comissao_id: comissaoNova.id,
-            descricao: `Comissão RT — ${detailClient.nome}`,
-            valor: totalRt,
-            status: "pendente" as const,
-            origem: "comissao",
-          } as any);
+          // Verificar se já existem parcelas vinculadas para não perder o parcelamento manual
+          const { data: parcelasExistentes } = await supabase
+            .from("financeiro_pagar")
+            .select("id")
+            .eq("comissao_id", comissaoNova.id)
+            .eq("empresa_id", empresaId!);
+
+          // Se já existem parcelas (length > 1), NÃO recriar — manter as parcelas existentes
+          if (parcelasExistentes && parcelasExistentes.length > 1) {
+            console.log("[CRM] Parcelas de comissão existentes detectadas (>1). Mantendo parcelamento.");
+          } else {
+            await supabase.from("financeiro_pagar").insert({
+              empresa_id: empresaId!,
+              projeto_id: projId,
+              fornecedor_id: arquitetoId,
+              comissao_id: comissaoNova.id,
+              descricao: `Comissão RT — ${detailClient.nome}`,
+              valor: totalRt,
+              status: "pendente" as const,
+              origem: "comissao",
+            } as any);
+          }
         }
 
         // ── Auto-vincular arquiteto em projeto_parceiros ──
