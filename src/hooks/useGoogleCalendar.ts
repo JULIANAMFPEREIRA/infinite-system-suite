@@ -45,7 +45,9 @@ export const useGoogleCalendarStatus = () => {
 export const useGoogleAuthUrl = () => {
   return useMutation({
     mutationFn: async () => {
+      console.log("Chamando auth-url...");
       const data = await invokeGoogle("auth-url");
+      console.log("Resposta auth-url:", data);
       return data as { url: string };
     },
   });
