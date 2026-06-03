@@ -2,17 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const invokeGoogle = async (action: string, body?: any) => {
-  const session = (await supabase.auth.getSession()).data.session;
+  const session = (await supabase.auth.getSession())
+    .data.session;
+  
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-auth?action=${action}`;
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
+  
   if (session?.access_token) {
     headers["Authorization"] = `Bearer ${session.access_token}`;
   }
-
   const res = await fetch(url, {
     method: body ? "POST" : "GET",
     headers,
@@ -20,9 +22,10 @@ const invokeGoogle = async (action: string, body?: any) => {
   });
   
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errData.error || "Request failed");
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `HTTP ${res.status}`)
   }
+  
   return res.json();
 };
 
