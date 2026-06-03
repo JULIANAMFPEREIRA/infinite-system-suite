@@ -805,7 +805,6 @@ const PortalParceiros = () => {
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
                       <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
-                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-blue-100 text-blue-700 border-blue-200">LEAD</Badge>
                     </div>
                   ));
                 })()}
@@ -824,7 +823,6 @@ const PortalParceiros = () => {
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
                       <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
-                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-yellow-100 text-yellow-700 border-yellow-200">EM CONTATO</Badge>
                     </div>
                   ));
                 })()}
@@ -834,7 +832,7 @@ const PortalParceiros = () => {
             {/* Coluna 3 — Proposta Enviada */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Proposta ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta").length})
+                Proposta Enviada ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta").length})
               </h3>
               <div className="flex flex-col gap-2">
                 {(() => {
@@ -843,7 +841,6 @@ const PortalParceiros = () => {
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
                       <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
-                      <Badge variant="outline" className="mt-1.5 text-[9px] font-bold px-1.5 py-0 bg-orange-100 text-orange-700 border-orange-200">PROPOSTA</Badge>
                     </div>
                   ));
                 })()}
