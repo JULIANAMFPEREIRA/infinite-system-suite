@@ -2,9 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const invokeGoogle = async (action: string, body?: any) => {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const session = (await supabase.auth.getSession()).data.session;
-  const url = `https://${projectId}.supabase.co/functions/v1/google-auth?action=${action}`;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-auth?action=${action}`;
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
