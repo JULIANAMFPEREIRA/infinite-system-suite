@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.visitas IS 'Tabela de visitas/agenda';
