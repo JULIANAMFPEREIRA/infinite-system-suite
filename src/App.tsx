@@ -32,6 +32,7 @@ import Configuracoes from "./pages/modules/Configuracoes";
  import ItensComprar from "./pages/modules/ItensComprar";
  import Orcamentos from "./pages/modules/Orcamentos";
  import FaltaComprar from "./pages/modules/FaltaComprar";
+import Agenda from "./pages/modules/Agenda";
 import PortalCliente from "./pages/portal/PortalCliente";
 import PortalParceiros from "./pages/portal/PortalParceiros";
 import NotFound from "./pages/NotFound";
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="/projetos/:id" element={<ModuleRoute module="projetos"><Projetos /></ModuleRoute>} />
               <Route path="/kits" element={<ModuleRoute module="kits"><Kits /></ModuleRoute>} />
               <Route path="/cronograma" element={<ModuleRoute module="cronograma"><Cronograma /></ModuleRoute>} />
+              <Route path="/agenda" element={<Agenda />} />
               <Route path="/estoque" element={<ModuleRoute module="estoque"><Estoque /></ModuleRoute>} />
               <Route path="/compras" element={<ModuleRoute module="compras"><Compras /></ModuleRoute>} />
               <Route path="/fornecedores" element={<ModuleRoute module="fornecedores"><Fornecedores /></ModuleRoute>} />

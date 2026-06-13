@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, FolderKanban, Package,
   DollarSign, BarChart3, Bell, PenTool,
   Receipt, Building2, Boxes, TrendingUp, Shield, Settings,
-  ChevronLeft, ChevronRight, ChevronDown, Wrench, Truck, X, FileText
+  ChevronLeft, ChevronRight, ChevronDown, Wrench, Truck, X, FileText, CalendarDays
 } from "lucide-react";
 
 interface NavItem {
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { label: "Orçamentos", icon: FileText, path: "/orcamentos", module: "crm" },
   { label: "Projetos", icon: FolderKanban, path: "/projetos", module: "projetos" },
   { label: "Cronograma", icon: Wrench, path: "/cronograma", module: "cronograma" },
+  { label: "Agenda", icon: CalendarDays, path: "/agenda" },
   {
     label: "Financeiro", icon: DollarSign, module: "financeiro", children: [
       { label: "Contas a Receber", path: "/financeiro/receber", module: "financeiro" },
