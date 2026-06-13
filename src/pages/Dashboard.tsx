@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
+import ProximosCompromissos from "@/components/dashboard/ProximosCompromissos";
  import { Skeleton } from "@/components/ui/skeleton";
  import {
    Dialog,
