@@ -26,7 +26,7 @@ export const useVisitas = (range?: { from: string; to: string }) => {
     queryFn: async () => {
       let q = supabase
         .from("agenda_visitas" as any)
-        .select("*, clientes(nome), agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
+        .select("*, clientes(nome), visita_tecnicos:agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
         .order("data_inicio", { ascending: true });
       if (empresaId) q = q.eq("empresa_id", empresaId);
       if (range) {
@@ -47,7 +47,7 @@ export const useProximasVisitas = (limit = 5) => {
       const nowIso = new Date().toISOString();
       let q = supabase
         .from("agenda_visitas" as any)
-        .select("*, clientes(nome), agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
+        .select("*, clientes(nome), visita_tecnicos:agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
         .gte("data_inicio", nowIso)
         .neq("status", "cancelada")
         .order("data_inicio", { ascending: true })
