@@ -541,7 +541,11 @@ const Dashboard = () => {
          </div>
        </div>
 
-       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-8">
+        <div className="pb-4">
+          <ProximosCompromissos />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-8">
          {/* Meu Saldo */}
          <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm">
            <div className="flex items-center gap-2 mb-2">
