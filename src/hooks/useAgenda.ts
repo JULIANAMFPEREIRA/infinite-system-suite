@@ -25,8 +25,8 @@ export const useVisitas = (range?: { from: string; to: string }) => {
     queryKey: ["visitas", empresaId, range?.from, range?.to],
     queryFn: async () => {
       let q = supabase
-        .from("visitas" as any)
-        .select("*, clientes(nome), visita_tecnicos(id, tecnico_id, fornecedores(nome))")
+        .from("agenda_visitas" as any)
+        .select("*, clientes(nome), visita_tecnicos:agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
         .order("data_inicio", { ascending: true });
       if (empresaId) q = q.eq("empresa_id", empresaId);
       if (range) {
@@ -46,8 +46,8 @@ export const useProximasVisitas = (limit = 5) => {
     queryFn: async () => {
       const nowIso = new Date().toISOString();
       let q = supabase
-        .from("visitas" as any)
-        .select("*, clientes(nome), visita_tecnicos(id, tecnico_id, fornecedores(nome))")
+        .from("agenda_visitas" as any)
+        .select("*, clientes(nome), visita_tecnicos:agenda_visita_tecnicos(id, tecnico_id, fornecedores(nome))")
         .gte("data_inicio", nowIso)
         .neq("status", "cancelada")
         .order("data_inicio", { ascending: true })
@@ -83,13 +83,13 @@ export const useSaveVisita = () => {
 
       if (id) {
         const { error } = await supabase
-          .from("visitas" as any)
+          .from("agenda_visitas" as any)
           .update(fields as any)
           .eq("id", id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
-          .from("visitas" as any)
+          .from("agenda_visitas" as any)
           .insert({
             ...fields,
             empresa_id: empresaId ?? "a0000000-0000-0000-0000-000000000001",
@@ -102,10 +102,10 @@ export const useSaveVisita = () => {
       }
 
       // Replace técnicos
-      await supabase.from("visita_tecnicos" as any).delete().eq("visita_id", visitaId!);
+      await supabase.from("agenda_visita_tecnicos" as any).delete().eq("visita_id", visitaId!);
       if (tecnico_ids.length > 0) {
         const rows = tecnico_ids.map((t) => ({ visita_id: visitaId!, tecnico_id: t }));
-        const { error: insErr } = await supabase.from("visita_tecnicos" as any).insert(rows as any);
+        const { error: insErr } = await supabase.from("agenda_visita_tecnicos" as any).insert(rows as any);
         if (insErr) throw insErr;
       }
 
@@ -122,7 +122,7 @@ export const useDeleteVisita = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("visitas" as any).delete().eq("id", id);
+      const { error } = await supabase.from("agenda_visitas" as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_visita_tecnicos: {
+        Row: {
+          created_at: string
+          id: string
+          tecnico_id: string
+          visita_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tecnico_id: string
+          visita_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tecnico_id?: string
+          visita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visita_tecnicos_tecnico_id_fkey"
+            columns: ["tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visita_tecnicos_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_visitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_visitas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          created_by: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          empresa_id: string
+          id: string
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anotacoes_usuario: {
         Row: {
           conteudo: string | null
@@ -2330,92 +2416,6 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      visita_tecnicos: {
-        Row: {
-          created_at: string
-          id: string
-          tecnico_id: string
-          visita_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          tecnico_id: string
-          visita_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          tecnico_id?: string
-          visita_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "visita_tecnicos_tecnico_id_fkey"
-            columns: ["tecnico_id"]
-            isOneToOne: false
-            referencedRelation: "fornecedores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "visita_tecnicos_visita_id_fkey"
-            columns: ["visita_id"]
-            isOneToOne: false
-            referencedRelation: "visitas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      visitas: {
-        Row: {
-          cliente_id: string | null
-          created_at: string
-          created_by: string | null
-          data_fim: string
-          data_inicio: string
-          descricao: string | null
-          empresa_id: string
-          id: string
-          status: string
-          titulo: string
-          updated_at: string
-        }
-        Insert: {
-          cliente_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          data_fim: string
-          data_inicio: string
-          descricao?: string | null
-          empresa_id?: string
-          id?: string
-          status?: string
-          titulo: string
-          updated_at?: string
-        }
-        Update: {
-          cliente_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          data_fim?: string
-          data_inicio?: string
-          descricao?: string | null
-          empresa_id?: string
-          id?: string
-          status?: string
-          titulo?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "visitas_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
         ]
