@@ -9,7 +9,7 @@ export const useCategorias = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categorias")
-        .select("id, nome, tipo, deletado, empresa_id")
+        .select("id, nome, tipo, empresa_id")
         .eq("empresa_id", "a0000000-0000-0000-0000-000000000001")
         .order("nome");
       if (error) {
@@ -50,7 +50,7 @@ export const useDeleteCategoria = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("categorias").update({ deletado: true } as any).eq("id", id);
+      const { error } = await supabase.from("categorias").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] }),
