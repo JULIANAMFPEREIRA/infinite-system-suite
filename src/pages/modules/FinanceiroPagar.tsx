@@ -181,7 +181,6 @@ const FinanceiroPagar = () => {
 
   const [statusFilter, setStatusFilter] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
-   const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
     const [buscaFilter, setBuscaFilter] = useState("");
     const [dataInicio, setDataInicio] = useState("");
@@ -421,14 +420,6 @@ const FinanceiroPagar = () => {
    const filtered = useMemo(() => {
      let list = contas ?? [];
      if (statusFilter) list = list.filter(c => c.status === statusFilter);
-     if (tipoFilter) {
-       list = list.filter(c => {
-         const t = (c as any).tipo_manual && String((c as any).tipo_manual).trim() !== ""
-           ? String((c as any).tipo_manual).toLowerCase()
-           : inferTipo(c.descricao);
-         return t === tipoFilter;
-       });
-     }
      if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
      if (buscaFilter.trim()) {
        const q = buscaFilter.trim().toLowerCase();
@@ -462,7 +453,7 @@ const FinanceiroPagar = () => {
        list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
      }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
+   }, [contas, statusFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
   const hoje = new Date().toISOString().split("T")[0];
   const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
@@ -737,11 +728,10 @@ const FinanceiroPagar = () => {
                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data fim</label>
                  <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={selectCls} />
                </div>
-               {(statusFilter || tipoFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
+               {(statusFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
                  <button
                    onClick={() => {
                      setStatusFilter("");
-                     setTipoFilter("");
                      setCategoriaFilter("");
                      setPeriodoFilter("");
                      setDataInicio("");
