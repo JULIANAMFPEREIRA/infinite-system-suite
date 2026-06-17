@@ -399,6 +399,7 @@ const CRM = () => {
   const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
   const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
   const [orcNomeInput, setOrcNomeInput] = useState("");
+  const [showConjuntoModal, setShowConjuntoModal] = useState(false);
 
   const isPreviewable = (filename: string) => {
     const ext = filename.split(".").pop()?.toLowerCase() ?? "";
