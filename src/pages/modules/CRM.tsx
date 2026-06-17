@@ -2177,6 +2177,11 @@ const CRM = () => {
                             {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary shrink-0"><Pencil size={11} /></button>}
                           </div>
                           {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
+                          {(orc as any).grupo_id && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-bold uppercase shrink-0 flex items-center gap-1" title="Faz parte de um grupo">
+                              <Link2 size={9} /> Grupo
+                            </span>
+                          )}
                         </div>
                         {orc.data_envio_proposta && (
                           <p className="text-[10px] text-muted-foreground italic mt-1">
