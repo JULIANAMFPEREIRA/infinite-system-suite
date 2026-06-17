@@ -92,6 +92,17 @@ Deno.serve(async (req) => {
     });
     if (roleErr) console.error("role insert", roleErr);
 
+    // If the user is a client, link auth user to clientes table
+    if (role === "cliente") {
+      const clientEmail = email;
+      const { error: clientErr } = await supabaseAdmin
+        .from("clientes")
+        .update({ user_id: userId })
+        .eq("email", clientEmail)
+        .eq("empresa_id", callerProfile.empresa_id);
+      if (clientErr) console.error("clientes user_id update", clientErr);
+    }
+
     // If the user is an architect, also ensure a fornecedor entry exists
     // so they appear in the CRM "Arquiteto" selection field.
     if (role === "arquiteto") {
