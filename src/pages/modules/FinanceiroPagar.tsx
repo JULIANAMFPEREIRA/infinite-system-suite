@@ -802,21 +802,13 @@ const FinanceiroPagar = () => {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Tipo</label>
-              <select 
-                value={tipo} 
-                onChange={e => handleTipoChange(e.target.value)} 
+              <label className="text-[11px] text-muted-foreground">Tipo / Subcategoria</label>
+              <input
+                value={tipo}
+                onChange={e => setTipo(e.target.value)}
+                placeholder="Ex: Frete, Imposto, Pix..."
                 className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Selecionar tipo...</option>
-                <option value="produto">Produto</option>
-                <option value="servico">Serviço</option>
-                <option value="frete">Frete</option>
-                <option value="imposto">Imposto</option>
-                <option value="adicional">Adicional</option>
-                <option value="comissao">Comissão</option>
-                <option value="outro">Outro</option>
-              </select>
+              />
             </div>
             <div className="space-y-1 col-span-2">
               <label className="text-[11px] text-muted-foreground">Descrição</label>
