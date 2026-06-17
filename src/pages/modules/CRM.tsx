@@ -27,6 +27,7 @@ import AtividadeLog from "@/components/projeto/AtividadeLog";
 import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/useVisitasTecnicas";
 import { useFormasPagamento } from "@/hooks/useCategorias";
+import AprovarConjuntoModal from "@/components/crm/AprovarConjuntoModal";
 
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
 
