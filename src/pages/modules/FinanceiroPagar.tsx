@@ -124,6 +124,7 @@ const FinanceiroPagar = () => {
   const deleteCategoria = useDeleteCategoria();
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  const [newCatTipo, setNewCatTipo] = useState("saida_operacional");
 
   
 
@@ -1220,7 +1221,12 @@ const FinanceiroPagar = () => {
                 {categorias && categorias.length > 0 ? (
                   categorias.map((cat) => (
                     <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
-                      <span className="text-xs font-medium">{cat.nome}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-medium truncate">{cat.nome}</span>
+                        <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border shrink-0">
+                          {tipoLabels[(cat as any).tipo || "outros"] ?? ((cat as any).tipo || "—")}
+                        </span>
+                      </div>
                       <button
                         onClick={() => {
                           if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
@@ -1245,7 +1251,7 @@ const FinanceiroPagar = () => {
             {/* Add New */}
             <div className="space-y-2 pt-4 border-t border-border">
               <h3 className="text-sm font-semibold text-foreground">Adicionar Nova Categoria</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <Input
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
@@ -1253,22 +1259,33 @@ const FinanceiroPagar = () => {
                   className="h-9 text-xs uppercase"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newCatName.trim()) {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase() });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
                       setNewCatName("");
                     }
                   }}
                 />
-                <Button
-                  size="sm"
-                  disabled={!newCatName.trim() || createCategoria.isPending}
-                  onClick={() => {
-                    createCategoria.mutate({ nome: newCatName.toUpperCase() });
-                    setNewCatName("");
-                  }}
-                >
-                  <Plus size={14} className="mr-1" />
-                  Adicionar
-                </Button>
+                <div className="flex gap-2">
+                  <select
+                    value={newCatTipo}
+                    onChange={(e) => setNewCatTipo(e.target.value)}
+                    className="flex-1 h-9 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    {CATEGORIA_TIPO_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    disabled={!newCatName.trim() || createCategoria.isPending}
+                    onClick={() => {
+                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      setNewCatName("");
+                    }}
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
