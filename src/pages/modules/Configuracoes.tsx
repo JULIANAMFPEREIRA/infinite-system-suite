@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCategorias, useCreateCategoria, useUpdateCategoria, useDeleteCategoria, useFormasPagamento, useCreateFormaPagamento, useUpdateFormaPagamento, useDeleteFormaPagamento } from "@/hooks/useCategorias";
+import { useSubcategorias, useCreateSubcategoria, useDeleteSubcategoria } from "@/hooks/useSubcategorias";
 import { useTransportadoras, useCreateTransportadora, useDeleteTransportadora } from "@/hooks/useTransportadoras";
 import { statusProjetoLabels, statusProjetoColors } from "@/lib/statusConfig";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ type Section =
   | "formas_pagamento"
   | "tipos_financeiros"
   | "categorias"
+  | "subcategorias"
   | "status_projeto"
   | "transportadoras";
 
@@ -53,6 +55,7 @@ const menuGroups = [
       { key: "formas_pagamento" as Section, label: "Formas de Pagamento", icon: CreditCard },
       { key: "tipos_financeiros" as Section, label: "Tipos Financeiros", icon: Wallet },
       { key: "categorias" as Section, label: "Categorias", icon: Tag },
+      { key: "subcategorias" as Section, label: "Tipos / Subcategorias", icon: Tag },
     ],
   },
   {
@@ -76,7 +79,7 @@ const Configuracoes = () => {
     const section = searchParams.get("section");
     const valid: Section[] = [
       "empresa","usuarios","funcionarios","parceiros",
-      "formas_pagamento","tipos_financeiros","categorias",
+      "formas_pagamento","tipos_financeiros","categorias","subcategorias",
       "status_projeto","transportadoras",
     ];
     if (section && (valid as string[]).includes(section)) {
@@ -171,6 +174,13 @@ const Configuracoes = () => {
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
+
+  // Subcategorias
+  const { data: subcategorias, isLoading: isLoadingSubs } = useSubcategorias();
+  const createSub = useCreateSubcategoria();
+  const deleteSub = useDeleteSubcategoria();
+  const [novaSubNome, setNovaSubNome] = useState("");
+  const [novaSubCatId, setNovaSubCatId] = useState("");
 
   // Transportadoras
   const { data: transportadoras, isLoading: isLoadingTransp } = useTransportadoras();
