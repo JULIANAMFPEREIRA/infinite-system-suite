@@ -9,13 +9,17 @@ export const useCategorias = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categorias")
-        .select("*")
-        .eq("empresa_id", empresaId!)
+        .select("id, nome, tipo, deletado, empresa_id")
+        .eq("empresa_id", "a0000000-0000-0000-0000-000000000001")
         .order("nome");
-      if (error) throw error;
+      if (error) {
+        console.error("useCategorias error:", error);
+        throw error;
+      }
+      console.log("useCategorias data:", data);
       return data;
     },
-    enabled: !!empresaId,
+    enabled: true,
   });
 };
 
