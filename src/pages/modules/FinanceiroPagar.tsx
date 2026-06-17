@@ -102,7 +102,7 @@ const FinanceiroPagar = () => {
      queryFn: async () => {
        let query = supabase
          .from("financeiro_pagar")
-         .select("*, comissao_id, fornecedores(nome), projetos(nome)")
+         .select("*, comissao_id, fornecedores(nome), projetos(nome), categorias(id, nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
           .order("data_vencimento", { ascending: true, nullsFirst: false });
@@ -199,8 +199,6 @@ const FinanceiroPagar = () => {
 
   const [statusFilter, setStatusFilter] = useState("pendente");
   const [periodoFilter, setPeriodoFilter] = useState("");
-  const [mesFilter, setMesFilter] = useState("");
-  const [anoFilter, setAnoFilter] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
     const [buscaFilter, setBuscaFilter] = useState("");
@@ -441,8 +439,15 @@ const FinanceiroPagar = () => {
    const filtered = useMemo(() => {
      let list = contas ?? [];
      if (statusFilter) list = list.filter(c => c.status === statusFilter);
-     if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
-     if (categoriaFilter) list = list.filter(c => (c as any).categorias?.id === categoriaFilter);
+     if (tipoFilter) {
+       list = list.filter(c => {
+         const t = (c as any).tipo_manual && String((c as any).tipo_manual).trim() !== ""
+           ? String((c as any).tipo_manual).toLowerCase()
+           : inferTipo(c.descricao);
+         return t === tipoFilter;
+       });
+     }
+     if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
      if (buscaFilter.trim()) {
        const q = buscaFilter.trim().toLowerCase();
        list = list.filter(c => {
@@ -451,7 +456,23 @@ const FinanceiroPagar = () => {
          return descMatch || fornecedorMatch;
        });
      }
-     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+     if (periodoFilter) {
+       const today = new Date();
+       const y = today.getFullYear();
+       const m = today.getMonth();
+       list = list.filter(c => {
+         if (!c.data_vencimento) return false;
+         const d = new Date(c.data_vencimento + "T00:00:00");
+         if (periodoFilter === "mes_atual") return d.getFullYear() === y && d.getMonth() === m;
+         if (periodoFilter === "mes_passado") {
+           const pm = m === 0 ? 11 : m - 1;
+           const py = m === 0 ? y - 1 : y;
+           return d.getFullYear() === py && d.getMonth() === pm;
+         }
+         if (periodoFilter === "ano_atual") return d.getFullYear() === y;
+         return true;
+       });
+     }
      if (dataInicio) {
        list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
      }
@@ -459,7 +480,7 @@ const FinanceiroPagar = () => {
        list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
      }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
+   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
   const hoje = new Date().toISOString().split("T")[0];
   const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
