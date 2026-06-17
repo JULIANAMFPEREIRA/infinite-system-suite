@@ -2143,6 +2143,15 @@ const CRM = () => {
                     <button onClick={gerarPropostaPDF} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80">
                       <Printer size={11} /> PDF
                     </button>
+                    {(orcamentos?.length ?? 0) >= 2 && (
+                      <button
+                        onClick={() => setShowConjuntoModal(true)}
+                        className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80 border border-primary/30"
+                        title="Aprovar múltiplos orçamentos juntos"
+                      >
+                        <Link2 size={11} /> Aprovar em Conjunto
+                      </button>
+                    )}
                   </div>
                 </div>
 
