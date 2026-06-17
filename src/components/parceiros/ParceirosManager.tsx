@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
  import { UserPlus, Save, Pencil, KeyRound, Copy, Trash2, Search, ExternalLink, DollarSign, Wallet } from "lucide-react";
  import PagamentosTecnicoModal from "./PagamentosTecnicoModal";
 import { toast } from "sonner";
-import ClientesLoginSection from "./ClientesLoginSection";
 
 const ParceirosManager = () => {
   const empresaId = useEmpresa();
@@ -864,8 +863,6 @@ const ParceirosManager = () => {
             </table>
           </div>
         </section>
-
-        <ClientesLoginSection />
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
