@@ -3790,3 +3790,164 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
 };
 
 export default CRM;
+
+/* ─── ClienteAcessoSection: gerencia login do cliente no portal ─── */
+function ClienteAcessoSection({
+  clienteId,
+  clienteNome,
+  clienteEmail,
+  userId,
+  onChanged,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  clienteEmail: string | null;
+  userId: string | null;
+  onChanged: (newUserId: string | null) => void;
+}) {
+  const [openCreate, setOpenCreate] = useState(false);
+  const [password, setPassword] = useState("");
+  const [emailEdit, setEmailEdit] = useState(clienteEmail ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const handleCreate = async () => {
+    if (!emailEdit) { toast.error("Informe um email."); return; }
+    if (!password || password.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres."); return; }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          full_name: (clienteNome || "").toUpperCase(),
+          email: emailEdit.toLowerCase(),
+          password,
+          role: "cliente",
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error ?? "Erro ao criar login");
+      const newUserId = data.user_id as string;
+      const { error: updErr } = await supabase
+        .from("clientes")
+        .update({ user_id: newUserId, email: emailEdit.toLowerCase() })
+        .eq("id", clienteId);
+      if (updErr) throw updErr;
+      toast.success("Login criado com sucesso");
+      setOpenCreate(false);
+      setPassword("");
+      onChanged(newUserId);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao criar login");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm("Remover acesso do cliente ao portal? (o usuário não será excluído)")) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("clientes").update({ user_id: null }).eq("id", clienteId);
+      if (error) throw error;
+      toast.success("Acesso removido");
+      onChanged(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao remover acesso");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded p-3 space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="space-y-1">
+          <h2 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <KeyRound size={13} /> Acesso do Cliente
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            Habilite o login do cliente no portal em <span className="font-mono">/portal/cliente</span>.
+          </p>
+        </div>
+        <span
+          className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+            userId ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {userId ? "Acesso ativo" : "Sem acesso"}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {!userId ? (
+          <button
+            onClick={() => { setEmailEdit(clienteEmail ?? ""); setPassword(""); setOpenCreate(true); }}
+            disabled={busy}
+            className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <KeyRound size={12} /> Criar Login
+          </button>
+        ) : (
+          <>
+            <a
+              href="/portal/cliente"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-8 px-3 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 flex items-center gap-1.5"
+            >
+              <ExternalLink size={12} /> Ver Portal
+            </a>
+            <button
+              onClick={handleRemove}
+              disabled={busy}
+              className="h-8 px-3 rounded bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <ShieldOff size={12} /> Remover Acesso
+            </button>
+          </>
+        )}
+      </div>
+
+      <Dialog open={openCreate} onOpenChange={(v) => { if (!v) { setOpenCreate(false); setPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar login para {clienteNome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">Email</label>
+              <input
+                value={emailEdit}
+                onChange={(e) => setEmailEdit(e.target.value)}
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                autoCapitalize="none"
+                autoCorrect="off"
+                placeholder="cliente@exemplo.com"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Senha de acesso *</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-9 px-2 mt-1 rounded border border-border bg-background text-sm"
+                placeholder="Mínimo 6 caracteres"
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              O cliente acessará o portal em /portal/cliente com esse email e senha.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setOpenCreate(false); setPassword(""); }}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={busy}>
+              {busy ? "Criando…" : "Criar Login"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
