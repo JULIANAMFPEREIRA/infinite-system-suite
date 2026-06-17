@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors, RotateCcw, Settings, Settings2 } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
-import { useFormasPagamento, useCategorias, useCreateCategoria, useDeleteCategoria } from "@/hooks/useCategorias";
+import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,10 +103,7 @@ const FinanceiroPagar = () => {
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
   const { data: categorias } = useCategorias();
-  const createCategoria = useCreateCategoria();
-  const deleteCategoria = useDeleteCategoria();
-  const [showCatManager, setShowCatManager] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
+  const navigate = useNavigate();
 
   
 
