@@ -334,6 +334,35 @@ export default function AprovarConjuntoModal({
               />
             </div>
           </div>
+
+          {condicao === "parcelado" && computedParcelas.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Parcelas
+              </p>
+              <div className="border border-border rounded-lg divide-y divide-border max-h-56 overflow-y-auto">
+                {computedParcelas.map((p, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-3 px-3 py-2"
+                  >
+                    <span className="text-[11px] font-semibold text-muted-foreground w-16 shrink-0">
+                      {i + 1}/{computedParcelas.length}
+                    </span>
+                    <span className="font-mono text-primary text-[12px] flex-1">
+                      R$ {p.valor.toFixed(2)}
+                    </span>
+                    <input
+                      type="date"
+                      value={parcelaDates[i] ?? p.data}
+                      onChange={e => updateParcelaDate(i, e.target.value)}
+                      className="h-7 px-2 rounded border border-border bg-background text-[12px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
