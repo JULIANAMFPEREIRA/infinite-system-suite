@@ -66,7 +66,6 @@ export const useFormasPagamento = () => {
         .from("formas_pagamento")
         .select("*")
         .eq("empresa_id", "a0000000-0000-0000-0000-000000000001")
-        .eq("ativo", true)
         .order("nome");
       if (error) {
         console.error("useFormasPagamento error:", error);
