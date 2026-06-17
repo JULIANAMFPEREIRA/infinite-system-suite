@@ -675,7 +675,12 @@ const FinanceiroPagar = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowCatManager(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/configuracoes?section=categorias')}
+            title="Gerenciar categorias em Configurações"
+          >
             <Settings2 className="h-4 w-4 mr-2" />
             Categorias
           </Button>
