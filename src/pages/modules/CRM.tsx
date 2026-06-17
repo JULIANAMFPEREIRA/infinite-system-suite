@@ -2027,6 +2027,17 @@ const CRM = () => {
                   }}
                 />
               </div>
+
+              <ClienteAcessoSection
+                clienteId={detailClient.id}
+                clienteNome={detailClient.nome}
+                clienteEmail={detailClient.email}
+                userId={detailClient.user_id ?? null}
+                onChanged={(newUserId) => {
+                  setDetailClient({ ...detailClient, user_id: newUserId });
+                  qc.invalidateQueries({ queryKey: ["clientes"] });
+                }}
+              />
             </div>
           </TabsContent>
 
