@@ -3,7 +3,7 @@ import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity, Wrench, Link2 } from "lucide-react";
+import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity, Wrench, Link2, KeyRound, ExternalLink, ShieldOff } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
