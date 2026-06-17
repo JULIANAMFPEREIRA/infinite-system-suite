@@ -995,7 +995,6 @@ const Configuracoes = () => {
     );
   };
 
-  const sectionMap: Record<Section, () => JSX.Element> = {
   const renderSubcategorias = () => {
     const filtered = (subcategorias ?? []).filter(s =>
       s.nome?.toLowerCase().includes(searchTerm.toLowerCase())
