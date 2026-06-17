@@ -108,6 +108,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          visivel_cliente: boolean
         }
         Insert: {
           conteudo?: string | null
@@ -116,6 +117,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          visivel_cliente?: boolean
         }
         Update: {
           conteudo?: string | null
@@ -124,6 +126,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          visivel_cliente?: boolean
         }
         Relationships: []
       }
@@ -307,6 +310,7 @@ export type Database = {
           status_crm: Database["public"]["Enums"]["status_crm"] | null
           telefone: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           arquiteto_id?: string | null
@@ -325,6 +329,7 @@ export type Database = {
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           arquiteto_id?: string | null
@@ -343,6 +348,7 @@ export type Database = {
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
