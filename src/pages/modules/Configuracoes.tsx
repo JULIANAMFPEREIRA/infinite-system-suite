@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCategorias, useCreateCategoria, useUpdateCategoria, useDeleteCategoria, useFormasPagamento, useCreateFormaPagamento, useUpdateFormaPagamento, useDeleteFormaPagamento } from "@/hooks/useCategorias";
+import { useSubcategorias, useCreateSubcategoria, useDeleteSubcategoria } from "@/hooks/useSubcategorias";
 import { useTransportadoras, useCreateTransportadora, useDeleteTransportadora } from "@/hooks/useTransportadoras";
 import { statusProjetoLabels, statusProjetoColors } from "@/lib/statusConfig";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ type Section =
   | "formas_pagamento"
   | "tipos_financeiros"
   | "categorias"
+  | "subcategorias"
   | "status_projeto"
   | "transportadoras";
 
@@ -53,6 +55,7 @@ const menuGroups = [
       { key: "formas_pagamento" as Section, label: "Formas de Pagamento", icon: CreditCard },
       { key: "tipos_financeiros" as Section, label: "Tipos Financeiros", icon: Wallet },
       { key: "categorias" as Section, label: "Categorias", icon: Tag },
+      { key: "subcategorias" as Section, label: "Tipos / Subcategorias", icon: Tag },
     ],
   },
   {
@@ -76,7 +79,7 @@ const Configuracoes = () => {
     const section = searchParams.get("section");
     const valid: Section[] = [
       "empresa","usuarios","funcionarios","parceiros",
-      "formas_pagamento","tipos_financeiros","categorias",
+      "formas_pagamento","tipos_financeiros","categorias","subcategorias",
       "status_projeto","transportadoras",
     ];
     if (section && (valid as string[]).includes(section)) {
@@ -171,6 +174,13 @@ const Configuracoes = () => {
   const deleteForma = useDeleteFormaPagamento();
   const [novaForma, setNovaForma] = useState("");
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
+
+  // Subcategorias
+  const { data: subcategorias, isLoading: isLoadingSubs } = useSubcategorias();
+  const createSub = useCreateSubcategoria();
+  const deleteSub = useDeleteSubcategoria();
+  const [novaSubNome, setNovaSubNome] = useState("");
+  const [novaSubCatId, setNovaSubCatId] = useState("");
 
   // Transportadoras
   const { data: transportadoras, isLoading: isLoadingTransp } = useTransportadoras();
@@ -985,6 +995,101 @@ const Configuracoes = () => {
     );
   };
 
+  const renderSubcategorias = () => {
+    const filtered = (subcategorias ?? []).filter(s =>
+      s.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const catName = (id: string | null) => (categorias ?? []).find(c => c.id === id)?.nome ?? "—";
+    return (
+      <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Tipos / Subcategorias</h2>
+            <p className="text-xs text-muted-foreground">Subdivisões das categorias usadas em Contas a Pagar</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                className="pl-9 h-9 text-xs"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Input
+              placeholder="Novo tipo..."
+              className="h-9 text-xs w-40"
+              value={novaSubNome}
+              onChange={e => setNovaSubNome(e.target.value)}
+            />
+            <select
+              value={novaSubCatId}
+              onChange={e => setNovaSubCatId(e.target.value)}
+              className="h-9 px-2 text-xs bg-background border border-border rounded"
+            >
+              <option value="">Categoria (opcional)</option>
+              {(categorias ?? []).map(c => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              onClick={async () => {
+                if (!novaSubNome.trim()) { toast.error("Nome obrigatório"); return; }
+                await createSub.mutateAsync({ nome: novaSubNome.trim().toUpperCase(), categoria_id: novaSubCatId || null });
+                setNovaSubNome(""); setNovaSubCatId("");
+                toast.success("Subcategoria criada");
+              }}
+              className="h-9"
+            >
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+        </div>
+
+        {isLoadingSubs && <div className="text-center py-8 text-sm text-muted-foreground">Carregando...</div>}
+
+        {!isLoadingSubs && filtered.length > 0 ? (
+          <div className="border border-border rounded overflow-hidden">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-secondary/60">
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Nome</th>
+                <th className="text-left px-2.5 py-2 font-semibold border-b border-border w-56">Categoria</th>
+                <th className="text-center px-2.5 py-2 font-semibold border-b border-border w-20">Ações</th>
+              </tr></thead>
+              <tbody>
+                {filtered.map(s => (
+                  <tr key={s.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                    <td className="px-2.5 py-1.5 font-medium">{s.nome}</td>
+                    <td className="px-2.5 py-1.5 text-muted-foreground">{catName(s.categoria_id)}</td>
+                    <td className="px-2.5 py-1.5 text-center">
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Excluir subcategoria?")) {
+                            deleteSub.mutate(s.id);
+                            toast.success("Removida");
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
+                        title="Excluir"
+                      ><Trash2 size={12} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : !isLoadingSubs && (
+          <div className="text-center py-12 border border-dashed rounded-lg bg-secondary/10">
+            <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground font-medium">Nenhum registro encontrado</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const sectionMap: Record<Section, () => JSX.Element> = {
     empresa: renderEmpresa,
     usuarios: renderUsuarios,
@@ -995,6 +1100,7 @@ const Configuracoes = () => {
     status_projeto: renderStatusProjeto,
     transportadoras: renderTransportadoras,
     parceiros: () => <ParceirosManager />,
+    subcategorias: renderSubcategorias,
   };
 
   return (

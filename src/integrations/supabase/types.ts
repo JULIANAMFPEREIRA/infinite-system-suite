@@ -2366,6 +2366,38 @@ export type Database = {
         }
         Relationships: []
       }
+      subcategorias: {
+        Row: {
+          categoria_id: string | null
+          created_at: string | null
+          empresa_id: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          categoria_id?: string | null
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          categoria_id?: string | null
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategorias_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transportadoras: {
         Row: {
           ativo: boolean
