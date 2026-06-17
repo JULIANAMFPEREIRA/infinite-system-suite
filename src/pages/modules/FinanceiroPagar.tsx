@@ -1182,12 +1182,7 @@ const FinanceiroPagar = () => {
                 {categorias && categorias.length > 0 ? (
                   categorias.map((cat) => (
                     <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-medium truncate">{cat.nome}</span>
-                        <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border shrink-0">
-                          {tipoLabels[(cat as any).tipo || "outros"] ?? ((cat as any).tipo || "—")}
-                        </span>
-                      </div>
+                      <span className="text-xs font-medium truncate">{cat.nome}</span>
                       <button
                         onClick={() => {
                           if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
