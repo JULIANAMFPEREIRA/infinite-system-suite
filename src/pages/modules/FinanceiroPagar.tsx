@@ -23,29 +23,11 @@ const STATUS_OPTIONS = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
-const TIPO_OPTIONS = [
-  { value: "", label: "Todos tipos" },
-  { value: "imposto", label: "Imposto" },
-  { value: "frete", label: "Frete" },
-  { value: "produto", label: "Produto" },
-  { value: "servico", label: "Serviço" },
-  { value: "adicional", label: "Adicional" },
-  { value: "comissao", label: "Comissão" },
-];
-
 const PERIODO_OPTIONS = [
   { value: "", label: "Todos" },
   { value: "mes_atual", label: "Este mês" },
   { value: "mes_passado", label: "Mês passado" },
   { value: "ano_atual", label: "Este ano" },
-];
-
-const CATEGORIA_TIPO_OPTIONS = [
-  { value: "saida_operacional", label: "📤 Saída Operacional" },
-  { value: "saida_financeira", label: "💰 Saída Financeira" },
-  { value: "saida_especial", label: "⭐ Saída Especial" },
-  { value: "produto", label: "📦 Produto" },
-  { value: "entrada", label: "📥 Entrada" },
 ];
 
 const inferTipo = (desc: string | null): string => {
@@ -102,7 +84,7 @@ const FinanceiroPagar = () => {
      queryFn: async () => {
        let query = supabase
          .from("financeiro_pagar")
-         .select("*, comissao_id, fornecedores(nome), projetos(nome), categorias(id, nome)")
+         .select("*, comissao_id, fornecedores(nome), projetos(nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
           .order("data_vencimento", { ascending: true, nullsFirst: false });
@@ -124,7 +106,6 @@ const FinanceiroPagar = () => {
   const deleteCategoria = useDeleteCategoria();
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState("");
-  const [newCatTipo, setNewCatTipo] = useState("saida_operacional");
 
   
 
