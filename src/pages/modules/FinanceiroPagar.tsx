@@ -73,6 +73,31 @@ const tipoBadge = (c: any) => {
 
 const RETIRADA_NOME = "RETIRADA PESSOAL (PRÓ-LABORE)";
 
+const SubcategoriaSelect = ({
+  categoriaId,
+  value,
+  onChange,
+}: {
+  categoriaId: string;
+  value: string;
+  onChange: (v: string) => void;
+}) => {
+  const { data: subs } = useSubcategorias(categoriaId || undefined);
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={!categoriaId}
+      className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+    >
+      <option value="">{categoriaId ? "Selecionar tipo..." : "Selecione categoria primeiro"}</option>
+      {(subs ?? []).map((s) => (
+        <option key={s.id} value={s.nome}>{s.nome}</option>
+      ))}
+    </select>
+  );
+};
+
 const toTitleCase = (str: string) =>
   (str ?? "").split(" ").map(w =>
   w.charAt(0).toUpperCase() +
