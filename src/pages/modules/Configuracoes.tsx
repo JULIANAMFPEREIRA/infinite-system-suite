@@ -164,19 +164,7 @@ const Configuracoes = () => {
   const categoriasCount = (tipo: string) => (categorias ?? []).filter(c => c.tipo === tipo).length;
 
   // Formas de pagamento
-  const { data: formas, isLoading: isLoadingFormas } = useQuery({
-    queryKey: ["config_formas", empresaId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("formas_pagamento")
-        .select("*")
-        .eq("empresa_id", empresaId!)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!empresaId && activeSection === "formas_pagamento",
-  });
+  const { data: formas, isLoading: isLoadingFormas } = useFormasPagamento();
   const createForma = useCreateFormaPagamento();
   const updateForma = useUpdateFormaPagamento();
   const deleteForma = useDeleteFormaPagamento();
@@ -184,19 +172,7 @@ const Configuracoes = () => {
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
 
   // Transportadoras
-  const { data: transportadoras, isLoading: isLoadingTransp } = useQuery({
-    queryKey: ["config_transp", empresaId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transportadoras")
-        .select("*")
-        .eq("empresa_id", empresaId!)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!empresaId && activeSection === "transportadoras",
-  });
+  const { data: transportadoras, isLoading: isLoadingTransp } = useTransportadoras();
   const createTransp = useCreateTransportadora();
   const deleteTransp = useDeleteTransportadora();
   const [novaTranspNome, setNovaTranspNome] = useState("");
