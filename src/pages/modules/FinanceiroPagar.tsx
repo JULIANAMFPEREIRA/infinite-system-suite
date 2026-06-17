@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
-import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
 const STATUS_OPTIONS = [
@@ -31,6 +30,22 @@ const TIPO_OPTIONS = [
   { value: "produto", label: "Produto" },
   { value: "servico", label: "Serviço" },
   { value: "adicional", label: "Adicional" },
+  { value: "comissao", label: "Comissão" },
+];
+
+const PERIODO_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "mes_atual", label: "Este mês" },
+  { value: "mes_passado", label: "Mês passado" },
+  { value: "ano_atual", label: "Este ano" },
+];
+
+const CATEGORIA_TIPO_OPTIONS = [
+  { value: "saida_operacional", label: "📤 Saída Operacional" },
+  { value: "saida_financeira", label: "💰 Saída Financeira" },
+  { value: "saida_especial", label: "⭐ Saída Especial" },
+  { value: "produto", label: "📦 Produto" },
+  { value: "entrada", label: "📥 Entrada" },
 ];
 
 const inferTipo = (desc: string | null): string => {
@@ -47,10 +62,12 @@ const inferTipo = (desc: string | null): string => {
 
 const tipoBadge = (c: any) => {
   const getTipo = (conta: any) => {
-    if (conta.tipo_manual) return conta.tipo_manual.toLowerCase();
-    if (conta.descricao?.toLowerCase().includes("frete")) return "frete";
-    if (conta.descricao?.toLowerCase().includes("imposto")) return "imposto";
-    if (conta.descricao?.toLowerCase().includes("comissão") || conta.origem === "comissao") return "comissao";
+    if (conta.tipo_manual && String(conta.tipo_manual).trim() !== "") {
+      return String(conta.tipo_manual).toLowerCase();
+    }
+    const inferred = inferTipo(conta.descricao);
+    if (inferred) return inferred;
+    if (conta.origem === "comissao") return "comissao";
     const desc = conta?.descricao ?? "";
     if (desc.startsWith("Compra — ")) return "produto";
     return "manual";
