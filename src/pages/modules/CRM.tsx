@@ -3,7 +3,7 @@ import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity, Wrench } from "lucide-react";
+import { Users, Plus, PlusCircle, Pencil, Trash2, Eye, ArrowLeft, MessageSquare, FileText, Package, Phone, MapPin, User, Calculator, Upload, Download, Image, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, Check, RefreshCw, Printer, LayoutGrid, List, DollarSign, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Loader2, CalendarDays, History, Activity, Wrench, Link2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -27,6 +27,7 @@ import AtividadeLog from "@/components/projeto/AtividadeLog";
 import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/useVisitasTecnicas";
 import { useFormasPagamento } from "@/hooks/useCategorias";
+import AprovarConjuntoModal from "@/components/crm/AprovarConjuntoModal";
 
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
 
@@ -398,6 +399,7 @@ const CRM = () => {
   const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
   const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
   const [orcNomeInput, setOrcNomeInput] = useState("");
+  const [showConjuntoModal, setShowConjuntoModal] = useState(false);
 
   const isPreviewable = (filename: string) => {
     const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -2141,6 +2143,15 @@ const CRM = () => {
                     <button onClick={gerarPropostaPDF} className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80">
                       <Printer size={11} /> PDF
                     </button>
+                    {(orcamentos?.length ?? 0) >= 2 && (
+                      <button
+                        onClick={() => setShowConjuntoModal(true)}
+                        className="flex items-center gap-1 h-7 px-2 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/80 border border-primary/30"
+                        title="Aprovar múltiplos orçamentos juntos"
+                      >
+                        <Link2 size={11} /> Aprovar em Conjunto
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2166,6 +2177,11 @@ const CRM = () => {
                             {editingOrcNome !== orc.id && <button onClick={e => { e.stopPropagation(); setEditingOrcNome(orc.id); setOrcNomeInput(orc.nome); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary shrink-0"><Pencil size={11} /></button>}
                           </div>
                           {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
+                          {(orc as any).grupo_id && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-bold uppercase shrink-0 flex items-center gap-1" title="Faz parte de um grupo">
+                              <Link2 size={9} /> Grupo
+                            </span>
+                          )}
                         </div>
                         {orc.data_envio_proposta && (
                           <p className="text-[10px] text-muted-foreground italic mt-1">
@@ -2205,6 +2221,18 @@ const CRM = () => {
                   </div>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">Criando primeiro orçamento...</p>
+                )}
+
+                {detailClient && empresaId && (
+                  <AprovarConjuntoModal
+                    open={showConjuntoModal}
+                    onClose={() => setShowConjuntoModal(false)}
+                    cliente={{ id: detailClient.id, nome: detailClient.nome }}
+                    empresaId={empresaId}
+                    orcamentos={(orcamentos ?? []) as any}
+                    onSuccess={() => { refetchOrcamentos(); }}
+                    syncOrcamentoToProject={syncOrcamentoToProject}
+                  />
                 )}
               </section>
 

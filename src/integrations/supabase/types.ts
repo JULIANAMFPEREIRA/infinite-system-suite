@@ -778,6 +778,7 @@ export type Database = {
           frete_outro: string | null
           frete_tipo: string | null
           frete_vencimento: string | null
+          grupo_id: string | null
           id: string
           imposto: number | null
           imposto_vencimento: string | null
@@ -801,6 +802,7 @@ export type Database = {
           frete_outro?: string | null
           frete_tipo?: string | null
           frete_vencimento?: string | null
+          grupo_id?: string | null
           id?: string
           imposto?: number | null
           imposto_vencimento?: string | null
@@ -824,6 +826,7 @@ export type Database = {
           frete_outro?: string | null
           frete_tipo?: string | null
           frete_vencimento?: string | null
+          grupo_id?: string | null
           id?: string
           imposto?: number | null
           imposto_vencimento?: string | null
@@ -847,6 +850,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_orcamentos_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "orcamento_grupos"
             referencedColumns: ["id"]
           },
         ]
@@ -1665,6 +1675,48 @@ export type Database = {
           titulo?: string
         }
         Relationships: []
+      }
+      orcamento_grupos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string | null
+          projeto_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string | null
+          projeto_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string | null
+          projeto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_grupos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamento_grupos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pagamentos_rt: {
         Row: {
