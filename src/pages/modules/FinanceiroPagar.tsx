@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, Layers, Scissors, RotateCcw, Settings, Settings2 } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
-import { useFormasPagamento, useCategorias, useCreateCategoria, useDeleteCategoria } from "@/hooks/useCategorias";
+import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,10 +103,7 @@ const FinanceiroPagar = () => {
   const updateConta = useUpdateContaPagar();
   const { data: formasPgto } = useFormasPagamento();
   const { data: categorias } = useCategorias();
-  const createCategoria = useCreateCategoria();
-  const deleteCategoria = useDeleteCategoria();
-  const [showCatManager, setShowCatManager] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
+  const navigate = useNavigate();
 
   
 
@@ -677,7 +675,12 @@ const FinanceiroPagar = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowCatManager(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/configuracoes?section=categorias')}
+            title="Gerenciar categorias em Configurações"
+          >
             <Settings2 className="h-4 w-4 mr-2" />
             Categorias
           </Button>
@@ -1161,85 +1164,6 @@ const FinanceiroPagar = () => {
             >
               Confirmar Parcelamento
             </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Category Manager Modal */}
-      <Dialog open={showCatManager} onOpenChange={setShowCatManager}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Gerenciar Categorias</DialogTitle>
-            <DialogDescription>
-              Adicione ou remova categorias para organizar seus lançamentos.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
-            {/* List Existing */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Categorias Existentes</h3>
-              <div className="max-h-[200px] overflow-y-auto border border-border rounded-md divide-y divide-border">
-                {categorias && categorias.length > 0 ? (
-                  categorias.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
-                      <span className="text-xs font-medium truncate">{cat.nome}</span>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
-                            deleteCategoria.mutate(cat.id);
-                          }
-                        }}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-xs text-muted-foreground">
-                    Nenhuma categoria encontrada.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Add New */}
-            <div className="space-y-2 pt-4 border-t border-border">
-              <h3 className="text-sm font-semibold text-foreground">Adicionar Nova Categoria</h3>
-              <div className="flex flex-col gap-2">
-                <Input
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  placeholder="NOME DA CATEGORIA"
-                  className="h-9 text-xs uppercase"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newCatName.trim()) {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
-                      setNewCatName("");
-                    }
-                  }}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    disabled={!newCatName.trim() || createCategoria.isPending}
-                    onClick={() => {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
-                      setNewCatName("");
-                    }}
-                  >
-                    <Plus size={14} className="mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowCatManager(false)}>
-              Fechar
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

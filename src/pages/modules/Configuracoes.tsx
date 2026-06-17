@@ -1,4 +1,5 @@
- import { useState, useMemo } from "react";
+ import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil, Search,
   CreditCard, Tag, ListChecks, Building2, UserCog, Wallet, FolderKanban, PackageCheck,
@@ -70,6 +71,18 @@ const menuGroups = [
 
 const Configuracoes = () => {
   const [activeSection, setActiveSection] = useState<Section>("empresa");
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const section = searchParams.get("section");
+    const valid: Section[] = [
+      "empresa","usuarios","funcionarios","parceiros",
+      "formas_pagamento","tipos_financeiros","categorias",
+      "status_projeto","transportadoras",
+    ];
+    if (section && (valid as string[]).includes(section)) {
+      setActiveSection(section as Section);
+    }
+  }, [searchParams]);
   const [searchTerm, setSearchTerm] = useState("");
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
@@ -815,7 +828,15 @@ const Configuracoes = () => {
               {categorias.map(c => (
                 <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
                   <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
-                  <td className="px-2.5 py-1.5 text-muted-foreground">{tipoLabel(c.tipo ?? "—")}</td>
+                  <td className="px-2.5 py-1.5">
+                    {c.tipo ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+                        {tipoLabel(c.tipo)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-2.5 py-1.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => setEditCat({ id: c.id, nome: c.nome, tipo: c.tipo ?? "entrada" })} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary" title="Editar"><Pencil size={12} /></button>
