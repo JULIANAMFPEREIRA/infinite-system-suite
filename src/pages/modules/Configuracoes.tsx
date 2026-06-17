@@ -1,4 +1,5 @@
- import { useState, useMemo } from "react";
+ import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Settings, Plus, Trash2, UserPlus, Users, Truck, Pencil, Search,
   CreditCard, Tag, ListChecks, Building2, UserCog, Wallet, FolderKanban, PackageCheck,
@@ -70,6 +71,18 @@ const menuGroups = [
 
 const Configuracoes = () => {
   const [activeSection, setActiveSection] = useState<Section>("empresa");
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const section = searchParams.get("section");
+    const valid: Section[] = [
+      "empresa","usuarios","funcionarios","parceiros",
+      "formas_pagamento","tipos_financeiros","categorias",
+      "status_projeto","transportadoras",
+    ];
+    if (section && (valid as string[]).includes(section)) {
+      setActiveSection(section as Section);
+    }
+  }, [searchParams]);
   const [searchTerm, setSearchTerm] = useState("");
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
