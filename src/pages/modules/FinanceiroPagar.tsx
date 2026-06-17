@@ -719,50 +719,64 @@ const FinanceiroPagar = () => {
        <div className="bg-card border border-border rounded-lg p-3 space-y-3">
          <div className="flex flex-col md:flex-row gap-3 items-end">
            <div className="flex-1">
-             <FinanceiroFilters
-               statusOptions={STATUS_OPTIONS}
-               statusFilter={statusFilter}
-               onStatusChange={setStatusFilter}
-               periodoFilter={periodoFilter}
-               onPeriodoChange={setPeriodoFilter}
-               mesFilter={mesFilter}
-               onMesChange={setMesFilter}
-               anoFilter={anoFilter}
-               onAnoChange={setAnoFilter}
-               extraFilters={
-                 <div className="flex items-center gap-2 flex-wrap">
-                   <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-                     {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                   </select>
-                   
-                   <div className="flex items-center gap-1">
-                     <select 
-                       value={categoriaFilter} 
-                       onChange={e => setCategoriaFilter(e.target.value)} 
-                       className={`${selectCls} max-w-[150px]`}
-                     >
-                       <option value="">Todas categorias</option>
-                       {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                         <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
-                           {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                         </optgroup>
-                       ))}
-                     </select>
-                   </div>
-
-                   <div className="flex items-center gap-1.5 shrink-0">
-                     <div className="flex items-center gap-1">
-                       <span className="text-[10px] text-muted-foreground">De:</span>
-                       <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-                     </div>
-                     <div className="flex items-center gap-1">
-                       <span className="text-[10px] text-muted-foreground">Até:</span>
-                       <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-                     </div>
-                   </div>
-                 </div>
-               }
-             />
+             <div className="flex items-end gap-3 flex-wrap">
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Status</label>
+                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectCls}>
+                   {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label || "Todos"}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tipo</label>
+                 <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+                   {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</label>
+                 <select
+                   value={categoriaFilter}
+                   onChange={e => setCategoriaFilter(e.target.value)}
+                   className={`${selectCls} max-w-[180px]`}
+                 >
+                   <option value="">Todas</option>
+                   {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                     <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                       {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                     </optgroup>
+                   ))}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Período</label>
+                 <select value={periodoFilter} onChange={e => setPeriodoFilter(e.target.value)} className={selectCls}>
+                   {PERIODO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data início</label>
+                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className={selectCls} />
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data fim</label>
+                 <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={selectCls} />
+               </div>
+               {(statusFilter || tipoFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
+                 <button
+                   onClick={() => {
+                     setStatusFilter("");
+                     setTipoFilter("");
+                     setCategoriaFilter("");
+                     setPeriodoFilter("");
+                     setDataInicio("");
+                     setDataFim("");
+                   }}
+                   className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                 >
+                   Limpar
+                 </button>
+               )}
+             </div>
            </div>
 
            <div className="relative w-full md:w-64">
