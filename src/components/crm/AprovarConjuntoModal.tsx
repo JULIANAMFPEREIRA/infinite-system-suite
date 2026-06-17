@@ -48,6 +48,7 @@ export default function AprovarConjuntoModal({
   const [intervaloDias, setIntervaloDias] = useState(30);
   const [formaPgto, setFormaPgto] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [parcelaDates, setParcelaDates] = useState<string[]>([]);
 
   // Pre-select all when opening
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function AprovarConjuntoModal({
 
   const toggle = (id: string) => setSelected(s => ({ ...s, [id]: !s[id] }));
 
-  const buildParcelas = (): { valor: number; data: string }[] => {
+  const computedParcelas = useMemo<{ valor: number; data: string }[]>(() => {
     if (totalCombinado <= 0) return [];
     const n = condicao === "vista" ? 1 : Math.max(1, Math.floor(numParcelas));
     const base = Number((totalCombinado / n).toFixed(2));
@@ -110,6 +111,19 @@ export default function AprovarConjuntoModal({
         valor: i === n - 1 ? ultimoAjuste : base,
         data: d.toISOString().slice(0, 10),
       };
+    });
+  }, [totalCombinado, condicao, numParcelas, primeiraData, intervaloDias]);
+
+  // Reset per-parcela dates whenever the structural inputs change
+  useEffect(() => {
+    setParcelaDates(computedParcelas.map(p => p.data));
+  }, [computedParcelas]);
+
+  const updateParcelaDate = (idx: number, value: string) => {
+    setParcelaDates(prev => {
+      const next = [...prev];
+      next[idx] = value;
+      return next;
     });
   };
 
@@ -161,8 +175,11 @@ export default function AprovarConjuntoModal({
         await supabase.from("financeiro_receber").delete().in("id", idsApagar);
       }
 
-      // 4. Gera parcelas combinadas
-      const parcelas = buildParcelas();
+      // 4. Gera parcelas combinadas (datas individuais editadas pelo usuário)
+      const parcelas = computedParcelas.map((p, i) => ({
+        valor: p.valor,
+        data: parcelaDates[i] ?? p.data,
+      }));
       const sufixo = formaPgto ? ` (Conjunto - ${formaPgto})` : " (Conjunto)";
       const inserts = parcelas.map((p, i) => ({
         empresa_id: empresaId,
@@ -317,6 +334,35 @@ export default function AprovarConjuntoModal({
               />
             </div>
           </div>
+
+          {condicao === "parcelado" && computedParcelas.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Parcelas
+              </p>
+              <div className="border border-border rounded-lg divide-y divide-border max-h-56 overflow-y-auto">
+                {computedParcelas.map((p, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-3 px-3 py-2"
+                  >
+                    <span className="text-[11px] font-semibold text-muted-foreground w-16 shrink-0">
+                      {i + 1}/{computedParcelas.length}
+                    </span>
+                    <span className="font-mono text-primary text-[12px] flex-1">
+                      R$ {p.valor.toFixed(2)}
+                    </span>
+                    <input
+                      type="date"
+                      value={parcelaDates[i] ?? p.data}
+                      onChange={e => updateParcelaDate(i, e.target.value)}
+                      className="h-7 px-2 rounded border border-border bg-background text-[12px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
