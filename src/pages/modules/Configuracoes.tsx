@@ -128,20 +128,7 @@ const Configuracoes = () => {
   });
 
   // Categorias
-  const { data: categorias, isLoading: isLoadingCategorias } = useQuery({
-    queryKey: ["config_categorias", empresaId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categorias")
-        .select("*")
-        .eq("empresa_id", empresaId!)
-        .eq("deletado", false)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!empresaId && activeSection === "categorias",
-  });
+  const { data: categorias, isLoading: isLoadingCategorias } = useCategorias();
   const createCat = useCreateCategoria();
   const updateCat = useUpdateCategoria();
   const deleteCat = useDeleteCategoria();
