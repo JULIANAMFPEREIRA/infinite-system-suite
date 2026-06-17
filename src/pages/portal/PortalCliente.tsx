@@ -413,6 +413,145 @@ const PortalCliente = () => {
                   </div>
                 )}
               </TabsContent>
+
+              {/* Visitas Agendadas */}
+              <TabsContent value="agenda" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
+                {!agenda?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma visita agendada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {agenda.map((a: any) => (
+                      <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                            a.status === "concluida" ? "bg-success/15 text-success" :
+                            a.status === "cancelada" ? "bg-destructive/15 text-destructive" :
+                            "bg-primary/15 text-primary"
+                          }`}>{a.status ?? "agendada"}</span>
+                        </div>
+                        {a.descricao && <p className="text-[11px] text-muted-foreground">{a.descricao}</p>}
+                        <p className="text-[11px] text-muted-foreground">
+                          {a.data_inicio ? new Date(a.data_inicio).toLocaleString("pt-BR") : "—"}
+                          {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Financeiro */}
+              <TabsContent value="financeiro" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
+                {!financeiro?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum lançamento financeiro.</p>
+                ) : (
+                  <div className="border border-border rounded-lg overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-secondary/50">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                          <th className="text-left px-3 py-2 font-semibold">Vencimento</th>
+                          <th className="text-right px-3 py-2 font-semibold">Valor</th>
+                          <th className="text-center px-3 py-2 font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {financeiro.map((f: any) => (
+                          <tr key={f.id} className="border-t border-border">
+                            <td className="px-3 py-2">
+                              {f.descricao ?? "Lançamento"}
+                              {f.parcela && <span className="text-[10px] text-muted-foreground ml-1">({f.parcela})</span>}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{f.data_vencimento ? new Date(f.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {Number(f.valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                f.status === "pago" || f.status === "recebido" ? "bg-success/15 text-success" :
+                                f.status === "atrasado" ? "bg-destructive/15 text-destructive" :
+                                "bg-warning/15 text-warning"
+                              }`}>{f.status ?? "pendente"}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Anotações */}
+              <TabsContent value="anotacoes" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
+                {!anotacoes?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma anotação compartilhada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {anotacoes.map((n: any) => (
+                      <div key={n.id} className="bg-card border border-border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">{n.tipo}</span>
+                          <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <p className="text-xs text-foreground whitespace-pre-wrap">{n.descricao}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Mensagens */}
+              <TabsContent value="mensagens" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Mensagens</h3>
+                <div className="bg-card border border-border rounded-lg flex flex-col h-[60vh]">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {!mensagens?.length && (
+                      <p className="text-xs text-muted-foreground py-6 text-center">Sem mensagens ainda.</p>
+                    )}
+                    {mensagens?.map((m: any) => {
+                      const sentByMe = m.tipo === "mensagem_cliente";
+                      return (
+                        <div key={m.id} className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                            sentByMe ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                          }`}>
+                            {!sentByMe && m.titulo && (
+                              <p className="text-[10px] font-semibold opacity-80 mb-0.5">{m.titulo}</p>
+                            )}
+                            <p className="text-xs whitespace-pre-wrap">{m.mensagem}</p>
+                            <p className={`text-[9px] mt-1 ${sentByMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              {m.data ? new Date(m.data).toLocaleString("pt-BR") : ""}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); sendMessage.mutate(); }}
+                    className="border-t border-border p-2 flex gap-2"
+                  >
+                    <input
+                      value={novaMensagem}
+                      onChange={(e) => setNovaMensagem(e.target.value)}
+                      placeholder="Escreva uma mensagem…"
+                      className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!novaMensagem.trim() || sendMessage.isPending}
+                      className="h-9 px-3 rounded bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Send size={12} /> Enviar
+                    </button>
+                  </form>
+                </div>
+              </TabsContent>
             </Tabs>
           </>
         )}
