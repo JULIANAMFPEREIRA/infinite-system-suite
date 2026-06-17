@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
-import FinanceiroFilters, { applyDateFilter } from "@/components/financeiro/FinanceiroFilters";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
 
 const STATUS_OPTIONS = [
@@ -31,6 +30,22 @@ const TIPO_OPTIONS = [
   { value: "produto", label: "Produto" },
   { value: "servico", label: "Serviço" },
   { value: "adicional", label: "Adicional" },
+  { value: "comissao", label: "Comissão" },
+];
+
+const PERIODO_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "mes_atual", label: "Este mês" },
+  { value: "mes_passado", label: "Mês passado" },
+  { value: "ano_atual", label: "Este ano" },
+];
+
+const CATEGORIA_TIPO_OPTIONS = [
+  { value: "saida_operacional", label: "📤 Saída Operacional" },
+  { value: "saida_financeira", label: "💰 Saída Financeira" },
+  { value: "saida_especial", label: "⭐ Saída Especial" },
+  { value: "produto", label: "📦 Produto" },
+  { value: "entrada", label: "📥 Entrada" },
 ];
 
 const inferTipo = (desc: string | null): string => {
@@ -47,10 +62,12 @@ const inferTipo = (desc: string | null): string => {
 
 const tipoBadge = (c: any) => {
   const getTipo = (conta: any) => {
-    if (conta.tipo_manual) return conta.tipo_manual.toLowerCase();
-    if (conta.descricao?.toLowerCase().includes("frete")) return "frete";
-    if (conta.descricao?.toLowerCase().includes("imposto")) return "imposto";
-    if (conta.descricao?.toLowerCase().includes("comissão") || conta.origem === "comissao") return "comissao";
+    if (conta.tipo_manual && String(conta.tipo_manual).trim() !== "") {
+      return String(conta.tipo_manual).toLowerCase();
+    }
+    const inferred = inferTipo(conta.descricao);
+    if (inferred) return inferred;
+    if (conta.origem === "comissao") return "comissao";
     const desc = conta?.descricao ?? "";
     if (desc.startsWith("Compra — ")) return "produto";
     return "manual";
@@ -85,7 +102,7 @@ const FinanceiroPagar = () => {
      queryFn: async () => {
        let query = supabase
          .from("financeiro_pagar")
-         .select("*, comissao_id, fornecedores(nome), projetos(nome)")
+         .select("*, comissao_id, fornecedores(nome), projetos(nome), categorias(id, nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
           .order("data_vencimento", { ascending: true, nullsFirst: false });
@@ -107,6 +124,7 @@ const FinanceiroPagar = () => {
   const deleteCategoria = useDeleteCategoria();
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  const [newCatTipo, setNewCatTipo] = useState("saida_operacional");
 
   
 
@@ -182,8 +200,6 @@ const FinanceiroPagar = () => {
 
   const [statusFilter, setStatusFilter] = useState("pendente");
   const [periodoFilter, setPeriodoFilter] = useState("");
-  const [mesFilter, setMesFilter] = useState("");
-  const [anoFilter, setAnoFilter] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
     const [buscaFilter, setBuscaFilter] = useState("");
@@ -424,8 +440,15 @@ const FinanceiroPagar = () => {
    const filtered = useMemo(() => {
      let list = contas ?? [];
      if (statusFilter) list = list.filter(c => c.status === statusFilter);
-     if (tipoFilter) list = list.filter(c => inferTipo(c.descricao) === tipoFilter);
-     if (categoriaFilter) list = list.filter(c => (c as any).categorias?.id === categoriaFilter);
+     if (tipoFilter) {
+       list = list.filter(c => {
+         const t = (c as any).tipo_manual && String((c as any).tipo_manual).trim() !== ""
+           ? String((c as any).tipo_manual).toLowerCase()
+           : inferTipo(c.descricao);
+         return t === tipoFilter;
+       });
+     }
+     if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
      if (buscaFilter.trim()) {
        const q = buscaFilter.trim().toLowerCase();
        list = list.filter(c => {
@@ -434,7 +457,23 @@ const FinanceiroPagar = () => {
          return descMatch || fornecedorMatch;
        });
      }
-     list = applyDateFilter(list, "data_vencimento", periodoFilter, mesFilter, anoFilter);
+     if (periodoFilter) {
+       const today = new Date();
+       const y = today.getFullYear();
+       const m = today.getMonth();
+       list = list.filter(c => {
+         if (!c.data_vencimento) return false;
+         const d = new Date(c.data_vencimento + "T00:00:00");
+         if (periodoFilter === "mes_atual") return d.getFullYear() === y && d.getMonth() === m;
+         if (periodoFilter === "mes_passado") {
+           const pm = m === 0 ? 11 : m - 1;
+           const py = m === 0 ? y - 1 : y;
+           return d.getFullYear() === py && d.getMonth() === pm;
+         }
+         if (periodoFilter === "ano_atual") return d.getFullYear() === y;
+         return true;
+       });
+     }
      if (dataInicio) {
        list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
      }
@@ -442,7 +481,7 @@ const FinanceiroPagar = () => {
        list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
      }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, mesFilter, anoFilter, buscaFilter, dataInicio, dataFim]);
+   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
   const hoje = new Date().toISOString().split("T")[0];
   const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
@@ -681,50 +720,64 @@ const FinanceiroPagar = () => {
        <div className="bg-card border border-border rounded-lg p-3 space-y-3">
          <div className="flex flex-col md:flex-row gap-3 items-end">
            <div className="flex-1">
-             <FinanceiroFilters
-               statusOptions={STATUS_OPTIONS}
-               statusFilter={statusFilter}
-               onStatusChange={setStatusFilter}
-               periodoFilter={periodoFilter}
-               onPeriodoChange={setPeriodoFilter}
-               mesFilter={mesFilter}
-               onMesChange={setMesFilter}
-               anoFilter={anoFilter}
-               onAnoChange={setAnoFilter}
-               extraFilters={
-                 <div className="flex items-center gap-2 flex-wrap">
-                   <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-                     {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                   </select>
-                   
-                   <div className="flex items-center gap-1">
-                     <select 
-                       value={categoriaFilter} 
-                       onChange={e => setCategoriaFilter(e.target.value)} 
-                       className={`${selectCls} max-w-[150px]`}
-                     >
-                       <option value="">Todas categorias</option>
-                       {Object.entries(categoriaGroups).map(([tipo, cats]) => (
-                         <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
-                           {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                         </optgroup>
-                       ))}
-                     </select>
-                   </div>
-
-                   <div className="flex items-center gap-1.5 shrink-0">
-                     <div className="flex items-center gap-1">
-                       <span className="text-[10px] text-muted-foreground">De:</span>
-                       <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-                     </div>
-                     <div className="flex items-center gap-1">
-                       <span className="text-[10px] text-muted-foreground">Até:</span>
-                       <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-7 px-1.5 text-[10px] bg-background border border-border rounded" />
-                     </div>
-                   </div>
-                 </div>
-               }
-             />
+             <div className="flex items-end gap-3 flex-wrap">
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Status</label>
+                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectCls}>
+                   {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label || "Todos"}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tipo</label>
+                 <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
+                   {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</label>
+                 <select
+                   value={categoriaFilter}
+                   onChange={e => setCategoriaFilter(e.target.value)}
+                   className={`${selectCls} max-w-[180px]`}
+                 >
+                   <option value="">Todas</option>
+                   {Object.entries(categoriaGroups).map(([tipo, cats]) => (
+                     <optgroup key={tipo} label={tipoLabels[tipo] || tipo}>
+                       {cats.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                     </optgroup>
+                   ))}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Período</label>
+                 <select value={periodoFilter} onChange={e => setPeriodoFilter(e.target.value)} className={selectCls}>
+                   {PERIODO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                 </select>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data início</label>
+                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className={selectCls} />
+               </div>
+               <div className="flex flex-col gap-1">
+                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data fim</label>
+                 <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={selectCls} />
+               </div>
+               {(statusFilter || tipoFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
+                 <button
+                   onClick={() => {
+                     setStatusFilter("");
+                     setTipoFilter("");
+                     setCategoriaFilter("");
+                     setPeriodoFilter("");
+                     setDataInicio("");
+                     setDataFim("");
+                   }}
+                   className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                 >
+                   Limpar
+                 </button>
+               )}
+             </div>
            </div>
 
            <div className="relative w-full md:w-64">
@@ -1168,7 +1221,12 @@ const FinanceiroPagar = () => {
                 {categorias && categorias.length > 0 ? (
                   categorias.map((cat) => (
                     <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
-                      <span className="text-xs font-medium">{cat.nome}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-medium truncate">{cat.nome}</span>
+                        <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border shrink-0">
+                          {tipoLabels[(cat as any).tipo || "outros"] ?? ((cat as any).tipo || "—")}
+                        </span>
+                      </div>
                       <button
                         onClick={() => {
                           if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
@@ -1193,7 +1251,7 @@ const FinanceiroPagar = () => {
             {/* Add New */}
             <div className="space-y-2 pt-4 border-t border-border">
               <h3 className="text-sm font-semibold text-foreground">Adicionar Nova Categoria</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <Input
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
@@ -1201,22 +1259,33 @@ const FinanceiroPagar = () => {
                   className="h-9 text-xs uppercase"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newCatName.trim()) {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase() });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
                       setNewCatName("");
                     }
                   }}
                 />
-                <Button
-                  size="sm"
-                  disabled={!newCatName.trim() || createCategoria.isPending}
-                  onClick={() => {
-                    createCategoria.mutate({ nome: newCatName.toUpperCase() });
-                    setNewCatName("");
-                  }}
-                >
-                  <Plus size={14} className="mr-1" />
-                  Adicionar
-                </Button>
+                <div className="flex gap-2">
+                  <select
+                    value={newCatTipo}
+                    onChange={(e) => setNewCatTipo(e.target.value)}
+                    className="flex-1 h-9 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    {CATEGORIA_TIPO_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    disabled={!newCatName.trim() || createCategoria.isPending}
+                    onClick={() => {
+                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      setNewCatName("");
+                    }}
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
