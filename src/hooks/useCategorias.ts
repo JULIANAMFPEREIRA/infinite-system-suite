@@ -11,7 +11,7 @@ export const useCategorias = () => {
         .from("categorias")
         .select("*")
         .eq("empresa_id", empresaId!)
-        .eq("deletado", false)
+        .is("deletado", false)
         .order("nome");
       if (error) throw error;
       return data;
