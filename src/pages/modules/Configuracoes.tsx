@@ -1005,6 +1005,7 @@ const Configuracoes = () => {
     status_projeto: renderStatusProjeto,
     transportadoras: renderTransportadoras,
     parceiros: () => <ParceirosManager />,
+    subcategorias: renderSubcategorias,
   };
 
   return (
