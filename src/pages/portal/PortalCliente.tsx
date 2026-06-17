@@ -270,9 +270,13 @@ const PortalCliente = () => {
               <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
                 <TabsTrigger value="diario" className="gap-1.5 text-xs"><Activity size={14} /> Diário de Obra</TabsTrigger>
                 <TabsTrigger value="cronograma" className="gap-1.5 text-xs"><CalendarDays size={14} /> Cronograma</TabsTrigger>
+                <TabsTrigger value="agenda" className="gap-1.5 text-xs"><CalendarClock size={14} /> Visitas Agendadas</TabsTrigger>
                 <TabsTrigger value="imagens" className="gap-1.5 text-xs"><ImageIcon size={14} /> Imagens</TabsTrigger>
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
+                <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
+                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
+                <TabsTrigger value="mensagens" className="gap-1.5 text-xs"><MessageSquare size={14} /> Mensagens</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
