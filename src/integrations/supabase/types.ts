@@ -657,6 +657,7 @@ export type Database = {
           id: string
           tipo: string | null
           usuario_id: string | null
+          visivel_cliente: boolean
         }
         Insert: {
           cliente_id: string
@@ -665,6 +666,7 @@ export type Database = {
           id?: string
           tipo?: string | null
           usuario_id?: string | null
+          visivel_cliente?: boolean
         }
         Update: {
           cliente_id?: string
@@ -673,6 +675,7 @@ export type Database = {
           id?: string
           tipo?: string | null
           usuario_id?: string | null
+          visivel_cliente?: boolean
         }
         Relationships: [
           {
@@ -1655,6 +1658,7 @@ export type Database = {
           projeto_id: string | null
           tipo: string
           titulo: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1667,6 +1671,7 @@ export type Database = {
           projeto_id?: string | null
           tipo?: string
           titulo: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1679,6 +1684,7 @@ export type Database = {
           projeto_id?: string | null
           tipo?: string
           titulo?: string
+          user_id?: string | null
         }
         Relationships: []
       }
