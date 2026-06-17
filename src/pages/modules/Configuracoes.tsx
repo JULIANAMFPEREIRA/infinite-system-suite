@@ -87,6 +87,7 @@ const Configuracoes = () => {
   const qc = useQueryClient();
   const { user, profile, roles } = useAuth();
   const empresaId = useEmpresa();
+  console.log('[Configuracoes] empresaId:', empresaId);
   const [isUploading, setIsUploading] = useState(false);
 
   // --- Data hooks ---
