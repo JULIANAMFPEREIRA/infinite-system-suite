@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, ChevronDown } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, MessageSquare, StickyNote, Send, CalendarClock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,11 +23,19 @@ const PortalCliente = () => {
   const navigate = useNavigate();
   const [selectedProjeto, setSelectedProjeto] = useState<string | null>(null);
 
-  // Find client and projects
+  // Find client (prefer user_id link, fall back to email match)
   const { data: clienteData, isLoading } = useQuery({
-    queryKey: ["portal_cliente_full", user?.email],
+    queryKey: ["portal_cliente_full", user?.id, user?.email],
     queryFn: async () => {
-      const { data: cliente } = await supabase.from("clientes").select("id, nome").eq("email", user!.email!).single();
+      let cliente: { id: string; nome: string } | null = null;
+      if (user?.id) {
+        const { data } = await supabase.from("clientes").select("id, nome").eq("user_id", user.id).maybeSingle();
+        cliente = data ?? null;
+      }
+      if (!cliente && user?.email) {
+        const { data } = await supabase.from("clientes").select("id, nome").eq("email", user.email).maybeSingle();
+        cliente = data ?? null;
+      }
       if (!cliente) return null;
       const { data: projetos } = await supabase.from("projetos")
         .select("id, nome, status, endereco_obra, data_inicio, data_previsao, descricao")
@@ -36,7 +44,7 @@ const PortalCliente = () => {
         .order("created_at", { ascending: false });
       return { cliente, projetos: projetos ?? [] };
     },
-    enabled: !!user?.email,
+    enabled: !!user?.id || !!user?.email,
   });
 
   const projetos = clienteData?.projetos ?? [];
