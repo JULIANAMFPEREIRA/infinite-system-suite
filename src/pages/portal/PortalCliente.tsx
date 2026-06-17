@@ -103,6 +103,84 @@ const PortalCliente = () => {
     enabled: !!active,
   });
 
+  // Visitas agendadas
+  const { data: agenda } = useQuery({
+    queryKey: ["portal_agenda", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("agenda_visitas" as any)
+        .select("id, titulo, descricao, data_inicio, data_fim, status")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .order("data_inicio", { ascending: false });
+      return (data ?? []) as any[];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Financeiro a receber
+  const { data: financeiro } = useQuery({
+    queryKey: ["portal_financeiro", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("financeiro_receber")
+        .select("id, descricao, valor, data_vencimento, data_recebimento, status, parcela")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("deletado", false)
+        .order("data_vencimento", { ascending: true });
+      return data ?? [];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Anotações visíveis para o cliente (crm_interacoes)
+  const { data: anotacoes } = useQuery({
+    queryKey: ["portal_anotacoes", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes")
+        .select("id, tipo, descricao, created_at, visivel_cliente")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("visivel_cliente" as any, true)
+        .order("created_at", { ascending: false });
+      return (data ?? []) as any[];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Mensagens (notificacoes do user logado)
+  const qc = useQueryClient();
+  const { data: mensagens } = useQuery({
+    queryKey: ["portal_mensagens", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("notificacoes")
+        .select("id, tipo, titulo, mensagem, data, user_id")
+        .eq("user_id" as any, user!.id)
+        .order("data", { ascending: true });
+      return (data ?? []) as any[];
+    },
+    enabled: !!user?.id,
+    refetchInterval: 15000,
+  });
+
+  const [novaMensagem, setNovaMensagem] = useState("");
+  const sendMessage = useMutation({
+    mutationFn: async () => {
+      const texto = novaMensagem.trim();
+      if (!texto || !user?.id) return;
+      const { data: emp } = await supabase.from("clientes").select("empresa_id").eq("id", clienteData!.cliente.id).single();
+      const { error } = await supabase.from("notificacoes").insert({
+        empresa_id: emp?.empresa_id,
+        user_id: user.id,
+        tipo: "mensagem_cliente",
+        titulo: "Mensagem do cliente",
+        mensagem: texto,
+        data: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { setNovaMensagem(""); qc.invalidateQueries({ queryKey: ["portal_mensagens"] }); },
+  });
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensagens?.length]);
+
   const activeProjeto = projetos.find(p => p.id === active);
   const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
 
