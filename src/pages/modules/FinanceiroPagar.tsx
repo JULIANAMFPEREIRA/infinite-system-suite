@@ -4,6 +4,7 @@ import { DollarSign, Plus, Check, Pencil, Trash2, Search, Paperclip, X, Upload, 
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroPagar, useCreateContaPagar, useUpdateContaPagar } from "@/hooks/useFinanceiro";
 import { useFormasPagamento, useCategorias } from "@/hooks/useCategorias";
+import { useSubcategorias } from "@/hooks/useSubcategorias";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -247,6 +248,7 @@ const FinanceiroPagar = () => {
   // Auto-suggest when selecting "Retirada Pessoal"
   const handleCategoriaChange = (catId: string) => {
     setCategoriaId(catId);
+    setTipo("");
     const cat = categorias?.find(c => c.id === catId);
     if (cat && cat.nome.toUpperCase() === RETIRADA_NOME) {
       // Suggest description if empty
@@ -806,11 +808,10 @@ const FinanceiroPagar = () => {
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground">Tipo / Subcategoria</label>
-              <input
+              <SubcategoriaSelect
+                categoriaId={categoriaId}
                 value={tipo}
-                onChange={e => setTipo(e.target.value)}
-                placeholder="Ex: Frete, Imposto, Pix..."
-                className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                onChange={setTipo}
               />
             </div>
             <div className="space-y-1 col-span-2">
@@ -919,7 +920,7 @@ const FinanceiroPagar = () => {
                         {c.origem === "orcamento" ? (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Orçamento</span>
                         ) : c.origem === "comissao" ? (
-                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-purple-500/10 text-purple-500 border-purple-500/20">Comissão</span>
+                          <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-primary/10 text-primary border-primary/20">Orçamento</span>
                         ) : (
                           <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border">Manual</span>
                         )}
