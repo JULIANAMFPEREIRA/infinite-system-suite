@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useCategorias, useCreateCategoria, useUpdateCategoria, useDeleteCategoria, useFormasPagamento, useCreateFormaPagamento, useUpdateFormaPagamento, useDeleteFormaPagamento } from "@/hooks/useCategorias";
-import { useSubcategorias, useCreateSubcategoria, useDeleteSubcategoria } from "@/hooks/useSubcategorias";
+import { useSubcategorias } from "@/hooks/useSubcategorias";
 import { useTransportadoras, useCreateTransportadora, useDeleteTransportadora } from "@/hooks/useTransportadoras";
 import { statusProjetoLabels, statusProjetoColors } from "@/lib/statusConfig";
 import { toast } from "sonner";
@@ -175,10 +175,10 @@ const Configuracoes = () => {
   const [novaForma, setNovaForma] = useState("");
   const [editForma, setEditForma] = useState<{ id: string; nome: string } | null>(null);
 
-  // Subcategorias
+  // Subcategorias (armazenadas em categorias com tipo='subcategoria')
   const { data: subcategorias, isLoading: isLoadingSubs } = useSubcategorias();
-  const createSub = useCreateSubcategoria();
-  const deleteSub = useDeleteSubcategoria();
+  const createSub = useCreateCategoria();
+  const deleteSub = useDeleteCategoria();
   const [novaSubNome, setNovaSubNome] = useState("");
   const [novaSubCatId, setNovaSubCatId] = useState("");
 
@@ -1037,7 +1037,7 @@ const Configuracoes = () => {
               size="sm"
               onClick={async () => {
                 if (!novaSubNome.trim()) { toast.error("Nome obrigatório"); return; }
-                await createSub.mutateAsync({ nome: novaSubNome.trim().toUpperCase(), categoria_id: novaSubCatId || null });
+                await createSub.mutateAsync({ nome: novaSubNome.trim().toUpperCase(), tipo: "subcategoria" });
                 setNovaSubNome(""); setNovaSubCatId("");
                 toast.success("Subcategoria criada");
               }}
