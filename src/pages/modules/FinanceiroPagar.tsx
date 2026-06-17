@@ -23,29 +23,11 @@ const STATUS_OPTIONS = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
-const TIPO_OPTIONS = [
-  { value: "", label: "Todos tipos" },
-  { value: "imposto", label: "Imposto" },
-  { value: "frete", label: "Frete" },
-  { value: "produto", label: "Produto" },
-  { value: "servico", label: "Serviço" },
-  { value: "adicional", label: "Adicional" },
-  { value: "comissao", label: "Comissão" },
-];
-
 const PERIODO_OPTIONS = [
   { value: "", label: "Todos" },
   { value: "mes_atual", label: "Este mês" },
   { value: "mes_passado", label: "Mês passado" },
   { value: "ano_atual", label: "Este ano" },
-];
-
-const CATEGORIA_TIPO_OPTIONS = [
-  { value: "saida_operacional", label: "📤 Saída Operacional" },
-  { value: "saida_financeira", label: "💰 Saída Financeira" },
-  { value: "saida_especial", label: "⭐ Saída Especial" },
-  { value: "produto", label: "📦 Produto" },
-  { value: "entrada", label: "📥 Entrada" },
 ];
 
 const inferTipo = (desc: string | null): string => {
@@ -102,7 +84,7 @@ const FinanceiroPagar = () => {
      queryFn: async () => {
        let query = supabase
          .from("financeiro_pagar")
-         .select("*, comissao_id, fornecedores(nome), projetos(nome), categorias(id, nome)")
+         .select("*, comissao_id, fornecedores(nome), projetos(nome)")
          .eq("empresa_id", empresaId!)
          .eq("deletado", false)
           .order("data_vencimento", { ascending: true, nullsFirst: false });
@@ -124,7 +106,6 @@ const FinanceiroPagar = () => {
   const deleteCategoria = useDeleteCategoria();
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState("");
-  const [newCatTipo, setNewCatTipo] = useState("saida_operacional");
 
   
 
@@ -200,7 +181,6 @@ const FinanceiroPagar = () => {
 
   const [statusFilter, setStatusFilter] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
-   const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
     const [buscaFilter, setBuscaFilter] = useState("");
     const [dataInicio, setDataInicio] = useState("");
@@ -440,14 +420,6 @@ const FinanceiroPagar = () => {
    const filtered = useMemo(() => {
      let list = contas ?? [];
      if (statusFilter) list = list.filter(c => c.status === statusFilter);
-     if (tipoFilter) {
-       list = list.filter(c => {
-         const t = (c as any).tipo_manual && String((c as any).tipo_manual).trim() !== ""
-           ? String((c as any).tipo_manual).toLowerCase()
-           : inferTipo(c.descricao);
-         return t === tipoFilter;
-       });
-     }
      if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
      if (buscaFilter.trim()) {
        const q = buscaFilter.trim().toLowerCase();
@@ -481,7 +453,7 @@ const FinanceiroPagar = () => {
        list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
      }
      return list;
-   }, [contas, statusFilter, tipoFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
+   }, [contas, statusFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
   const hoje = new Date().toISOString().split("T")[0];
   const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
@@ -728,12 +700,6 @@ const FinanceiroPagar = () => {
                  </select>
                </div>
                <div className="flex flex-col gap-1">
-                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tipo</label>
-                 <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-                   {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                 </select>
-               </div>
-               <div className="flex flex-col gap-1">
                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</label>
                  <select
                    value={categoriaFilter}
@@ -762,11 +728,10 @@ const FinanceiroPagar = () => {
                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Data fim</label>
                  <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={selectCls} />
                </div>
-               {(statusFilter || tipoFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
+               {(statusFilter || categoriaFilter || periodoFilter || dataInicio || dataFim) && (
                  <button
                    onClick={() => {
                      setStatusFilter("");
-                     setTipoFilter("");
                      setCategoriaFilter("");
                      setPeriodoFilter("");
                      setDataInicio("");
@@ -837,21 +802,13 @@ const FinanceiroPagar = () => {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Tipo</label>
-              <select 
-                value={tipo} 
-                onChange={e => handleTipoChange(e.target.value)} 
+              <label className="text-[11px] text-muted-foreground">Tipo / Subcategoria</label>
+              <input
+                value={tipo}
+                onChange={e => setTipo(e.target.value)}
+                placeholder="Ex: Frete, Imposto, Pix..."
                 className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Selecionar tipo...</option>
-                <option value="produto">Produto</option>
-                <option value="servico">Serviço</option>
-                <option value="frete">Frete</option>
-                <option value="imposto">Imposto</option>
-                <option value="adicional">Adicional</option>
-                <option value="comissao">Comissão</option>
-                <option value="outro">Outro</option>
-              </select>
+              />
             </div>
             <div className="space-y-1 col-span-2">
               <label className="text-[11px] text-muted-foreground">Descrição</label>
@@ -975,7 +932,11 @@ const FinanceiroPagar = () => {
                         <span className="font-medium text-foreground truncate block">{toTitleCase(c.descricao)}</span>
                       </td>
                       <td className="px-3 py-2 text-xs text-center">
-                        {tipoBadge(c)}
+                        {(c as any).tipo_manual && String((c as any).tipo_manual).trim() !== "" ? (
+                          <span className="text-[10px] text-foreground/80">{toTitleCase(String((c as any).tipo_manual))}</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/50">—</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
                       <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
@@ -1221,12 +1182,7 @@ const FinanceiroPagar = () => {
                 {categorias && categorias.length > 0 ? (
                   categorias.map((cat) => (
                     <div key={cat.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-medium truncate">{cat.nome}</span>
-                        <span className="inline-flex px-1.5 py-0 rounded text-[9px] font-medium border bg-secondary text-muted-foreground border-border shrink-0">
-                          {tipoLabels[(cat as any).tipo || "outros"] ?? ((cat as any).tipo || "—")}
-                        </span>
-                      </div>
+                      <span className="text-xs font-medium truncate">{cat.nome}</span>
                       <button
                         onClick={() => {
                           if (window.confirm(`Excluir categoria "${cat.nome}"?`)) {
@@ -1259,26 +1215,17 @@ const FinanceiroPagar = () => {
                   className="h-9 text-xs uppercase"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newCatName.trim()) {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
                       setNewCatName("");
                     }
                   }}
                 />
                 <div className="flex gap-2">
-                  <select
-                    value={newCatTipo}
-                    onChange={(e) => setNewCatTipo(e.target.value)}
-                    className="flex-1 h-9 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    {CATEGORIA_TIPO_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
                   <Button
                     size="sm"
                     disabled={!newCatName.trim() || createCategoria.isPending}
                     onClick={() => {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
                       setNewCatName("");
                     }}
                   >
