@@ -864,6 +864,8 @@ const ParceirosManager = () => {
             </table>
           </div>
         </section>
+
+        <ClientesLoginSection />
       </div>
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
