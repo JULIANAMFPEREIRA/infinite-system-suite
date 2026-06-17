@@ -104,7 +104,7 @@ export const useDeleteFormaPagamento = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("formas_pagamento").update({ ativo: false } as any).eq("id", id);
+      const { error } = await supabase.from("formas_pagamento").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["formas_pagamento"] }),

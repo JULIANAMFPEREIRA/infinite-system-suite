@@ -35,7 +35,10 @@ export const useCreateSubcategoria = () => {
           categoria_id: sub.categoria_id ?? null,
           empresa_id: EMPRESA_ID,
         });
-      if (error) throw error;
+      if (error) {
+        console.error("useCreateSubcategoria error:", error);
+        throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["subcategorias"] }),
   });
