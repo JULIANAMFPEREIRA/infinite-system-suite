@@ -65,13 +65,16 @@ export const useFormasPagamento = () => {
       const { data, error } = await supabase
         .from("formas_pagamento")
         .select("*")
-        .eq("empresa_id", empresaId!)
+        .eq("empresa_id", "a0000000-0000-0000-0000-000000000001")
         .eq("ativo", true)
         .order("nome");
-      if (error) throw error;
+      if (error) {
+        console.error("useFormasPagamento error:", error);
+        throw error;
+      }
       return data;
     },
-    enabled: !!empresaId,
+    enabled: true,
   });
 };
 
