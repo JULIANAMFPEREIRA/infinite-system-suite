@@ -198,7 +198,7 @@ const FinanceiroPagar = () => {
     }
   };
 
-  const [statusFilter, setStatusFilter] = useState("pendente");
+  const [statusFilter, setStatusFilter] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
    const [tipoFilter, setTipoFilter] = useState("");
    const [categoriaFilter, setCategoriaFilter] = useState("");
