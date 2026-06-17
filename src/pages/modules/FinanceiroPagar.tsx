@@ -1234,26 +1234,17 @@ const FinanceiroPagar = () => {
                   className="h-9 text-xs uppercase"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newCatName.trim()) {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
                       setNewCatName("");
                     }
                   }}
                 />
                 <div className="flex gap-2">
-                  <select
-                    value={newCatTipo}
-                    onChange={(e) => setNewCatTipo(e.target.value)}
-                    className="flex-1 h-9 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    {CATEGORIA_TIPO_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
                   <Button
                     size="sm"
                     disabled={!newCatName.trim() || createCategoria.isPending}
                     onClick={() => {
-                      createCategoria.mutate({ nome: newCatName.toUpperCase(), tipo: newCatTipo });
+                      createCategoria.mutate({ nome: newCatName.toUpperCase() } as any);
                       setNewCatName("");
                     }}
                   >
