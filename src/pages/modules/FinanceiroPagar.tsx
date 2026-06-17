@@ -709,12 +709,6 @@ const FinanceiroPagar = () => {
                  </select>
                </div>
                <div className="flex flex-col gap-1">
-                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tipo</label>
-                 <select value={tipoFilter} onChange={e => setTipoFilter(e.target.value)} className={selectCls}>
-                   {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                 </select>
-               </div>
-               <div className="flex flex-col gap-1">
                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Categoria</label>
                  <select
                    value={categoriaFilter}
