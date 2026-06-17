@@ -142,23 +142,13 @@ export default function AprovarConjuntoModal({
         return;
       }
 
-      // 2. Cria grupo
-      const { data: grupo, error: grupoErr } = await (supabase as any)
-        .from("orcamento_grupos")
-        .insert({
-          empresa_id: empresaId,
-          cliente_id: cliente.id,
-          projeto_id: projetoId,
-          nome: `Grupo — ${cliente.nome ?? "Cliente"}`,
-        })
-        .select()
-        .single();
-      if (grupoErr) throw grupoErr;
+      // 2. Gera grupo_id client-side (sem tabela orcamento_grupos)
+      const grupoId = crypto.randomUUID();
 
       // 3. Marca orçamentos selecionados como aprovados + vincula grupo
       const { error: updErr } = await (supabase as any)
         .from("crm_orcamentos")
-        .update({ aprovado: true, grupo_id: grupo.id })
+        .update({ aprovado: true, grupo_id: grupoId })
         .in("id", selectedIds);
       if (updErr) throw updErr;
 
