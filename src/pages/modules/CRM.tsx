@@ -2222,6 +2222,18 @@ const CRM = () => {
                 ) : (
                   <p className="text-[11px] text-muted-foreground">Criando primeiro orçamento...</p>
                 )}
+
+                {detailClient && empresaId && (
+                  <AprovarConjuntoModal
+                    open={showConjuntoModal}
+                    onClose={() => setShowConjuntoModal(false)}
+                    cliente={{ id: detailClient.id, nome: detailClient.nome }}
+                    empresaId={empresaId}
+                    orcamentos={(orcamentos ?? []) as any}
+                    onSuccess={() => { refetchOrcamentos(); }}
+                    syncOrcamentoToProject={syncOrcamentoToProject}
+                  />
+                )}
               </section>
 
               {/* ═══════════════════════════════════════════════════════ */}
