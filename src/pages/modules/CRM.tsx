@@ -329,6 +329,7 @@ const CRM = () => {
   const [editIntId, setEditIntId] = useState<string | null>(null);
   const [intData, setIntData] = useState<Date | undefined>(undefined);
   const [intMembroEquipe, setIntMembroEquipe] = useState("");
+  const [intVisivelCliente, setIntVisivelCliente] = useState(false);
 
   // CRM Items form
   const [itemDesc, setItemDesc] = useState("");
