@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, ChevronDown } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, MessageSquare, StickyNote, Send, CalendarClock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,11 +23,19 @@ const PortalCliente = () => {
   const navigate = useNavigate();
   const [selectedProjeto, setSelectedProjeto] = useState<string | null>(null);
 
-  // Find client and projects
+  // Find client (prefer user_id link, fall back to email match)
   const { data: clienteData, isLoading } = useQuery({
-    queryKey: ["portal_cliente_full", user?.email],
+    queryKey: ["portal_cliente_full", user?.id, user?.email],
     queryFn: async () => {
-      const { data: cliente } = await supabase.from("clientes").select("id, nome").eq("email", user!.email!).single();
+      let cliente: { id: string; nome: string } | null = null;
+      if (user?.id) {
+        const { data } = await supabase.from("clientes").select("id, nome").eq("user_id", user.id).maybeSingle();
+        cliente = data ?? null;
+      }
+      if (!cliente && user?.email) {
+        const { data } = await supabase.from("clientes").select("id, nome").eq("email", user.email).maybeSingle();
+        cliente = data ?? null;
+      }
       if (!cliente) return null;
       const { data: projetos } = await supabase.from("projetos")
         .select("id, nome, status, endereco_obra, data_inicio, data_previsao, descricao")
@@ -36,7 +44,7 @@ const PortalCliente = () => {
         .order("created_at", { ascending: false });
       return { cliente, projetos: projetos ?? [] };
     },
-    enabled: !!user?.email,
+    enabled: !!user?.id || !!user?.email,
   });
 
   const projetos = clienteData?.projetos ?? [];
@@ -94,6 +102,84 @@ const PortalCliente = () => {
     },
     enabled: !!active,
   });
+
+  // Visitas agendadas
+  const { data: agenda } = useQuery({
+    queryKey: ["portal_agenda", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("agenda_visitas" as any)
+        .select("id, titulo, descricao, data_inicio, data_fim, status")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .order("data_inicio", { ascending: false });
+      return (data ?? []) as any[];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Financeiro a receber
+  const { data: financeiro } = useQuery({
+    queryKey: ["portal_financeiro", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("financeiro_receber")
+        .select("id, descricao, valor, data_vencimento, data_recebimento, status, parcela")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("deletado", false)
+        .order("data_vencimento", { ascending: true });
+      return data ?? [];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Anotações visíveis para o cliente (crm_interacoes)
+  const { data: anotacoes } = useQuery({
+    queryKey: ["portal_anotacoes", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await (supabase.from("crm_interacoes") as any)
+        .select("id, tipo, descricao, created_at, visivel_cliente")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("visivel_cliente", true)
+        .order("created_at", { ascending: false });
+      return (data ?? []) as any[];
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
+  // Mensagens (notificacoes do user logado)
+  const qc = useQueryClient();
+  const { data: mensagens } = useQuery({
+    queryKey: ["portal_mensagens", user?.id],
+    queryFn: async () => {
+      const { data } = await (supabase.from("notificacoes") as any)
+        .select("id, tipo, titulo, mensagem, data, user_id")
+        .eq("user_id", user!.id)
+        .order("data", { ascending: true });
+      return (data ?? []) as any[];
+    },
+    enabled: !!user?.id,
+    refetchInterval: 15000,
+  });
+
+  const [novaMensagem, setNovaMensagem] = useState("");
+  const sendMessage = useMutation({
+    mutationFn: async () => {
+      const texto = novaMensagem.trim();
+      if (!texto || !user?.id) return;
+      const { data: emp } = await supabase.from("clientes").select("empresa_id").eq("id", clienteData!.cliente.id).single();
+      const { error } = await supabase.from("notificacoes").insert({
+        empresa_id: emp?.empresa_id,
+        user_id: user.id,
+        tipo: "mensagem_cliente",
+        titulo: "Mensagem do cliente",
+        mensagem: texto,
+        data: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { setNovaMensagem(""); qc.invalidateQueries({ queryKey: ["portal_mensagens"] }); },
+  });
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensagens?.length]);
 
   const activeProjeto = projetos.find(p => p.id === active);
   const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
@@ -184,9 +270,13 @@ const PortalCliente = () => {
               <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
                 <TabsTrigger value="diario" className="gap-1.5 text-xs"><Activity size={14} /> Diário de Obra</TabsTrigger>
                 <TabsTrigger value="cronograma" className="gap-1.5 text-xs"><CalendarDays size={14} /> Cronograma</TabsTrigger>
+                <TabsTrigger value="agenda" className="gap-1.5 text-xs"><CalendarClock size={14} /> Visitas Agendadas</TabsTrigger>
                 <TabsTrigger value="imagens" className="gap-1.5 text-xs"><ImageIcon size={14} /> Imagens</TabsTrigger>
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
+                <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
+                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
+                <TabsTrigger value="mensagens" className="gap-1.5 text-xs"><MessageSquare size={14} /> Mensagens</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
@@ -322,6 +412,145 @@ const PortalCliente = () => {
                     ))}
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Visitas Agendadas */}
+              <TabsContent value="agenda" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
+                {!agenda?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma visita agendada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {agenda.map((a: any) => (
+                      <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                            a.status === "concluida" ? "bg-success/15 text-success" :
+                            a.status === "cancelada" ? "bg-destructive/15 text-destructive" :
+                            "bg-primary/15 text-primary"
+                          }`}>{a.status ?? "agendada"}</span>
+                        </div>
+                        {a.descricao && <p className="text-[11px] text-muted-foreground">{a.descricao}</p>}
+                        <p className="text-[11px] text-muted-foreground">
+                          {a.data_inicio ? new Date(a.data_inicio).toLocaleString("pt-BR") : "—"}
+                          {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Financeiro */}
+              <TabsContent value="financeiro" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
+                {!financeiro?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum lançamento financeiro.</p>
+                ) : (
+                  <div className="border border-border rounded-lg overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-secondary/50">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                          <th className="text-left px-3 py-2 font-semibold">Vencimento</th>
+                          <th className="text-right px-3 py-2 font-semibold">Valor</th>
+                          <th className="text-center px-3 py-2 font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {financeiro.map((f: any) => (
+                          <tr key={f.id} className="border-t border-border">
+                            <td className="px-3 py-2">
+                              {f.descricao ?? "Lançamento"}
+                              {f.parcela && <span className="text-[10px] text-muted-foreground ml-1">({f.parcela})</span>}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{f.data_vencimento ? new Date(f.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {Number(f.valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                f.status === "pago" || f.status === "recebido" ? "bg-success/15 text-success" :
+                                f.status === "atrasado" ? "bg-destructive/15 text-destructive" :
+                                "bg-warning/15 text-warning"
+                              }`}>{f.status ?? "pendente"}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Anotações */}
+              <TabsContent value="anotacoes" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
+                {!anotacoes?.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma anotação compartilhada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {anotacoes.map((n: any) => (
+                      <div key={n.id} className="bg-card border border-border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">{n.tipo}</span>
+                          <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <p className="text-xs text-foreground whitespace-pre-wrap">{n.descricao}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Mensagens */}
+              <TabsContent value="mensagens" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Mensagens</h3>
+                <div className="bg-card border border-border rounded-lg flex flex-col h-[60vh]">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {!mensagens?.length && (
+                      <p className="text-xs text-muted-foreground py-6 text-center">Sem mensagens ainda.</p>
+                    )}
+                    {mensagens?.map((m: any) => {
+                      const sentByMe = m.tipo === "mensagem_cliente";
+                      return (
+                        <div key={m.id} className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                            sentByMe ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                          }`}>
+                            {!sentByMe && m.titulo && (
+                              <p className="text-[10px] font-semibold opacity-80 mb-0.5">{m.titulo}</p>
+                            )}
+                            <p className="text-xs whitespace-pre-wrap">{m.mensagem}</p>
+                            <p className={`text-[9px] mt-1 ${sentByMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              {m.data ? new Date(m.data).toLocaleString("pt-BR") : ""}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); sendMessage.mutate(); }}
+                    className="border-t border-border p-2 flex gap-2"
+                  >
+                    <input
+                      value={novaMensagem}
+                      onChange={(e) => setNovaMensagem(e.target.value)}
+                      placeholder="Escreva uma mensagem…"
+                      className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!novaMensagem.trim() || sendMessage.isPending}
+                      className="h-9 px-3 rounded bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Send size={12} /> Enviar
+                    </button>
+                  </form>
+                </div>
               </TabsContent>
             </Tabs>
           </>

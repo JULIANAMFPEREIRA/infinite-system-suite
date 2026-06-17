@@ -329,6 +329,7 @@ const CRM = () => {
   const [editIntId, setEditIntId] = useState<string | null>(null);
   const [intData, setIntData] = useState<Date | undefined>(undefined);
   const [intMembroEquipe, setIntMembroEquipe] = useState("");
+  const [intVisivelCliente, setIntVisivelCliente] = useState(false);
 
   // CRM Items form
   const [itemDesc, setItemDesc] = useState("");
@@ -553,7 +554,7 @@ const CRM = () => {
 
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
   const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemRtTipo("valor"); setItemRtPercentual(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
-  const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); };
+  const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); setIntVisivelCliente(false); };
 
   const openEdit = (c: any) => {
     setEditId(c.id); setNome(c.nome); setEmail(c.email ?? ""); setTelefone(c.telefone ?? "");
@@ -1329,10 +1330,10 @@ const CRM = () => {
         ? `[Equipe: ${equipeMembers?.find(m => m.id === intMembroEquipe)?.nome ?? intMembroEquipe}] ${intDesc}`
         : intDesc;
       if (editIntId) {
-        const { error } = await supabase.from("crm_interacoes").update(sanitizePayload({ tipo: intTipo, descricao: descFull })).eq("id", editIntId);
+        const { error } = await supabase.from("crm_interacoes").update(sanitizePayload({ tipo: intTipo, descricao: descFull, visivel_cliente: intVisivelCliente } as any)).eq("id", editIntId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_interacoes").insert(sanitizePayload({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null }));
+        const { error } = await supabase.from("crm_interacoes").insert(sanitizePayload({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null, visivel_cliente: intVisivelCliente } as any));
         if (error) throw error;
       }
     },
@@ -2053,6 +2054,15 @@ const CRM = () => {
                   <button onClick={() => addInteracao.mutate()} disabled={!intDesc.trim()} className="h-8 px-4 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">{editIntId ? "Salvar" : "Adicionar"}</button>
                   {editIntId && <button onClick={resetIntForm} className="h-8 px-2 rounded bg-secondary text-secondary-foreground text-xs">Cancelar</button>}
                 </div>
+                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none mt-1">
+                  <input
+                    type="checkbox"
+                    checked={intVisivelCliente}
+                    onChange={(e) => setIntVisivelCliente(e.target.checked)}
+                    className="h-3 w-3 accent-primary"
+                  />
+                  <Eye size={11} /> Visível para o cliente (aparece no portal)
+                </label>
                 {intTipo === "visita" && (
                   <div className="flex gap-2 items-end flex-wrap mt-1">
                     <div className="space-y-0.5">
@@ -2069,10 +2079,17 @@ const CRM = () => {
                 {interacoes?.map(i => (
                   <div key={i.id} className="p-2.5 rounded bg-card border border-border text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-primary capitalize">{i.tipo}</span>
+                      <span className="font-medium text-primary capitalize flex items-center gap-1.5">
+                        {i.tipo}
+                        {(i as any).visivel_cliente && (
+                          <span title="Visível para o cliente" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px] font-semibold">
+                            <Eye size={9} /> CLIENTE
+                          </span>
+                        )}
+                      </span>
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">{new Date(i.created_at).toLocaleDateString("pt-BR")} {new Date(i.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                        <button onClick={() => { setEditIntId(i.id); setIntTipo(i.tipo ?? "outro"); setIntDesc(i.descricao ?? ""); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>
+                        <button onClick={() => { setEditIntId(i.id); setIntTipo(i.tipo ?? "outro"); setIntDesc(i.descricao ?? ""); setIntVisivelCliente(!!(i as any).visivel_cliente); }} className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-primary"><Pencil size={11} /></button>
                         <button onClick={() => { if (window.confirm("Excluir?")) deleteInteracao.mutate(i.id); }} className="p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
                       </div>
                     </div>

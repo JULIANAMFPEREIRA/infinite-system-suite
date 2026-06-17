@@ -108,6 +108,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          visivel_cliente: boolean
         }
         Insert: {
           conteudo?: string | null
@@ -116,6 +117,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          visivel_cliente?: boolean
         }
         Update: {
           conteudo?: string | null
@@ -124,6 +126,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          visivel_cliente?: boolean
         }
         Relationships: []
       }
@@ -307,6 +310,7 @@ export type Database = {
           status_crm: Database["public"]["Enums"]["status_crm"] | null
           telefone: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           arquiteto_id?: string | null
@@ -325,6 +329,7 @@ export type Database = {
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           arquiteto_id?: string | null
@@ -343,6 +348,7 @@ export type Database = {
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -651,6 +657,7 @@ export type Database = {
           id: string
           tipo: string | null
           usuario_id: string | null
+          visivel_cliente: boolean
         }
         Insert: {
           cliente_id: string
@@ -659,6 +666,7 @@ export type Database = {
           id?: string
           tipo?: string | null
           usuario_id?: string | null
+          visivel_cliente?: boolean
         }
         Update: {
           cliente_id?: string
@@ -667,6 +675,7 @@ export type Database = {
           id?: string
           tipo?: string | null
           usuario_id?: string | null
+          visivel_cliente?: boolean
         }
         Relationships: [
           {
@@ -1649,6 +1658,7 @@ export type Database = {
           projeto_id: string | null
           tipo: string
           titulo: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1661,6 +1671,7 @@ export type Database = {
           projeto_id?: string | null
           tipo?: string
           titulo: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1673,6 +1684,7 @@ export type Database = {
           projeto_id?: string | null
           tipo?: string
           titulo?: string
+          user_id?: string | null
         }
         Relationships: []
       }
