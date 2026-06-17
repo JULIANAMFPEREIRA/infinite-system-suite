@@ -134,10 +134,10 @@ const PortalCliente = () => {
   const { data: anotacoes } = useQuery({
     queryKey: ["portal_anotacoes", clienteData?.cliente?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("crm_interacoes")
+      const { data } = await (supabase.from("crm_interacoes") as any)
         .select("id, tipo, descricao, created_at, visivel_cliente")
         .eq("cliente_id", clienteData!.cliente.id)
-        .eq("visivel_cliente" as any, true)
+        .eq("visivel_cliente", true)
         .order("created_at", { ascending: false });
       return (data ?? []) as any[];
     },
@@ -149,9 +149,9 @@ const PortalCliente = () => {
   const { data: mensagens } = useQuery({
     queryKey: ["portal_mensagens", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("notificacoes")
+      const { data } = await (supabase.from("notificacoes") as any)
         .select("id, tipo, titulo, mensagem, data, user_id")
-        .eq("user_id" as any, user!.id)
+        .eq("user_id", user!.id)
         .order("data", { ascending: true });
       return (data ?? []) as any[];
     },
