@@ -1330,10 +1330,10 @@ const CRM = () => {
         ? `[Equipe: ${equipeMembers?.find(m => m.id === intMembroEquipe)?.nome ?? intMembroEquipe}] ${intDesc}`
         : intDesc;
       if (editIntId) {
-        const { error } = await supabase.from("crm_interacoes").update(sanitizePayload({ tipo: intTipo, descricao: descFull })).eq("id", editIntId);
+        const { error } = await supabase.from("crm_interacoes").update(sanitizePayload({ tipo: intTipo, descricao: descFull, visivel_cliente: intVisivelCliente } as any)).eq("id", editIntId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("crm_interacoes").insert(sanitizePayload({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null }));
+        const { error } = await supabase.from("crm_interacoes").insert(sanitizePayload({ cliente_id: detailClient.id, tipo: intTipo, descricao: descFull, usuario_id: user?.id ?? null, visivel_cliente: intVisivelCliente } as any));
         if (error) throw error;
       }
     },
