@@ -932,7 +932,11 @@ const FinanceiroPagar = () => {
                         <span className="font-medium text-foreground truncate block">{toTitleCase(c.descricao)}</span>
                       </td>
                       <td className="px-3 py-2 text-xs text-center">
-                        {tipoBadge(c)}
+                        {(c as any).tipo_manual && String((c as any).tipo_manual).trim() !== "" ? (
+                          <span className="text-[10px] text-foreground/80">{toTitleCase(String((c as any).tipo_manual))}</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/50">—</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.fornecedores as any)?.nome ?? "—"}</td>
                       <td className="px-3 py-2 text-xs text-foreground/80 max-w-[150px] truncate">{(c.projetos as any)?.nome ?? "—"}</td>
