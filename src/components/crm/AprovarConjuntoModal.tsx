@@ -142,17 +142,14 @@ export default function AprovarConjuntoModal({
         return;
       }
 
-      // 2. Gera grupo_id client-side (sem tabela orcamento_grupos)
-      const grupoId = crypto.randomUUID();
-
-      // 3. Marca orçamentos selecionados como aprovados + vincula grupo
+      // 2. Marca orçamentos selecionados como aprovados sem alterar grupo_id
       const { error: updErr } = await (supabase as any)
         .from("crm_orcamentos")
-        .update({ aprovado: true, grupo_id: grupoId })
+        .update({ aprovado: true })
         .in("id", selectedIds);
       if (updErr) throw updErr;
 
-      // 4. Apaga parcelas pendentes (preserva pago/parcial)
+      // 3. Apaga parcelas pendentes (preserva pago/parcial)
       const { data: existentes } = await supabase
         .from("financeiro_receber")
         .select("id, status")
@@ -164,7 +161,7 @@ export default function AprovarConjuntoModal({
         await supabase.from("financeiro_receber").delete().in("id", idsApagar);
       }
 
-      // 5. Gera parcelas combinadas
+      // 4. Gera parcelas combinadas
       const parcelas = buildParcelas();
       const sufixo = formaPgto ? ` (Conjunto - ${formaPgto})` : " (Conjunto)";
       const inserts = parcelas.map((p, i) => ({
