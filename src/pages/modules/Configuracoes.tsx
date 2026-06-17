@@ -673,6 +673,7 @@ const Configuracoes = () => {
     const filtered = (formas ?? []).filter(f => 
       f.nome?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    console.log('useFormasPagamento data:', formas, 'loading:', isLoadingFormas);
 
     return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-4">
