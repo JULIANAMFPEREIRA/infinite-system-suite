@@ -53,7 +53,7 @@ const menuGroups = [
     label: "Financeiro",
     items: [
       { key: "formas_pagamento" as Section, label: "Formas de Pagamento", icon: CreditCard },
-      { key: "tipos_financeiros" as Section, label: "Tipos Financeiros", icon: Wallet },
+      { key: "tipos_financeiros" as Section, label: "Tipos de Categoria", icon: Wallet },
       { key: "categorias" as Section, label: "Categorias", icon: Tag },
       { key: "subcategorias" as Section, label: "Tipos / Subcategorias", icon: Tag },
     ],
@@ -842,8 +842,8 @@ const Configuracoes = () => {
     <div className="bg-card border border-border rounded-lg p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-foreground">Tipos Financeiros</h2>
-          <p className="text-xs text-muted-foreground">Classificação mestre para suas categorias</p>
+          <h2 className="text-lg font-bold text-foreground">Tipos de Categoria</h2>
+          <p className="text-xs text-muted-foreground">Classificação dos tipos usados nas categorias financeiras</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:w-64">
