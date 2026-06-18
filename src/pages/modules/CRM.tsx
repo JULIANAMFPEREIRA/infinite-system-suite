@@ -2212,6 +2212,13 @@ const CRM = () => {
                             </span>
                           )}
                         </div>
+                        {(orc as any).grupo_id && (
+                          <div className="flex justify-end -mt-1 mb-1">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-semibold uppercase tracking-wide flex items-center gap-1" title="Cobrança agrupada com outro orçamento">
+                              <Link2 size={8} /> Faturado em conjunto
+                            </span>
+                          </div>
+                        )}
                         {orc.data_envio_proposta && (
                           <p className="text-[10px] text-muted-foreground italic mt-1">
                             Proposta enviada {formatDistanceToNow(new Date(orc.data_envio_proposta), { addSuffix: true, locale: ptBR })}
