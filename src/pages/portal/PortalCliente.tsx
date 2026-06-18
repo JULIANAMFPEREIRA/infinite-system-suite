@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, MessageSquare, StickyNote, Send, CalendarClock } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import PortalColaborativo from "@/components/portal/PortalColaborativo";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -130,57 +131,6 @@ const PortalCliente = () => {
     enabled: !!clienteData?.cliente?.id,
   });
 
-  // Anotações visíveis para o cliente (crm_interacoes)
-  const { data: anotacoes } = useQuery({
-    queryKey: ["portal_anotacoes", clienteData?.cliente?.id],
-    queryFn: async () => {
-      const { data } = await (supabase.from("crm_interacoes") as any)
-        .select("id, tipo, descricao, created_at, visivel_cliente")
-        .eq("cliente_id", clienteData!.cliente.id)
-        .eq("visivel_cliente", true)
-        .order("created_at", { ascending: false });
-      return (data ?? []) as any[];
-    },
-    enabled: !!clienteData?.cliente?.id,
-  });
-
-  // Mensagens (notificacoes do user logado)
-  const qc = useQueryClient();
-  const { data: mensagens } = useQuery({
-    queryKey: ["portal_mensagens", user?.id],
-    queryFn: async () => {
-      const { data } = await (supabase.from("notificacoes") as any)
-        .select("id, tipo, titulo, mensagem, data, user_id")
-        .eq("user_id", user!.id)
-        .order("data", { ascending: true });
-      return (data ?? []) as any[];
-    },
-    enabled: !!user?.id,
-    refetchInterval: 15000,
-  });
-
-  const [novaMensagem, setNovaMensagem] = useState("");
-  const sendMessage = useMutation({
-    mutationFn: async () => {
-      const texto = novaMensagem.trim();
-      if (!texto || !user?.id) return;
-      const { data: emp } = await supabase.from("clientes").select("empresa_id").eq("id", clienteData!.cliente.id).single();
-      const { error } = await supabase.from("notificacoes").insert({
-        empresa_id: emp?.empresa_id,
-        user_id: user.id,
-        tipo: "mensagem_cliente",
-        titulo: "Mensagem do cliente",
-        mensagem: texto,
-        data: new Date().toISOString(),
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => { setNovaMensagem(""); qc.invalidateQueries({ queryKey: ["portal_mensagens"] }); },
-  });
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensagens?.length]);
-
   const activeProjeto = projetos.find(p => p.id === active);
   const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
 
@@ -297,8 +247,7 @@ const PortalCliente = () => {
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
                 <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
-                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
-                <TabsTrigger value="mensagens" className="gap-1.5 text-xs"><MessageSquare size={14} /> Mensagens</TabsTrigger>
+                <TabsTrigger value="colaborativo" className="gap-1.5 text-xs"><Users size={14} /> Colaborativo</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
@@ -506,73 +455,16 @@ const PortalCliente = () => {
                 )}
               </TabsContent>
 
-              {/* Anotações */}
-              <TabsContent value="anotacoes" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
-                {!anotacoes?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma anotação compartilhada.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {anotacoes.map((n: any) => (
-                      <div key={n.id} className="bg-card border border-border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">{n.tipo}</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
-                        </div>
-                        <p className="text-xs text-foreground whitespace-pre-wrap">{n.descricao}</p>
-                      </div>
-                    ))}
-                  </div>
+              {/* Colaborativo (Pendências, Diário, Documentos, Comunicação) */}
+              <TabsContent value="colaborativo" className="space-y-3">
+                {active && clienteData?.cliente?.id && (
+                  <PortalColaborativo
+                    clienteId={clienteData.cliente.id}
+                    projetoId={active}
+                    autorTipo="cliente"
+                    userName={nomeCliente}
+                  />
                 )}
-              </TabsContent>
-
-              {/* Mensagens */}
-              <TabsContent value="mensagens" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Mensagens</h3>
-                <div className="bg-card border border-border rounded-lg flex flex-col h-[60vh]">
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {!mensagens?.length && (
-                      <p className="text-xs text-muted-foreground py-6 text-center">Sem mensagens ainda.</p>
-                    )}
-                    {mensagens?.map((m: any) => {
-                      const sentByMe = m.tipo === "mensagem_cliente";
-                      return (
-                        <div key={m.id} className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
-                            sentByMe ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                          }`}>
-                            {!sentByMe && m.titulo && (
-                              <p className="text-[10px] font-semibold opacity-80 mb-0.5">{m.titulo}</p>
-                            )}
-                            <p className="text-xs whitespace-pre-wrap">{m.mensagem}</p>
-                            <p className={`text-[9px] mt-1 ${sentByMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              {m.data ? new Date(m.data).toLocaleString("pt-BR") : ""}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </div>
-                  <form
-                    onSubmit={(e) => { e.preventDefault(); sendMessage.mutate(); }}
-                    className="border-t border-border p-2 flex gap-2"
-                  >
-                    <input
-                      value={novaMensagem}
-                      onChange={(e) => setNovaMensagem(e.target.value)}
-                      placeholder="Escreva uma mensagem…"
-                      className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!novaMensagem.trim() || sendMessage.isPending}
-                      className="h-9 px-3 rounded bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-50"
-                    >
-                      <Send size={12} /> Enviar
-                    </button>
-                  </form>
-                </div>
               </TabsContent>
             </Tabs>
           </>
