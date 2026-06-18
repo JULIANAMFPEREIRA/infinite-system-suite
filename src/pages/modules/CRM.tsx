@@ -2207,8 +2207,8 @@ const CRM = () => {
                           </div>
                           {orc.aprovado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold uppercase shrink-0">Aprovado</span>}
                           {(orc as any).grupo_id && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-bold uppercase shrink-0 flex items-center gap-1" title="Faz parte de um grupo">
-                              <Link2 size={9} /> Grupo
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold uppercase shrink-0 flex items-center gap-1" title="Faz parte de um grupo (conjunto)">
+                              <Link2 size={9} /> Conjunto
                             </span>
                           )}
                         </div>
