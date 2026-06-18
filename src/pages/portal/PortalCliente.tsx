@@ -189,19 +189,41 @@ const PortalCliente = () => {
   const imagens = documentos?.filter(d => d.tipo === "imagem" || d.nome_arquivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ?? [];
   const docs = documentos?.filter(d => !d.nome_arquivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i) && d.tipo !== "imagem") ?? [];
 
+  const nomeCliente = clienteData?.cliente?.nome ?? "";
+  const iniciais = nomeCliente.split(" ").slice(0, 2).map(n => n[0]?.toUpperCase()).join("");
+  const primeiroNome = nomeCliente.split(" ")[0] ?? "";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <FolderKanban size={20} className="text-primary" />
-          <h1 className="text-sm font-bold text-foreground">Portal do Cliente</h1>
+      <header className="border-b border-border bg-gradient-to-r from-slate-900 to-slate-800 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+              {iniciais || <FolderKanban size={18} />}
+            </div>
+            <div>
+              <span className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
+                INFINIT NETWORK
+              </span>
+              <h1 className="text-sm font-bold text-white">
+                Olá, {primeiroNome || "Cliente"} 👋
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
+              Cliente
+            </span>
+            <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
+              <LogOut size={14} /> Sair
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground hidden sm:inline">{clienteData?.cliente?.nome}</span>
-          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut size={14} /> Sair
-          </button>
+        <div className="max-w-5xl mx-auto px-4 pb-3">
+          <p className="text-[11px] text-slate-500 italic">
+            "Acompanhe seu projeto em tempo real."
+          </p>
         </div>
       </header>
 
