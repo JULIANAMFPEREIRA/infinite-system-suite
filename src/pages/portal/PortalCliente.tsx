@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, MessageSquare, StickyNote, Send, CalendarClock } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import PortalColaborativo from "@/components/portal/PortalColaborativo";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
