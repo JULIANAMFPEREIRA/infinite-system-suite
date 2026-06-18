@@ -455,73 +455,16 @@ const PortalCliente = () => {
                 )}
               </TabsContent>
 
-              {/* Anotações */}
-              <TabsContent value="anotacoes" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Anotações</h3>
-                {!anotacoes?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma anotação compartilhada.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {anotacoes.map((n: any) => (
-                      <div key={n.id} className="bg-card border border-border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">{n.tipo}</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString("pt-BR")}</span>
-                        </div>
-                        <p className="text-xs text-foreground whitespace-pre-wrap">{n.descricao}</p>
-                      </div>
-                    ))}
-                  </div>
+              {/* Colaborativo (Pendências, Diário, Documentos, Comunicação) */}
+              <TabsContent value="colaborativo" className="space-y-3">
+                {active && clienteData?.cliente?.id && (
+                  <PortalColaborativo
+                    clienteId={clienteData.cliente.id}
+                    projetoId={active}
+                    autorTipo="cliente"
+                    userName={nomeCliente}
+                  />
                 )}
-              </TabsContent>
-
-              {/* Mensagens */}
-              <TabsContent value="mensagens" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Mensagens</h3>
-                <div className="bg-card border border-border rounded-lg flex flex-col h-[60vh]">
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {!mensagens?.length && (
-                      <p className="text-xs text-muted-foreground py-6 text-center">Sem mensagens ainda.</p>
-                    )}
-                    {mensagens?.map((m: any) => {
-                      const sentByMe = m.tipo === "mensagem_cliente";
-                      return (
-                        <div key={m.id} className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
-                            sentByMe ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                          }`}>
-                            {!sentByMe && m.titulo && (
-                              <p className="text-[10px] font-semibold opacity-80 mb-0.5">{m.titulo}</p>
-                            )}
-                            <p className="text-xs whitespace-pre-wrap">{m.mensagem}</p>
-                            <p className={`text-[9px] mt-1 ${sentByMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              {m.data ? new Date(m.data).toLocaleString("pt-BR") : ""}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </div>
-                  <form
-                    onSubmit={(e) => { e.preventDefault(); sendMessage.mutate(); }}
-                    className="border-t border-border p-2 flex gap-2"
-                  >
-                    <input
-                      value={novaMensagem}
-                      onChange={(e) => setNovaMensagem(e.target.value)}
-                      placeholder="Escreva uma mensagem…"
-                      className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!novaMensagem.trim() || sendMessage.isPending}
-                      className="h-9 px-3 rounded bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 disabled:opacity-50"
-                    >
-                      <Send size={12} /> Enviar
-                    </button>
-                  </form>
-                </div>
               </TabsContent>
             </Tabs>
           </>
