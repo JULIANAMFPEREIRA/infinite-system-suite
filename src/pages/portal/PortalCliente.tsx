@@ -298,8 +298,7 @@ const PortalCliente = () => {
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
                 <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
-                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
-                <TabsTrigger value="mensagens" className="gap-1.5 text-xs"><MessageSquare size={14} /> Mensagens</TabsTrigger>
+                <TabsTrigger value="colaborativo" className="gap-1.5 text-xs"><Users size={14} /> Colaborativo</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
