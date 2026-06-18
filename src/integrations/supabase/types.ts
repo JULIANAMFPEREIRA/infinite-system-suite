@@ -603,31 +603,37 @@ export type Database = {
       }
       crm_arquivos: {
         Row: {
+          autor_tipo: string | null
           cliente_id: string
           created_at: string
           empresa_id: string
           id: string
           nome_arquivo: string
+          projeto_id: string | null
           tamanho: number | null
           tipo: string
           url: string
         }
         Insert: {
+          autor_tipo?: string | null
           cliente_id: string
           created_at?: string
           empresa_id: string
           id?: string
           nome_arquivo: string
+          projeto_id?: string | null
           tamanho?: number | null
           tipo?: string
           url: string
         }
         Update: {
+          autor_tipo?: string | null
           cliente_id?: string
           created_at?: string
           empresa_id?: string
           id?: string
           nome_arquivo?: string
+          projeto_id?: string | null
           tamanho?: number | null
           tipo?: string
           url?: string
@@ -647,35 +653,54 @@ export type Database = {
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "crm_arquivos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crm_interacoes: {
         Row: {
+          autor_tipo: string | null
           cliente_id: string
           created_at: string
           descricao: string | null
           id: string
+          projeto_id: string | null
+          status: string | null
           tipo: string | null
           usuario_id: string | null
           visivel_cliente: boolean
+          visivel_portal: boolean | null
         }
         Insert: {
+          autor_tipo?: string | null
           cliente_id: string
           created_at?: string
           descricao?: string | null
           id?: string
+          projeto_id?: string | null
+          status?: string | null
           tipo?: string | null
           usuario_id?: string | null
           visivel_cliente?: boolean
+          visivel_portal?: boolean | null
         }
         Update: {
+          autor_tipo?: string | null
           cliente_id?: string
           created_at?: string
           descricao?: string | null
           id?: string
+          projeto_id?: string | null
+          status?: string | null
           tipo?: string | null
           usuario_id?: string | null
           visivel_cliente?: boolean
+          visivel_portal?: boolean | null
         }
         Relationships: [
           {
@@ -683,6 +708,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_interacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
             referencedColumns: ["id"]
           },
         ]
