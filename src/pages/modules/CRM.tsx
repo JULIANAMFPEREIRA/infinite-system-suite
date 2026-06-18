@@ -1010,6 +1010,64 @@ const CRM = () => {
   // Unapprove orcamento (cancel linked project)
   const unapproveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
+      // Fix 2: handle grouped orçamentos
+      const { data: currentOrc } = await supabase
+        .from("crm_orcamentos")
+        .select("grupo_id")
+        .eq("id", orcId)
+        .maybeSingle();
+      const grupoId = (currentOrc as any)?.grupo_id ?? null;
+
+      if (grupoId) {
+        const ok = window.confirm(
+          "Este orçamento foi faturado em conjunto com outros orçamentos. Desaprovar irá desfazer o faturamento conjunto e cancelar todos os orçamentos do grupo. Deseja continuar?"
+        );
+        if (!ok) throw new Error("__ABORT__");
+      }
+
+      // Collect all orçamentos affected (group siblings + current)
+      let groupOrcIds: string[] = [orcId];
+      if (grupoId) {
+        const { data: siblings } = await supabase
+          .from("crm_orcamentos")
+          .select("id")
+          .eq("grupo_id", grupoId);
+        groupOrcIds = Array.from(new Set([...(siblings ?? []).map((s: any) => s.id), orcId]));
+      }
+
+      // Fix 1: protect paid entries across all affected orçamentos' linked projects
+      const { data: affectedProjects } = await supabase
+        .from("projetos")
+        .select("id")
+        .in("orcamento_id", groupOrcIds);
+      const projectIds = (affectedProjects ?? []).map((p: any) => p.id);
+
+      if (projectIds.length > 0) {
+        const { data: paidEntries } = await supabase
+          .from("financeiro_receber")
+          .select("id, status, valor_recebido")
+          .in("projeto_id", projectIds)
+          .or("status.eq.pago,valor_recebido.gt.0");
+        if (paidEntries && paidEntries.length > 0) {
+          const ok = window.confirm(
+            "Existem parcelas já recebidas. Desaprovar este orçamento pode causar inconsistências financeiras. Deseja continuar mesmo assim?"
+          );
+          if (!ok) throw new Error("__ABORT__");
+        }
+      }
+
+      // If grouped: unset grupo_id and aprovado on siblings
+      if (grupoId) {
+        await supabase
+          .from("crm_orcamentos")
+          .update({ aprovado: false, grupo_id: null })
+          .eq("grupo_id", grupoId);
+        await supabase
+          .from("crm_orcamentos")
+          .update({ grupo_id: null })
+          .eq("id", orcId);
+      }
+
       const { error } = await supabase.from("crm_orcamentos").update({ aprovado: false }).eq("id", orcId);
       if (error) throw error;
       // Find linked projects
@@ -1045,7 +1103,10 @@ const CRM = () => {
       qc.invalidateQueries({ queryKey: ["compras"] });
       toast.success("Orçamento desaprovado. Dados vinculados foram removidos.");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err?.message === "__ABORT__") return;
+      toast.error(err.message);
+    },
   });
 
   const deleteOrcamento = useMutation({
