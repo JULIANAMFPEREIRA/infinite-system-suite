@@ -131,57 +131,6 @@ const PortalCliente = () => {
     enabled: !!clienteData?.cliente?.id,
   });
 
-  // Anotações visíveis para o cliente (crm_interacoes)
-  const { data: anotacoes } = useQuery({
-    queryKey: ["portal_anotacoes", clienteData?.cliente?.id],
-    queryFn: async () => {
-      const { data } = await (supabase.from("crm_interacoes") as any)
-        .select("id, tipo, descricao, created_at, visivel_cliente")
-        .eq("cliente_id", clienteData!.cliente.id)
-        .eq("visivel_cliente", true)
-        .order("created_at", { ascending: false });
-      return (data ?? []) as any[];
-    },
-    enabled: !!clienteData?.cliente?.id,
-  });
-
-  // Mensagens (notificacoes do user logado)
-  const qc = useQueryClient();
-  const { data: mensagens } = useQuery({
-    queryKey: ["portal_mensagens", user?.id],
-    queryFn: async () => {
-      const { data } = await (supabase.from("notificacoes") as any)
-        .select("id, tipo, titulo, mensagem, data, user_id")
-        .eq("user_id", user!.id)
-        .order("data", { ascending: true });
-      return (data ?? []) as any[];
-    },
-    enabled: !!user?.id,
-    refetchInterval: 15000,
-  });
-
-  const [novaMensagem, setNovaMensagem] = useState("");
-  const sendMessage = useMutation({
-    mutationFn: async () => {
-      const texto = novaMensagem.trim();
-      if (!texto || !user?.id) return;
-      const { data: emp } = await supabase.from("clientes").select("empresa_id").eq("id", clienteData!.cliente.id).single();
-      const { error } = await supabase.from("notificacoes").insert({
-        empresa_id: emp?.empresa_id,
-        user_id: user.id,
-        tipo: "mensagem_cliente",
-        titulo: "Mensagem do cliente",
-        mensagem: texto,
-        data: new Date().toISOString(),
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => { setNovaMensagem(""); qc.invalidateQueries({ queryKey: ["portal_mensagens"] }); },
-  });
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensagens?.length]);
-
   const activeProjeto = projetos.find(p => p.id === active);
   const progress = activeProjeto ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0) : 0;
 
