@@ -25,6 +25,219 @@ const tipoColors: Record<AnotTipo, string> = {
   comunicacao: "bg-accent/30 text-accent-foreground",
 };
 
+function AnotacoesTab({ clienteId, projetoId, userId, userName }: { clienteId: string; projetoId: string; userId: string; userName: string }) {
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<"todos" | AnotTipo>("todos");
+  const [novoTipo, setNovoTipo] = useState<AnotTipo>("geral");
+  const [novoTexto, setNovoTexto] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: itens = [] } = useQuery({
+    queryKey: ["portal_anotacoes", clienteId, projetoId],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes" as any)
+        .select("id, tipo, descricao, created_at, autor_tipo, usuario_id, status, visivel_cliente, projeto_id, cliente_id")
+        .eq("cliente_id", clienteId)
+        .eq("projeto_id", projetoId)
+        .eq("visivel_cliente", true)
+        .order("created_at", { ascending: true });
+      return (data ?? []) as any[];
+    },
+    refetchInterval: filter === "comunicacao" ? 15000 : false,
+  });
+
+  useEffect(() => {
+    if (filter === "comunicacao") chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [itens, filter]);
+
+  const filtered = filter === "todos" ? itens : itens.filter(i => i.tipo === filter);
+
+  const handleAdd = async () => {
+    const txt = novoTexto.trim();
+    if (!txt) return;
+    const { error } = await supabase.from("crm_interacoes" as any).insert({
+      cliente_id: clienteId,
+      projeto_id: projetoId,
+      tipo: novoTipo,
+      descricao: txt,
+      autor_tipo: "cliente",
+      usuario_id: userId,
+      visivel_cliente: true,
+      status: novoTipo === "pendencia" ? "aberta" : null,
+    } as any);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    setNovoTexto("");
+    qc.invalidateQueries({ queryKey: ["portal_anotacoes", clienteId, projetoId] });
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("crm_interacoes" as any).delete().eq("id", id);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    qc.invalidateQueries({ queryKey: ["portal_anotacoes", clienteId, projetoId] });
+  };
+
+  const togglePendStatus = async (id: string, atual: string | null) => {
+    const novo = atual === "concluida" ? "aberta" : "concluida";
+    const { error } = await supabase.from("crm_interacoes" as any).update({ status: novo }).eq("id", id);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    qc.invalidateQueries({ queryKey: ["portal_anotacoes", clienteId, projetoId] });
+  };
+
+  const tipos: ("todos" | AnotTipo)[] = ["todos", "geral", "pendencia", "diario", "comunicacao"];
+
+  return (
+    <div className="space-y-3">
+      {/* Filter row */}
+      <div className="flex gap-1.5 flex-wrap">
+        {tipos.map(t => (
+          <button key={t} onClick={() => setFilter(t)}
+            className={`px-3 py-1 rounded text-[11px] font-medium border transition-colors ${
+              filter === t ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"
+            }`}>
+            {t === "todos" ? "Todos" : tipoLabels[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Add form */}
+      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+        <div className="flex gap-2">
+          <select value={novoTipo} onChange={e => setNovoTipo(e.target.value as AnotTipo)}
+            className="text-xs bg-background border border-border rounded px-2 py-1">
+            <option value="geral">Geral</option>
+            <option value="pendencia">Pendência</option>
+            <option value="diario">Diário de Obra</option>
+            <option value="comunicacao">Comunicação</option>
+          </select>
+        </div>
+        <Textarea value={novoTexto} onChange={e => setNovoTexto(e.target.value)}
+          placeholder="Escreva uma anotação..." rows={2} className="text-xs" />
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleAdd} disabled={!novoTexto.trim()}>Adicionar</Button>
+        </div>
+      </div>
+
+      {/* List / chat */}
+      {filter === "comunicacao" ? (
+        <div className="bg-card border border-border rounded-lg p-3 space-y-2 max-h-[420px] overflow-y-auto">
+          {!filtered.length ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma mensagem.</p>
+          ) : filtered.map(i => {
+            const mine = i.usuario_id === userId;
+            return (
+              <div key={i.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] rounded-lg px-3 py-1.5 ${mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                  {!mine && <p className="text-[10px] font-semibold opacity-70 mb-0.5">{i.autor_tipo}</p>}
+                  <p className="text-xs whitespace-pre-wrap break-words">{i.descricao}</p>
+                  <p className="text-[9px] opacity-60 mt-0.5 text-right">{new Date(i.created_at).toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={chatEndRef} />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {!filtered.length ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma anotação.</p>
+          ) : filtered.map(i => {
+            const mine = i.usuario_id === userId;
+            const tipo = (i.tipo ?? "geral") as AnotTipo;
+            return (
+              <div key={i.id} className="bg-card border border-border rounded-lg p-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${tipoColors[tipo] ?? "bg-secondary text-secondary-foreground"}`}>
+                      {tipoLabels[tipo] ?? tipo}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                      {i.autor_tipo ?? "—"}
+                    </span>
+                    {tipo === "pendencia" && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                        i.status === "concluida" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                      }`}>
+                        {i.status === "concluida" ? "Concluída" : "Aberta"}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(i.created_at).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground whitespace-pre-wrap break-words">{i.descricao}</p>
+                {mine && (
+                  <div className="flex items-center gap-1.5 pt-1">
+                    {tipo === "pendencia" && (
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]"
+                        onClick={() => togglePendStatus(i.id, i.status)}>
+                        <Check size={11} className="mr-1" />
+                        {i.status === "concluida" ? "Reabrir" : "Concluir"}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-destructive"
+                      onClick={() => handleDelete(i.id)}>
+                      <Trash2 size={11} className="mr-1" /> Excluir
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocumentosUpload({ clienteId, projetoId, onUploaded }: { clienteId: string; projetoId: string; onUploaded: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = `cliente/${clienteId}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { data: { user } } = await supabase.auth.getUser();
+      // resolve empresa_id via clientes
+      const { data: cli } = await supabase.from("clientes").select("empresa_id").eq("id", clienteId).maybeSingle();
+      const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
+        cliente_id: clienteId,
+        projeto_id: projetoId,
+        empresa_id: cli?.empresa_id,
+        usuario_id: user?.id,
+        autor_tipo: "cliente",
+        nome_arquivo: file.name,
+        url: pub.publicUrl,
+        tipo: file.type?.startsWith("image/") ? "imagem" : "documento",
+      } as any);
+      if (insErr) throw insErr;
+      toast({ title: "Arquivo enviado" });
+      onUploaded();
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <input ref={inputRef} type="file" hidden onChange={handleFile} />
+      <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+        <Upload size={13} className="mr-1.5" />
+        {uploading ? "Enviando..." : "Enviar arquivo"}
+      </Button>
+    </div>
+  );
+}
+
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
 
