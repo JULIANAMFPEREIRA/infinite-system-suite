@@ -438,17 +438,17 @@ const PortalCliente = () => {
 
             {/* Tabs */}
             <Tabs defaultValue="projeto" className="space-y-4">
-              <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
-                <TabsTrigger value="projeto" className="gap-1.5 text-xs"><FolderKanban size={14} /> Projeto</TabsTrigger>
-                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
-                <TabsTrigger value="visitas" className="gap-1.5 text-xs"><CalendarClock size={14} /> Visitas Técnicas</TabsTrigger>
-                <TabsTrigger value="cronograma" className="gap-1.5 text-xs"><CalendarDays size={14} /> Cronograma</TabsTrigger>
-                <TabsTrigger value="imagens" className="gap-1.5 text-xs"><ImageIcon size={14} /> Imagens</TabsTrigger>
-                <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
-                <TabsTrigger value="projetos" className="gap-1.5 text-xs"><ListChecks size={14} /> Projetos</TabsTrigger>
-                <TabsTrigger value="timeline" className="gap-1.5 text-xs"><History size={14} /> Linha do Tempo</TabsTrigger>
-                <TabsTrigger value="atividades" className="gap-1.5 text-xs"><Activity size={14} /> Atividades</TabsTrigger>
-                <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
+              <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 p-1 bg-card border border-border">
+                <TabsTrigger value="projeto" className="gap-1 text-[11px] px-2 py-1 h-auto"><FolderKanban size={12} /> Projeto</TabsTrigger>
+                <TabsTrigger value="anotacoes" className="gap-1 text-[11px] px-2 py-1 h-auto"><StickyNote size={12} /> Anotações</TabsTrigger>
+                <TabsTrigger value="visitas" className="gap-1 text-[11px] px-2 py-1 h-auto"><CalendarClock size={12} /> Visitas Técnicas</TabsTrigger>
+                <TabsTrigger value="cronograma" className="gap-1 text-[11px] px-2 py-1 h-auto"><CalendarDays size={12} /> Cronograma</TabsTrigger>
+                <TabsTrigger value="imagens" className="gap-1 text-[11px] px-2 py-1 h-auto"><ImageIcon size={12} /> Imagens</TabsTrigger>
+                <TabsTrigger value="documentos" className="gap-1 text-[11px] px-2 py-1 h-auto"><FileText size={12} /> Documentos</TabsTrigger>
+                <TabsTrigger value="projetos" className="gap-1 text-[11px] px-2 py-1 h-auto"><ListChecks size={12} /> Projetos</TabsTrigger>
+                <TabsTrigger value="timeline" className="gap-1 text-[11px] px-2 py-1 h-auto"><History size={12} /> Linha do Tempo</TabsTrigger>
+                <TabsTrigger value="atividades" className="gap-1 text-[11px] px-2 py-1 h-auto"><Activity size={12} /> Atividades</TabsTrigger>
+                <TabsTrigger value="financeiro" className="gap-1 text-[11px] px-2 py-1 h-auto"><DollarSign size={12} /> Financeiro</TabsTrigger>
               </TabsList>
 
               {/* Projeto - summary card */}
