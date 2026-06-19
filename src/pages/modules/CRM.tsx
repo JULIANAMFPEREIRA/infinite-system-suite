@@ -553,6 +553,20 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
+  const { data: financeiroReceber } = useQuery({
+    queryKey: ["crm_financeiro_receber", detailClient?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("financeiro_receber")
+        .select("id, descricao, valor, data_vencimento, data_recebimento, status, parcela")
+        .eq("cliente_id", detailClient!.id)
+        .eq("deletado", false)
+        .order("data_vencimento", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!detailClient?.id,
+  });
+
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
   const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemRtTipo("valor"); setItemRtPercentual(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); setIntVisivelCliente(false); };
@@ -2044,6 +2058,7 @@ const CRM = () => {
             <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
             <TabsTrigger value="historico" className="text-xs gap-1.5"><History size={13} /> Linha do Tempo</TabsTrigger>
             <TabsTrigger value="atividades" className="text-xs gap-1.5"><Activity size={13} /> Atividades</TabsTrigger>
+            <TabsTrigger value="financeiro" className="text-xs gap-1.5"><DollarSign size={13} /> Financeiro</TabsTrigger>
           </TabsList>
 
           {/* ─── DADOS DO CLIENTE ─── */}
@@ -3386,6 +3401,56 @@ const CRM = () => {
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${p.status === "cancelado" ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>{p.status}</span>
                 </div>
               )) : <p className="text-muted-foreground text-xs text-center py-4">Nenhum projeto vinculado. Aprove um orçamento para criar um projeto.</p>}
+            </div>
+          </TabsContent>
+
+          {/* ─── FINANCEIRO ─── */}
+          <TabsContent value="financeiro">
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold flex items-center gap-1.5"><DollarSign size={12} /> Contas a Receber do Cliente</h4>
+              {!financeiroReceber?.length ? (
+                <p className="text-xs text-muted-foreground py-6 text-center">Nenhum lançamento financeiro.</p>
+              ) : (
+                <div className="border border-border rounded-lg overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-secondary/50">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                        <th className="text-left px-3 py-2 font-semibold">Vencimento</th>
+                        <th className="text-right px-3 py-2 font-semibold">Valor</th>
+                        <th className="text-center px-3 py-2 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financeiroReceber.map((f: any) => {
+                        const isPago = f.status === "pago" || f.status === "recebido";
+                        const isVencido = !isPago && f.data_vencimento && new Date(f.data_vencimento + "T00:00:00") < new Date(new Date().toDateString());
+                        const badge = isPago
+                          ? "bg-success/15 text-success"
+                          : (f.status === "atrasado" || isVencido)
+                            ? "bg-destructive/15 text-destructive"
+                            : "bg-warning/15 text-warning";
+                        const label = isPago ? "pago" : (f.status === "atrasado" || isVencido) ? "vencido" : (f.status ?? "pendente");
+                        return (
+                          <tr key={f.id} className="border-t border-border">
+                            <td className="px-3 py-2">
+                              {f.descricao ?? "Lançamento"}
+                              {f.parcela && <span className="text-[10px] text-muted-foreground ml-1">({f.parcela})</span>}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{f.data_vencimento ? new Date(f.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {Number(f.valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge}`}>{label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
