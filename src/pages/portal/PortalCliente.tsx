@@ -1,18 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, MessageCircle } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, StickyNote, ListChecks, History, Upload, Trash2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import {
-  PendenciasSection,
-  DiarioObraSection,
-  DocumentosSection,
-  ComunicacaoSection,
-} from "@/components/portal/PortalColaborativo";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+
+type AnotTipo = "geral" | "pendencia" | "diario" | "comunicacao";
+const tipoLabels: Record<AnotTipo, string> = {
+  geral: "Geral",
+  pendencia: "Pendência",
+  diario: "Diário de Obra",
+  comunicacao: "Comunicação",
+};
+const tipoColors: Record<AnotTipo, string> = {
+  geral: "bg-secondary text-secondary-foreground",
+  pendencia: "bg-warning/15 text-warning",
+  diario: "bg-primary/15 text-primary",
+  comunicacao: "bg-accent/30 text-accent-foreground",
+};
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -27,6 +38,7 @@ const progressMap: Record<StatusProjeto, number> = {
 const PortalCliente = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedProjeto, setSelectedProjeto] = useState<string | null>(null);
 
   // Find client (prefer user_id link, fall back to email match)
