@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, BookOpen, MessageCircle } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -252,10 +252,7 @@ const PortalCliente = () => {
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
                 <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
-                <TabsTrigger value="colab_pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
-                <TabsTrigger value="colab_diario" className="gap-1.5 text-xs"><BookOpen size={14} /> Diário de Obra</TabsTrigger>
-                <TabsTrigger value="colab_documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
-                <TabsTrigger value="colab_comunicacao" className="gap-1.5 text-xs"><MessageCircle size={14} /> Comunicação</TabsTrigger>
+                <TabsTrigger value="comunicacao" className="gap-1.5 text-xs"><MessageCircle size={14} /> Comunicação</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
@@ -346,10 +343,14 @@ const PortalCliente = () => {
               {/* Pendências */}
               <TabsContent value="pendencias" className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Pendências</h3>
+                {active && clienteData?.cliente?.id && (
+                  <PendenciasSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                )}
                 {!pendencias?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma pendência registrada.</p>
+                  null
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Necessidades de Compra</h4>
                     {pendencias.map(p => (
                       <div key={p.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
                         <div className="flex-1">
@@ -372,6 +373,9 @@ const PortalCliente = () => {
               {/* Documentos */}
               <TabsContent value="documentos" className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Documentos</h3>
+                {active && clienteData?.cliente?.id && (
+                  <DocumentosSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                )}
                 {!docs.length ? (
                   <p className="text-xs text-muted-foreground py-6 text-center">Nenhum documento disponível.</p>
                 ) : (
@@ -419,6 +423,12 @@ const PortalCliente = () => {
                     ))}
                   </div>
                 )}
+                {active && clienteData?.cliente?.id && (
+                  <div className="pt-4 border-t border-border space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground">Diário de Obra</h3>
+                    <DiarioObraSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                  </div>
+                )}
               </TabsContent>
 
               {/* Financeiro */}
@@ -463,29 +473,8 @@ const PortalCliente = () => {
                 )}
               </TabsContent>
 
-              {/* Colaborativo — Pendências */}
-              <TabsContent value="colab_pendencias" className="space-y-3">
-                {active && clienteData?.cliente?.id && (
-                  <PendenciasSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                )}
-              </TabsContent>
-
-              {/* Colaborativo — Diário de Obra */}
-              <TabsContent value="colab_diario" className="space-y-3">
-                {active && clienteData?.cliente?.id && (
-                  <DiarioObraSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                )}
-              </TabsContent>
-
-              {/* Colaborativo — Documentos */}
-              <TabsContent value="colab_documentos" className="space-y-3">
-                {active && clienteData?.cliente?.id && (
-                  <DocumentosSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                )}
-              </TabsContent>
-
-              {/* Colaborativo — Comunicação */}
-              <TabsContent value="colab_comunicacao" className="space-y-3">
+              {/* Comunicação */}
+              <TabsContent value="comunicacao" className="space-y-3">
                 {active && clienteData?.cliente?.id && (
                   <ComunicacaoSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" userName={nomeCliente} />
                 )}
