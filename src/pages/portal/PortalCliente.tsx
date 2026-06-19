@@ -436,92 +436,216 @@ const PortalCliente = () => {
               </div>
             )}
 
-            {/* Project overview card */}
-            {activeProjeto && (
-              <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <h2 className="text-base font-bold text-foreground">{activeProjeto.nome}</h2>
-                    {activeProjeto.endereco_obra && (
-                      <p className="text-xs text-muted-foreground mt-0.5">📍 {activeProjeto.endereco_obra}</p>
-                    )}
-                  </div>
-                  <span className={`self-start px-3 py-1 rounded text-xs font-semibold ${statusColor[activeProjeto.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
-                    {statusLabel[activeProjeto.status ?? ""] ?? activeProjeto.status}
-                  </span>
-                </div>
-                {activeProjeto.descricao && (
-                  <p className="text-xs text-muted-foreground">{activeProjeto.descricao}</p>
-                )}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Progresso da obra</span>
-                    <span className="font-semibold text-foreground">{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="h-2.5" />
-                </div>
-                <div className="flex gap-4 text-[11px] text-muted-foreground">
-                  {activeProjeto.data_inicio && <span><Clock size={10} className="inline mr-0.5" /> Início: {activeProjeto.data_inicio}</span>}
-                  {activeProjeto.data_previsao && <span>Previsão: {activeProjeto.data_previsao}</span>}
-                </div>
-              </div>
-            )}
-
             {/* Tabs */}
-            <Tabs defaultValue="diario" className="space-y-4">
+            <Tabs defaultValue="projeto" className="space-y-4">
               <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
-                <TabsTrigger value="diario" className="gap-1.5 text-xs"><Activity size={14} /> Diário de Obra</TabsTrigger>
+                <TabsTrigger value="projeto" className="gap-1.5 text-xs"><FolderKanban size={14} /> Projeto</TabsTrigger>
+                <TabsTrigger value="anotacoes" className="gap-1.5 text-xs"><StickyNote size={14} /> Anotações</TabsTrigger>
+                <TabsTrigger value="visitas" className="gap-1.5 text-xs"><CalendarClock size={14} /> Visitas Técnicas</TabsTrigger>
                 <TabsTrigger value="cronograma" className="gap-1.5 text-xs"><CalendarDays size={14} /> Cronograma</TabsTrigger>
-                <TabsTrigger value="agenda" className="gap-1.5 text-xs"><CalendarClock size={14} /> Visitas Agendadas</TabsTrigger>
                 <TabsTrigger value="imagens" className="gap-1.5 text-xs"><ImageIcon size={14} /> Imagens</TabsTrigger>
-                <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
+                <TabsTrigger value="projetos" className="gap-1.5 text-xs"><ListChecks size={14} /> Projetos</TabsTrigger>
+                <TabsTrigger value="timeline" className="gap-1.5 text-xs"><History size={14} /> Linha do Tempo</TabsTrigger>
+                <TabsTrigger value="atividades" className="gap-1.5 text-xs"><Activity size={14} /> Atividades</TabsTrigger>
                 <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
-                <TabsTrigger value="comunicacao" className="gap-1.5 text-xs"><MessageCircle size={14} /> Comunicação</TabsTrigger>
               </TabsList>
 
-              {/* Diário de Obra - Visitas Técnicas */}
-              <TabsContent value="diario" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Diário de Obra</h3>
-                {!visitas?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum registro de visita técnica.</p>
+              {/* Projeto - summary card */}
+              <TabsContent value="projeto" className="space-y-3">
+                {activeProjeto && (
+                  <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <h2 className="text-base font-bold text-foreground">{activeProjeto.nome}</h2>
+                        {activeProjeto.endereco_obra && (
+                          <p className="text-xs text-muted-foreground mt-0.5">📍 {activeProjeto.endereco_obra}</p>
+                        )}
+                      </div>
+                      <span className={`self-start px-3 py-1 rounded text-xs font-semibold ${statusColor[activeProjeto.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
+                        {statusLabel[activeProjeto.status ?? ""] ?? activeProjeto.status}
+                      </span>
+                    </div>
+                    {activeProjeto.descricao && (
+                      <p className="text-xs text-muted-foreground">{activeProjeto.descricao}</p>
+                    )}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Progresso da obra</span>
+                        <span className="font-semibold text-foreground">{progress}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2.5" />
+                    </div>
+                    <div className="flex gap-4 text-[11px] text-muted-foreground">
+                      {activeProjeto.data_inicio && <span><Clock size={10} className="inline mr-0.5" /> Início: {activeProjeto.data_inicio}</span>}
+                      {activeProjeto.data_previsao && <span>Previsão: {activeProjeto.data_previsao}</span>}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Anotações - unified crm_interacoes */}
+              <TabsContent value="anotacoes">
+                {active && clienteData?.cliente?.id && user?.id ? (
+                  <AnotacoesTab clienteId={clienteData.cliente.id} projetoId={active} userId={user.id} userName={nomeCliente} />
                 ) : (
-                  <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
-                    {visitas.map(v => (
-                      <div key={v.id} className="relative">
-                        <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                        <div className="bg-card border border-border rounded-lg p-3 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-foreground">
-                              {v.data ? new Date(v.data + "T00:00:00").toLocaleDateString("pt-BR") : "Sem data"}
-                              {v.hora && ` às ${v.hora}`}
-                            </span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                              v.status_visita === "concluida" ? "bg-success/15 text-success" :
-                              v.status_visita === "agendada" ? "bg-primary/15 text-primary" :
-                              "bg-secondary text-secondary-foreground"
-                            }`}>
-                              {v.status_visita === "concluida" ? "Concluída" : v.status_visita === "agendada" ? "Agendada" : v.status_visita}
-                            </span>
-                          </div>
-                          {v.descricao && <p className="text-xs text-muted-foreground">{v.descricao}</p>}
-                          {v.servicos_executados && (
-                            <div className="text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground">Serviços: </span>{v.servicos_executados}
-                            </div>
-                          )}
+                  <p className="text-xs text-muted-foreground py-6 text-center">Selecione um projeto.</p>
+                )}
+              </TabsContent>
+
+              {/* Visitas Técnicas (read-only agenda + visitas_tecnicas) */}
+              <TabsContent value="visitas" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
+                {!agenda?.length ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma visita agendada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {agenda.map((a: any) => (
+                      <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                            a.status === "concluida" ? "bg-success/15 text-success" :
+                            a.status === "cancelada" ? "bg-destructive/15 text-destructive" :
+                            "bg-primary/15 text-primary"
+                          }`}>{a.status ?? "agendada"}</span>
                         </div>
+                        {a.descricao && <p className="text-[11px] text-muted-foreground">{a.descricao}</p>}
+                        <p className="text-[11px] text-muted-foreground">
+                          {a.data_inicio ? new Date(a.data_inicio).toLocaleString("pt-BR") : "—"}
+                          {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <h3 className="text-sm font-semibold text-foreground pt-3 border-t border-border">Visitas Realizadas</h3>
+                {!visitas?.length ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma visita realizada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {visitas.map(v => (
+                      <div key={v.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-foreground">
+                            {v.data ? new Date(v.data + "T00:00:00").toLocaleDateString("pt-BR") : "Sem data"}
+                            {v.hora && ` às ${v.hora}`}
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                            v.status_visita === "concluida" ? "bg-success/15 text-success" :
+                            v.status_visita === "agendada" ? "bg-primary/15 text-primary" :
+                            "bg-secondary text-secondary-foreground"
+                          }`}>
+                            {v.status_visita === "concluida" ? "Concluída" : v.status_visita === "agendada" ? "Agendada" : v.status_visita}
+                          </span>
+                        </div>
+                        {v.descricao && <p className="text-xs text-muted-foreground">{v.descricao}</p>}
+                        {v.servicos_executados && (
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">Serviços: </span>{v.servicos_executados}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
               </TabsContent>
 
-              {/* Cronograma - Timeline de Status */}
+              {/* Cronograma - placeholder (no separate schedule source) */}
               <TabsContent value="cronograma" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Cronograma / Evolução</h3>
+                <h3 className="text-sm font-semibold text-foreground">Cronograma</h3>
+                {activeProjeto?.data_inicio || activeProjeto?.data_previsao ? (
+                  <div className="bg-card border border-border rounded-lg p-4 space-y-2 text-xs">
+                    {activeProjeto.data_inicio && <p><span className="font-semibold">Início:</span> {activeProjeto.data_inicio}</p>}
+                    {activeProjeto.data_previsao && <p><span className="font-semibold">Previsão:</span> {activeProjeto.data_previsao}</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Em breve</p>
+                )}
+              </TabsContent>
+
+              {/* Imagens */}
+              <TabsContent value="imagens" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Galeria de Imagens</h3>
+                {!imagens.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma imagem disponível.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {imagens.map(img => (
+                      <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="group">
+                        <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                          <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1 truncate">{img.nome_arquivo}</p>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Documentos */}
+              <TabsContent value="documentos" className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">Documentos</h3>
+                  {active && clienteData?.cliente?.id && (
+                    <DocumentosUpload
+                      clienteId={clienteData.cliente.id}
+                      projetoId={active}
+                      onUploaded={() => queryClient.invalidateQueries({ queryKey: ["portal_documentos", clienteData.cliente.id] })}
+                    />
+                  )}
+                </div>
+                {!docs.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum documento disponível.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {docs.map(d => (
+                      <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
+                        className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
+                        <FileText size={16} className="text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">{d.nome_arquivo}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                        <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Projetos - list of client's projects */}
+              <TabsContent value="projetos" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Meus Projetos</h3>
+                {!projetos.length ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum projeto.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {projetos.map(p => (
+                      <button key={p.id} onClick={() => setSelectedProjeto(p.id)}
+                        className={`w-full bg-card border rounded-lg p-3 flex items-center justify-between text-left transition-colors ${
+                          active === p.id ? "border-primary" : "border-border hover:border-primary/40"
+                        }`}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">{p.nome}</p>
+                          {p.endereco_obra && <p className="text-[10px] text-muted-foreground truncate">{p.endereco_obra}</p>}
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${statusColor[p.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
+                          {statusLabel[p.status ?? ""] ?? p.status}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Linha do Tempo - historico_projeto */}
+              <TabsContent value="timeline" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Linha do Tempo</h3>
                 {!historico?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum histórico de status.</p>
+                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum histórico.</p>
                 ) : (
                   <div className="relative pl-4 border-l-2 border-primary/20 space-y-3">
                     {historico.map((h, i) => (
@@ -546,114 +670,10 @@ const PortalCliente = () => {
                 )}
               </TabsContent>
 
-              {/* Imagens */}
-              <TabsContent value="imagens" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Galeria de Imagens</h3>
-                {!imagens.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma imagem disponível.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {imagens.map(img => (
-                      <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="group">
-                        <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                          <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-1 truncate">{img.nome_arquivo}</p>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Pendências */}
-              <TabsContent value="pendencias" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Pendências</h3>
-                {active && clienteData?.cliente?.id && (
-                  <PendenciasSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                )}
-                {!pendencias?.length ? (
-                  null
-                ) : (
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Necessidades de Compra</h4>
-                    {pendencias.map(p => (
-                      <div key={p.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-foreground">{p.descricao ?? "Item sem descrição"}</p>
-                          {p.quantidade && <span className="text-[11px] text-muted-foreground">Qtd: {p.quantidade}</span>}
-                        </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                          p.status === "pendente" ? "bg-warning/15 text-warning" :
-                          p.status === "comprado" ? "bg-success/15 text-success" :
-                          "bg-secondary text-secondary-foreground"
-                        }`}>
-                          {p.status === "pendente" ? "Pendente" : p.status === "comprado" ? "Comprado" : p.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Documentos */}
-              <TabsContent value="documentos" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Documentos</h3>
-                {active && clienteData?.cliente?.id && (
-                  <DocumentosSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                )}
-                {!docs.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhum documento disponível.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {docs.map(d => (
-                      <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
-                        className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
-                        <FileText size={16} className="text-primary shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{d.nome_arquivo}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {new Date(d.created_at).toLocaleDateString("pt-BR")}
-                          </p>
-                        </div>
-                        <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Visitas Agendadas */}
-              <TabsContent value="agenda" className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
-                {!agenda?.length ? (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma visita agendada.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {agenda.map((a: any) => (
-                      <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                            a.status === "concluida" ? "bg-success/15 text-success" :
-                            a.status === "cancelada" ? "bg-destructive/15 text-destructive" :
-                            "bg-primary/15 text-primary"
-                          }`}>{a.status ?? "agendada"}</span>
-                        </div>
-                        {a.descricao && <p className="text-[11px] text-muted-foreground">{a.descricao}</p>}
-                        <p className="text-[11px] text-muted-foreground">
-                          {a.data_inicio ? new Date(a.data_inicio).toLocaleString("pt-BR") : "—"}
-                          {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {active && clienteData?.cliente?.id && (
-                  <div className="pt-4 border-t border-border space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground">Diário de Obra</h3>
-                    <DiarioObraSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
-                  </div>
-                )}
+              {/* Atividades - placeholder */}
+              <TabsContent value="atividades" className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Atividades</h3>
+                <p className="text-xs text-muted-foreground py-6 text-center">Em breve</p>
               </TabsContent>
 
               {/* Financeiro */}
@@ -695,13 +715,6 @@ const PortalCliente = () => {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </TabsContent>
-
-              {/* Comunicação */}
-              <TabsContent value="comunicacao" className="space-y-3">
-                {active && clienteData?.cliente?.id && (
-                  <ComunicacaoSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" userName={nomeCliente} />
                 )}
               </TabsContent>
             </Tabs>
