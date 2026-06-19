@@ -553,6 +553,20 @@ const CRM = () => {
     enabled: !!detailClient?.id,
   });
 
+  const { data: financeiroReceber } = useQuery({
+    queryKey: ["crm_financeiro_receber", detailClient?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("financeiro_receber")
+        .select("id, descricao, valor, data_vencimento, data_recebimento, status, parcela")
+        .eq("cliente_id", detailClient!.id)
+        .eq("deletado", false)
+        .order("data_vencimento", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!detailClient?.id,
+  });
+
   const resetForm = () => { setNome(""); setEmail(""); setTelefone(""); setEndereco(""); setEnderecoObra(""); setOrigem("outro"); setArquitetoIdOrigem(""); setStatusCrm("lead"); setEditId(null); setShowForm(false); setNovoClienteObs(""); };
   const resetItemForm = () => { setItemDesc(""); setItemQtd(1); setItemCusto(0); setItemVenda(0); setItemRt(0); setItemRtTipo("valor"); setItemRtPercentual(0); setItemTipo("produto"); setEditItemId(null); setItemProdutoId(null); };
   const resetIntForm = () => { setIntTipo("ligacao"); setIntDesc(""); setEditIntId(null); setIntData(undefined); setIntMembroEquipe(""); setIntVisivelCliente(false); };
