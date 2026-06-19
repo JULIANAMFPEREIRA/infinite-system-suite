@@ -40,12 +40,9 @@ function AutorBadge({ tipo }: { tipo?: string }) {
   );
 }
 
-export default function PortalColaborativo({ clienteId, projetoId, autorTipo, userName, empresaId }: PortalColaborativoProps) {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-
-  // Resolve empresa_id if not provided
-  const { data: resolvedEmpresaId } = useQuery({
+/* Shared hook: resolve empresa_id from cliente when not provided */
+function useEmpresaId(clienteId: string, empresaId?: string) {
+  const { data } = useQuery({
     queryKey: ["portal_colab_empresa", clienteId, empresaId],
     queryFn: async () => {
       if (empresaId) return empresaId;
@@ -53,30 +50,39 @@ export default function PortalColaborativo({ clienteId, projetoId, autorTipo, us
       return (data as any)?.empresa_id ?? null;
     },
   });
+  return data ?? null;
+}
 
-  return (
-    <Tabs defaultValue="pendencias" className="space-y-4">
-      <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border">
-        <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
-        <TabsTrigger value="diario" className="gap-1.5 text-xs"><BookOpen size={14} /> Diário de Obra</TabsTrigger>
-        <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
-        <TabsTrigger value="comunicacao" className="gap-1.5 text-xs"><MessageCircle size={14} /> Comunicação</TabsTrigger>
-      </TabsList>
+export interface SectionProps {
+  clienteId: string;
+  projetoId: string;
+  autorTipo: AutorTipo;
+  empresaId?: string;
+  userName?: string;
+}
 
-      <TabsContent value="pendencias">
-        <PendenciasTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolvedEmpresaId} userId={user?.id} />
-      </TabsContent>
-      <TabsContent value="diario">
-        <DiarioTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolvedEmpresaId} userId={user?.id} />
-      </TabsContent>
-      <TabsContent value="documentos">
-        <DocumentosTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolvedEmpresaId} userId={user?.id} />
-      </TabsContent>
-      <TabsContent value="comunicacao">
-        <ComunicacaoTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} userName={userName} empresaId={resolvedEmpresaId} userId={user?.id} />
-      </TabsContent>
-    </Tabs>
-  );
+export function PendenciasSection({ clienteId, projetoId, autorTipo, empresaId }: SectionProps) {
+  const { user } = useAuth();
+  const resolved = useEmpresaId(clienteId, empresaId);
+  return <PendenciasTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolved} userId={user?.id} />;
+}
+
+export function DiarioObraSection({ clienteId, projetoId, autorTipo, empresaId }: SectionProps) {
+  const { user } = useAuth();
+  const resolved = useEmpresaId(clienteId, empresaId);
+  return <DiarioTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolved} userId={user?.id} />;
+}
+
+export function DocumentosSection({ clienteId, projetoId, autorTipo, empresaId }: SectionProps) {
+  const { user } = useAuth();
+  const resolved = useEmpresaId(clienteId, empresaId);
+  return <DocumentosTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolved} userId={user?.id} />;
+}
+
+export function ComunicacaoSection({ clienteId, projetoId, autorTipo, empresaId, userName }: SectionProps) {
+  const { user } = useAuth();
+  const resolved = useEmpresaId(clienteId, empresaId);
+  return <ComunicacaoTab clienteId={clienteId} projetoId={projetoId} autorTipo={autorTipo} empresaId={resolved} userId={user?.id} userName={userName} />;
 }
 
 /* ───────────────────────────────────────── Pendências ───────────────────────────────────────── */
