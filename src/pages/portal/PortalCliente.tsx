@@ -2,12 +2,17 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, Users } from "lucide-react";
+import { FolderKanban, LogOut, Clock, FileText, Image as ImageIcon, AlertCircle, CalendarDays, Activity, ChevronRight, DollarSign, CalendarClock, BookOpen, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import PortalColaborativo from "@/components/portal/PortalColaborativo";
+import {
+  PendenciasSection,
+  DiarioObraSection,
+  DocumentosSection,
+  ComunicacaoSection,
+} from "@/components/portal/PortalColaborativo";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -247,7 +252,10 @@ const PortalCliente = () => {
                 <TabsTrigger value="pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
                 <TabsTrigger value="financeiro" className="gap-1.5 text-xs"><DollarSign size={14} /> Financeiro</TabsTrigger>
-                <TabsTrigger value="colaborativo" className="gap-1.5 text-xs"><Users size={14} /> Colaborativo</TabsTrigger>
+                <TabsTrigger value="colab_pendencias" className="gap-1.5 text-xs"><AlertCircle size={14} /> Pendências</TabsTrigger>
+                <TabsTrigger value="colab_diario" className="gap-1.5 text-xs"><BookOpen size={14} /> Diário de Obra</TabsTrigger>
+                <TabsTrigger value="colab_documentos" className="gap-1.5 text-xs"><FileText size={14} /> Documentos</TabsTrigger>
+                <TabsTrigger value="colab_comunicacao" className="gap-1.5 text-xs"><MessageCircle size={14} /> Comunicação</TabsTrigger>
               </TabsList>
 
               {/* Diário de Obra - Visitas Técnicas */}
@@ -455,15 +463,31 @@ const PortalCliente = () => {
                 )}
               </TabsContent>
 
-              {/* Colaborativo (Pendências, Diário, Documentos, Comunicação) */}
-              <TabsContent value="colaborativo" className="space-y-3">
+              {/* Colaborativo — Pendências */}
+              <TabsContent value="colab_pendencias" className="space-y-3">
                 {active && clienteData?.cliente?.id && (
-                  <PortalColaborativo
-                    clienteId={clienteData.cliente.id}
-                    projetoId={active}
-                    autorTipo="cliente"
-                    userName={nomeCliente}
-                  />
+                  <PendenciasSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                )}
+              </TabsContent>
+
+              {/* Colaborativo — Diário de Obra */}
+              <TabsContent value="colab_diario" className="space-y-3">
+                {active && clienteData?.cliente?.id && (
+                  <DiarioObraSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                )}
+              </TabsContent>
+
+              {/* Colaborativo — Documentos */}
+              <TabsContent value="colab_documentos" className="space-y-3">
+                {active && clienteData?.cliente?.id && (
+                  <DocumentosSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" />
+                )}
+              </TabsContent>
+
+              {/* Colaborativo — Comunicação */}
+              <TabsContent value="colab_comunicacao" className="space-y-3">
+                {active && clienteData?.cliente?.id && (
+                  <ComunicacaoSection clienteId={clienteData.cliente.id} projetoId={active} autorTipo="cliente" userName={nomeCliente} />
                 )}
               </TabsContent>
             </Tabs>
