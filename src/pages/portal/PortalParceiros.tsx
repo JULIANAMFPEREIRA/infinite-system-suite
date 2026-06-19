@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass, Target
+  CheckCircle2, Hourglass, Target, FileText, Upload
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
