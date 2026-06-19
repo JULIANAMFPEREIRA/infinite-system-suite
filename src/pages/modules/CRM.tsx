@@ -2058,6 +2058,7 @@ const CRM = () => {
             <TabsTrigger value="projetos" className="text-xs">Projetos</TabsTrigger>
             <TabsTrigger value="historico" className="text-xs gap-1.5"><History size={13} /> Linha do Tempo</TabsTrigger>
             <TabsTrigger value="atividades" className="text-xs gap-1.5"><Activity size={13} /> Atividades</TabsTrigger>
+            <TabsTrigger value="financeiro" className="text-xs gap-1.5"><DollarSign size={13} /> Financeiro</TabsTrigger>
           </TabsList>
 
           {/* ─── DADOS DO CLIENTE ─── */}
