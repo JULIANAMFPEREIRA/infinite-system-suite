@@ -43,6 +43,7 @@ import AdminDashboard from "./pages/infinit/admin/AdminDashboard";
 import NewAuthorization from "./pages/infinit/admin/NewAuthorization";
 import AuthorizationDetail from "./pages/infinit/admin/AuthorizationDetail";
 import PublicAuthorization from "./pages/infinit/public/PublicAuthorization";
+import SiteInstitucional from "./pages/site/SiteInstitucional";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/auth/:slug" element={<PublicAuthorization />} />
             <Route path="/formulario" element={<FormularioCliente />} />
             <Route path="/cadastro" element={<CadastroLivre />} />
+            <Route path="/site" element={<SiteInstitucional />} />
             {/* Portal routes - no AppLayout */}
             <Route path="/portal/cliente" element={<RoleRoute allowedRoles={["cliente"]}><PortalCliente /></RoleRoute>} />
             <Route path="/portal/arquiteto" element={<RoleRoute allowedRoles={["arquiteto", "parceiro", "tecnico"]}><PortalParceiros /></RoleRoute>} />
