@@ -607,6 +607,69 @@ const PortalParceiros = () => {
             ))}
           </div>
         </TabsContent>
+
+        <TabsContent value="documentos" className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Documentos</h3>
+            <div>
+              <input ref={uploadInputRef} type="file" hidden onChange={handleUploadDoc} />
+              <button
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={uploadingDoc}
+                className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium disabled:opacity-50"
+              >
+                <Upload size={13} /> {uploadingDoc ? "Enviando..." : "Enviar arquivo"}
+              </button>
+            </div>
+          </div>
+          {!(documentos ?? []).length ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">Nenhum documento disponível.</p>
+          ) : (
+            <div className="space-y-2">
+              {(documentos ?? []).map(d => (
+                <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
+                  className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
+                  <FileText size={16} className="text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{d.nome_arquivo}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                      {d.autor_tipo && ` · ${d.autor_tipo}`}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                </a>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="linha_tempo" className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Linha do Tempo</h3>
+          {!(historico ?? []).length ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">Sem eventos registrados.</p>
+          ) : (
+            <div className="relative pl-4 border-l-2 border-primary/20 space-y-3">
+              {(historico ?? []).map((h, i) => (
+                <div key={h.id} className="relative">
+                  <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-background ${i === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${statusColor[h.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                      {statusLabel[h.status] ?? h.status}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  {h.observacao && <p className="text-xs text-muted-foreground mt-1">{h.observacao}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="atividades" className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Atividades</h3>
+          <p className="text-xs text-muted-foreground py-6 text-center">Em breve.</p>
+        </TabsContent>
       </Tabs>
     </div>
   );
