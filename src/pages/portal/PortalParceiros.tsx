@@ -418,6 +418,9 @@ const PortalParceiros = () => {
           <TabsTrigger value="visitas" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Visitas</TabsTrigger>
           <TabsTrigger value="imagens" className="gap-2 text-sm h-10 px-4"><ImageIcon size={18} /> Imagens</TabsTrigger>
           {data.fornecedor.tipo !== "tecnico" && <TabsTrigger value="anotacoes" className="gap-2 text-sm h-10 px-4"><MessageSquare size={18} /> Anotações</TabsTrigger>}
+          <TabsTrigger value="documentos" className="gap-2 text-sm h-10 px-4"><FileText size={18} /> Documentos</TabsTrigger>
+          <TabsTrigger value="linha_tempo" className="gap-2 text-sm h-10 px-4"><Clock size={18} /> Linha do Tempo</TabsTrigger>
+          <TabsTrigger value="atividades" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Atividades</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cronograma" className="space-y-4">
