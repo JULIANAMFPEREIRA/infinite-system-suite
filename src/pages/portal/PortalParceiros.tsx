@@ -718,8 +718,12 @@ const PortalParceiros = () => {
                       const saldo = p.valor_combinado - pagoNoProjeto;
                       const quitado = saldo <= 0;
                       return (
-                        <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
-                          <td className="p-3">
+                        <tr
+                          key={p.id}
+                          onClick={() => p.projeto_id && setSelectedProjeto(p.projeto_id)}
+                          className={`transition-colors ${p.projeto_id ? "cursor-pointer hover:bg-secondary/40" : ""}`}
+                        >
+                           <td className="p-3">
                             <p className="font-bold text-foreground">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</p>
                             {p.projetos?.nome && p.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {p.clientes.nome}</p>}
                           </td>
