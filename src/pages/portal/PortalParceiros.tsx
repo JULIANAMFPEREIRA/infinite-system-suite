@@ -262,6 +262,52 @@ const PortalParceiros = () => {
     enabled: !!activeProjeto?.cliente_id,
   });
 
+  const { data: documentos, refetch: refetchDocumentos } = useQuery({
+    queryKey: ["portal_parc_documentos", selectedProjeto],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_arquivos")
+        .select("id, nome_arquivo, url, tipo, created_at, autor_tipo")
+        .eq("projeto_id", selectedProjeto!)
+        .order("created_at", { ascending: false });
+      return data?.filter(d => d.tipo !== "imagem" && !d.nome_arquivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ?? [];
+    },
+    enabled: !!selectedProjeto,
+  });
+
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeProjeto || !data?.fornecedor) return;
+    setUploadingDoc(true);
+    try {
+      const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { data: { user: u } } = await supabase.auth.getUser();
+      const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
+        cliente_id: activeProjeto.cliente_id,
+        projeto_id: selectedProjeto,
+        empresa_id: activeProjeto.empresa_id,
+        usuario_id: u?.id,
+        autor_tipo: data.fornecedor.tipo,
+        nome_arquivo: file.name,
+        url: pub.publicUrl,
+        tipo: file.type?.startsWith("image/") ? "imagem" : "documento",
+      } as any);
+      if (insErr) throw insErr;
+      toast.success("Arquivo enviado");
+      refetchDocumentos();
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setUploadingDoc(false);
+      if (uploadInputRef.current) uploadInputRef.current.value = "";
+    }
+  };
+
   const handleLogout = async () => { await signOut(); navigate("/login"); };
 
   const handleAddNota = async () => {
