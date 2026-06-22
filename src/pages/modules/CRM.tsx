@@ -1280,7 +1280,7 @@ const CRM = () => {
       await supabase.from("projeto_itens").insert(itemInserts);
     }
     // Generate financial parcels from simulation
-    if (totalVenda > 0) {
+    if (totalVenda > 0 && !(approvedOrc as any)?.grupo_id) {
       const parseDate = (d: string) => {
         if (!d) return null;
         if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; }
