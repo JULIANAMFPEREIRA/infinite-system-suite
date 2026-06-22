@@ -208,6 +208,7 @@ const PortalParceiros = () => {
     activeProjetoFound: !!activeProjeto,
     activeProjetoId: activeProjeto?.id
   });
+  console.log('selectedProjeto:', selectedProjeto, 'activeProjeto:', activeProjeto, 'data.projetos:', data?.projetos);
 
   const progress = activeProjeto
     ? (progressMap[activeProjeto.status as StatusProjeto] ?? 0)
