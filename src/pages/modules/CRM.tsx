@@ -760,6 +760,11 @@ const CRM = () => {
     }
 
      // ── Sync financeiro_receber ──
+     // If this orçamento was approved as part of a group, skip — joint parcelas
+     // are managed by AprovarConjuntoModal and must not be overwritten here.
+     if ((orcData as any)?.grupo_id) {
+       // skip financeiro sync for grouped orçamentos
+     } else {
      const { data: parcelasExistentes } = await supabase
        .from("financeiro_receber")
        .select("id, parcela, status, valor_recebido")
@@ -817,6 +822,7 @@ const CRM = () => {
          descricao: `Conta a receber — ${detailClient.nome}`,
          valor: totalVenda, parcela: 1, status: "pendente" as const,
        });
+     }
      }
 
     // ── Sync comissões (RT) — single consolidated entry ──
