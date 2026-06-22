@@ -817,40 +817,6 @@ const PortalParceiros = () => {
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-border">
-            <h2 className="text-sm font-bold">Visitas e Projetos</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {(data?.projetos ?? []).map((p: any) => (
-                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
-                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
-                      {p.clientes?.nome && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
-                      )}
-                      {p.endereco_obra && (
-                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
-                        {statusLabel[p.status] ?? p.status}
-                      </span>
-                      <ChevronRight size={16} className="text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-muted-foreground">
-                      <span>Progresso</span>
-                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
-                    </div>
-                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       );
     }
