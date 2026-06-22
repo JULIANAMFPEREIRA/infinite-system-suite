@@ -171,7 +171,18 @@ const Projetos = () => {
       await supabase.from("projetos").update({ status: "aprovado" }).eq("id", projetoId);
       const venda = projeto.venda_total ?? 0;
       const parcelas = projeto.numero_parcelas ?? 1;
-      if (venda > 0 && empresaId) {
+      // If linked orçamento was approved as part of a group, skip parcela generation —
+      // joint parcelas are managed by AprovarConjuntoModal and must not be duplicated.
+      let isGrouped = false;
+      if (projeto.orcamento_id) {
+        const { data: orc } = await supabase
+          .from("crm_orcamentos")
+          .select("grupo_id")
+          .eq("id", projeto.orcamento_id)
+          .single();
+        isGrouped = !!(orc as any)?.grupo_id;
+      }
+      if (venda > 0 && empresaId && !isGrouped) {
         const valorParcela = Math.round((venda / parcelas) * 100) / 100;
         const today = new Date();
         const inserts = Array.from({ length: parcelas }, (_, i) => {
