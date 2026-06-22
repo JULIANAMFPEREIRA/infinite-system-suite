@@ -708,30 +708,20 @@ const PortalParceiros = () => {
 
       return (
         <div className="space-y-6 animate-fade-in">
-          {(() => {
-            const glass = {
-              background: "rgba(15, 23, 42, 0.6)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            } as React.CSSProperties;
-            return (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
-                  <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
-                </div>
-                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Recebido</p>
-                  <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
-                </div>
-                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Saldo Devedor</p>
-                  <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
-                </div>
-              </div>
-            );
-          })()}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px] bg-[#0f172a] border border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
+              <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px] bg-card border border-border">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Total Recebido</p>
+              <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px] bg-card border border-border">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Saldo Devedor</p>
+              <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
+            </div>
+          </div>
 
           {(() => {
             const allProjs = (data?.projetos ?? []) as any[];
