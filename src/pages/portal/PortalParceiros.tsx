@@ -421,6 +421,9 @@ const PortalParceiros = () => {
           <TabsTrigger value="documentos" className="gap-2 text-sm h-10 px-4"><FileText size={18} /> Documentos</TabsTrigger>
           <TabsTrigger value="linha_tempo" className="gap-2 text-sm h-10 px-4"><Clock size={18} /> Linha do Tempo</TabsTrigger>
           <TabsTrigger value="atividades" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Atividades</TabsTrigger>
+          {data.fornecedor.tipo === "tecnico" && (
+            <TabsTrigger value="financeiro" className="gap-2 text-sm h-10 px-4"><DollarSign size={18} /> Financeiro</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="cronograma" className="space-y-4">
@@ -670,6 +673,22 @@ const PortalParceiros = () => {
           <h3 className="text-sm font-semibold text-foreground">Atividades</h3>
           <p className="text-xs text-muted-foreground py-6 text-center">Em breve.</p>
         </TabsContent>
+
+        {data.fornecedor.tipo === "tecnico" && (
+          <TabsContent value="financeiro" className="space-y-4">
+            {(() => {
+              const valorContratado = (data?.ptecnico ?? [])
+                .filter((p: any) => p.projeto_id === selectedProjeto)
+                .reduce((s: number, p: any) => s + Number(p.valor_combinado || 0), 0);
+              return (
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Valor Contratado neste Projeto</p>
+                  <p className="text-3xl font-black text-white tracking-tight">{fmt(valorContratado)}</p>
+                </div>
+              );
+            })()}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -700,40 +719,39 @@ const PortalParceiros = () => {
 
           <div className="space-y-4">
             <h2 className="text-sm font-bold">Projetos</h2>
-            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
-                       <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Contratado</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                     {(data.ptecnico ?? []).length === 0 && (
-                       <tr><td colSpan={2} className="p-4 text-center text-muted-foreground">Nenhum projeto vinculado.</td></tr>
-                     )}
-                    {(data.ptecnico ?? []).map((p: any) => {
-                      const pagoNoProjeto = (data.lancamentos ?? []).filter((l: any) => l.projeto_id === p.projeto_id).reduce((acc: number, cur: any) => acc + Number(cur.valor), 0);
-                      const saldo = p.valor_combinado - pagoNoProjeto;
-                      const quitado = saldo <= 0;
-                      return (
-                        <tr
-                          key={p.id}
-                          onClick={() => p.id && setSelectedProjeto(p.id)}
-                          className={`transition-colors ${p.projeto_id ? "cursor-pointer hover:bg-secondary/40" : ""}`}
-                        >
-                           <td className="p-3">
-                            <p className="font-bold text-foreground">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</p>
-                            {p.projetos?.nome && p.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {p.clientes.nome}</p>}
-                          </td>
-                           <td className="p-3 text-right font-medium">{fmt(p.valor_combinado)}</td>
-                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
+              {(data?.projetos ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
+              )}
+              {(data?.projetos ?? []).map((p: any) => (
+                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                      {p.clientes?.nome && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                      )}
+                      {p.endereco_obra && (
+                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                        {statusLabel[p.status] ?? p.status}
+                      </span>
+                      <ChevronRight size={16} className="text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                      <span>Progresso</span>
+                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+                    </div>
+                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -799,40 +817,6 @@ const PortalParceiros = () => {
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-border">
-            <h2 className="text-sm font-bold">Visitas e Projetos</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {(data?.projetos ?? []).map((p: any) => (
-                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
-                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
-                      {p.clientes?.nome && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
-                      )}
-                      {p.endereco_obra && (
-                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
-                        {statusLabel[p.status] ?? p.status}
-                      </span>
-                      <ChevronRight size={16} className="text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-muted-foreground">
-                      <span>Progresso</span>
-                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
-                    </div>
-                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       );
     }
