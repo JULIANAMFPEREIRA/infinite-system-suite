@@ -720,7 +720,7 @@ const PortalParceiros = () => {
                       return (
                         <tr
                           key={p.id}
-                          onClick={() => p.projeto_id && setSelectedProjeto(p.projeto_id)}
+                          onClick={() => p.id && setSelectedProjeto(p.id)}
                           className={`transition-colors ${p.projeto_id ? "cursor-pointer hover:bg-secondary/40" : ""}`}
                         >
                            <td className="p-3">
