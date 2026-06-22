@@ -673,6 +673,22 @@ const PortalParceiros = () => {
           <h3 className="text-sm font-semibold text-foreground">Atividades</h3>
           <p className="text-xs text-muted-foreground py-6 text-center">Em breve.</p>
         </TabsContent>
+
+        {data.fornecedor.tipo === "tecnico" && (
+          <TabsContent value="financeiro" className="space-y-4">
+            {(() => {
+              const valorContratado = (data?.ptecnico ?? [])
+                .filter((p: any) => p.projeto_id === selectedProjeto)
+                .reduce((s: number, p: any) => s + Number(p.valor_combinado || 0), 0);
+              return (
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Valor Contratado neste Projeto</p>
+                  <p className="text-3xl font-black text-white tracking-tight">{fmt(valorContratado)}</p>
+                </div>
+              );
+            })()}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
