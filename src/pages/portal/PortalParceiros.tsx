@@ -40,6 +40,10 @@ const PortalParceiros = () => {
   const [showNovaEntrada, setShowNovaEntrada] = useState(false);
   const [showConcluidos, setShowConcluidos] = useState(false);
   const [showAllRecebidos, setShowAllRecebidos] = useState(false);
+  const [monthCursor, setMonthCursor] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   const [novaNota, setNovaNota] = useState("");
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
