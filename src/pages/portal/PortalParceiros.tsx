@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { 
   LogOut, Activity, CalendarDays,
-  Image as ImageIcon, ChevronLeft, ChevronRight,
+  Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   Plus, DollarSign, MessageSquare, Clock,
   CheckCircle2, Hourglass, Target, FileText, Upload
 } from "lucide-react";
@@ -38,6 +38,8 @@ const PortalParceiros = () => {
   const navigate = useNavigate();
   const [selectedProjeto, setSelectedProjeto] = useState<string | null>(null);
   const [showNovaEntrada, setShowNovaEntrada] = useState(false);
+  const [showConcluidos, setShowConcluidos] = useState(false);
+  const [showAllRecebidos, setShowAllRecebidos] = useState(false);
   const [novaNota, setNovaNota] = useState("");
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
