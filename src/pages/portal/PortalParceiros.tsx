@@ -814,38 +814,47 @@ const PortalParceiros = () => {
 
           {(() => {
             const lancs = (data.lancamentos ?? []) as any[];
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = now.getMonth();
-            let mes = 0, ano = 0;
-            for (const l of lancs) {
-              if (!l.data_pagamento) continue;
+            const cy = monthCursor.getFullYear();
+            const cm = monthCursor.getMonth();
+            const monthLancs = lancs.filter((l: any) => {
+              if (!l.data_pagamento) return false;
               const d = new Date(l.data_pagamento);
-              const v = Number(l.valor) || 0;
-              if (d.getFullYear() === y) {
-                ano += v;
-                if (d.getMonth() === m) mes += v;
-              }
-            }
+              return d.getFullYear() === cy && d.getMonth() === cm;
+            });
+            const totalMes = monthLancs.reduce((acc: number, l: any) => acc + (Number(l.valor) || 0), 0);
+            const monthName = monthCursor.toLocaleDateString("pt-BR", { month: "long" });
+            const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + cy;
+            const goPrev = () => setMonthCursor(new Date(cy, cm - 1, 1));
+            const goNext = () => setMonthCursor(new Date(cy, cm + 1, 1));
             return (
               <div className="space-y-3">
                 <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-secondary/40 p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Este Mês</p>
-                      <p className="text-base font-black text-success">{fmt(mes)}</p>
+                  <div className="flex items-center justify-between gap-3 rounded-xl bg-secondary/40 p-3">
+                    <button
+                      onClick={goPrev}
+                      className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
+                      aria-label="Mês anterior"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <div className="flex-1 text-center">
+                      <p className="text-xs font-semibold text-muted-foreground">{monthLabel}</p>
+                      <p className="text-base font-black text-success">{fmt(totalMes)}</p>
                     </div>
-                    <div className="rounded-xl bg-secondary/40 p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Este Ano</p>
-                      <p className="text-base font-black text-success">{fmt(ano)}</p>
-                    </div>
+                    <button
+                      onClick={goNext}
+                      className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
+                      aria-label="Próximo mês"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
                   <button
                     onClick={() => setShowAllRecebidos(v => !v)}
                     className="w-full flex items-center justify-between text-xs font-semibold text-primary hover:underline px-1"
                   >
-                    <span>{showAllRecebidos ? "Ocultar" : "Ver todos"} ({lancs.length})</span>
+                    <span>{showAllRecebidos ? "Ocultar" : "Ver todos"} ({monthLancs.length})</span>
                     <ChevronDown size={14} className={`transition-transform ${showAllRecebidos ? "rotate-180" : ""}`} />
                   </button>
                   {showAllRecebidos && (
@@ -860,10 +869,10 @@ const PortalParceiros = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
-                            {lancs.length === 0 && (
-                              <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
+                            {monthLancs.length === 0 && (
+                              <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento neste mês.</td></tr>
                             )}
-                            {lancs.map((l: any) => (
+                            {monthLancs.map((l: any) => (
                               <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
                                 <td className="p-3 text-muted-foreground w-[120px]">
                                   {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
