@@ -81,13 +81,12 @@ const PortalParceiros = () => {
           .order("created_at", { ascending: false });
         projetos = p ?? [];
       } else {
-        const { data: vis } = await supabase
-          .from("visitas_tecnicas")
+        const { data: pt } = await supabase
+          .from("pagamentos_tecnico")
           .select("projeto_id")
-          .eq("tecnico_id", forn.id)
-          .eq("deletado", false);
+          .eq("tecnico_id", forn.id);
 
-        const ids = [...new Set((vis ?? []).map(v => v.projeto_id))];
+        const ids = [...new Set((pt ?? []).map(v => v.projeto_id).filter(Boolean))];
         if (ids.length > 0) {
           const { data: p } = await supabase
             .from("projetos")
