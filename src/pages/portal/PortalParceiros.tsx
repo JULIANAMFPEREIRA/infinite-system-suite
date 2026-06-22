@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { 
   LogOut, Activity, CalendarDays,
-  Image as ImageIcon, ChevronLeft, ChevronRight,
+  Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   Plus, DollarSign, MessageSquare, Clock,
   CheckCircle2, Hourglass, Target, FileText, Upload
 } from "lucide-react";
@@ -38,6 +38,8 @@ const PortalParceiros = () => {
   const navigate = useNavigate();
   const [selectedProjeto, setSelectedProjeto] = useState<string | null>(null);
   const [showNovaEntrada, setShowNovaEntrada] = useState(false);
+  const [showConcluidos, setShowConcluidos] = useState(false);
+  const [showAllRecebidos, setShowAllRecebidos] = useState(false);
   const [novaNota, setNovaNota] = useState("");
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
@@ -702,89 +704,179 @@ const PortalParceiros = () => {
 
       return (
         <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
-              <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Total Recebido</p>
-              <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-center min-h-[110px]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Saldo Devedor</p>
-              <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
-            </div>
-          </div>
+          {(() => {
+            const glass = {
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            } as React.CSSProperties;
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
+                  <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
+                </div>
+                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Recebido</p>
+                  <p className="text-2xl font-black text-success">{fmt(totalRecebido)}</p>
+                </div>
+                <div style={glass} className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px]">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Saldo Devedor</p>
+                  <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
+                </div>
+              </div>
+            );
+          })()}
 
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold">Projetos</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {(data?.projetos ?? []).length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
-              )}
-              {(data?.projetos ?? []).map((p: any) => (
-                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
-                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
-                      {p.clientes?.nome && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
-                      )}
-                      {p.endereco_obra && (
-                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
-                        {statusLabel[p.status] ?? p.status}
-                      </span>
-                      <ChevronRight size={16} className="text-muted-foreground" />
-                    </div>
+          {(() => {
+            const allProjs = (data?.projetos ?? []) as any[];
+            const emAndamento = allProjs.filter(p => p.status !== "concluido" && p.status !== "cancelado");
+            const concluidos = allProjs.filter(p => p.status === "concluido");
+            const renderCard = (p: any) => (
+              <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+                className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                    {p.clientes?.nome && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                    )}
+                    {p.endereco_obra && (
+                      <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-muted-foreground">
-                      <span>Progresso</span>
-                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
-                    </div>
-                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                      {statusLabel[p.status] ?? p.status}
+                    </span>
+                    <ChevronRight size={16} className="text-muted-foreground" />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
-            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {(data.lancamentos ?? []).length === 0 && (
-                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
-                    )}
-                    {(data.lancamentos ?? []).map((l: any) => (
-                      <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground w-[120px]">
-                          {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
-                        </td>
-                        <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span>Progresso</span>
+                    <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+                  </div>
+                  <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+                </div>
               </div>
-            </div>
-          </div>
+            );
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h2 className="text-sm font-bold">Projetos</h2>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
+                  </div>
+                </div>
+
+                {allProjs.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
+                )}
+
+                {emAndamento.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Em Andamento</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {emAndamento.map(renderCard)}
+                    </div>
+                  </div>
+                )}
+
+                {concluidos.length > 0 && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowConcluidos(v => !v)}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-card border border-border hover:border-primary/40 transition-colors"
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Concluídos ({concluidos.length})
+                      </span>
+                      <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showConcluidos ? "rotate-180" : ""}`} />
+                    </button>
+                    {showConcluidos && (
+                      <div className="grid grid-cols-1 gap-4">
+                        {concluidos.map(renderCard)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const lancs = (data.lancamentos ?? []) as any[];
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            let mes = 0, ano = 0;
+            for (const l of lancs) {
+              if (!l.data_pagamento) continue;
+              const d = new Date(l.data_pagamento);
+              const v = Number(l.valor) || 0;
+              if (d.getFullYear() === y) {
+                ano += v;
+                if (d.getMonth() === m) mes += v;
+              }
+            }
+            return (
+              <div className="space-y-3">
+                <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-secondary/40 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Este Mês</p>
+                      <p className="text-base font-black text-success">{fmt(mes)}</p>
+                    </div>
+                    <div className="rounded-xl bg-secondary/40 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Este Ano</p>
+                      <p className="text-base font-black text-success">{fmt(ano)}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAllRecebidos(v => !v)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-primary hover:underline px-1"
+                  >
+                    <span>{showAllRecebidos ? "Ocultar" : "Ver todos"} ({lancs.length})</span>
+                    <ChevronDown size={14} className={`transition-transform ${showAllRecebidos ? "rotate-180" : ""}`} />
+                  </button>
+                  {showAllRecebidos && (
+                    <div className="border border-border rounded-xl overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-secondary/50">
+                            <tr>
+                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
+                              <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
+                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {lancs.length === 0 && (
+                              <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento registrado.</td></tr>
+                            )}
+                            {lancs.map((l: any) => (
+                              <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
+                                <td className="p-3 text-muted-foreground w-[120px]">
+                                  {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
+                                </td>
+                                <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
+                                <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="space-y-4">
             <h2 className="text-sm font-bold">PRÓXIMOS PAGAMENTOS</h2>
