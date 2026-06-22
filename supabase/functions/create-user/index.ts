@@ -123,6 +123,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // If the user is a technician, ensure a fornecedor entry with tipo='tecnico'
+    if (role === "tecnico") {
+      const { data: existingForn } = await supabaseAdmin
+        .from("fornecedores")
+        .select("id")
+        .eq("empresa_id", callerProfile.empresa_id)
+        .eq("email", email)
+        .maybeSingle();
+      if (!existingForn) {
+        const { error: fornErr } = await supabaseAdmin.from("fornecedores").insert({
+          empresa_id: callerProfile.empresa_id,
+          nome: full_name.toUpperCase(),
+          email,
+          tipo: "tecnico",
+          ativo: true,
+        });
+        if (fornErr) console.error("tecnico fornecedor insert", fornErr);
+      }
+    }
+
     // If the user is a partner, ensure a fornecedor entry with subtipo
     if (role === "parceiro") {
       const subtipo = String(body?.subtipo_parceiro ?? "arquiteto").trim().toLowerCase();
