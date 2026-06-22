@@ -719,40 +719,39 @@ const PortalParceiros = () => {
 
           <div className="space-y-4">
             <h2 className="text-sm font-bold">Projetos</h2>
-            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Projeto/Cliente</th>
-                       <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground">Contratado</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                     {(data.ptecnico ?? []).length === 0 && (
-                       <tr><td colSpan={2} className="p-4 text-center text-muted-foreground">Nenhum projeto vinculado.</td></tr>
-                     )}
-                    {(data.ptecnico ?? []).map((p: any) => {
-                      const pagoNoProjeto = (data.lancamentos ?? []).filter((l: any) => l.projeto_id === p.projeto_id).reduce((acc: number, cur: any) => acc + Number(cur.valor), 0);
-                      const saldo = p.valor_combinado - pagoNoProjeto;
-                      const quitado = saldo <= 0;
-                      return (
-                        <tr
-                          key={p.id}
-                          onClick={() => p.id && setSelectedProjeto(p.id)}
-                          className={`transition-colors ${p.projeto_id ? "cursor-pointer hover:bg-secondary/40" : ""}`}
-                        >
-                           <td className="p-3">
-                            <p className="font-bold text-foreground">{p.projetos?.nome || p.clientes?.nome || "Sem nome"}</p>
-                            {p.projetos?.nome && p.clientes?.nome && <p className="text-[10px] text-muted-foreground">👤 {p.clientes.nome}</p>}
-                          </td>
-                           <td className="p-3 text-right font-medium">{fmt(p.valor_combinado)}</td>
-                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
+              {(data?.projetos ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
+              )}
+              {(data?.projetos ?? []).map((p: any) => (
+                <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+                  className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                      {p.clientes?.nome && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                      )}
+                      {p.endereco_obra && (
+                        <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                        {statusLabel[p.status] ?? p.status}
+                      </span>
+                      <ChevronRight size={16} className="text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                      <span>Progresso</span>
+                      <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+                    </div>
+                    <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
