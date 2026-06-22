@@ -404,25 +404,25 @@ const PortalParceiros = () => {
         </div>
 
       <Tabs defaultValue="rt" className="space-y-4">
-        <TabsList className="w-full justify-start overflow-x-auto bg-card border border-border h-12 p-1">
-          <TabsTrigger value="cronograma" className="gap-2 text-sm h-10 px-4"><CalendarDays size={18} /> Cronograma</TabsTrigger>
+        <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 bg-card border border-border p-1">
+          <TabsTrigger value="cronograma" className="gap-1.5 text-xs h-8 px-2.5"><CalendarDays size={14} /> Cronograma</TabsTrigger>
           {data.fornecedor.tipo === "arquiteto" && (
             <TabsTrigger 
               value="rt" 
-              className="gap-2 text-sm h-10 px-4 bg-primary/5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border-x border-primary/10"
+              className="gap-1.5 text-xs h-8 px-2.5 bg-primary/5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border-x border-primary/10"
             >
-              <DollarSign size={18} /> RT e Parcelas
+              <DollarSign size={14} /> RT e Parcelas
             </TabsTrigger>
           )}
-          {data.fornecedor.tipo === "tecnico" && <TabsTrigger value="diario" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Diário de Obra</TabsTrigger>}
-          <TabsTrigger value="visitas" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Visitas</TabsTrigger>
-          <TabsTrigger value="imagens" className="gap-2 text-sm h-10 px-4"><ImageIcon size={18} /> Imagens</TabsTrigger>
-          {data.fornecedor.tipo !== "tecnico" && <TabsTrigger value="anotacoes" className="gap-2 text-sm h-10 px-4"><MessageSquare size={18} /> Anotações</TabsTrigger>}
-          <TabsTrigger value="documentos" className="gap-2 text-sm h-10 px-4"><FileText size={18} /> Documentos</TabsTrigger>
-          <TabsTrigger value="linha_tempo" className="gap-2 text-sm h-10 px-4"><Clock size={18} /> Linha do Tempo</TabsTrigger>
-          <TabsTrigger value="atividades" className="gap-2 text-sm h-10 px-4"><Activity size={18} /> Atividades</TabsTrigger>
+          {data.fornecedor.tipo === "tecnico" && <TabsTrigger value="diario" className="gap-1.5 text-xs h-8 px-2.5"><Activity size={14} /> Diário de Obra</TabsTrigger>}
+          <TabsTrigger value="visitas" className="gap-1.5 text-xs h-8 px-2.5"><Activity size={14} /> Visitas</TabsTrigger>
+          <TabsTrigger value="imagens" className="gap-1.5 text-xs h-8 px-2.5"><ImageIcon size={14} /> Imagens</TabsTrigger>
+          {data.fornecedor.tipo !== "tecnico" && <TabsTrigger value="anotacoes" className="gap-1.5 text-xs h-8 px-2.5"><MessageSquare size={14} /> Anotações</TabsTrigger>}
+          <TabsTrigger value="documentos" className="gap-1.5 text-xs h-8 px-2.5"><FileText size={14} /> Documentos</TabsTrigger>
+          <TabsTrigger value="linha_tempo" className="gap-1.5 text-xs h-8 px-2.5"><Clock size={14} /> Linha do Tempo</TabsTrigger>
+          <TabsTrigger value="atividades" className="gap-1.5 text-xs h-8 px-2.5"><Activity size={14} /> Atividades</TabsTrigger>
           {data.fornecedor.tipo === "tecnico" && (
-            <TabsTrigger value="financeiro" className="gap-2 text-sm h-10 px-4"><DollarSign size={18} /> Financeiro</TabsTrigger>
+            <TabsTrigger value="financeiro" className="gap-1.5 text-xs h-8 px-2.5"><DollarSign size={14} /> Financeiro</TabsTrigger>
           )}
         </TabsList>
 
