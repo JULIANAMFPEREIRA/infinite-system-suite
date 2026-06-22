@@ -1018,7 +1018,23 @@ const PortalParceiros = () => {
   const primeiroNome = data.fornecedor.nome.split(" ")[0];
 
   const header = (
-    <header className="border-b border-border bg-gradient-to-r from-slate-900 to-slate-800 sticky top-0 z-10">
+    <header
+      className="border-b border-border sticky top-0 z-10 relative overflow-hidden"
+      style={{
+        backgroundColor: "#0a0f1e",
+        backgroundImage: [
+          "radial-gradient(ellipse 80% 60% at 15% 20%, rgba(99,102,241,0.25), transparent 60%)",
+          "radial-gradient(ellipse 60% 50% at 85% 30%, rgba(139,92,246,0.22), transparent 60%)",
+          "radial-gradient(ellipse 70% 60% at 50% 110%, rgba(56,189,248,0.18), transparent 60%)",
+          "radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.6) 50%, transparent 100%)",
+          "radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.5) 50%, transparent 100%)",
+          "radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.45) 50%, transparent 100%)",
+          "radial-gradient(1.5px 1.5px at 85% 15%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+          "radial-gradient(1px 1px at 10% 70%, rgba(255,255,255,0.4) 50%, transparent 100%)",
+          "linear-gradient(135deg, #0a0f1e 0%, #111634 60%, #0a0f1e 100%)",
+        ].join(", "),
+      }}
+    >
       <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
