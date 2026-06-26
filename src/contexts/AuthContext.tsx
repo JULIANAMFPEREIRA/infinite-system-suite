@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const fetchProfileAndRoles = async (userId: string) => {
     const { data: prof } = await supabase
@@ -55,12 +56,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchProfileAndRoles(session.user.id), 0);
+          setRolesLoaded(false);
+          setLoading(true);
+          setTimeout(() => {
+            fetchProfileAndRoles(session.user.id).finally(() => {
+              setRolesLoaded(true);
+              setLoading(false);
+            });
+          }, 0);
         } else {
           setProfile(null);
           setRoles([]);
+          setRolesLoaded(true);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -68,8 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfileAndRoles(session.user.id).finally(() => setLoading(false));
+        fetchProfileAndRoles(session.user.id).finally(() => {
+          setRolesLoaded(true);
+          setLoading(false);
+        });
       } else {
+        setRolesLoaded(true);
         setLoading(false);
       }
     });
