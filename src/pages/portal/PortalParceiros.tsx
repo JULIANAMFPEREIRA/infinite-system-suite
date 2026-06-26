@@ -1130,35 +1130,35 @@ const PortalParceiros = () => {
         ].join(", "),
       }}
     >
-      <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+      <div className="max-w-4xl mx-auto px-3 py-2.5 sm:px-4 sm:py-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-[11px] sm:text-sm shadow-lg shrink-0">
             {iniciais}
           </div>
-          <div>
+          <div className="min-w-0">
             <button
               onClick={() => {
                 setSelectedProjeto(null)
               }}
-              className="text-[11px] text-slate-400 uppercase tracking-widest font-medium hover:text-white transition-colors">
+              className="hidden sm:block text-[11px] text-slate-400 uppercase tracking-widest font-medium hover:text-white transition-colors">
               INFINIT NETWORK
             </button>
-            <h1 className="text-sm font-bold text-white">
+            <h1 className="text-xs sm:text-sm font-bold text-white truncate">
               Olá, {primeiroNome} 👋
             </h1>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
             {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
           </span>
           {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
-            <LogOut size={14} /> Sair
+          <button onClick={handleLogout} className="text-slate-400 hover:text-white text-[11px] sm:text-xs flex items-center gap-1">
+            <LogOut size={13} /> Sair
           </button>
         </div>
       </div>
-      <div className="max-w-4xl mx-auto px-4 pb-3">
+      <div className="max-w-4xl mx-auto px-4 pb-3 hidden sm:block">
         <p className="text-[11px] text-slate-500 italic">
           "Construindo juntos, crescendo juntos."
         </p>
@@ -1183,7 +1183,7 @@ const PortalParceiros = () => {
   return (
     <div className="min-h-screen bg-background">
       {header}
-      <main className="max-w-4xl mx-auto p-4">
+      <main className="max-w-4xl mx-auto px-2 py-3 sm:p-4">
         {selectedProjeto && activeProjeto
           ? renderProjectDetail()
           : selectedProjeto && !activeProjeto
