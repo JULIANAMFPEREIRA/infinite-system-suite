@@ -93,7 +93,7 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
   return (
     <aside
       className={[
-        "fixed left-0 top-0 h-screen z-50 flex flex-col transition-all duration-300",
+        "fixed left-0 top-0 h-screen max-h-screen h-[100dvh] max-h-[100dvh] z-50 flex flex-col transition-all duration-300",
         // Desktop: solid card bg
         "md:bg-card md:border-r md:border-border",
         // Mobile: glassmorphism
@@ -119,7 +119,7 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 md:py-2 px-2.5 md:px-1.5 space-y-1 md:space-y-0.5">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth py-3 md:py-2 px-2.5 md:px-1.5 space-y-1 md:space-y-0.5 pb-20 md:pb-2">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isOpen = openMenus.includes(item.label);
