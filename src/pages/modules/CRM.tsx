@@ -762,7 +762,17 @@ const CRM = () => {
      // ── Sync financeiro_receber ──
      // If this orçamento was approved as part of a group, skip — joint parcelas
      // are managed by AprovarConjuntoModal and must not be overwritten here.
-     if ((orcData as any)?.grupo_id) {
+     // Also check if ANY orçamento for this project has a grupo_id (extra safety).
+     const { data: orcamentosGrupo } = await supabase
+       .from("crm_orcamentos")
+       .select("grupo_id")
+       .eq("cliente_id", detailClient.id)
+       .eq("aprovado", true)
+       .not("grupo_id", "is", null)
+       .limit(1);
+     const projetoTemGrupo = !!(orcamentosGrupo && orcamentosGrupo.length > 0);
+     if ((orcData as any)?.grupo_id || projetoTemGrupo) {
+       console.log("[CRM] Projeto com grupo_id detectado — pulando sync de financeiro_receber");
        // skip financeiro sync for grouped orçamentos
      } else {
      const { data: parcelasExistentes } = await supabase
@@ -827,7 +837,7 @@ const CRM = () => {
 
     // ── Sync comissões (RT) — single consolidated entry ──
     await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
-    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null);
+    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null).eq("status", "pendente");
     const arquitetoId = detailClient.arquiteto_id;
     if (arquitetoId && insertedItens.length > 0) {
       const totalRt = insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0);
