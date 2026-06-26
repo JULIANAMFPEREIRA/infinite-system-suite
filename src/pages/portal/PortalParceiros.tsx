@@ -382,19 +382,19 @@ const PortalParceiros = () => {
           <ChevronLeft size={16} />
           Voltar aos projetos
         </button>
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 mb-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black text-white">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-3 sm:p-5 mb-5 space-y-4">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-black text-white truncate">
                 {activeProjeto?.nome}
               </h2>
               {activeProjeto?.clientes?.nome && (
-                <p className="text-sm text-slate-400">
+                <p className="text-xs sm:text-sm text-slate-400 truncate">
                   👤 {activeProjeto.clientes.nome}
                 </p>
               )}
             </div>
-            <span className={`px-3 py-1 rounded-lg text-xs font-bold shrink-0 ${statusColor[activeProjeto?.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
+            <span className={`px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-bold shrink-0 ${statusColor[activeProjeto?.status ?? ""] ?? "bg-secondary text-secondary-foreground"}`}>
               {statusLabel[activeProjeto?.status ?? ""] ?? activeProjeto?.status}
             </span>
           </div>
@@ -462,7 +462,7 @@ const PortalParceiros = () => {
 
               return (
                 <>
-                  <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                     <div className="bg-card border border-border rounded-xl p-3 text-center">
                       <p className="text-[10px] uppercase text-muted-foreground">RT Total</p>
                       <p className="text-lg font-black text-foreground">{fmt(projRtTotal)}</p>
