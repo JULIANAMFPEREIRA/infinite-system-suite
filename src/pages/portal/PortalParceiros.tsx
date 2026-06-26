@@ -1041,7 +1041,6 @@ const PortalParceiros = () => {
                 })()}
               </div>
             </div>
-          </div>
 
             {/* Coluna 4 — Concluído */}
             <div className="space-y-3">
