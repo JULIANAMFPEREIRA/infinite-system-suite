@@ -867,6 +867,7 @@ const ParceirosManager = () => {
 
       {openVincular && <VincularModal parceiroId={openVincular} />}
       {openGerenciar && <GerenciarFinanceiroModal parceiroId={openGerenciar} />}
+      {openEdit && <EditModal parceiroId={openEdit} />}
 
       <Dialog open={openNew} onOpenChange={setOpenNew}>
         <DialogContent>
