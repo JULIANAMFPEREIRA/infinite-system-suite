@@ -72,7 +72,7 @@ const PortalParceiros = () => {
           .select("id, nome, status_crm, origem")
           .eq("arquiteto_id", forn.id)
           .eq("deletado", false)
-          .in("status_crm", ["lead", "contato", "proposta"]);
+          .in("status_crm", ["lead", "contato", "proposta", "concluido"]);
         leads = leadsData ?? [];
       }
 
@@ -987,7 +987,7 @@ const PortalParceiros = () => {
             <p className="text-[11px] text-muted-foreground">Clientes em negociação</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Coluna 1 — Lead */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
@@ -1038,6 +1038,43 @@ const PortalParceiros = () => {
                       <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
                     </div>
                   ));
+                })()}
+              </div>
+            </div>
+          </div>
+
+            {/* Coluna 4 — Concluído */}
+            <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-green-700 bg-green-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
+                Concluído ({(() => {
+                  const leadsConcluidos = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "concluido");
+                  const projsConcluidos = ((data?.projetos ?? []) as any[]).filter(p => p.status === "concluido");
+                  return leadsConcluidos.length + projsConcluidos.length;
+                })()})
+              </h3>
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const leadsConcluidos = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "concluido");
+                  const projsConcluidos = ((data?.projetos ?? []) as any[]).filter(p => p.status === "concluido");
+                  if (leadsConcluidos.length === 0 && projsConcluidos.length === 0)
+                    return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
+                  return (
+                    <>
+                      {leadsConcluidos.map(lead => (
+                        <div key={`l-${lead.id}`} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
+                          <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+                        </div>
+                      ))}
+                      {projsConcluidos.map(p => (
+                        <div key={`p-${p.id}`} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
+                          <p className="text-xs font-bold text-foreground truncate" title={p.nome}>{p.nome}</p>
+                          {p.clientes?.nome && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">👤 {p.clientes.nome}</p>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  );
                 })()}
               </div>
             </div>
