@@ -1044,67 +1044,109 @@ const PortalParceiros = () => {
           </div>
         </div>
       )}
-      <div className="space-y-4">
-        <h2 className="text-sm font-bold">Meus Projetos</h2>
-        <div className="grid grid-cols-1 gap-4">
-          {(data?.projetos ?? []).map((p: any) => (
-            <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
-              className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
-                  {p.clientes?.nome && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
-                  )}
-                  {p.endereco_obra && (
-                    <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
-                    {statusLabel[p.status] ?? p.status}
-                  </span>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
+      {(() => {
+        const allProjs = (data?.projetos ?? []) as any[];
+        const emAndamento = allProjs.filter((p: any) => p.status !== "concluido" && p.status !== "cancelado");
+        const concluidos = allProjs.filter((p: any) => p.status === "concluido");
+        const renderArqCard = (p: any) => (
+          <div key={p.id} onClick={() => setSelectedProjeto(p.id)}
+            className="cursor-pointer bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
+                {p.clientes?.nome && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">👤 {p.clientes.nome}</p>
+                )}
+                {p.endereco_obra && (
+                  <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                )}
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between items-end text-[11px] text-muted-foreground">
-                  <div>
-                    <span>Progresso</span>
-                    <p className="text-xs text-red-500 mt-1">Clique para ver detalhes →</p>
-                  </div>
-                  <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
-                </div>
-                <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
+                  {statusLabel[p.status] ?? p.status}
+                </span>
+                <ChevronRight size={16} className="text-muted-foreground" />
               </div>
-              {data.fornecedor.tipo === "arquiteto" && (() => {
-                const projParcelasRT = (data?.parcelasRT ?? []).filter((prt: any) => prt.projeto_id === p.id);
-                const projRtTotal = projParcelasRT.reduce((s: number, prt: any) => s + (Number(prt.valor) || 0), 0);
-                const projRtPago = projParcelasRT.reduce((s: number, prt: any) => prt.status === "pago" ? s + (Number(prt.valor) || 0) : s, 0);
-                
-                if (projRtTotal === 0) return null;
-                
-                return (
-                  <div className="pt-2 border-t border-border/60 grid grid-cols-3 gap-2 text-[11px]">
-                    <div>
-                      <p className="text-muted-foreground text-[9px] uppercase">RT Total</p>
-                      <p className="font-bold text-foreground">{fmt(projRtTotal)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[9px] uppercase">Pago</p>
-                      <p className="font-bold text-success">{fmt(projRtPago)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[9px] uppercase">Pendente</p>
-                      <p className="font-bold text-warning">{fmt(projRtTotal - projRtPago)}</p>
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="space-y-1">
+              <div className="flex justify-between items-end text-[11px] text-muted-foreground">
+                <div>
+                  <span>Progresso</span>
+                  <p className="text-xs text-red-500 mt-1">Clique para ver detalhes →</p>
+                </div>
+                <span className="font-semibold text-foreground">{progressMap[p.status as StatusProjeto] ?? 0}%</span>
+              </div>
+              <Progress value={progressMap[p.status as StatusProjeto] ?? 0} className="h-2" />
+            </div>
+            {data.fornecedor.tipo === "arquiteto" && (() => {
+              const projParcelasRT = (data?.parcelasRT ?? []).filter((prt: any) => prt.projeto_id === p.id);
+              const projRtTotal = projParcelasRT.reduce((s: number, prt: any) => s + (Number(prt.valor) || 0), 0);
+              const projRtPago = projParcelasRT.reduce((s: number, prt: any) => prt.status === "pago" ? s + (Number(prt.valor) || 0) : s, 0);
+              if (projRtTotal === 0) return null;
+              return (
+                <div className="pt-2 border-t border-border/60 grid grid-cols-3 gap-2 text-[11px]">
+                  <div>
+                    <p className="text-muted-foreground text-[9px] uppercase">RT Total</p>
+                    <p className="font-bold text-foreground">{fmt(projRtTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[9px] uppercase">Pago</p>
+                    <p className="font-bold text-success">{fmt(projRtPago)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[9px] uppercase">Pendente</p>
+                    <p className="font-bold text-warning">{fmt(projRtTotal - projRtPago)}</p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-sm font-bold">Meus Projetos</h2>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
+              </div>
+            </div>
+
+            {allProjs.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
+            )}
+
+            {emAndamento.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Em Andamento</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {emAndamento.map(renderArqCard)}
+                </div>
+              </div>
+            )}
+
+            {concluidos.length > 0 && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowConcluidos(v => !v)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-card border border-border hover:border-primary/40 transition-colors"
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Concluídos ({concluidos.length})
+                  </span>
+                  <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showConcluidos ? "rotate-180" : ""}`} />
+                </button>
+                {showConcluidos && (
+                  <div className="grid grid-cols-1 gap-4">
+                    {concluidos.map(renderArqCard)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
   };
