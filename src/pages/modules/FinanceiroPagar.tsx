@@ -326,6 +326,7 @@ const FinanceiroPagar = () => {
         await qc.invalidateQueries({
           queryKey: ["financeiro_pagar"]
         });
+        await qc.refetchQueries({ queryKey: ["financeiro_pagar"] });
         refetch();
         toast.success("Conta atualizada");
       } else {
@@ -428,6 +429,7 @@ const FinanceiroPagar = () => {
       await qc.invalidateQueries({
         queryKey: ["comissoes"]
       });
+      await qc.refetchQueries({ queryKey: ["financeiro_pagar"] });
     } catch (err: any) {
       console.error("Erro baixa:", err)
       toast.error(
