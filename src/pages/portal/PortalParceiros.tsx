@@ -987,15 +987,49 @@ const PortalParceiros = () => {
             <p className="text-[11px] text-muted-foreground">Clientes em negociação</p>
           </div>
           
+          {(() => {
+            const leadsAll = (data.leads as any[]) ?? [];
+            const projsAll = ((data?.projetos ?? []) as any[]);
+            const leadsConcluidosRaw = leadsAll.filter(l => l.status_crm?.toLowerCase() === "concluido");
+            const projsConcluidos = projsAll.filter(p => p.status === "concluido");
+            // Set of cliente ids that are "Concluído" (from leads + projects' cliente_id)
+            const concluidoClienteIds = new Set<string>([
+              ...leadsConcluidosRaw.map((l: any) => l.id),
+              ...projsConcluidos.map((p: any) => p.cliente_id).filter(Boolean),
+            ]);
+            // Dedup leads in concluído by id
+            const leadsConcluidos = leadsConcluidosRaw.filter(
+              (l, i, arr) => arr.findIndex(x => x.id === l.id) === i
+            );
+            // Dedup projects in concluído by cliente_id (fallback to project id)
+            const seenProj = new Set<string>();
+            const projsConcluidosDedup = projsConcluidos.filter((p: any) => {
+              const key = p.cliente_id ?? `p-${p.id}`;
+              // skip project if a lead card for the same cliente is already shown
+              if (p.cliente_id && leadsConcluidos.some(l => l.id === p.cliente_id)) return false;
+              if (seenProj.has(key)) return false;
+              seenProj.add(key);
+              return true;
+            });
+            const concluidoTotal = leadsConcluidos.length + projsConcluidosDedup.length;
+            // Exclude concluído clients from other columns
+            const filterCol = (key: string) =>
+              leadsAll.filter(
+                l => l.status_crm?.toLowerCase() === key && !concluidoClienteIds.has(l.id)
+              );
+            const leadItems = filterCol("lead");
+            const contatoItems = filterCol("contato");
+            const propostaItems = filterCol("proposta");
+            return (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Coluna 1 — Lead */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Lead ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "lead").length})
+                Lead ({leadItems.length})
               </h3>
               <div className="flex flex-col gap-2">
                 {(() => {
-                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "lead");
+                  const items = leadItems;
                   if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
@@ -1009,11 +1043,11 @@ const PortalParceiros = () => {
             {/* Coluna 2 — Em Contato */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Em Contato ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "contato").length})
+                Em Contato ({contatoItems.length})
               </h3>
               <div className="flex flex-col gap-2">
                 {(() => {
-                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "contato");
+                  const items = contatoItems;
                   if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
@@ -1027,11 +1061,11 @@ const PortalParceiros = () => {
             {/* Coluna 3 — Proposta Enviada */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Proposta Enviada ({(data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta").length})
+                Proposta Enviada ({propostaItems.length})
               </h3>
               <div className="flex flex-col gap-2">
                 {(() => {
-                  const items = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "proposta");
+                  const items = propostaItems;
                   if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
                   return items.map(lead => (
                     <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
@@ -1045,17 +1079,11 @@ const PortalParceiros = () => {
             {/* Coluna 4 — Concluído */}
             <div className="space-y-3">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-green-700 bg-green-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Concluído ({(() => {
-                  const leadsConcluidos = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "concluido");
-                  const projsConcluidos = ((data?.projetos ?? []) as any[]).filter(p => p.status === "concluido");
-                  return leadsConcluidos.length + projsConcluidos.length;
-                })()})
+                Concluído ({concluidoTotal})
               </h3>
               <div className="flex flex-col gap-2">
                 {(() => {
-                  const leadsConcluidos = (data.leads as any[]).filter(l => l.status_crm?.toLowerCase() === "concluido");
-                  const projsConcluidos = ((data?.projetos ?? []) as any[]).filter(p => p.status === "concluido");
-                  if (leadsConcluidos.length === 0 && projsConcluidos.length === 0)
+                  if (concluidoTotal === 0)
                     return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
                   return (
                     <>
@@ -1064,7 +1092,7 @@ const PortalParceiros = () => {
                           <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
                         </div>
                       ))}
-                      {projsConcluidos.map(p => (
+                      {projsConcluidosDedup.map(p => (
                         <div key={`p-${p.id}`} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
                           <p className="text-xs font-bold text-foreground truncate" title={p.nome}>{p.nome}</p>
                           {p.clientes?.nome && (
@@ -1078,6 +1106,8 @@ const PortalParceiros = () => {
               </div>
             </div>
           </div>
+            );
+          })()}
         </div>
       )}
       {(() => {
