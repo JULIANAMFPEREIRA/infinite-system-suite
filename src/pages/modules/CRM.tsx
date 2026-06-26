@@ -766,7 +766,8 @@ const CRM = () => {
      const { data: orcamentosGrupo } = await supabase
        .from("crm_orcamentos")
        .select("grupo_id")
-       .eq("projeto_id", projId)
+       .eq("cliente_id", detailClient.id)
+       .eq("aprovado", true)
        .not("grupo_id", "is", null)
        .limit(1);
      const projetoTemGrupo = !!(orcamentosGrupo && orcamentosGrupo.length > 0);
