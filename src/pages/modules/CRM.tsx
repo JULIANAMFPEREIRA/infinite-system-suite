@@ -836,94 +836,108 @@ const CRM = () => {
      }
 
     // ── Sync comissões (RT) — single consolidated entry ──
-    await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
-    await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null).eq("status", "pendente");
-    const arquitetoId = detailClient.arquiteto_id;
-    if (arquitetoId && insertedItens.length > 0) {
-      const totalRt = insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0);
-      if (totalRt > 0) {
-        const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
-        await supabase.from("comissoes").insert({
-          empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
-          valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
-        });
+    const { data: paidComissao } = await supabase
+      .from("comissoes")
+      .select("id")
+      .eq("projeto_id", projId)
+      .eq("status", "pago")
+      .limit(1)
+      .maybeSingle();
 
-        // Buscar a comissão recém inserida
-        const { data: comissaoNova } = await supabase
-          .from("comissoes")
-          .select("id")
-          .eq("projeto_id", projId)
-          .eq("fornecedor_id", arquitetoId)
-          .eq("status", "pendente")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    if (paidComissao) {
+      console.log("[CRM] Comissão já paga para este projeto — pulando sync de RT");
+    }
 
-        // Criar lançamento em financeiro_pagar
-        if (comissaoNova?.id) {
-          // Verificar se já existem parcelas vinculadas para não perder o parcelamento manual
-          const { data: parcelasExistentes } = await supabase
-            .from("financeiro_pagar")
-            .select("id")
-            .eq("comissao_id", comissaoNova.id)
-            .eq("empresa_id", empresaId!);
+    if (!paidComissao) {
+      await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
+      await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null).eq("status", "pendente");
+      const arquitetoId = detailClient.arquiteto_id;
+      if (arquitetoId && insertedItens.length > 0) {
+        const totalRt = insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0);
+        if (totalRt > 0) {
+          const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
+          await supabase.from("comissoes").insert({
+            empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
+            valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
+          });
 
-          // Se já existem parcelas (length > 1), NÃO recriar — manter as parcelas existentes
-          if (parcelasExistentes && parcelasExistentes.length > 1) {
-            console.log("[CRM] Parcelas de comissão existentes detectadas (>1). Mantendo parcelamento.");
-          } else {
-            await supabase.from("financeiro_pagar").insert({
-              empresa_id: empresaId!,
-              projeto_id: projId,
-              fornecedor_id: arquitetoId,
-              comissao_id: comissaoNova.id,
-              descricao: `Comissão RT — ${detailClient.nome}`,
-              valor: totalRt,
-              status: "pendente" as const,
-              origem: "comissao",
-            } as any);
-          }
-        }
-
-        // ── Auto-vincular arquiteto em projeto_parceiros ──
-        if (arquitetoId && totalRt > 0 && projId && empresaId) {
-          // Verificar se já existe vínculo antes de inserir
-          const { data: existing } = await supabase
-            .from("projeto_parceiros")
+          // Buscar a comissão recém inserida
+          const { data: comissaoNova } = await supabase
+            .from("comissoes")
             .select("id")
             .eq("projeto_id", projId)
-            .eq("parceiro_id", arquitetoId)
+            .eq("fornecedor_id", arquitetoId)
+            .eq("status", "pendente")
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
 
-          if (!existing) {
-            await supabase
-              .from("projeto_parceiros")
-              .insert({
-                empresa_id: empresaId,
-                projeto_id: projId,
-                parceiro_id: arquitetoId,
-                rt_tipo: "fixo",
-                rt_base: "rt_itens",
-                rt_percentual: percentualMedio,
-                rt_valor: totalRt,
-                rt_total: totalRt,
-                rt_recebido: 0,
-              });
-          } else {
-            // Atualizar RT total se já existir
-            await supabase
-              .from("projeto_parceiros")
-              .update({
-                rt_valor: totalRt,
-                rt_total: totalRt,
-              })
-              .eq("id", existing.id);
-          }
-        }
+          // Criar lançamento em financeiro_pagar
+          if (comissaoNova?.id) {
+            // Verificar se já existem parcelas vinculadas para não perder o parcelamento manual
+            const { data: parcelasExistentes } = await supabase
+              .from("financeiro_pagar")
+              .select("id")
+              .eq("comissao_id", comissaoNova.id)
+              .eq("empresa_id", empresaId!);
 
-        qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
-        qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
-        qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
+            // Se já existem parcelas (length > 1), NÃO recriar — manter as parcelas existentes
+            if (parcelasExistentes && parcelasExistentes.length > 1) {
+              console.log("[CRM] Parcelas de comissão existentes detectadas (>1). Mantendo parcelamento.");
+            } else {
+              await supabase.from("financeiro_pagar").insert({
+                empresa_id: empresaId!,
+                projeto_id: projId,
+                fornecedor_id: arquitetoId,
+                comissao_id: comissaoNova.id,
+                descricao: `Comissão RT — ${detailClient.nome}`,
+                valor: totalRt,
+                status: "pendente" as const,
+                origem: "comissao",
+              } as any);
+            }
+          }
+
+          // ── Auto-vincular arquiteto em projeto_parceiros ──
+          if (arquitetoId && totalRt > 0 && projId && empresaId) {
+            // Verificar se já existe vínculo antes de inserir
+            const { data: existing } = await supabase
+              .from("projeto_parceiros")
+              .select("id")
+              .eq("projeto_id", projId)
+              .eq("parceiro_id", arquitetoId)
+              .maybeSingle();
+
+            if (!existing) {
+              await supabase
+                .from("projeto_parceiros")
+                .insert({
+                  empresa_id: empresaId,
+                  projeto_id: projId,
+                  parceiro_id: arquitetoId,
+                  rt_tipo: "fixo",
+                  rt_base: "rt_itens",
+                  rt_percentual: percentualMedio,
+                  rt_valor: totalRt,
+                  rt_total: totalRt,
+                  rt_recebido: 0,
+                });
+            } else {
+              // Atualizar RT total se já existir
+              await supabase
+                .from("projeto_parceiros")
+                .update({
+                  rt_valor: totalRt,
+                  rt_total: totalRt,
+                })
+                .eq("id", existing.id);
+            }
+          }
+
+          qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
+          qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
+          qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
+        }
       }
     }
 
