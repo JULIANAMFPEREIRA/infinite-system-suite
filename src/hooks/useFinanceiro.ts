@@ -15,7 +15,6 @@ export const useFinanceiroPagar = () => {
           *,
           fornecedores(nome),
           projetos(nome),
-          categorias(nome),
           tipo_manual,
           origem
         `)
