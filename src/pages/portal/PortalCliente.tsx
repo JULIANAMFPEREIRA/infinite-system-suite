@@ -393,37 +393,37 @@ const PortalCliente = () => {
           ].join(", "),
         }}
       >
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-              {iniciais || <FolderKanban size={18} />}
+        <div className="max-w-5xl mx-auto px-3 py-2.5 sm:px-4 sm:py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-[11px] sm:text-sm shadow-lg shrink-0">
+              {iniciais || <FolderKanban size={16} />}
             </div>
-            <div>
-              <span className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">
+            <div className="min-w-0">
+              <span className="hidden sm:block text-[11px] text-slate-400 uppercase tracking-widest font-medium">
                 INFINIT NETWORK
               </span>
-              <h1 className="text-sm font-bold text-white">
+              <h1 className="text-xs sm:text-sm font-bold text-white truncate">
                 Olá, {primeiroNome || "Cliente"} 👋
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <span className="hidden sm:inline text-[10px] px-2.5 py-1 rounded-full bg-primary/20 text-primary font-semibold uppercase tracking-wide">
               Cliente
             </span>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-white text-xs flex items-center gap-1">
-              <LogOut size={14} /> Sair
+            <button onClick={handleLogout} className="text-slate-400 hover:text-white text-[11px] sm:text-xs flex items-center gap-1">
+              <LogOut size={13} /> Sair
             </button>
           </div>
         </div>
-        <div className="max-w-5xl mx-auto px-4 pb-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 pb-2 sm:pb-3 hidden sm:block">
           <p className="text-[11px] text-slate-500 italic">
             "Acompanhe seu projeto em tempo real."
           </p>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-2 py-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         {isLoading ? (
           <p className="text-center py-12 text-sm text-muted-foreground">Carregando...</p>
         ) : !projetos.length ? (
