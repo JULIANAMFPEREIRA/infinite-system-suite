@@ -229,6 +229,59 @@ const VisitasTecnicasSection = ({ projetoId }: { projetoId: string }) => {
     </div>
   );
 };
+
+const AgendaVisitasCliente = ({ clienteId }: { clienteId: string }) => {
+  const { data } = useQuery({
+    queryKey: ["crm_agenda_visitas_cliente", clienteId],
+    queryFn: async () => {
+      const { data: rows } = await supabase.from("crm_interacoes" as any)
+        .select("id, descricao, visivel_portal, created_at")
+        .eq("cliente_id", clienteId)
+        .eq("tipo", "visita")
+        .order("created_at", { ascending: false });
+      return ((rows ?? []) as any[])
+        .map((row: any) => {
+          let p: any = {};
+          try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
+          return {
+            id: row.id,
+            titulo: p.titulo ?? "Visita",
+            data_inicio: p.data_inicio ?? null,
+            data_fim: p.data_fim ?? null,
+            status: p.status ?? "agendada",
+            visivel_portal: row.visivel_portal ?? p.visivel_portal ?? true,
+          };
+        })
+        .filter((v: any) => v.data_inicio);
+    },
+    enabled: !!clienteId,
+  });
+  const items = data ?? [];
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-foreground">Visitas da Agenda</h3>
+      {items.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground py-2">Nenhuma visita registrada na agenda para este cliente.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map((v: any) => (
+            <div key={v.id} className="flex items-center justify-between gap-2 bg-secondary/30 border border-border rounded px-2.5 py-1.5 text-[11px]">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${v.visivel_portal ? "bg-amber-400" : "bg-[hsl(210,70%,50%)]"}`} />
+                <span className="font-semibold truncate">{v.titulo}</span>
+                <span className="text-muted-foreground truncate">
+                  {new Date(v.data_inicio).toLocaleString("pt-BR")}
+                  {v.data_fim && ` — ${new Date(v.data_fim).toLocaleString("pt-BR")}`}
+                </span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-card text-muted-foreground border border-border">{v.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 const ProjetoCronogramaSection = ({ projeto, dataInicio, dataPrevisao }: { projeto: any; dataInicio: string; dataPrevisao: string }) => {
   const status = projeto?.status as StatusProjeto | undefined;
   const statusIdx = status ? statusProjetoOperacionais.indexOf(status) : 0;
