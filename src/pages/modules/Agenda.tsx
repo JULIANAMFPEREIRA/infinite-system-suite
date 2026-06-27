@@ -19,8 +19,8 @@ const safeDate = (val: any): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-const HOUR_START = 7;
-const HOUR_END = 20;
+const HOUR_START = 6;
+const HOUR_END = 22;
 const HOUR_PX = 56;
 
 const Agenda = () => {
@@ -40,6 +40,38 @@ const Agenda = () => {
   const { data: visitas = [] } = useVisitas({
     from: weekStart.toISOString(),
     to: addDays(weekEnd, 1).toISOString(),
+  });
+
+  const empresaId = useEmpresa();
+  const { data: fallbackVisitas = [] } = useQuery({
+    queryKey: ["visitas_fallback_crm", empresaId, weekStart.toISOString()],
+    queryFn: async () => {
+      const fromIso = weekStart.toISOString();
+      const toIso = addDays(weekEnd, 1).toISOString();
+      let q = supabase
+        .from("crm_interacoes")
+        .select("id, cliente_id, descricao, created_at, clientes(nome)")
+        .eq("tipo", "visita")
+        .gte("created_at", addDays(weekStart, -30).toISOString());
+      const { data, error } = await q;
+      if (error) return [];
+      return (data ?? [])
+        .map((row: any) => {
+          let parsed: any = {};
+          try { parsed = JSON.parse(row.descricao ?? "{}"); } catch { parsed = {}; }
+          const start = parsed.data_inicio ? new Date(parsed.data_inicio) : null;
+          const end = parsed.data_fim ? new Date(parsed.data_fim) : null;
+          return {
+            id: row.id,
+            titulo: parsed.titulo ?? "Visita",
+            _start: start && !isNaN(start.getTime()) ? start : null,
+            _end: end && !isNaN(end.getTime()) ? end : null,
+            clienteNome: row.clientes?.nome ?? null,
+            status: parsed.status ?? "agendada",
+          };
+        })
+        .filter((v: any) => v._start && v._start >= new Date(fromIso) && v._start <= new Date(toIso));
+    },
   });
 
   const { data: googleStatus } = useGoogleCalendarStatus();
@@ -75,6 +107,17 @@ const Agenda = () => {
   };
 
   const visitasByDay = (day: Date) => visitas.filter((v) => isSameDay(new Date(v.data_inicio), day));
+
+  const fallbackByDay = (day: Date) =>
+    fallbackVisitas.filter((v: any) => v._start && isSameDay(v._start, day));
+
+  const fallbackBlockStyle = (v: any) => {
+    const start: Date = v._start;
+    const end: Date = v._end ?? new Date(start.getTime() + 60 * 60 * 1000);
+    const top = (start.getHours() + start.getMinutes() / 60 - HOUR_START) * HOUR_PX;
+    const height = Math.max(24, ((end.getTime() - start.getTime()) / 3600000) * HOUR_PX - 2);
+    return { top, height };
+  };
 
   const blockStyle = (v: Visita) => {
     const start = new Date(v.data_inicio);
@@ -173,6 +216,22 @@ const Agenda = () => {
                           {format(new Date(v.data_inicio), "HH:mm")}–{format(new Date(v.data_fim), "HH:mm")}
                         </div>
                         {v.clientes?.nome && <div className="truncate opacity-70">{v.clientes.nome}</div>}
+                      </div>
+                    );
+                  })}
+                  {fallbackByDay(day).map((v: any) => {
+                    const { top, height } = fallbackBlockStyle(v);
+                    return (
+                      <div
+                        key={`f-${v.id}`}
+                        style={{ top, height }}
+                        className="absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border overflow-hidden shadow-sm bg-emerald-500/15 border-emerald-500/60 text-emerald-50"
+                      >
+                        <div className="font-semibold truncate">{v.titulo}</div>
+                        <div className="opacity-80 truncate">
+                          {format(v._start, "HH:mm")}{v._end ? `–${format(v._end, "HH:mm")}` : ""}
+                        </div>
+                        {v.clienteNome && <div className="truncate opacity-70">{v.clienteNome}</div>}
                       </div>
                     );
                   })}
