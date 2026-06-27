@@ -244,6 +244,35 @@ const PortalParceiros = () => {
     enabled: !!selectedProjeto,
   });
 
+  // Agenda visits shared with this técnico via crm_interacoes (fallback)
+  const { data: agendaVisitas } = useQuery({
+    queryKey: ["portal_parc_agenda_crm", data?.fornecedor?.id],
+    queryFn: async () => {
+      const fornecedorId = data!.fornecedor.id;
+      const { data: rows } = await supabase.from("crm_interacoes" as any)
+        .select("id, cliente_id, descricao, visivel_portal, created_at, clientes(nome)")
+        .eq("tipo", "visita")
+        .eq("visivel_portal", true)
+        .order("created_at", { ascending: false });
+      return ((rows ?? []) as any[])
+        .map((row: any) => {
+          let p: any = {};
+          try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
+          return {
+            id: row.id,
+            titulo: p.titulo ?? "Visita",
+            data_inicio: p.data_inicio ?? null,
+            data_fim: p.data_fim ?? null,
+            status: p.status ?? "agendada",
+            tecnico_ids: Array.isArray(p.tecnico_ids) ? p.tecnico_ids : [],
+            clienteNome: row.clientes?.nome ?? null,
+          };
+        })
+        .filter((v: any) => v.data_inicio && v.tecnico_ids.includes(fornecedorId));
+    },
+    enabled: !!data?.fornecedor?.id,
+  });
+
   const { data: imagens } = useQuery({
     queryKey: ["portal_parc_imagens", activeProjeto?.cliente_id],
     queryFn: async () => {
