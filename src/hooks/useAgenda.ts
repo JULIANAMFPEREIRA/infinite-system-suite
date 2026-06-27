@@ -12,6 +12,7 @@ export interface Visita {
   data_inicio: string;
   data_fim: string;
   status: string;
+  visivel_portal?: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -69,6 +70,7 @@ interface SaveVisitaInput {
   data_fim: string;
   status?: string;
   tecnico_ids: string[];
+  visivel_portal?: boolean;
 }
 
 export const useSaveVisita = () => {
@@ -78,7 +80,8 @@ export const useSaveVisita = () => {
 
   return useMutation({
     mutationFn: async (input: SaveVisitaInput) => {
-      const { id, tecnico_ids, ...fields } = input;
+      const { id, tecnico_ids, ...rest } = input;
+      const fields = { ...rest, visivel_portal: rest.visivel_portal ?? true };
       let visitaId = id;
 
       if (id) {
@@ -111,6 +114,7 @@ export const useSaveVisita = () => {
               data_fim: fields.data_fim,
               status: fields.status ?? "agendada",
               tecnico_ids,
+              visivel_portal: fields.visivel_portal,
             });
             const { data: fallback, error: fbErr } = await supabase
               .from("crm_interacoes")
@@ -118,6 +122,7 @@ export const useSaveVisita = () => {
                 cliente_id: fields.cliente_id,
                 tipo: "visita",
                 descricao: descPayload,
+                visivel_portal: fields.visivel_portal,
                 usuario_id: user?.id ?? null,
               } as any)
               .select("id")

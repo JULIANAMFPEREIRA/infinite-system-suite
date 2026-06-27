@@ -244,6 +244,35 @@ const PortalParceiros = () => {
     enabled: !!selectedProjeto,
   });
 
+  // Agenda visits shared with this técnico via crm_interacoes (fallback)
+  const { data: agendaVisitas } = useQuery({
+    queryKey: ["portal_parc_agenda_crm", data?.fornecedor?.id],
+    queryFn: async () => {
+      const fornecedorId = data!.fornecedor.id;
+      const { data: rows } = await supabase.from("crm_interacoes" as any)
+        .select("id, cliente_id, descricao, visivel_portal, created_at, clientes(nome)")
+        .eq("tipo", "visita")
+        .eq("visivel_portal", true)
+        .order("created_at", { ascending: false });
+      return ((rows ?? []) as any[])
+        .map((row: any) => {
+          let p: any = {};
+          try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
+          return {
+            id: row.id,
+            titulo: p.titulo ?? "Visita",
+            data_inicio: p.data_inicio ?? null,
+            data_fim: p.data_fim ?? null,
+            status: p.status ?? "agendada",
+            tecnico_ids: Array.isArray(p.tecnico_ids) ? p.tecnico_ids : [],
+            clienteNome: row.clientes?.nome ?? null,
+          };
+        })
+        .filter((v: any) => v.data_inicio && v.tecnico_ids.includes(fornecedorId));
+    },
+    enabled: !!data?.fornecedor?.id,
+  });
+
   const { data: imagens } = useQuery({
     queryKey: ["portal_parc_imagens", activeProjeto?.cliente_id],
     queryFn: async () => {
@@ -579,6 +608,24 @@ const PortalParceiros = () => {
         )}
 
         <TabsContent value="visitas" className="space-y-4">
+          {(agendaVisitas ?? []).length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">Visitas agendadas (Agenda)</h4>
+              {(agendaVisitas ?? []).map((a: any) => (
+                <div key={`av-${a.id}`} className="bg-card border border-amber-400/40 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground">{a.titulo}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-amber-400/15 text-amber-300">{a.status}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(a.data_inicio).toLocaleString("pt-BR")}
+                    {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
+                  </p>
+                  {a.clienteNome && <p className="text-[11px] text-muted-foreground">Cliente: {a.clienteNome}</p>}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
             {(visitas ?? []).map(v => (
               <div key={v.id} className="relative">

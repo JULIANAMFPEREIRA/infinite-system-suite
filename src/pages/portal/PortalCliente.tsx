@@ -347,6 +347,32 @@ const PortalCliente = () => {
     enabled: !!clienteData?.cliente?.id,
   });
 
+  // Visitas agendadas (fallback via crm_interacoes — visíveis ao portal)
+  const { data: agendaCrm } = useQuery({
+    queryKey: ["portal_agenda_crm", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes" as any)
+        .select("id, descricao, visivel_portal, created_at")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("tipo", "visita")
+        .eq("visivel_portal", true)
+        .order("created_at", { ascending: false });
+      return ((data ?? []) as any[]).map((row: any) => {
+        let p: any = {};
+        try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
+        return {
+          id: row.id,
+          titulo: p.titulo ?? "Visita",
+          descricao: p.descricao ?? null,
+          data_inicio: p.data_inicio ?? null,
+          data_fim: p.data_fim ?? null,
+          status: p.status ?? "agendada",
+        };
+      }).filter((a: any) => a.data_inicio);
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
   // Financeiro a receber
   const { data: financeiro } = useQuery({
     queryKey: ["portal_financeiro", clienteData?.cliente?.id],
@@ -512,11 +538,13 @@ const PortalCliente = () => {
               {/* Visitas Técnicas (read-only agenda + visitas_tecnicas) */}
               <TabsContent value="visitas" className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
-                {!agenda?.length ? (
+                {!(agenda?.length || agendaCrm?.length) ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma visita agendada.</p>
                 ) : (
                   <div className="space-y-2">
-                    {agenda.map((a: any) => (
+                    {[...(agenda ?? []), ...(agendaCrm ?? [])]
+                      .sort((a: any, b: any) => (new Date(b.data_inicio).getTime()) - (new Date(a.data_inicio).getTime()))
+                      .map((a: any) => (
                       <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>

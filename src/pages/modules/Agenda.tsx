@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { addDays, addWeeks, endOfWeek, format, isSameDay, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVisitas, Visita } from "@/hooks/useAgenda";
 import VisitaModal from "@/components/agenda/VisitaModal";
@@ -50,7 +50,7 @@ const Agenda = () => {
       const toIso = addDays(weekEnd, 1).toISOString();
       let q = supabase
         .from("crm_interacoes")
-        .select("id, cliente_id, descricao, created_at, clientes(nome)")
+        .select("id, cliente_id, descricao, visivel_portal, created_at, clientes(nome)")
         .eq("tipo", "visita")
         .gte("created_at", addDays(weekStart, -30).toISOString());
       const { data, error } = await q;
@@ -68,6 +68,7 @@ const Agenda = () => {
             _end: end && !isNaN(end.getTime()) ? end : null,
             clienteNome: row.clientes?.nome ?? null,
             status: parsed.status ?? "agendada",
+            visivel_portal: row.visivel_portal ?? parsed.visivel_portal ?? true,
           };
         })
         .filter((v: any) => v._start && v._start >= new Date(fromIso) && v._start <= new Date(toIso));
@@ -204,14 +205,21 @@ const Agenda = () => {
                   ))}
                   {dayVisitas.map((v) => {
                     const { top, height } = blockStyle(v);
+                    const visible = (v as any).visivel_portal ?? true;
+                    const colorCls = visible
+                      ? "bg-amber-400/20 border-amber-400/60 text-amber-50"
+                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
                     return (
                       <div
                         key={v.id}
                         onClick={(e) => { e.stopPropagation(); openEdit(v); }}
                         style={{ top, height }}
-                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${statusColor(v.status)}`}
+                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${v.status === "cancelada" ? "opacity-60 line-through" : ""} ${colorCls}`}
                       >
-                        <div className="font-semibold truncate">{v.titulo}</div>
+                        <div className="flex items-center gap-1 font-semibold truncate">
+                          {visible && <Eye size={9} className="shrink-0 opacity-80" />}
+                          <span className="truncate">{v.titulo}</span>
+                        </div>
                         <div className="opacity-80 truncate">
                           {format(new Date(v.data_inicio), "HH:mm")}–{format(new Date(v.data_fim), "HH:mm")}
                         </div>
@@ -221,13 +229,20 @@ const Agenda = () => {
                   })}
                   {fallbackByDay(day).map((v: any) => {
                     const { top, height } = fallbackBlockStyle(v);
+                    const visible = v.visivel_portal ?? true;
+                    const colorCls = visible
+                      ? "bg-amber-400/20 border-amber-400/60 text-amber-50"
+                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
                     return (
                       <div
                         key={`f-${v.id}`}
                         style={{ top, height }}
-                        className="absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border overflow-hidden shadow-sm bg-emerald-500/15 border-emerald-500/60 text-emerald-50"
+                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border overflow-hidden shadow-sm ${colorCls}`}
                       >
-                        <div className="font-semibold truncate">{v.titulo}</div>
+                        <div className="flex items-center gap-1 font-semibold truncate">
+                          {visible && <Eye size={9} className="shrink-0 opacity-80" />}
+                          <span className="truncate">{v.titulo}</span>
+                        </div>
                         <div className="opacity-80 truncate">
                           {format(v._start, "HH:mm")}{v._end ? `–${format(v._end, "HH:mm")}` : ""}
                         </div>
@@ -268,22 +283,16 @@ const Agenda = () => {
         defaultStart={defaultStart}
       />
 
-      {isGoogleConnected && (
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-primary/40 border border-primary/60" />
-            Visitas locais
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-500/60" />
-            Visitas (fallback)
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[hsl(210,70%,50%)]/30 border border-[hsl(210,70%,50%)]/60" />
-            Google Agenda
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-4 text-[11px] text-muted-foreground flex-wrap">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-[hsl(210,70%,50%)]/30 border border-[hsl(210,70%,50%)]/60" />
+          Interno (Google Agenda + visitas privadas)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-amber-400/30 border border-amber-400/60" />
+          Compartilhadas (cliente / técnico / arquiteto)
+        </span>
+      </div>
       {!isGoogleConnected && (
         <div className="flex items-center justify-between rounded-xl border border-dashed border-border p-4">
           <p className="text-xs text-muted-foreground">
