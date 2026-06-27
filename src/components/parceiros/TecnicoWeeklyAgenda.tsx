@@ -269,18 +269,6 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
               </div>
             </div>
             <div>
-              <Label>Cliente</Label>
-              <Select value={novoClienteId || "none"} onValueChange={(v) => setNovoClienteId(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent className="max-h-64">
-                  <SelectItem value="none">— Nenhum —</SelectItem>
-                  {clientesTecnico.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Descrição</Label>
               <Textarea value={novoDescricao} onChange={(e) => setNovoDescricao(e.target.value)} rows={3} />
             </div>
