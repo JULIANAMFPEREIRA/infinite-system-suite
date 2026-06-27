@@ -781,6 +781,8 @@ const PortalParceiros = () => {
             </div>
           </div>
 
+          <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
+
           {(() => {
             const allProjs = (data?.projetos ?? []) as any[];
             const emAndamento = allProjs.filter(p => p.status !== "concluido" && p.status !== "cancelado");
