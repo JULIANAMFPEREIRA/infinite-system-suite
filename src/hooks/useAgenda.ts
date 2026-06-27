@@ -18,6 +18,7 @@ export interface Visita {
   updated_at: string;
   visita_tecnicos?: { id: string; tecnico_id: string; fornecedores?: { nome: string } | null }[];
   clientes?: { nome: string } | null;
+  _source?: "agenda_visitas" | "crm_interacoes";
 }
 
 export const useVisitas = (range?: { from: string; to: string }) => {
@@ -71,6 +72,7 @@ interface SaveVisitaInput {
   status?: string;
   tecnico_ids: string[];
   visivel_portal?: boolean;
+  _source?: "agenda_visitas" | "crm_interacoes";
 }
 
 export const useSaveVisita = () => {
@@ -80,11 +82,31 @@ export const useSaveVisita = () => {
 
   return useMutation({
     mutationFn: async (input: SaveVisitaInput) => {
-      const { id, tecnico_ids, ...rest } = input;
+      const { id, tecnico_ids, _source, ...rest } = input;
       const fields = { ...rest, visivel_portal: rest.visivel_portal ?? true };
       let visitaId = id;
 
-      if (id) {
+      if (id && _source === "crm_interacoes") {
+        const descPayload = JSON.stringify({
+          titulo: fields.titulo,
+          descricao: fields.descricao,
+          data_inicio: fields.data_inicio,
+          data_fim: fields.data_fim,
+          status: fields.status ?? "agendada",
+          tecnico_ids,
+          visivel_portal: fields.visivel_portal,
+        });
+        const { error } = await supabase
+          .from("crm_interacoes")
+          .update({
+            descricao: descPayload,
+            visivel_portal: fields.visivel_portal,
+            cliente_id: fields.cliente_id,
+          } as any)
+          .eq("id", id);
+        if (error) throw error;
+        return id;
+      } else if (id) {
         const { error } = await supabase
           .from("agenda_visitas" as any)
           .update(fields as any)
@@ -156,9 +178,9 @@ export const useSaveVisita = () => {
       qc.invalidateQueries({ queryKey: ["visitas"] });
       qc.invalidateQueries({ queryKey: ["visitas_proximas"] });
       qc.invalidateQueries({ queryKey: ["crm_interacoes"] });
-      qc.invalidateQueries({ queryKey: ["visitas_fallback_crm"] });
+      qc.invalidateQueries({ queryKey: ["crm_interacoes_visitas"] });
       qc.refetchQueries({ queryKey: ["visitas"] });
-      qc.refetchQueries({ queryKey: ["visitas_fallback_crm"] });
+      qc.refetchQueries({ queryKey: ["crm_interacoes_visitas"] });
     },
   });
 };
@@ -166,13 +188,18 @@ export const useSaveVisita = () => {
 export const useDeleteVisita = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("agenda_visitas" as any).delete().eq("id", id);
+    mutationFn: async (arg: string | { id: string; source?: "agenda_visitas" | "crm_interacoes" }) => {
+      const id = typeof arg === "string" ? arg : arg.id;
+      const source = typeof arg === "string" ? "agenda_visitas" : arg.source ?? "agenda_visitas";
+      const table = source === "crm_interacoes" ? "crm_interacoes" : "agenda_visitas";
+      const { error } = await supabase.from(table as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["visitas"] });
       qc.invalidateQueries({ queryKey: ["visitas_proximas"] });
+      qc.invalidateQueries({ queryKey: ["crm_interacoes_visitas"] });
+      qc.refetchQueries({ queryKey: ["crm_interacoes_visitas"] });
     },
   });
 };
