@@ -30,6 +30,7 @@ const Integracoes = () => {
   const disconnectMutation = useGoogleDisconnect();
   const { data: events } = useGoogleCalendarEvents(googleStatus?.connected ?? false);
    const callbackProcessed = useRef(false);
+  const calendarEvents = Array.isArray(events) ? events : [];
 
   // Handle OAuth callback code
   useEffect(() => {
@@ -137,11 +138,11 @@ const Integracoes = () => {
         </div>
 
         {/* Upcoming events from Google */}
-        {isConnected && Array.isArray(events) && events.length > 0 && (
+        {isConnected && calendarEvents.length > 0 && (
           <div className="border-t border-border pt-4">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-3">Próximos eventos do Google</p>
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-              {events.slice(0, 8).map((ev) => (
+              {calendarEvents.slice(0, 8).map((ev) => (
                 <div key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
                   <div className="flex flex-col items-center justify-center w-9 h-9 rounded-lg bg-primary/15 text-primary shrink-0">
                     <span className="text-[10px] font-bold leading-tight">
