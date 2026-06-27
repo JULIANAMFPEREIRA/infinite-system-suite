@@ -1,6 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+type GoogleCalendarEvent = {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  description: string;
+};
+
 const invokeGoogle = async (action: string, body?: any) => {
   const session = (await supabase.auth.getSession())
     .data.session;
@@ -89,19 +97,15 @@ export const useGoogleCalendarEvents = (enabled: boolean) => {
     queryFn: async () => {
       try {
         const data = await invokeGoogle("events");
-        return (data?.events ?? []) as Array<{
-          id: string;
-          summary: string;
-          start: string;
-          end: string;
-          description: string;
-        }>;
+        return (Array.isArray(data?.events) ? data.events : []) as GoogleCalendarEvent[];
       } catch {
         return [];
       }
     },
     enabled,
     refetchInterval: 120000,
+    placeholderData: [],
+    initialData: [],
   });
 };
 
