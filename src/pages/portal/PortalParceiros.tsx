@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TecnicoWeeklyAgenda from "@/components/parceiros/TecnicoWeeklyAgenda";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
@@ -780,6 +781,8 @@ const PortalParceiros = () => {
               <p className="text-2xl font-black text-destructive">{fmt(saldoDevedor)}</p>
             </div>
           </div>
+
+          <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
 
           {(() => {
             const allProjs = (data?.projetos ?? []) as any[];
