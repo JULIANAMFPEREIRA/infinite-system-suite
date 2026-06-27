@@ -219,7 +219,9 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={save.isPending}>Salvar</Button>
+            <Button onClick={handleSave} disabled={save.isPending}>
+              {initial ? "Salvar alterações" : "Salvar"}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
