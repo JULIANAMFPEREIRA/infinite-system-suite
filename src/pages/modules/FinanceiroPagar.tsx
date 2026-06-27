@@ -899,6 +899,32 @@ const FinanceiroPagar = () => {
                />
              </div>
           </div>
+          {!editId && (
+            <div className="pt-1 border-t border-border space-y-2">
+              <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={repetirFixa}
+                  onChange={e => setRepetirFixa(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border"
+                />
+                Repetir despesa fixa
+              </label>
+              {repetirFixa && (
+                <div className="space-y-1 max-w-xs">
+                  <label className="text-[11px] text-muted-foreground">Repetir por quantos meses?</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={repetirMeses}
+                    onChange={e => setRepetirMeses(Number(e.target.value))}
+                    className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {editId && (
             <div className="space-y-1 pt-1 border-t border-border">
               <label className="text-[11px] text-muted-foreground">Anexar Documento (boleto, NF, comprovante)</label>
