@@ -13,6 +13,12 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+const safeDate = (val: string | undefined | null) => {
+  if (!val) return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 const integracoes = [
   { nome: "Banco Cora", status: "planejado", desc: "Boletos e conciliação bancária" },
   { nome: "Bradesco", status: "planejado", desc: "Integração via API bancária" },
@@ -142,25 +148,29 @@ const Integracoes = () => {
           <div className="border-t border-border pt-4">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-3">Próximos eventos do Google</p>
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-              {calendarEvents.slice(0, 8).map((ev) => (
-                <div key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-                  <div className="flex flex-col items-center justify-center w-9 h-9 rounded-lg bg-primary/15 text-primary shrink-0">
-                    <span className="text-[10px] font-bold leading-tight">
-                      {ev.start ? format(new Date(ev.start), "dd") : "—"}
-                    </span>
-                    <span className="text-[8px] uppercase">
-                      {ev.start ? format(new Date(ev.start), "MMM", { locale: ptBR }) : ""}
-                    </span>
+              {calendarEvents.slice(0, 8).map((ev) => {
+                const startDate = safeDate(ev.start as unknown as string);
+                const endDate = safeDate(ev.end as unknown as string);
+                return (
+                  <div key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
+                    <div className="flex flex-col items-center justify-center w-9 h-9 rounded-lg bg-primary/15 text-primary shrink-0">
+                      <span className="text-[10px] font-bold leading-tight">
+                        {startDate ? format(startDate, "dd") : "—"}
+                      </span>
+                      <span className="text-[8px] uppercase">
+                        {startDate ? format(startDate, "MMM", { locale: ptBR }) : ""}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-foreground truncate">{ev.summary}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {startDate ? format(startDate, "HH:mm") : "—"}
+                        {endDate ? ` – ${format(endDate, "HH:mm")}` : ""}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground truncate">{ev.summary}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {ev.start ? format(new Date(ev.start), "HH:mm") : "—"}
-                      {ev.end ? ` – ${format(new Date(ev.end), "HH:mm")}` : ""}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
