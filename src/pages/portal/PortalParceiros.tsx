@@ -792,10 +792,6 @@ const PortalParceiros = () => {
           </div>
 
           {(() => {
-            // PAGAMENTOS RECEBIDOS BLOCK (left column)
-            const _LEFT_PAGAMENTOS = true; return _LEFT_PAGAMENTOS && null;
-          })()}
-          {(() => {
             const lancs = (data.lancamentos ?? []) as any[];
             const cy = monthCursor.getFullYear();
             const cm = monthCursor.getMonth();
