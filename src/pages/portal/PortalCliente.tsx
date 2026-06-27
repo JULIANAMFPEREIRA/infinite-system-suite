@@ -449,7 +449,7 @@ const PortalCliente = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-2 py-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <main className="w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-4 md:py-6 space-y-4 sm:space-y-6">
         {isLoading ? (
           <p className="text-center py-12 text-sm text-muted-foreground">Carregando...</p>
         ) : !projetos.length ? (
