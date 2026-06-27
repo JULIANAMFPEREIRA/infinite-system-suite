@@ -545,11 +545,13 @@ const FinanceiroPagar = () => {
   const categoriaGroups = useMemo(() => {
     if (!categorias) return {};
     const groups: Record<string, typeof categorias> = {};
-    categorias.forEach(c => {
-      const tipo = c.tipo || "outros";
-      if (!groups[tipo]) groups[tipo] = [];
-      groups[tipo].push(c);
-    });
+    categorias
+      .filter((c: any) => c.tipo !== "subcategoria" && !c.parent_id)
+      .forEach(c => {
+        const tipo = c.tipo || "outros";
+        if (!groups[tipo]) groups[tipo] = [];
+        groups[tipo].push(c);
+      });
     return groups;
   }, [categorias]);
 
