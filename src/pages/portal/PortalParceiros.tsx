@@ -608,6 +608,24 @@ const PortalParceiros = () => {
         )}
 
         <TabsContent value="visitas" className="space-y-4">
+          {(agendaVisitas ?? []).length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">Visitas agendadas (Agenda)</h4>
+              {(agendaVisitas ?? []).map((a: any) => (
+                <div key={`av-${a.id}`} className="bg-card border border-amber-400/40 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground">{a.titulo}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-amber-400/15 text-amber-300">{a.status}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(a.data_inicio).toLocaleString("pt-BR")}
+                    {a.data_fim && <> — {new Date(a.data_fim).toLocaleString("pt-BR")}</>}
+                  </p>
+                  {a.clienteNome && <p className="text-[11px] text-muted-foreground">Cliente: {a.clienteNome}</p>}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
             {(visitas ?? []).map(v => (
               <div key={v.id} className="relative">
