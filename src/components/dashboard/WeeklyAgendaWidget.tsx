@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useVisitas } from "@/hooks/useAgenda";
 import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
+import { layoutOverlaps } from "@/lib/agendaLayout";
 
 const safeDate = (val: any): Date | null => {
   const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
@@ -138,6 +139,94 @@ const WeeklyAgendaWidget = () => {
               const dayVisitas = visitas.filter((v) => isSameDay(new Date(v.data_inicio), day));
               const dayFallback = fallbackVisitas.filter((v: any) => isSameDay(v._start, day));
               const dayGoogle = gEvents.filter((e: any) => isSameDay(e._start, day));
+
+              type Block = {
+                key: string;
+                start: Date;
+                end: Date;
+                render: (style: React.CSSProperties) => JSX.Element;
+              };
+              const blocks: Block[] = [];
+
+              for (const v of dayVisitas) {
+                const start = new Date(v.data_inicio);
+                const end = new Date(v.data_fim);
+                const visible = (v as any).visivel_portal ?? true;
+                const colorCls = visible
+                  ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
+                  : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
+                blocks.push({
+                  key: `v-${v.id}`,
+                  start,
+                  end,
+                  render: (style) => (
+                    <div
+                      key={`v-${v.id}`}
+                      style={style}
+                      className={`absolute rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm ${v.status === "cancelada" ? "opacity-60 line-through" : ""} ${colorCls}`}
+                    >
+                      <div className="flex items-center gap-1 font-semibold truncate">
+                        {visible && <Eye size={8} className="shrink-0 opacity-80" />}
+                        <span className="truncate">{v.titulo}</span>
+                      </div>
+                      <div className="opacity-80 truncate">{format(start, "HH:mm")}</div>
+                    </div>
+                  ),
+                });
+              }
+              for (const v of dayFallback) {
+                const start: Date = v._start;
+                const end: Date = v._end ?? new Date(start.getTime() + 60 * 60 * 1000);
+                const visible = v.visivel_portal ?? true;
+                const colorCls = visible
+                  ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
+                  : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
+                blocks.push({
+                  key: `f-${v.id}`,
+                  start,
+                  end,
+                  render: (style) => (
+                    <div
+                      key={`f-${v.id}`}
+                      style={style}
+                      className={`absolute rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm ${colorCls}`}
+                    >
+                      <div className="flex items-center gap-1 font-semibold truncate">
+                        {visible && <Eye size={8} className="shrink-0 opacity-80" />}
+                        <span className="truncate">{v.titulo}</span>
+                      </div>
+                      <div className="opacity-80 truncate">{format(start, "HH:mm")}</div>
+                    </div>
+                  ),
+                });
+              }
+              if (isGoogleConnected) {
+                for (const ev of dayGoogle) {
+                  const start: Date = ev._start;
+                  const end: Date = ev._end ?? new Date(start.getTime() + 60 * 60 * 1000);
+                  blocks.push({
+                    key: `g-${ev.id}`,
+                    start,
+                    end,
+                    render: (style) => (
+                      <div
+                        key={`g-${ev.id}`}
+                        style={style}
+                        className="absolute rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
+                      >
+                        <div className="flex items-center gap-1 font-semibold truncate">
+                          <CalendarIcon size={8} className="text-[hsl(210,70%,50%)] shrink-0" />
+                          <span className="truncate">{ev.summary || "(sem título)"}</span>
+                        </div>
+                        <div className="opacity-80 truncate">{format(start, "HH:mm")}</div>
+                      </div>
+                    ),
+                  });
+                }
+              }
+
+              const laid = layoutOverlaps(blocks);
+
               return (
                 <div
                   key={day.toISOString()}
@@ -147,65 +236,16 @@ const WeeklyAgendaWidget = () => {
                   {hours.map((h) => (
                     <div key={h} style={{ height: HOUR_PX }} className="border-b border-border/40 hover:bg-primary/5 transition-colors" />
                   ))}
-                  {dayVisitas.map((v) => {
-                    const start = new Date(v.data_inicio);
-                    const end = new Date(v.data_fim);
-                    const { top, height } = blockStyle(start, end);
-                    const visible = (v as any).visivel_portal ?? true;
-                    const colorCls = visible
-                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
-                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
-                    return (
-                      <div
-                        key={v.id}
-                        style={{ top, height }}
-                        className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm ${v.status === "cancelada" ? "opacity-60 line-through" : ""} ${colorCls}`}
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          {visible && <Eye size={8} className="shrink-0 opacity-80" />}
-                          <span className="truncate">{v.titulo}</span>
-                        </div>
-                        <div className="opacity-80 truncate">{format(start, "HH:mm")}</div>
-                      </div>
-                    );
-                  })}
-                  {dayFallback.map((v: any) => {
-                    const end = v._end ?? new Date(v._start.getTime() + 60 * 60 * 1000);
-                    const { top, height } = blockStyle(v._start, end);
-                    const visible = v.visivel_portal ?? true;
-                    const colorCls = visible
-                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
-                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
-                    return (
-                      <div
-                        key={`f-${v.id}`}
-                        style={{ top, height }}
-                        className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm ${colorCls}`}
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          {visible && <Eye size={8} className="shrink-0 opacity-80" />}
-                          <span className="truncate">{v.titulo}</span>
-                        </div>
-                        <div className="opacity-80 truncate">{format(v._start, "HH:mm")}</div>
-                      </div>
-                    );
-                  })}
-                  {isGoogleConnected && dayGoogle.map((ev: any) => {
-                    const end = ev._end ?? new Date(ev._start.getTime() + 60 * 60 * 1000);
-                    const { top, height } = blockStyle(ev._start, end);
-                    return (
-                      <div
-                        key={`g-${ev.id}`}
-                        style={{ top, height }}
-                        className="absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[9px] border overflow-hidden shadow-sm bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          <CalendarIcon size={8} className="text-[hsl(210,70%,50%)] shrink-0" />
-                          <span className="truncate">{ev.summary || "(sem título)"}</span>
-                        </div>
-                        <div className="opacity-80 truncate">{format(ev._start, "HH:mm")}</div>
-                      </div>
-                    );
+                  {laid.map((r) => {
+                    const { top, height } = blockStyle(r.item.start, r.item.end);
+                    const gap = 1;
+                    const style: React.CSSProperties = {
+                      top,
+                      height,
+                      left: `calc(${r.leftPct}% + ${r.col === 0 ? 2 : gap}px)`,
+                      width: `calc(${r.widthPct}% - ${r.col === 0 || r.col + 1 === r.cols ? gap + 2 : gap * 2}px)`,
+                    };
+                    return r.item.render(style);
                   })}
                 </div>
               );
