@@ -100,8 +100,8 @@ export default function InteractiveCalendar({ localVisitas, isLoadingLocal }: Pr
   const gEvents: UnifiedEvent[] = (Array.isArray(googleEvents) ? googleEvents : [])
     .filter(e => e && !linkedGoogleIds.has(e.id))
     .map(e => {
-      const rawStart = e.start;
-      const rawEnd = e.end;
+      const rawStart = e.start as unknown as string | { dateTime?: string; date?: string } | undefined;
+      const rawEnd = e.end as unknown as string | { dateTime?: string; date?: string } | undefined;
       const startStr: string =
         typeof rawStart === "string"
           ? rawStart
