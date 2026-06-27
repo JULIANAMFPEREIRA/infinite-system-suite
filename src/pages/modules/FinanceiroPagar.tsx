@@ -77,21 +77,45 @@ const SubcategoriaSelect = ({
   categoriaId,
   value,
   onChange,
+  categorias,
 }: {
   categoriaId: string;
   value: string;
   onChange: (v: string) => void;
+  categorias: any[] | undefined;
 }) => {
-  const { data: subs } = useSubcategorias(categoriaId || undefined);
+  const subs = (categorias ?? []).filter(
+    (c: any) => c.parent_id === categoriaId && categoriaId
+  );
+  if (!categoriaId) {
+    return (
+      <select
+        disabled
+        className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+      >
+        <option value="">Selecione uma categoria primeiro</option>
+      </select>
+    );
+  }
+  if (subs.length === 0) {
+    return (
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Tipo / Subcategoria (opcional)"
+        className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    );
+  }
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      disabled={!categoriaId}
-      className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+      className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
     >
-      <option value="">{categoriaId ? "Selecionar tipo..." : "Selecione categoria primeiro"}</option>
-      {(subs ?? []).map((s) => (
+      <option value="">Selecionar tipo...</option>
+      {subs.map((s: any) => (
         <option key={s.id} value={s.nome}>{s.nome}</option>
       ))}
     </select>
