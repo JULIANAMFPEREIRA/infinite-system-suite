@@ -538,11 +538,13 @@ const PortalCliente = () => {
               {/* Visitas Técnicas (read-only agenda + visitas_tecnicas) */}
               <TabsContent value="visitas" className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Visitas Agendadas</h3>
-                {!agenda?.length ? (
+                {!(agenda?.length || agendaCrm?.length) ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">Nenhuma visita agendada.</p>
                 ) : (
                   <div className="space-y-2">
-                    {agenda.map((a: any) => (
+                    {[...(agenda ?? []), ...(agendaCrm ?? [])]
+                      .sort((a: any, b: any) => (new Date(b.data_inicio).getTime()) - (new Date(a.data_inicio).getTime()))
+                      .map((a: any) => (
                       <div key={a.id} className="bg-card border border-border rounded-lg p-3 space-y-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-semibold text-foreground">{a.titulo ?? "Visita"}</p>
