@@ -983,13 +983,13 @@ const PortalParceiros = () => {
         const rtPendente = rtTotal - rtPago;
 
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -translate-y-6 translate-x-6" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total RT</p>
-              <p className="text-3xl font-black text-white tracking-tight">{fmt(rtTotal)}</p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex-1 h-1.5 rounded-full bg-slate-700">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-xl p-3 shadow-lg">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -translate-y-6 translate-x-6" />
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total RT</p>
+              <p className="text-2xl font-black text-white tracking-tight">{fmt(rtTotal)}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex-1 h-1 rounded-full bg-slate-700">
                   <div className="h-full bg-primary rounded-full transition-all"
                     style={{ width: rtTotal > 0 ? `${Math.min((rtPago / rtTotal) * 100, 100)}%` : "0%" }} />
                 </div>
@@ -997,25 +997,25 @@ const PortalParceiros = () => {
               </div>
               <p className="text-[10px] text-slate-500 mt-1">{data.comissoes?.length ?? 0} projeto(s) com RT</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recebido</p>
-                <div className="w-8 h-8 rounded-lg bg-success/15 flex items-center justify-center">
-                  <CheckCircle2 size={16} className="text-success" />
+            <div className="bg-card border border-border rounded-xl p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recebido</p>
+                <div className="w-6 h-6 rounded-md bg-success/15 flex items-center justify-center">
+                  <CheckCircle2 size={13} className="text-success" />
                 </div>
               </div>
               <p className="text-2xl font-black text-success">{fmt(rtPago)}</p>
-              <p className="text-[11px] text-muted-foreground mt-2">Já depositado</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Já depositado</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pendente</p>
-                <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
-                  <Hourglass size={16} className="text-warning" />
+            <div className="bg-card border border-border rounded-xl p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pendente</p>
+                <div className="w-6 h-6 rounded-md bg-warning/15 flex items-center justify-center">
+                  <Hourglass size={13} className="text-warning" />
                 </div>
               </div>
               <p className="text-2xl font-black text-warning">{fmt(rtPendente)}</p>
-              <p className="text-[11px] text-muted-foreground mt-2">A receber</p>
+              <p className="text-[10px] text-muted-foreground mt-1">A receber</p>
             </div>
           </div>
         );
@@ -1101,10 +1101,10 @@ const PortalParceiros = () => {
                 className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
               >
                 <p className="text-xs font-bold text-foreground truncate" title={nome}>{nome}</p>
-                {sub && (
+                {sub && sub.trim().toLowerCase() !== "arquiteto" && (
                   <p className="text-[10px] text-muted-foreground mt-0.5 truncate">👤 {sub}</p>
                 )}
-                {origem && (
+                {origem && origem.trim().toLowerCase() !== "arquiteto" && (
                   <span className="inline-block mt-1.5 text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
                     {origem}
                   </span>
@@ -1268,7 +1268,7 @@ const PortalParceiros = () => {
         ].join(", "),
       }}
     >
-      <div className="max-w-4xl mx-auto px-3 py-2.5 sm:px-4 sm:py-4 flex items-center justify-between gap-2">
+      <div className="w-full px-3 sm:px-6 lg:px-8 py-2.5 sm:py-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-[11px] sm:text-sm shadow-lg shrink-0">
             {iniciais}
@@ -1296,7 +1296,7 @@ const PortalParceiros = () => {
           </button>
         </div>
       </div>
-      <div className="max-w-4xl mx-auto px-4 pb-3 hidden sm:block">
+      <div className="w-full px-3 sm:px-6 lg:px-8 pb-3 hidden sm:block">
         <p className="text-[11px] text-slate-500 italic">
           "Construindo juntos, crescendo juntos."
         </p>
