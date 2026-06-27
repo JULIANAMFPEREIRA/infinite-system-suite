@@ -63,6 +63,7 @@ export type Database = {
           status: string
           titulo: string
           updated_at: string
+          visivel_portal: boolean
         }
         Insert: {
           cliente_id?: string | null
@@ -76,6 +77,7 @@ export type Database = {
           status?: string
           titulo: string
           updated_at?: string
+          visivel_portal?: boolean
         }
         Update: {
           cliente_id?: string | null
@@ -89,6 +91,7 @@ export type Database = {
           status?: string
           titulo?: string
           updated_at?: string
+          visivel_portal?: boolean
         }
         Relationships: [
           {
