@@ -53,23 +53,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        const newUserId = session?.user?.id ?? null;
         setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setRolesLoaded(false);
-          setLoading(true);
-          setTimeout(() => {
-            fetchProfileAndRoles(session.user.id).finally(() => {
-              setRolesLoaded(true);
-              setLoading(false);
-            });
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-          setRolesLoaded(true);
-          setLoading(false);
-        }
+        setUser((prevUser) => {
+          const prevId = prevUser?.id ?? null;
+          // Only refetch profile/roles when the user actually changes (sign-in / sign-out / account switch).
+          // Ignore TOKEN_REFRESHED / INITIAL_SESSION re-fires on tab focus to avoid re-mounting routes.
+          if (newUserId && newUserId !== prevId) {
+            setRolesLoaded(false);
+            setLoading(true);
+            setTimeout(() => {
+              fetchProfileAndRoles(newUserId).finally(() => {
+                setRolesLoaded(true);
+                setLoading(false);
+              });
+            }, 0);
+          } else if (!newUserId && prevId) {
+            setProfile(null);
+            setRoles([]);
+            setRolesLoaded(true);
+            setLoading(false);
+          }
+          return session?.user ?? null;
+        });
       }
     );
 
