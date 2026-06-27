@@ -97,22 +97,31 @@ export default function InteractiveCalendar({ localVisitas, isLoadingLocal }: Pr
       googleEventId: v.google_event_id ?? undefined,
     }));
 
-  const gEvents: UnifiedEvent[] = (googleEvents ?? [])
-    .filter(e => !linkedGoogleIds.has(e.id))
+  const gEvents: UnifiedEvent[] = (Array.isArray(googleEvents) ? googleEvents : [])
+    .filter(e => e && !linkedGoogleIds.has(e.id))
     .map(e => {
-      const startStr = e.start || "";
+      const rawStart = e.start;
+      const rawEnd = e.end;
+      const startStr: string =
+        typeof rawStart === "string"
+          ? rawStart
+          : (rawStart?.dateTime ?? rawStart?.date ?? "");
+      const endStr: string =
+        typeof rawEnd === "string"
+          ? rawEnd
+          : (rawEnd?.dateTime ?? rawEnd?.date ?? "");
       let eventDate = "";
       let eventTime = "";
       let endTime = "";
-      if (startStr.includes("T")) {
+      if (typeof startStr === "string" && startStr.includes("T")) {
         const dt = new Date(startStr);
         eventDate = format(dt, "yyyy-MM-dd");
         eventTime = format(dt, "HH:mm");
       } else {
         eventDate = startStr;
       }
-      if (e.end && e.end.includes("T")) {
-        endTime = format(new Date(e.end), "HH:mm");
+      if (typeof endStr === "string" && endStr.includes("T")) {
+        endTime = format(new Date(endStr), "HH:mm");
       }
       return {
         id: e.id,
