@@ -337,7 +337,7 @@ const Agenda = () => {
                       left: `calc(${r.leftPct}% + ${r.col === 0 ? 4 : gap}px)`,
                       width: `calc(${r.widthPct}% - ${r.col === 0 || r.col + 1 === r.cols ? gap + 4 : gap * 2}px)`,
                     };
-                    return r.render(style);
+                    return r.item.render(style);
                   })}
                 </div>
               );
