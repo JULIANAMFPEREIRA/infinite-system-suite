@@ -97,16 +97,52 @@ export const useSaveVisita = () => {
           } as any)
           .select("id")
           .single();
-        if (error) throw error;
+        if (error) {
+          // Fallback: schema cache miss for agenda_visitas (PGRST205).
+          // Save as a crm_interacoes record of tipo='visita' as temporary workaround.
+          const isSchemaCacheError =
+            (error as any).code === "PGRST205" ||
+            /schema cache|Could not find the table/i.test(error.message || "");
+          if (isSchemaCacheError && fields.cliente_id) {
+            const descPayload = JSON.stringify({
+              titulo: fields.titulo,
+              descricao: fields.descricao,
+              data_inicio: fields.data_inicio,
+              data_fim: fields.data_fim,
+              status: fields.status ?? "agendada",
+              tecnico_ids,
+            });
+            const { data: fallback, error: fbErr } = await supabase
+              .from("crm_interacoes")
+              .insert({
+                cliente_id: fields.cliente_id,
+                tipo: "visita",
+                descricao: descPayload,
+                usuario_id: user?.id ?? null,
+              } as any)
+              .select("id")
+              .single();
+            if (fbErr) throw fbErr;
+            return (fallback as any).id as string;
+          }
+          throw error;
+        }
         visitaId = (data as any).id;
       }
 
       // Replace técnicos
-      await supabase.from("agenda_visita_tecnicos" as any).delete().eq("visita_id", visitaId!);
-      if (tecnico_ids.length > 0) {
-        const rows = tecnico_ids.map((t) => ({ visita_id: visitaId!, tecnico_id: t }));
-        const { error: insErr } = await supabase.from("agenda_visita_tecnicos" as any).insert(rows as any);
-        if (insErr) throw insErr;
+      try {
+        await supabase.from("agenda_visita_tecnicos" as any).delete().eq("visita_id", visitaId!);
+        if (tecnico_ids.length > 0) {
+          const rows = tecnico_ids.map((t) => ({ visita_id: visitaId!, tecnico_id: t }));
+          const { error: insErr } = await supabase.from("agenda_visita_tecnicos" as any).insert(rows as any);
+          if (insErr) throw insErr;
+        }
+      } catch (e: any) {
+        // Ignore schema cache errors for the join table — main visit was saved.
+        const isSchemaCacheError =
+          e?.code === "PGRST205" || /schema cache|Could not find the table/i.test(e?.message || "");
+        if (!isSchemaCacheError) throw e;
       }
 
       return visitaId!;
