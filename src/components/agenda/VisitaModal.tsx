@@ -81,8 +81,9 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         data_fim: new Date(fim).toISOString(),
         status,
         visivel_portal: visivelPortal,
+        _source: initial?._source,
       });
-      toast({ title: initial ? "Visita atualizada" : "Visita criada" });
+      toast({ title: initial ? "Alterações salvas" : "Visita criada" });
       onClose();
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
@@ -93,7 +94,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
     if (!initial) return;
     if (!confirm("Excluir esta visita?")) return;
     try {
-      await del.mutateAsync(initial.id);
+      await del.mutateAsync({ id: initial.id, source: initial._source });
       toast({ title: "Visita excluída" });
       onClose();
     } catch (e: any) {
