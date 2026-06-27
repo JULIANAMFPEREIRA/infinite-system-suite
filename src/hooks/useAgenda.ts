@@ -228,6 +228,7 @@ export const useTecnicosLista = () => {
         .select("id, nome, tipo, subtipo_parceiro")
         .eq("deletado", false)
         .eq("ativo", true)
+        .eq("tipo", "tecnico")
         .order("nome");
       if (empresaId) q = q.eq("empresa_id", empresaId);
       const { data, error } = await q;
