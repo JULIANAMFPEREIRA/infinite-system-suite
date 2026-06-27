@@ -525,7 +525,7 @@ const CRM = () => {
   const { data: interacoes, refetch: refetchInteracoes } = useQuery({
     queryKey: ["crm_interacoes", detailClient?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).order("created_at", { ascending: false, nullsFirst: false });
+      const { data, error } = await supabase.from("crm_interacoes").select("*").eq("cliente_id", detailClient!.id).neq("tipo", "visita").order("created_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
