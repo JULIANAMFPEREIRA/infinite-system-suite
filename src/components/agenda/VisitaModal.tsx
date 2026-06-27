@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useClientesLista, useTecnicosLista, useSaveVisita, useDeleteVisita, Visita } from "@/hooks/useAgenda";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -33,6 +34,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [status, setStatus] = useState("agendada");
+  const [visivelPortal, setVisivelPortal] = useState(true);
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +46,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
       setInicio(toLocalInput(new Date(initial.data_inicio)));
       setFim(toLocalInput(new Date(initial.data_fim)));
       setStatus(initial.status);
+      setVisivelPortal(initial.visivel_portal ?? true);
     } else {
       const start = defaultStart ?? new Date();
       const end = new Date(start.getTime() + 60 * 60 * 1000);
@@ -54,6 +57,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
       setInicio(toLocalInput(start));
       setFim(toLocalInput(end));
       setStatus("agendada");
+      setVisivelPortal(true);
     }
   }, [open, initial, defaultStart]);
 
@@ -76,6 +80,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         data_inicio: new Date(inicio).toISOString(),
         data_fim: new Date(fim).toISOString(),
         status,
+        visivel_portal: visivelPortal,
       });
       toast({ title: initial ? "Visita atualizada" : "Visita criada" });
       onClose();
@@ -172,6 +177,20 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
           <div>
             <Label>Descrição</Label>
             <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} />
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Eye size={14} className="text-muted-foreground" />
+              <Label htmlFor="visivel-portal" className="text-xs cursor-pointer">
+                Visível para cliente, técnico e arquiteto
+              </Label>
+            </div>
+            <Switch
+              id="visivel-portal"
+              checked={visivelPortal}
+              onCheckedChange={setVisivelPortal}
+            />
           </div>
 
           {initial && (
