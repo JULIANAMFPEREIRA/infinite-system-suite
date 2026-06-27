@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react";
 import { addDays, addWeeks, endOfWeek, format, isSameDay, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 
 const HOUR_START = 7;
 const HOUR_END = 20;
@@ -18,6 +23,8 @@ interface Props {
 const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selected, setSelected] = useState<any | null>(null);
+  const [novoOpen, setNovoOpen] = useState(false);
+  const qc = useQueryClient();
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const hours = useMemo(
@@ -64,6 +71,79 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
     enabled: !!fornecedorId,
   });
 
+  const { data: clientesTecnico = [] } = useQuery({
+    queryKey: ["tecnico_clientes_para_agenda", fornecedorId],
+    queryFn: async () => {
+      const { data: pps, error } = await supabase
+        .from("projeto_parceiros")
+        .select("projetos(cliente_id, clientes(id, nome))")
+        .eq("parceiro_id", fornecedorId);
+      if (error) return [];
+      const map = new Map<string, string>();
+      (pps ?? []).forEach((pp: any) => {
+        const c = pp.projetos?.clientes;
+        if (c?.id) map.set(c.id, c.nome);
+      });
+      return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
+    },
+    enabled: !!fornecedorId,
+  });
+
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [novoInicio, setNovoInicio] = useState("");
+  const [novoFim, setNovoFim] = useState("");
+  const [novoDescricao, setNovoDescricao] = useState("");
+  const [novoClienteId, setNovoClienteId] = useState("");
+
+  const openNovo = () => {
+    const now = new Date();
+    const start = new Date(now.getTime());
+    start.setMinutes(0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const fmt = (d: Date) => format(d, "yyyy-MM-dd'T'HH:mm");
+    setNovoTitulo("");
+    setNovoDescricao("");
+    setNovoClienteId("");
+    setNovoInicio(fmt(start));
+    setNovoFim(fmt(end));
+    setNovoOpen(true);
+  };
+
+  const saveNovo = useMutation({
+    mutationFn: async () => {
+      if (!novoTitulo.trim()) throw new Error("Título obrigatório");
+      if (!novoInicio || !novoFim) throw new Error("Informe data início e fim");
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id ?? null;
+      const payload = {
+        titulo: novoTitulo.trim().toUpperCase(),
+        descricao: novoDescricao.trim() || null,
+        data_inicio: new Date(novoInicio).toISOString(),
+        data_fim: new Date(novoFim).toISOString(),
+        status: "agendada",
+        tecnico_ids: [fornecedorId],
+        visivel_portal: true,
+      };
+      const { error } = await supabase.from("crm_interacoes").insert({
+        cliente_id: novoClienteId || null,
+        tipo: "visita",
+        descricao: JSON.stringify(payload),
+        visivel_portal: true,
+        usuario_id: uid,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Evento criado" });
+      qc.invalidateQueries({ queryKey: ["tecnico_weekly_agenda"] });
+      qc.invalidateQueries({ queryKey: ["visitas"] });
+      qc.invalidateQueries({ queryKey: ["crm_interacoes_visitas"] });
+      qc.refetchQueries({ queryKey: ["tecnico_weekly_agenda"] });
+      setNovoOpen(false);
+    },
+    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const blockStyle = (start: Date, end: Date) => {
     const top = (start.getHours() + start.getMinutes() / 60 - HOUR_START) * HOUR_PX;
     const height = Math.max(18, ((end.getTime() - start.getTime()) / 3600000) * HOUR_PX - 2);
@@ -80,6 +160,9 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" onClick={openNovo} className="gap-1">
+            <Plus size={14} /> Novo Evento
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setWeekStart(addWeeks(weekStart, -1))}>
             <ChevronLeft size={14} />
           </Button>
@@ -183,6 +266,50 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
               </p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Evento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>Título *</Label>
+              <Input value={novoTitulo} onChange={(e) => setNovoTitulo(e.target.value)} placeholder="Ex.: VISITA TÉCNICA" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Início *</Label>
+                <Input type="datetime-local" value={novoInicio} onChange={(e) => setNovoInicio(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fim *</Label>
+                <Input type="datetime-local" value={novoFim} onChange={(e) => setNovoFim(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Cliente</Label>
+              <Select value={novoClienteId || "none"} onValueChange={(v) => setNovoClienteId(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  <SelectItem value="none">— Nenhum —</SelectItem>
+                  {clientesTecnico.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Textarea value={novoDescricao} onChange={(e) => setNovoDescricao(e.target.value)} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovoOpen(false)}>Cancelar</Button>
+            <Button onClick={() => saveNovo.mutate()} disabled={saveNovo.isPending}>Salvar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
