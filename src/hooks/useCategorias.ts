@@ -9,7 +9,7 @@ export const useCategorias = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categorias")
-        .select("id, nome, tipo, empresa_id")
+        .select("id, nome, tipo, empresa_id, parent_id")
         .eq("empresa_id", "a0000000-0000-0000-0000-000000000001")
         .order("nome");
       if (error) {
