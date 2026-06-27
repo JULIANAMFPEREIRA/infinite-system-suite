@@ -1,12 +1,27 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, ArrowRight } from "lucide-react";
+import { CalendarClock, ArrowRight, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProximasVisitas } from "@/hooks/useAgenda";
+import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
+
+const safeDate = (val: any): Date | null => {
+  const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 const ProximosCompromissos = () => {
   const { data: visitas = [], isLoading } = useProximasVisitas(5);
   const navigate = useNavigate();
+  const { data: googleStatus } = useGoogleCalendarStatus();
+  const isGoogleConnected = googleStatus?.connected === true;
+  const { data: googleEvents } = useGoogleCalendarEvents(isGoogleConnected);
+  const gEvents = (Array.isArray(googleEvents) ? googleEvents : [])
+    .map((e: any) => ({ ...e, _start: safeDate(e.start) }))
+    .filter((e) => e._start)
+    .slice(0, 5);
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -49,6 +64,36 @@ const ProximosCompromissos = () => {
             </li>
           ))}
         </ul>
+      )}
+
+      {isGoogleConnected && gEvents.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-border/60">
+          <div className="flex items-center gap-2 mb-2">
+            <CalendarIcon size={12} className="text-primary" />
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Google Agenda</p>
+          </div>
+          <ul className="space-y-2">
+            {gEvents.map((ev: any) => (
+              <li
+                key={ev.id}
+                onClick={() => navigate("/agenda")}
+                className="rounded-lg border border-border/60 px-3 py-2 hover:bg-secondary/40 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px] font-semibold shrink-0">
+                      <CalendarIcon size={9} /> Google
+                    </span>
+                    <p className="text-[13px] font-semibold truncate">{ev.summary || "(sem título)"}</p>
+                  </div>
+                  <span className="text-[10px] text-primary font-medium whitespace-nowrap">
+                    {format(ev._start, "dd/MM HH:mm", { locale: ptBR })}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
