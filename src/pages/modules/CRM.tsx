@@ -3381,6 +3381,11 @@ const CRM = () => {
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-6">Aprove um orçamento para habilitar visitas técnicas</p>
               )}
+              {detailClient?.id && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <AgendaVisitasCliente clienteId={detailClient.id} />
+                </div>
+              )}
             </div>
           </TabsContent>
 
