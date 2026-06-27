@@ -33,8 +33,8 @@ const Integracoes = () => {
 
   // Handle OAuth callback code
   useEffect(() => {
-    const code = searchParams.get("code");
-    const error = searchParams.get("error");
+    const code = searchParams?.get?.("code") ?? null;
+    const error = searchParams?.get?.("error") ?? null;
 
     if (error) {
       toast.error("Conexão cancelada.");
@@ -137,7 +137,7 @@ const Integracoes = () => {
         </div>
 
         {/* Upcoming events from Google */}
-        {isConnected && events && events.length > 0 && (
+        {isConnected && Array.isArray(events) && events.length > 0 && (
           <div className="border-t border-border pt-4">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-3">Próximos eventos do Google</p>
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
