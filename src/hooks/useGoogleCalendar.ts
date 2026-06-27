@@ -5,11 +5,11 @@ const invokeGoogle = async (action: string, body?: any) => {
   const session = (await supabase.auth.getSession())
     .data.session;
   
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-auth?action=${action}`;
+  const url = `https://sjlgjxyrfrbldxqhffak.supabase.co/functions/v1/google-auth?action=${action}`;
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    "apikey": "sb_publishable_mTi96i7ZFid_DO_QDkH9jQ_GbK3HK9R",
   };
   
   if (session?.access_token) {
