@@ -71,6 +71,12 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Missing code" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      console.log("Callback recebido, code:", code?.substring(0, 20));
+      console.log("State (userId):", userId);
+      console.log("REDIRECT_URI:", REDIRECT_URI);
+      console.log("CLIENT_ID presente:", !!GOOGLE_CLIENT_ID);
+      console.log("CLIENT_SECRET presente:", !!GOOGLE_CLIENT_SECRET);
+
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -84,6 +90,9 @@ Deno.serve(async (req) => {
       });
 
       const tokenData = await tokenRes.json();
+      console.log("Token response status:", tokenRes.status);
+      console.log("Token error:", tokenData.error);
+      console.log("Token error description:", tokenData.error_description);
       if (tokenData.error) {
         return new Response(JSON.stringify({ error: tokenData.error_description || tokenData.error }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
