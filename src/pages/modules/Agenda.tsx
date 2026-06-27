@@ -8,6 +8,9 @@ import VisitaModal from "@/components/agenda/VisitaModal";
 import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
 
 const safeDate = (val: any): Date | null => {
   const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
