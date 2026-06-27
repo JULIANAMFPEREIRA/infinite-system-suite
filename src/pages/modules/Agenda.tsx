@@ -197,6 +197,126 @@ const Agenda = () => {
             {/* Day columns */}
             {days.map((day) => {
               const dayVisitas = visitasByDay(day);
+              const dayFallback = fallbackByDay(day);
+              const dayGoogle = isGoogleConnected ? gEventsByDay(day) : [];
+
+              type Block = {
+                key: string;
+                start: Date;
+                end: Date;
+                render: (style: React.CSSProperties) => JSX.Element;
+              };
+              const blocks: Block[] = [];
+
+              for (const v of dayVisitas) {
+                const start = new Date(v.data_inicio);
+                const end = new Date(v.data_fim);
+                const visible = (v as any).visivel_portal ?? true;
+                const colorCls = visible
+                  ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
+                  : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
+                blocks.push({
+                  key: `v-${v.id}`,
+                  start,
+                  end,
+                  render: (style) => (
+                    <div
+                      key={`v-${v.id}`}
+                      onClick={(e) => { e.stopPropagation(); openEdit(v); }}
+                      style={style}
+                      className={`absolute rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${v.status === "cancelada" ? "opacity-60 line-through" : ""} ${colorCls}`}
+                    >
+                      <div className="flex items-center gap-1 font-semibold truncate">
+                        {visible && <Eye size={9} className="shrink-0 opacity-80" />}
+                        <span className="truncate">{v.titulo}</span>
+                      </div>
+                      <div className="opacity-80 truncate">
+                        {format(start, "HH:mm")}–{format(end, "HH:mm")}
+                      </div>
+                      {v.clientes?.nome && <div className="truncate opacity-70">{v.clientes.nome}</div>}
+                    </div>
+                  ),
+                });
+              }
+
+              for (const v of dayFallback) {
+                const start: Date = v._start;
+                const end: Date = v._end ?? new Date(start.getTime() + 60 * 60 * 1000);
+                const visible = v.visivel_portal ?? true;
+                const colorCls = visible
+                  ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
+                  : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
+                blocks.push({
+                  key: `f-${v.id}`,
+                  start,
+                  end,
+                  render: (style) => (
+                    <div
+                      key={`f-${v.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit({
+                          id: v.id,
+                          empresa_id: empresaId ?? "",
+                          cliente_id: v.cliente_id,
+                          titulo: v.titulo,
+                          descricao: v.descricao ?? null,
+                          data_inicio: start.toISOString(),
+                          data_fim: end.toISOString(),
+                          status: v.status,
+                          visivel_portal: v.visivel_portal,
+                          created_by: null,
+                          created_at: "",
+                          updated_at: "",
+                          visita_tecnicos: (v.tecnico_ids ?? []).map((tid: string) => ({ id: tid, tecnico_id: tid })),
+                          clientes: v.clienteNome ? { nome: v.clienteNome } : null,
+                          _source: "crm_interacoes",
+                        } as Visita);
+                      }}
+                      style={style}
+                      className={`absolute rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${colorCls}`}
+                    >
+                      <div className="flex items-center gap-1 font-semibold truncate">
+                        {visible && <Eye size={9} className="shrink-0 opacity-80" />}
+                        <span className="truncate">{v.titulo}</span>
+                      </div>
+                      <div className="opacity-80 truncate">
+                        {format(start, "HH:mm")}{v._end ? `–${format(end, "HH:mm")}` : ""}
+                      </div>
+                      {v.clienteNome && <div className="truncate opacity-70">{v.clienteNome}</div>}
+                    </div>
+                  ),
+                });
+              }
+
+              for (const ev of dayGoogle) {
+                const start: Date = ev._start;
+                const end: Date = ev._end ?? new Date(start.getTime() + 60 * 60 * 1000);
+                blocks.push({
+                  key: `g-${ev.id}`,
+                  start,
+                  end,
+                  render: (style) => (
+                    <div
+                      key={`g-${ev.id}`}
+                      onClick={(e) => { e.stopPropagation(); navigate("/integracoes"); }}
+                      style={style}
+                      className="absolute rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
+                    >
+                      <div className="flex items-center gap-1 font-semibold truncate">
+                        <CalendarIcon size={9} className="text-[hsl(210,70%,50%)] shrink-0" />
+                        <span className="truncate">{ev.summary || "(sem título)"}</span>
+                      </div>
+                      <div className="opacity-80 truncate">
+                        {format(start, "HH:mm")}{ev._end ? `–${format(end, "HH:mm")}` : ""}
+                      </div>
+                    </div>
+                  ),
+                });
+              }
+
+              const laid = layoutOverlaps(blocks);
+
               return (
                 <div key={day.toISOString()} className="relative border-l border-border">
                   {hours.map((h) => (
@@ -207,91 +327,17 @@ const Agenda = () => {
                       onClick={() => openNew(day, h)}
                     />
                   ))}
-                  {dayVisitas.map((v) => {
-                    const { top, height } = blockStyle(v);
-                    const visible = (v as any).visivel_portal ?? true;
-                    const colorCls = visible
-                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
-                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
-                    return (
-                      <div
-                        key={v.id}
-                        onClick={(e) => { e.stopPropagation(); openEdit(v); }}
-                        style={{ top, height }}
-                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${v.status === "cancelada" ? "opacity-60 line-through" : ""} ${colorCls}`}
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          {visible && <Eye size={9} className="shrink-0 opacity-80" />}
-                          <span className="truncate">{v.titulo}</span>
-                        </div>
-                        <div className="opacity-80 truncate">
-                          {format(new Date(v.data_inicio), "HH:mm")}–{format(new Date(v.data_fim), "HH:mm")}
-                        </div>
-                        {v.clientes?.nome && <div className="truncate opacity-70">{v.clientes.nome}</div>}
-                      </div>
-                    );
-                  })}
-                  {fallbackByDay(day).map((v: any) => {
-                    const { top, height } = fallbackBlockStyle(v);
-                    const visible = v.visivel_portal ?? true;
-                    const colorCls = visible
-                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
-                      : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
-                    return (
-                      <div
-                        key={`f-${v.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEdit({
-                            id: v.id,
-                            empresa_id: empresaId ?? "",
-                            cliente_id: v.cliente_id,
-                            titulo: v.titulo,
-                            descricao: v.descricao ?? null,
-                            data_inicio: v._start.toISOString(),
-                            data_fim: (v._end ?? new Date(v._start.getTime() + 60 * 60 * 1000)).toISOString(),
-                            status: v.status,
-                            visivel_portal: v.visivel_portal,
-                            created_by: null,
-                            created_at: "",
-                            updated_at: "",
-                            visita_tecnicos: (v.tecnico_ids ?? []).map((tid: string) => ({ id: tid, tecnico_id: tid })),
-                            clientes: v.clienteNome ? { nome: v.clienteNome } : null,
-                            _source: "crm_interacoes",
-                          } as Visita);
-                        }}
-                        style={{ top, height }}
-                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${colorCls}`}
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          {visible && <Eye size={9} className="shrink-0 opacity-80" />}
-                          <span className="truncate">{v.titulo}</span>
-                        </div>
-                        <div className="opacity-80 truncate">
-                          {format(v._start, "HH:mm")}{v._end ? `–${format(v._end, "HH:mm")}` : ""}
-                        </div>
-                        {v.clienteNome && <div className="truncate opacity-70">{v.clienteNome}</div>}
-                      </div>
-                    );
-                  })}
-                  {isGoogleConnected && gEventsByDay(day).map((ev: any) => {
-                    const { top, height } = gBlockStyle(ev);
-                    return (
-                      <div
-                        key={`g-${ev.id}`}
-                        onClick={(e) => { e.stopPropagation(); navigate("/integracoes"); }}
-                        style={{ top, height }}
-                        className="absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
-                      >
-                        <div className="flex items-center gap-1 font-semibold truncate">
-                          <CalendarIcon size={9} className="text-[hsl(210,70%,50%)] shrink-0" />
-                          <span className="truncate">{ev.summary || "(sem título)"}</span>
-                        </div>
-                        <div className="opacity-80 truncate">
-                          {format(ev._start, "HH:mm")}{ev._end ? `–${format(ev._end, "HH:mm")}` : ""}
-                        </div>
-                      </div>
-                    );
+                  {laid.map((r) => {
+                    const top = (r.item.start.getHours() + r.item.start.getMinutes() / 60 - HOUR_START) * HOUR_PX;
+                    const height = Math.max(24, ((r.item.end.getTime() - r.item.start.getTime()) / 3600000) * HOUR_PX - 2);
+                    const gap = 2;
+                    const style: React.CSSProperties = {
+                      top,
+                      height,
+                      left: `calc(${r.leftPct}% + ${r.col === 0 ? 4 : gap}px)`,
+                      width: `calc(${r.widthPct}% - ${r.col === 0 || r.col + 1 === r.cols ? gap + 4 : gap * 2}px)`,
+                    };
+                    return r.render(style);
                   })}
                 </div>
               );
