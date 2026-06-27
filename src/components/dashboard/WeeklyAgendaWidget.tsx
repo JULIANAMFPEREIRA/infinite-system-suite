@@ -1,7 +1,7 @@
-import { useMemo } from "react";
-import { addDays, endOfWeek, format, isSameDay, startOfWeek } from "date-fns";
+import { useMemo, useState } from "react";
+import { addDays, addWeeks, endOfWeek, format, isSameDay, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Eye, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Eye, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ const HOUR_PX = 36;
 
 const WeeklyAgendaWidget = () => {
   const navigate = useNavigate();
-  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const weekEnd = useMemo(() => endOfWeek(weekStart, { weekStartsOn: 1 }), [weekStart]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const hours = useMemo(
@@ -90,9 +90,20 @@ const WeeklyAgendaWidget = () => {
             {format(weekStart, "dd 'de' MMM", { locale: ptBR })} — {format(weekEnd, "dd 'de' MMM", { locale: ptBR })}
           </p>
         </div>
-        <Button size="sm" onClick={() => navigate("/agenda")}>
-          <Plus size={14} className="mr-1" /> Nova Visita
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setWeekStart(addWeeks(weekStart, -1))}>
+            <ChevronLeft size={14} />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+            Hoje
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
+            <ChevronRight size={14} />
+          </Button>
+          <Button size="sm" onClick={() => navigate("/agenda")}>
+            <Plus size={14} className="mr-1" /> Nova Visita
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

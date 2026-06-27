@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
 const HOUR_START = 7;
@@ -71,29 +70,10 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
     enabled: !!fornecedorId,
   });
 
-  const { data: clientesTecnico = [] } = useQuery({
-    queryKey: ["tecnico_clientes_para_agenda", fornecedorId],
-    queryFn: async () => {
-      const { data: pps, error } = await supabase
-        .from("projeto_parceiros")
-        .select("projetos(cliente_id, clientes(id, nome))")
-        .eq("parceiro_id", fornecedorId);
-      if (error) return [];
-      const map = new Map<string, string>();
-      (pps ?? []).forEach((pp: any) => {
-        const c = pp.projetos?.clientes;
-        if (c?.id) map.set(c.id, c.nome);
-      });
-      return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
-    },
-    enabled: !!fornecedorId,
-  });
-
   const [novoTitulo, setNovoTitulo] = useState("");
   const [novoInicio, setNovoInicio] = useState("");
   const [novoFim, setNovoFim] = useState("");
   const [novoDescricao, setNovoDescricao] = useState("");
-  const [novoClienteId, setNovoClienteId] = useState("");
 
   const openNovo = () => {
     const now = new Date();
@@ -103,7 +83,6 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
     const fmt = (d: Date) => format(d, "yyyy-MM-dd'T'HH:mm");
     setNovoTitulo("");
     setNovoDescricao("");
-    setNovoClienteId("");
     setNovoInicio(fmt(start));
     setNovoFim(fmt(end));
     setNovoOpen(true);
@@ -125,7 +104,7 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
         visivel_portal: true,
       };
       const { error } = await supabase.from("crm_interacoes").insert({
-        cliente_id: novoClienteId || null,
+        cliente_id: null,
         tipo: "visita",
         descricao: JSON.stringify(payload),
         visivel_portal: true,
@@ -288,18 +267,6 @@ const TecnicoWeeklyAgenda = ({ fornecedorId }: Props) => {
                 <Label>Fim *</Label>
                 <Input type="datetime-local" value={novoFim} onChange={(e) => setNovoFim(e.target.value)} />
               </div>
-            </div>
-            <div>
-              <Label>Cliente</Label>
-              <Select value={novoClienteId || "none"} onValueChange={(v) => setNovoClienteId(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent className="max-h-64">
-                  <SelectItem value="none">— Nenhum —</SelectItem>
-                  {clientesTecnico.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <Label>Descrição</Label>
