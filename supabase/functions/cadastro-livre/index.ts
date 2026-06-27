@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa, origem, empresa_id } = body;
+    const { nome, cpf_cnpj, email, telefone, endereco, notas, tipo_pessoa, origem } = body;
 
     if (!nome || !nome.trim()) {
       return new Response(
@@ -38,21 +38,15 @@ serve(async (req) => {
       );
     }
 
-    // Use provided empresa_id or fallback to first empresa
-    let targetEmpresaId = empresa_id;
+    // SECURITY: Pin empresa_id server-side. Never trust caller-supplied values.
+    // Configured via DEFAULT_EMPRESA_ID secret to prevent cross-tenant injection.
+    const targetEmpresaId = Deno.env.get("DEFAULT_EMPRESA_ID");
     if (!targetEmpresaId) {
-      const { data: empresa } = await supabase
-        .from("empresas")
-        .select("id")
-        .limit(1)
-        .single();
-      if (!empresa) {
-        return new Response(
-          JSON.stringify({ error: "Nenhuma empresa encontrada" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      targetEmpresaId = empresa.id;
+      console.error("DEFAULT_EMPRESA_ID secret is not configured");
+      return new Response(
+        JSON.stringify({ error: "Formulário indisponível no momento" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const notasCompletas = [
