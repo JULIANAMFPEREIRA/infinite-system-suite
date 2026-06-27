@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
-import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
+import WeeklyAgendaWidget from "@/components/dashboard/WeeklyAgendaWidget";
  import { Skeleton } from "@/components/ui/skeleton";
  import {
    Dialog,
@@ -484,18 +484,7 @@ const Dashboard = () => {
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
 
       <div className="grid grid-cols-1 gap-4">
-        <InteractiveCalendar
-          localVisitas={(stats?.proximasVisitas ?? []).map(v => ({
-            id: v.id,
-            data: v.data ?? null,
-            hora: v.hora ?? null,
-            descricao: v.descricao ?? null,
-            status_visita: v.status_visita,
-            projeto_id: v.projeto_id,
-            google_event_id: (v as any).google_event_id ?? null,
-            projetoNome: v.projetoNome,
-          }))}
-        />
+        <WeeklyAgendaWidget />
       </div>
 
       {/* Inadimplência detalhada */}
