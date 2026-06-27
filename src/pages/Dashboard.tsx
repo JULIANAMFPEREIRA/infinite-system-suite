@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import RevenueExpensesChart from "@/components/dashboard/RevenueExpensesChart";
 import InteractiveCalendar from "@/components/dashboard/InteractiveCalendar";
-import ProximosCompromissos from "@/components/dashboard/ProximosCompromissos";
  import { Skeleton } from "@/components/ui/skeleton";
  import {
    Dialog,
@@ -540,10 +539,6 @@ const Dashboard = () => {
            </span>
          </div>
        </div>
-
-        <div className="pb-4">
-          <ProximosCompromissos />
-        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-8">
          {/* Meu Saldo */}
