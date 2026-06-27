@@ -1332,7 +1332,7 @@ const PortalParceiros = () => {
   return (
     <div className="min-h-screen bg-background">
       {header}
-      <main className="max-w-4xl mx-auto px-2 py-3 sm:p-4">
+      <main className="w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         {selectedProjeto && activeProjeto
           ? renderProjectDetail()
           : selectedProjeto && !activeProjeto
