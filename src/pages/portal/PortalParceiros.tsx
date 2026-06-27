@@ -1048,10 +1048,13 @@ const PortalParceiros = () => {
       {data.fornecedor.tipo === "arquiteto" && (data.leads?.length ?? 0) > 0 && (
         <div className="space-y-4">
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" /> Meus Leads
+            <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Target className="h-4 w-4" />
+              </span>
+              Meus Leads
             </h2>
-            <p className="text-[11px] text-muted-foreground">Clientes em negociação</p>
+            <p className="text-[11px] text-muted-foreground ml-9">Clientes em negociação</p>
           </div>
           
           {(() => {
@@ -1087,92 +1090,63 @@ const PortalParceiros = () => {
             const leadItems = filterCol("lead");
             const contatoItems = filterCol("contato");
             const propostaItems = filterCol("proposta");
+            const columns: Array<{
+              key: string;
+              label: string;
+              count: number;
+              topBorder: string;
+              headerText: string;
+              countBg: string;
+              bg: string;
+              items: any[];
+              extra?: any[];
+            }> = [
+              { key: "lead", label: "LEAD", count: leadItems.length, topBorder: "border-t-blue-500", headerText: "text-blue-700", countBg: "bg-blue-100 text-blue-700", bg: "bg-blue-50/40", items: leadItems },
+              { key: "contato", label: "EM CONTATO", count: contatoItems.length, topBorder: "border-t-yellow-500", headerText: "text-yellow-700", countBg: "bg-yellow-100 text-yellow-700", bg: "bg-yellow-50/40", items: contatoItems },
+              { key: "proposta", label: "PROPOSTA ENVIADA", count: propostaItems.length, topBorder: "border-t-purple-500", headerText: "text-purple-700", countBg: "bg-purple-100 text-purple-700", bg: "bg-purple-50/40", items: propostaItems },
+              { key: "concluido", label: "CONCLUÍDO", count: concluidoTotal, topBorder: "border-t-green-500", headerText: "text-green-700", countBg: "bg-green-100 text-green-700", bg: "bg-green-50/40", items: leadsConcluidos, extra: projsConcluidosDedup },
+            ];
+            const renderCard = (key: string, nome: string, sub?: string, origem?: string) => (
+              <div
+                key={key}
+                className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
+              >
+                <p className="text-xs font-bold text-foreground truncate" title={nome}>{nome}</p>
+                {sub && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate">👤 {sub}</p>
+                )}
+                {origem && (
+                  <span className="inline-block mt-1.5 text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                    {origem}
+                  </span>
+                )}
+              </div>
+            );
             return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Coluna 1 — Lead */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Lead ({leadItems.length})
-              </h3>
-              <div className="flex flex-col gap-2">
-                {(() => {
-                  const items = leadItems;
-                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
-                  return items.map(lead => (
-                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
-                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {columns.map(col => (
+                  <div
+                    key={col.key}
+                    className={`rounded-lg border border-slate-200 border-t-4 ${col.topBorder} ${col.bg} shadow-md flex flex-col`}
+                  >
+                    <div className="px-3 py-2 border-b border-slate-200/70 flex items-center justify-between">
+                      <h3 className={`text-[11px] font-black uppercase tracking-wider ${col.headerText}`}>
+                        {col.label}
+                      </h3>
+                      <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${col.countBg}`}>
+                        {col.count}
+                      </span>
                     </div>
-                  ));
-                })()}
-              </div>
-            </div>
-
-            {/* Coluna 2 — Em Contato */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Em Contato ({contatoItems.length})
-              </h3>
-              <div className="flex flex-col gap-2">
-                {(() => {
-                  const items = contatoItems;
-                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
-                  return items.map(lead => (
-                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
-                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
+                    <div className="p-2 flex flex-col gap-2 min-h-[60px]">
+                      {col.count === 0 && (
+                        <p className="text-[10px] text-muted-foreground italic px-1 py-2 text-center">Nenhum</p>
+                      )}
+                      {col.items.map((lead: any) => renderCard(`l-${lead.id}`, lead.nome, undefined, lead.origem))}
+                      {col.extra?.map((p: any) => renderCard(`p-${p.id}`, p.nome, p.clientes?.nome))}
                     </div>
-                  ));
-                })()}
+                  </div>
+                ))}
               </div>
-            </div>
-
-            {/* Coluna 3 — Proposta Enviada */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Proposta Enviada ({propostaItems.length})
-              </h3>
-              <div className="flex flex-col gap-2">
-                {(() => {
-                  const items = propostaItems;
-                  if (items.length === 0) return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
-                  return items.map(lead => (
-                    <div key={lead.id} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
-                      <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
-                    </div>
-                  ));
-                })()}
-              </div>
-            </div>
-
-            {/* Coluna 4 — Concluído */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-green-700 bg-green-50 px-2 py-1 rounded-md w-fit flex items-center gap-1.5">
-                Concluído ({concluidoTotal})
-              </h3>
-              <div className="flex flex-col gap-2">
-                {(() => {
-                  if (concluidoTotal === 0)
-                    return <p className="text-[10px] text-muted-foreground italic px-1">Nenhum</p>;
-                  return (
-                    <>
-                      {leadsConcluidos.map(lead => (
-                        <div key={`l-${lead.id}`} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
-                          <p className="text-xs font-bold text-foreground truncate" title={lead.nome}>{lead.nome}</p>
-                        </div>
-                      ))}
-                      {projsConcluidosDedup.map(p => (
-                        <div key={`p-${p.id}`} className="bg-card border border-border rounded-lg p-2.5 shadow-sm">
-                          <p className="text-xs font-bold text-foreground truncate" title={p.nome}>{p.nome}</p>
-                          {p.clientes?.nome && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">👤 {p.clientes.nome}</p>
-                          )}
-                        </div>
-                      ))}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
             );
           })()}
         </div>
