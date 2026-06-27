@@ -44,7 +44,7 @@ const Agenda = () => {
 
   const empresaId = useEmpresa();
   const { data: fallbackVisitas = [] } = useQuery({
-    queryKey: ["visitas_fallback_crm", empresaId, weekStart.toISOString()],
+    queryKey: ["crm_interacoes_visitas", empresaId, weekStart.toISOString()],
     queryFn: async () => {
       const fromIso = weekStart.toISOString();
       const toIso = addDays(weekEnd, 1).toISOString();
@@ -63,6 +63,9 @@ const Agenda = () => {
           const end = parsed.data_fim ? new Date(parsed.data_fim) : null;
           return {
             id: row.id,
+            cliente_id: row.cliente_id,
+            descricao: parsed.descricao ?? null,
+            tecnico_ids: Array.isArray(parsed.tecnico_ids) ? parsed.tecnico_ids : [],
             titulo: parsed.titulo ?? "Visita",
             _start: start && !isNaN(start.getTime()) ? start : null,
             _end: end && !isNaN(end.getTime()) ? end : null,
@@ -236,8 +239,28 @@ const Agenda = () => {
                     return (
                       <div
                         key={`f-${v.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit({
+                            id: v.id,
+                            empresa_id: empresaId ?? "",
+                            cliente_id: v.cliente_id,
+                            titulo: v.titulo,
+                            descricao: v.descricao ?? null,
+                            data_inicio: v._start.toISOString(),
+                            data_fim: (v._end ?? new Date(v._start.getTime() + 60 * 60 * 1000)).toISOString(),
+                            status: v.status,
+                            visivel_portal: v.visivel_portal,
+                            created_by: null,
+                            created_at: "",
+                            updated_at: "",
+                            visita_tecnicos: (v.tecnico_ids ?? []).map((tid: string) => ({ id: tid, tecnico_id: tid })),
+                            clientes: v.clienteNome ? { nome: v.clienteNome } : null,
+                            _source: "crm_interacoes",
+                          } as Visita);
+                        }}
                         style={{ top, height }}
-                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border overflow-hidden shadow-sm ${colorCls}`}
+                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow ${colorCls}`}
                       >
                         <div className="flex items-center gap-1 font-semibold truncate">
                           {visible && <Eye size={9} className="shrink-0 opacity-80" />}
