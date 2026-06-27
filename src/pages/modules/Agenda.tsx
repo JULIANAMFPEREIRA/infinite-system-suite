@@ -46,6 +46,17 @@ const Agenda = () => {
     .map((e: any) => ({ ...e, _start: safeDate(e.start), _end: safeDate(e.end) }))
     .filter((e) => e._start);
 
+  const gEventsByDay = (day: Date) =>
+    gEvents.filter((e) => e._start && isSameDay(e._start as Date, day));
+
+  const gBlockStyle = (ev: any) => {
+    const start = ev._start as Date;
+    const end = (ev._end as Date) ?? new Date(start.getTime() + 60 * 60 * 1000);
+    const top = (start.getHours() + start.getMinutes() / 60 - HOUR_START) * HOUR_PX;
+    const height = Math.max(24, ((end.getTime() - start.getTime()) / 3600000) * HOUR_PX - 2);
+    return { top, height };
+  };
+
   const openNew = (day: Date, hour: number) => {
     const d = new Date(day);
     d.setHours(hour, 0, 0, 0);
@@ -162,6 +173,25 @@ const Agenda = () => {
                       </div>
                     );
                   })}
+                  {isGoogleConnected && gEventsByDay(day).map((ev: any) => {
+                    const { top, height } = gBlockStyle(ev);
+                    return (
+                      <div
+                        key={`g-${ev.id}`}
+                        onClick={(e) => { e.stopPropagation(); navigate("/integracoes"); }}
+                        style={{ top, height }}
+                        className="absolute left-1 right-1 rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
+                      >
+                        <div className="flex items-center gap-1 font-semibold truncate">
+                          <CalendarIcon size={9} className="text-[hsl(210,70%,50%)] shrink-0" />
+                          <span className="truncate">{ev.summary || "(sem título)"}</span>
+                        </div>
+                        <div className="opacity-80 truncate">
+                          {format(ev._start, "HH:mm")}{ev._end ? `–${format(ev._end, "HH:mm")}` : ""}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -176,52 +206,28 @@ const Agenda = () => {
         defaultStart={defaultStart}
       />
 
-      {/* Google Agenda section */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CalendarIcon size={16} className="text-primary" />
-            <h2 className="text-sm font-bold">Google Agenda</h2>
-          </div>
-          {isGoogleConnected && (
-            <span className="text-[10px] text-muted-foreground">{gEvents.length} evento(s)</span>
-          )}
+      {isGoogleConnected && (
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-primary/40 border border-primary/60" />
+            Visitas locais
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[hsl(210,70%,50%)]/30 border border-[hsl(210,70%,50%)]/60" />
+            Google Agenda
+          </span>
         </div>
-
-        {!isGoogleConnected ? (
-          <div className="flex flex-col items-start gap-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              Conecte sua conta do Google para visualizar eventos do Google Agenda aqui.
-            </p>
-            <Button size="sm" onClick={() => navigate("/integracoes")}>
-              <CalendarIcon size={14} className="mr-1" /> Conectar Google Agenda
-            </Button>
-          </div>
-        ) : gEvents.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">Nenhum evento no Google Agenda.</p>
-        ) : (
-          <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-            {gEvents.map((ev: any) => (
-              <li key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-                <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/15 text-primary shrink-0">
-                  <span className="text-[11px] font-bold leading-tight">{format(ev._start, "dd")}</span>
-                  <span className="text-[8px] uppercase">{format(ev._start, "MMM", { locale: ptBR })}</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-foreground truncate">{ev.summary || "(sem título)"}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {format(ev._start, "HH:mm")}
-                    {ev._end ? ` – ${format(ev._end, "HH:mm")}` : ""}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px] font-semibold shrink-0">
-                  <CalendarIcon size={9} /> Google
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      )}
+      {!isGoogleConnected && (
+        <div className="flex items-center justify-between rounded-xl border border-dashed border-border p-4">
+          <p className="text-xs text-muted-foreground">
+            Conecte sua conta do Google para visualizar eventos do Google Agenda na grade.
+          </p>
+          <Button size="sm" onClick={() => navigate("/integracoes")}>
+            <CalendarIcon size={14} className="mr-1" /> Conectar Google Agenda
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
