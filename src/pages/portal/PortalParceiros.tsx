@@ -773,7 +773,10 @@ const PortalParceiros = () => {
 
       return (
         <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
             <div className="relative overflow-hidden rounded-2xl p-5 shadow-lg flex flex-col justify-center min-h-[110px] bg-[#0f172a] border border-slate-800">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Contratado</p>
               <p className="text-2xl font-black text-white tracking-tight">{fmt(totalContratado)}</p>
@@ -788,8 +791,107 @@ const PortalParceiros = () => {
             </div>
           </div>
 
-          <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
+          {(() => {
+            // PAGAMENTOS RECEBIDOS BLOCK (left column)
+            const _LEFT_PAGAMENTOS = true; return _LEFT_PAGAMENTOS && null;
+          })()}
+          {(() => {
+            const lancs = (data.lancamentos ?? []) as any[];
+            const cy = monthCursor.getFullYear();
+            const cm = monthCursor.getMonth();
+            const monthLancs = lancs.filter((l: any) => {
+              if (!l.data_pagamento) return false;
+              const d = new Date(l.data_pagamento);
+              return d.getFullYear() === cy && d.getMonth() === cm;
+            });
+            const totalMes = monthLancs.reduce((acc: number, l: any) => acc + (Number(l.valor) || 0), 0);
+            const monthName = monthCursor.toLocaleDateString("pt-BR", { month: "long" });
+            const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + cy;
+            const goPrev = () => setMonthCursor(new Date(cy, cm - 1, 1));
+            const goNext = () => setMonthCursor(new Date(cy, cm + 1, 1));
+            return (
+              <div className="space-y-3">
+                <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between gap-3 rounded-xl bg-secondary/40 p-3">
+                    <button onClick={goPrev} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors" aria-label="Mês anterior">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <div className="flex-1 text-center">
+                      <p className="text-xs font-semibold text-muted-foreground">{monthLabel}</p>
+                      <p className="text-base font-black text-success">{fmt(totalMes)}</p>
+                    </div>
+                    <button onClick={goNext} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors" aria-label="Próximo mês">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                  <button onClick={() => setShowAllRecebidos(v => !v)} className="w-full flex items-center justify-between text-xs font-semibold text-primary hover:underline px-1">
+                    <span>{showAllRecebidos ? "Ocultar" : "Ver todos"} ({monthLancs.length})</span>
+                    <ChevronDown size={14} className={`transition-transform ${showAllRecebidos ? "rotate-180" : ""}`} />
+                  </button>
+                  {showAllRecebidos && (
+                    <div className="border border-border rounded-xl overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-secondary/50">
+                            <tr>
+                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
+                              <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
+                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {monthLancs.length === 0 && (
+                              <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento neste mês.</td></tr>
+                            )}
+                            {monthLancs.map((l: any) => (
+                              <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
+                                <td className="p-3 text-muted-foreground w-[120px]">{l.data_pagamento ? formatDate(l.data_pagamento) : "—"}</td>
+                                <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
+                                <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold">PRÓXIMOS PAGAMENTOS</h2>
+            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data Prevista</th>
+                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
+                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(data.previstos ?? []).length === 0 && (
+                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
+                    )}
+                    {(data.previstos ?? []).map((l: any) => (
+                      <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
+                        <td className="p-3 text-muted-foreground w-[120px]">{l.data_prevista ? formatDate(l.data_prevista) : "—"}</td>
+                        <td className="p-3 text-right font-bold text-warning w-[150px]">{fmt(Number(l.valor))}</td>
+                        <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div className="lg:col-span-2 order-1 lg:order-2">
           {(() => {
             const allProjs = (data?.projetos ?? []) as any[];
             const emAndamento = allProjs.filter(p => p.status !== "concluido" && p.status !== "cancelado");
@@ -868,117 +970,8 @@ const PortalParceiros = () => {
               </div>
             );
           })()}
-
-          {(() => {
-            const lancs = (data.lancamentos ?? []) as any[];
-            const cy = monthCursor.getFullYear();
-            const cm = monthCursor.getMonth();
-            const monthLancs = lancs.filter((l: any) => {
-              if (!l.data_pagamento) return false;
-              const d = new Date(l.data_pagamento);
-              return d.getFullYear() === cy && d.getMonth() === cm;
-            });
-            const totalMes = monthLancs.reduce((acc: number, l: any) => acc + (Number(l.valor) || 0), 0);
-            const monthName = monthCursor.toLocaleDateString("pt-BR", { month: "long" });
-            const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + cy;
-            const goPrev = () => setMonthCursor(new Date(cy, cm - 1, 1));
-            const goNext = () => setMonthCursor(new Date(cy, cm + 1, 1));
-            return (
-              <div className="space-y-3">
-                <h2 className="text-sm font-bold">Pagamentos Recebidos</h2>
-                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between gap-3 rounded-xl bg-secondary/40 p-3">
-                    <button
-                      onClick={goPrev}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
-                      aria-label="Mês anterior"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <div className="flex-1 text-center">
-                      <p className="text-xs font-semibold text-muted-foreground">{monthLabel}</p>
-                      <p className="text-base font-black text-success">{fmt(totalMes)}</p>
-                    </div>
-                    <button
-                      onClick={goNext}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
-                      aria-label="Próximo mês"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setShowAllRecebidos(v => !v)}
-                    className="w-full flex items-center justify-between text-xs font-semibold text-primary hover:underline px-1"
-                  >
-                    <span>{showAllRecebidos ? "Ocultar" : "Ver todos"} ({monthLancs.length})</span>
-                    <ChevronDown size={14} className={`transition-transform ${showAllRecebidos ? "rotate-180" : ""}`} />
-                  </button>
-                  {showAllRecebidos && (
-                    <div className="border border-border rounded-xl overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="bg-secondary/50">
-                            <tr>
-                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data</th>
-                              <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
-                              <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border">
-                            {monthLancs.length === 0 && (
-                              <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento neste mês.</td></tr>
-                            )}
-                            {monthLancs.map((l: any) => (
-                              <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                                <td className="p-3 text-muted-foreground w-[120px]">
-                                  {l.data_pagamento ? formatDate(l.data_pagamento) : "—"}
-                                </td>
-                                <td className="p-3 text-right font-bold text-success w-[150px]">{fmt(Number(l.valor))}</td>
-                                <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold">PRÓXIMOS PAGAMENTOS</h2>
-            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Data Prevista</th>
-                      <th className="text-right p-3 font-bold uppercase tracking-wider text-muted-foreground w-[150px]">Valor</th>
-                      <th className="text-left p-3 font-bold uppercase tracking-wider text-muted-foreground">Observação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {(data.previstos ?? []).length === 0 && (
-                      <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">Nenhum pagamento previsto.</td></tr>
-                    )}
-                    {(data.previstos ?? []).map((l: any) => (
-                      <tr key={l.id} className="hover:bg-secondary/20 transition-colors">
-                        <td className="p-3 text-muted-foreground w-[120px]">
-                          {l.data_prevista ? formatDate(l.data_prevista) : "—"}
-                        </td>
-                        <td className="p-3 text-right font-bold text-warning w-[150px]">{fmt(Number(l.valor))}</td>
-                        <td className="p-3 text-muted-foreground italic truncate max-w-[200px]" title={l.observacao}>{l.observacao || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
-
+          </div>
         </div>
       );
     }
