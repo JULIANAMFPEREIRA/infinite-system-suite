@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
+import { layoutOverlaps } from "@/lib/agendaLayout";
 
 const safeDate = (val: any): Date | null => {
   const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
