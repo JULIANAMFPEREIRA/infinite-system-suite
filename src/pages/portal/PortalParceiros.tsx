@@ -620,10 +620,15 @@ const PortalParceiros = () => {
         )}
 
         <TabsContent value="visitas" className="space-y-4">
-          {(agendaVisitas ?? []).length > 0 && (
+          {(() => {
+            const projVisitas = (agendaVisitas ?? []).filter(
+              (a: any) => a.cliente_id === activeProjeto?.cliente_id
+            );
+            if (projVisitas.length === 0) return null;
+            return (
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">Visitas agendadas (Agenda)</h4>
-              {(agendaVisitas ?? []).map((a: any) => (
+              {projVisitas.map((a: any) => (
                 <div key={`av-${a.id}`} className="bg-card border border-amber-400/40 rounded-lg p-3 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-foreground">{a.titulo}</span>
@@ -637,7 +642,8 @@ const PortalParceiros = () => {
                 </div>
               ))}
             </div>
-          )}
+            );
+          })()}
           <div className="relative pl-4 border-l-2 border-primary/20 space-y-4">
             {(visitas ?? []).map(v => (
               <div key={v.id} className="relative">
