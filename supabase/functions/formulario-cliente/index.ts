@@ -60,12 +60,66 @@ serve(async (req) => {
 
     // POST - Generate new token for an orcamento
     if (req.method === "POST") {
-      const { orcamento_id, empresa_id } = await req.json();
-
-      if (!orcamento_id || !empresa_id) {
+      // SECURITY: require authenticated caller and verify tenant ownership
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
         return new Response(
-          JSON.stringify({ error: "Orcamento ID and Empresa ID are required" }),
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+      if (!anonKey) {
+        return new Response(
+          JSON.stringify({ error: "Server misconfigured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token_jwt = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token_jwt);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const userId = claimsData.claims.sub as string;
+
+      const { orcamento_id } = await req.json();
+      if (!orcamento_id) {
+        return new Response(
+          JSON.stringify({ error: "Orcamento ID is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Resolve caller's empresa_id from their profile (never trust client input)
+      const { data: profile, error: profileErr } = await supabase
+        .from("profiles")
+        .select("empresa_id")
+        .eq("id", userId)
+        .single();
+      if (profileErr || !profile?.empresa_id) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const empresa_id = profile.empresa_id;
+
+      // Verify the orcamento belongs to the caller's empresa
+      const { data: orc, error: orcErr } = await supabase
+        .from("crm_orcamentos")
+        .select("id, empresa_id")
+        .eq("id", orcamento_id)
+        .single();
+      if (orcErr || !orc || orc.empresa_id !== empresa_id) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
