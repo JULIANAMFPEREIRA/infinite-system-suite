@@ -882,6 +882,7 @@ const FinanceiroPagar = () => {
                 categoriaId={categoriaId}
                 value={tipo}
                 onChange={setTipo}
+                categorias={categorias as any}
               />
             </div>
             <div className="space-y-1 col-span-2">
