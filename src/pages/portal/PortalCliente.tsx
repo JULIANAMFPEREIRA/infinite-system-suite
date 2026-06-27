@@ -347,6 +347,32 @@ const PortalCliente = () => {
     enabled: !!clienteData?.cliente?.id,
   });
 
+  // Visitas agendadas (fallback via crm_interacoes — visíveis ao portal)
+  const { data: agendaCrm } = useQuery({
+    queryKey: ["portal_agenda_crm", clienteData?.cliente?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes" as any)
+        .select("id, descricao, visivel_portal, created_at")
+        .eq("cliente_id", clienteData!.cliente.id)
+        .eq("tipo", "visita")
+        .eq("visivel_portal", true)
+        .order("created_at", { ascending: false });
+      return ((data ?? []) as any[]).map((row: any) => {
+        let p: any = {};
+        try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
+        return {
+          id: row.id,
+          titulo: p.titulo ?? "Visita",
+          descricao: p.descricao ?? null,
+          data_inicio: p.data_inicio ?? null,
+          data_fim: p.data_fim ?? null,
+          status: p.status ?? "agendada",
+        };
+      }).filter((a: any) => a.data_inicio);
+    },
+    enabled: !!clienteData?.cliente?.id,
+  });
+
   // Financeiro a receber
   const { data: financeiro } = useQuery({
     queryKey: ["portal_financeiro", clienteData?.cliente?.id],
