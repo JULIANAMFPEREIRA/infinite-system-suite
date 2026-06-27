@@ -246,9 +246,13 @@ const PortalParceiros = () => {
 
   // Agenda visits shared with this técnico via crm_interacoes (fallback)
   const { data: agendaVisitas } = useQuery({
-    queryKey: ["portal_parc_agenda_crm", data?.fornecedor?.id],
+    queryKey: ["portal_parc_agenda_crm", data?.fornecedor?.id, (data?.projetos ?? []).map((p: any) => p.cliente_id).join(",")],
     queryFn: async () => {
       const fornecedorId = data!.fornecedor.id;
+      const fornecedorTipo = data!.fornecedor.tipo;
+      const clienteIdsArquiteto = new Set(
+        (data!.projetos ?? []).map((p: any) => p.cliente_id).filter(Boolean)
+      );
       const { data: rows } = await supabase.from("crm_interacoes" as any)
         .select("id, cliente_id, descricao, visivel_portal, created_at, clientes(nome)")
         .eq("tipo", "visita")
@@ -260,6 +264,7 @@ const PortalParceiros = () => {
           try { p = JSON.parse(row.descricao ?? "{}"); } catch { p = {}; }
           return {
             id: row.id,
+            cliente_id: row.cliente_id,
             titulo: p.titulo ?? "Visita",
             data_inicio: p.data_inicio ?? null,
             data_fim: p.data_fim ?? null,
@@ -268,7 +273,13 @@ const PortalParceiros = () => {
             clienteNome: row.clientes?.nome ?? null,
           };
         })
-        .filter((v: any) => v.data_inicio && v.tecnico_ids.includes(fornecedorId));
+        .filter((v: any) => {
+          if (!v.data_inicio) return false;
+          if (fornecedorTipo === "arquiteto") {
+            return clienteIdsArquiteto.has(v.cliente_id);
+          }
+          return v.tecnico_ids.includes(fornecedorId);
+        });
     },
     enabled: !!data?.fornecedor?.id,
   });
