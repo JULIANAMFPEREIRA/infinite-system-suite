@@ -5,12 +5,23 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVisitas, Visita } from "@/hooks/useAgenda";
 import VisitaModal from "@/components/agenda/VisitaModal";
+import { useGoogleCalendarStatus, useGoogleCalendarEvents } from "@/hooks/useGoogleCalendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const safeDate = (val: any): Date | null => {
+  const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 const HOUR_START = 7;
 const HOUR_END = 20;
 const HOUR_PX = 56;
 
 const Agenda = () => {
+  const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Visita | null>(null);
@@ -27,6 +38,13 @@ const Agenda = () => {
     from: weekStart.toISOString(),
     to: addDays(weekEnd, 1).toISOString(),
   });
+
+  const { data: googleStatus } = useGoogleCalendarStatus();
+  const isGoogleConnected = googleStatus?.connected === true;
+  const { data: googleEvents } = useGoogleCalendarEvents(isGoogleConnected);
+  const gEvents = (Array.isArray(googleEvents) ? googleEvents : [])
+    .map((e: any) => ({ ...e, _start: safeDate(e.start), _end: safeDate(e.end) }))
+    .filter((e) => e._start);
 
   const openNew = (day: Date, hour: number) => {
     const d = new Date(day);
@@ -157,6 +175,53 @@ const Agenda = () => {
         initial={editing}
         defaultStart={defaultStart}
       />
+
+      {/* Google Agenda section */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <CalendarIcon size={16} className="text-primary" />
+            <h2 className="text-sm font-bold">Google Agenda</h2>
+          </div>
+          {isGoogleConnected && (
+            <span className="text-[10px] text-muted-foreground">{gEvents.length} evento(s)</span>
+          )}
+        </div>
+
+        {!isGoogleConnected ? (
+          <div className="flex flex-col items-start gap-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Conecte sua conta do Google para visualizar eventos do Google Agenda aqui.
+            </p>
+            <Button size="sm" onClick={() => navigate("/integracoes")}>
+              <CalendarIcon size={14} className="mr-1" /> Conectar Google Agenda
+            </Button>
+          </div>
+        ) : gEvents.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-2">Nenhum evento no Google Agenda.</p>
+        ) : (
+          <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+            {gEvents.map((ev: any) => (
+              <li key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
+                <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/15 text-primary shrink-0">
+                  <span className="text-[11px] font-bold leading-tight">{format(ev._start, "dd")}</span>
+                  <span className="text-[8px] uppercase">{format(ev._start, "MMM", { locale: ptBR })}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-foreground truncate">{ev.summary || "(sem título)"}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {format(ev._start, "HH:mm")}
+                    {ev._end ? ` – ${format(ev._end, "HH:mm")}` : ""}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px] font-semibold shrink-0">
+                  <CalendarIcon size={9} /> Google
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
