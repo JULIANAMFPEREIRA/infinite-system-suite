@@ -207,7 +207,7 @@ const Agenda = () => {
                     const { top, height } = blockStyle(v);
                     const visible = (v as any).visivel_portal ?? true;
                     const colorCls = visible
-                      ? "bg-amber-400/20 border-amber-400/60 text-amber-50"
+                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
                       : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
                     return (
                       <div
@@ -231,7 +231,7 @@ const Agenda = () => {
                     const { top, height } = fallbackBlockStyle(v);
                     const visible = v.visivel_portal ?? true;
                     const colorCls = visible
-                      ? "bg-amber-400/20 border-amber-400/60 text-amber-50"
+                      ? "bg-amber-400/30 border-amber-500/70 text-amber-950"
                       : "bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground";
                     return (
                       <div

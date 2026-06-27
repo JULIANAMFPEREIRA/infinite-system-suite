@@ -155,6 +155,10 @@ export const useSaveVisita = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["visitas"] });
       qc.invalidateQueries({ queryKey: ["visitas_proximas"] });
+      qc.invalidateQueries({ queryKey: ["crm_interacoes"] });
+      qc.invalidateQueries({ queryKey: ["visitas_fallback_crm"] });
+      qc.refetchQueries({ queryKey: ["visitas"] });
+      qc.refetchQueries({ queryKey: ["visitas_fallback_crm"] });
     },
   });
 };
