@@ -145,6 +145,8 @@ const FinanceiroPagar = () => {
   const [categoriaId, setCategoriaId] = useState("");
    const [descRetirada, setDescRetirada] = useState("");
    const [observacao, setObservacao] = useState("");
+  const [repetirFixa, setRepetirFixa] = useState(false);
+  const [repetirMeses, setRepetirMeses] = useState(3);
   const [showBaixa, setShowBaixa] = useState(false);
   const [baixaId, setBaixaId] = useState<string | null>(null);
   const [baixaData, setBaixaData] = useState(new Date().toISOString().split("T")[0]);
@@ -236,6 +238,8 @@ const FinanceiroPagar = () => {
     setProjetoId(""); 
     setCategoriaId(""); 
     setDescRetirada(""); 
+    setRepetirFixa(false);
+    setRepetirMeses(3);
     setEditId(null); 
     setShowForm(false); 
   };
@@ -330,8 +334,23 @@ const FinanceiroPagar = () => {
         refetch();
         toast.success("Conta atualizada");
       } else {
-        await createConta.mutateAsync({ ...payload, status: "pendente" } as any);
-        toast.success("Conta adicionada");
+        if (repetirFixa && vencimento) {
+          const n = Math.max(1, Math.min(24, Number(repetirMeses) || 1));
+          const base = new Date(vencimento + "T00:00:00");
+          const rows = Array.from({ length: n }).map((_, i) => {
+            const d = new Date(base);
+            d.setMonth(d.getMonth() + i);
+            const iso = d.toISOString().split("T")[0];
+            return { ...payload, data_vencimento: iso, status: "pendente", empresa_id: empresaId! };
+          });
+          const { error } = await supabase.from("financeiro_pagar").insert(rows as any);
+          if (error) throw error;
+          await qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+          toast.success(`${n} lançamentos criados para os próximos ${n} meses`);
+        } else {
+          await createConta.mutateAsync({ ...payload, status: "pendente" } as any);
+          toast.success("Conta adicionada");
+        }
       }
       resetForm();
     } catch (err: any) { toast.error(err.message); }
@@ -880,6 +899,32 @@ const FinanceiroPagar = () => {
                />
              </div>
           </div>
+          {!editId && (
+            <div className="pt-1 border-t border-border space-y-2">
+              <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={repetirFixa}
+                  onChange={e => setRepetirFixa(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border"
+                />
+                Repetir despesa fixa
+              </label>
+              {repetirFixa && (
+                <div className="space-y-1 max-w-xs">
+                  <label className="text-[11px] text-muted-foreground">Repetir por quantos meses?</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={repetirMeses}
+                    onChange={e => setRepetirMeses(Number(e.target.value))}
+                    className="w-full h-8 px-2 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {editId && (
             <div className="space-y-1 pt-1 border-t border-border">
               <label className="text-[11px] text-muted-foreground">Anexar Documento (boleto, NF, comprovante)</label>
