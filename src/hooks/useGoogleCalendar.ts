@@ -41,6 +41,8 @@ export const useGoogleCalendarStatus = () => {
       }
     },
     refetchInterval: 60000,
+    placeholderData: { connected: false },
+    initialData: { connected: false },
   });
 };
 
