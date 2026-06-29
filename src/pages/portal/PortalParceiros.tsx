@@ -48,9 +48,9 @@ const PortalParceiros = () => {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [novaNota, setNovaNota] = useState("");
-  const [showRelatorio, setShowRelatorio] = useState(false);
   const [relMes, setRelMes] = useState<string>("todos");
   const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
+  const [relStatus, setRelStatus] = useState<string>("todos");
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
