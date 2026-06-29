@@ -7,7 +7,7 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass, Target, FileText, Upload
+  CheckCircle2, Hourglass, Target, FileText, Upload, BarChart3, X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
@@ -51,6 +51,8 @@ const PortalParceiros = () => {
   const [relMes, setRelMes] = useState<string>("todos");
   const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
   const [relStatus, setRelStatus] = useState<string>("todos");
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [expandedKanbanCol, setExpandedKanbanCol] = useState<string | null>(null);
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -771,18 +773,21 @@ const PortalParceiros = () => {
   };
 
   const renderProjectList = () => {
-    // ============ Relatórios (arquiteto + tecnico) ============
-    const MESES_REL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    const ANOS_REL = [2024, 2025, 2026];
-    const matchMesAnoRel = (dateStr: string | null | undefined) => {
-      if (!dateStr) return relMes === "todos" && relAno === "todos";
-      const d = new Date(dateStr);
-      const okMes = relMes === "todos" || d.getMonth() + 1 === Number(relMes);
-      const okAno = relAno === "todos" || d.getFullYear() === Number(relAno);
-      return okMes && okAno;
-    };
+    return renderProjectListInner();
+  };
 
-    const renderRelatorioSection = () => {
+  // ============ Relatórios (arquiteto + tecnico) — hoisted ============
+  const MESES_REL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const ANOS_REL = [2024, 2025, 2026];
+  const matchMesAnoRel = (dateStr: string | null | undefined) => {
+    if (!dateStr) return relMes === "todos" && relAno === "todos";
+    const d = new Date(dateStr);
+    const okMes = relMes === "todos" || d.getMonth() + 1 === Number(relMes);
+    const okAno = relAno === "todos" || d.getFullYear() === Number(relAno);
+    return okMes && okAno;
+  };
+
+  const renderRelatorioSection = () => {
       if (!data) return null;
       const isArq = data.fornecedor.tipo === "arquiteto";
       const isTec = data.fornecedor.tipo === "tecnico";
@@ -1010,6 +1015,7 @@ const PortalParceiros = () => {
       );
     };
 
+  const renderProjectListInner = () => {
     if (data.fornecedor.tipo === "tecnico") {
       const totalContratado = (data.ptecnico ?? []).reduce((acc: number, p: any) => acc + Number(p.valor_combinado), 0);
       const totalRecebido = (data.lancamentos ?? []).reduce((acc: number, l: any) => acc + Number(l.valor), 0);
@@ -1219,7 +1225,7 @@ const PortalParceiros = () => {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {renderRelatorioSection()}
+        {data.fornecedor.tipo !== "arquiteto" && renderRelatorioSection()}
         {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = (data.parcelasRT ?? [])
           .reduce((s: number, p: any) => s + Number(p.valor), 0);
@@ -1279,6 +1285,22 @@ const PortalParceiros = () => {
           )}
         </div>
       )}
+
+      {data.fornecedor.tipo === "arquiteto" && (() => {
+        const allProjs = (data?.projetos ?? []) as any[];
+        const emAndamento = allProjs.filter((p: any) => p.status !== "concluido" && p.status !== "cancelado");
+        const concluidos = allProjs.filter((p: any) => p.status === "concluido");
+        return (
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-border">
+            <h2 className="text-sm font-bold">Meus Projetos</h2>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {data.fornecedor.tipo === "arquiteto" && (data.leads?.length ?? 0) > 0 && (
         <div className="space-y-4">
@@ -1358,7 +1380,36 @@ const PortalParceiros = () => {
               </div>
             );
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <>
+              {/* Mobile: compact badges */}
+              <div className="md:hidden space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {columns.map(col => (
+                    <button
+                      key={col.key}
+                      onClick={() => setExpandedKanbanCol(v => v === col.key ? null : col.key)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${col.countBg} ${expandedKanbanCol === col.key ? "ring-2 ring-primary" : ""}`}
+                    >
+                      {col.label}: {col.count}
+                    </button>
+                  ))}
+                </div>
+                {expandedKanbanCol && (() => {
+                  const col = columns.find(c => c.key === expandedKanbanCol);
+                  if (!col) return null;
+                  return (
+                    <div className={`rounded-lg border border-slate-200 border-t-4 ${col.topBorder} ${col.bg} p-2 flex flex-col gap-2`}>
+                      {col.count === 0 && (
+                        <p className="text-[11px] text-muted-foreground italic px-1 py-2 text-center">Nenhum</p>
+                      )}
+                      {col.items.map((lead: any) => renderCard(`l-${lead.id}`, lead.nome, undefined, lead.origem))}
+                      {col.extra?.map((p: any) => renderCard(`p-${p.id}`, p.nome, p.clientes?.nome))}
+                    </div>
+                  );
+                })()}
+              </div>
+              {/* Desktop: kanban grid */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {columns.map(col => (
                   <div
                     key={col.key}
@@ -1382,6 +1433,7 @@ const PortalParceiros = () => {
                   </div>
                 ))}
               </div>
+              </>
             );
           })()}
         </div>
@@ -1446,15 +1498,6 @@ const PortalParceiros = () => {
         );
         return (
           <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold">Meus Projetos</h2>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
-              </div>
-            </div>
-
             {allProjs.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
             )}
@@ -1537,13 +1580,22 @@ const PortalParceiros = () => {
             {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
           </span>
           {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
+          {data.fornecedor.tipo === "arquiteto" && (
+            <button
+              onClick={() => setShowRelatorio(true)}
+              title="Relatórios"
+              className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <BarChart3 size={16} />
+            </button>
+          )}
           <button onClick={handleLogout} className="text-slate-400 hover:text-white text-[11px] sm:text-xs flex items-center gap-1">
             <LogOut size={13} /> Sair
           </button>
         </div>
       </div>
-      <div className="w-full px-3 sm:px-6 lg:px-8 pb-3 hidden sm:block">
-        <p className="text-[11px] text-slate-500 italic">
+      <div className="w-full px-3 sm:px-6 lg:px-8 pb-3">
+        <p className="text-[10px] sm:text-[11px] text-slate-500 italic">
           "Construindo juntos, crescendo juntos."
         </p>
       </div>
@@ -1588,6 +1640,27 @@ const PortalParceiros = () => {
         }
       </main>
       {footer}
+      {showRelatorio && data.fornecedor.tipo === "arquiteto" && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto">
+          <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-5xl my-4">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-background z-10">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <BarChart3 size={16} className="text-primary" /> Relatórios
+              </h2>
+              <button
+                onClick={() => setShowRelatorio(false)}
+                className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground"
+                title="Fechar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4">
+              {renderRelatorioSection()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
