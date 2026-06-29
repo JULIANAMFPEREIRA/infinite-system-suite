@@ -48,9 +48,9 @@ const PortalParceiros = () => {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [novaNota, setNovaNota] = useState("");
-  const [showRelatorio, setShowRelatorio] = useState(false);
   const [relMes, setRelMes] = useState<string>("todos");
   const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
+  const [relStatus, setRelStatus] = useState<string>("todos");
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -850,42 +850,100 @@ const PortalParceiros = () => {
 
       const selectCls = "h-7 px-2 rounded border border-border bg-background text-xs";
 
-      return (
-        <div className="bg-card border border-border rounded-2xl shadow-sm">
-          <button
-            onClick={() => setShowRelatorio(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3"
-          >
-            <span className="flex items-center gap-2 text-sm font-bold">
-              <FileText size={16} className="text-primary" /> {titulo}
-            </span>
-            <ChevronDown size={16} className={`transition-transform ${showRelatorio ? "rotate-180" : ""}`} />
-          </button>
-          {showRelatorio && (
-            <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <select className={selectCls} value={relMes} onChange={(e) => setRelMes(e.target.value)}>
-                  <option value="todos">Todos os meses</option>
-                  {MESES_REL.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                </select>
-                <select className={selectCls} value={relAno} onChange={(e) => setRelAno(e.target.value)}>
-                  <option value="todos">Todos os anos</option>
-                  {ANOS_REL.map(a => <option key={a} value={String(a)}>{a}</option>)}
-                </select>
-                <div className="flex-1" />
-                <div className="text-xs">
-                  <span className="text-muted-foreground">Total: </span>
-                  <span className="font-bold text-success">{fmt(total)}</span>
-                </div>
-                <button
-                  onClick={exportRelPDF}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105"
-                >
-                  <FileText size={13} /> Exportar PDF
-                </button>
-              </div>
+      // Status filter for arquiteto (applied after mês/ano filter)
+      const todayISO = new Date(); todayISO.setHours(0,0,0,0);
+      const isVencida = (p: any) => p.status !== "pago" && p.data_vencimento && new Date(p.data_vencimento) < todayISO;
+      if (isArq && relStatus !== "todos") {
+        rows = rows.filter((p: any) => {
+          if (relStatus === "pago") return p.status === "pago";
+          if (relStatus === "vencido") return isVencida(p);
+          if (relStatus === "pendente") return p.status !== "pago" && !isVencida(p);
+          return true;
+        });
+        total = rows.reduce((s: number, p: any) => s + (Number(p.valor) || 0), 0);
+      }
 
-              <div className="border border-border rounded overflow-hidden overflow-x-auto">
+      // KPI summary
+      const arqAll = isArq ? (data.parcelasRT ?? []).filter((p: any) => matchMesAnoRel(p.data_vencimento)) : [];
+      const sumArq = (pred: (p: any) => boolean) =>
+        arqAll.filter(pred).reduce((s: number, p: any) => s + (Number(p.valor) || 0), 0);
+      const kpiPago = isArq ? sumArq((p) => p.status === "pago") : 0;
+      const kpiVencido = isArq ? sumArq((p) => isVencida(p)) : 0;
+      const kpiPendente = isArq ? sumArq((p) => p.status !== "pago" && !isVencida(p)) : 0;
+      const kpiTotalArq = isArq ? sumArq(() => true) : 0;
+
+      return (
+        <div className="space-y-3 pt-4 mt-2 border-t border-border">
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-primary" />
+            <h2 className="text-base font-bold tracking-tight">📊 Relatórios — {titulo}</h2>
+          </div>
+
+          {/* Filters row */}
+          <div className="flex flex-wrap items-end gap-2 bg-card border border-border rounded-xl p-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] uppercase text-muted-foreground font-semibold">Mês</label>
+              <select className={selectCls} value={relMes} onChange={(e) => setRelMes(e.target.value)}>
+                <option value="todos">Todos os meses</option>
+                {MESES_REL.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] uppercase text-muted-foreground font-semibold">Ano</label>
+              <select className={selectCls} value={relAno} onChange={(e) => setRelAno(e.target.value)}>
+                <option value="todos">Todos os anos</option>
+                {ANOS_REL.map(a => <option key={a} value={String(a)}>{a}</option>)}
+              </select>
+            </div>
+            {isArq && (
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[10px] uppercase text-muted-foreground font-semibold">Status</label>
+                <select className={selectCls} value={relStatus} onChange={(e) => setRelStatus(e.target.value)}>
+                  <option value="todos">Todos</option>
+                  <option value="pago">Pago</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="vencido">Vencido</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* KPI summary */}
+          {isArq ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Total no período</div>
+                <div className="text-lg font-bold">{fmt(kpiTotalArq)}</div>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Pago</div>
+                <div className="text-lg font-bold text-success">{fmt(kpiPago)}</div>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Pendente</div>
+                <div className="text-lg font-bold text-warning">{fmt(kpiPendente)}</div>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Vencido</div>
+                <div className="text-lg font-bold text-destructive">{fmt(kpiVencido)}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Total recebido no período</div>
+                <div className="text-lg font-bold text-success">{fmt(total)}</div>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Quantidade de pagamentos</div>
+                <div className="text-lg font-bold">{rows.length}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-secondary/50">
                     {isArq ? (
@@ -915,9 +973,13 @@ const PortalParceiros = () => {
                         <td className="px-2.5 py-1.5">{p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString("pt-BR") : "—"}</td>
                         <td className="px-2.5 py-1.5">{p.data_pagamento ? new Date(p.data_pagamento).toLocaleDateString("pt-BR") : "—"}</td>
                         <td className="px-2.5 py-1.5">
-                          <span className={p.status === "pago" ? "text-success font-semibold" : "text-warning font-semibold"}>
-                            {(p.status ?? "").toUpperCase()}
-                          </span>
+                          {p.status === "pago" ? (
+                            <span className="text-success font-semibold">PAGO</span>
+                          ) : isVencida(p) ? (
+                            <span className="text-destructive font-semibold">VENCIDO</span>
+                          ) : (
+                            <span className="text-warning font-semibold">PENDENTE</span>
+                          )}
                         </td>
                         <td className="px-2.5 py-1.5 text-right font-medium">{fmt(Number(p.valor) || 0)}</td>
                       </tr>
@@ -932,9 +994,18 @@ const PortalParceiros = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
-          )}
+          </div>
+
+          {/* PDF button bottom-right */}
+          <div className="flex justify-end">
+            <button
+              onClick={exportRelPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105"
+            >
+              <FileText size={13} /> Exportar PDF
+            </button>
+          </div>
         </div>
       );
     };
