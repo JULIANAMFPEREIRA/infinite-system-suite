@@ -773,18 +773,21 @@ const PortalParceiros = () => {
   };
 
   const renderProjectList = () => {
-    // ============ Relatórios (arquiteto + tecnico) ============
-    const MESES_REL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    const ANOS_REL = [2024, 2025, 2026];
-    const matchMesAnoRel = (dateStr: string | null | undefined) => {
-      if (!dateStr) return relMes === "todos" && relAno === "todos";
-      const d = new Date(dateStr);
-      const okMes = relMes === "todos" || d.getMonth() + 1 === Number(relMes);
-      const okAno = relAno === "todos" || d.getFullYear() === Number(relAno);
-      return okMes && okAno;
-    };
+    return renderProjectListInner();
+  };
 
-    const renderRelatorioSection = () => {
+  // ============ Relatórios (arquiteto + tecnico) — hoisted ============
+  const MESES_REL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const ANOS_REL = [2024, 2025, 2026];
+  const matchMesAnoRel = (dateStr: string | null | undefined) => {
+    if (!dateStr) return relMes === "todos" && relAno === "todos";
+    const d = new Date(dateStr);
+    const okMes = relMes === "todos" || d.getMonth() + 1 === Number(relMes);
+    const okAno = relAno === "todos" || d.getFullYear() === Number(relAno);
+    return okMes && okAno;
+  };
+
+  const renderRelatorioSection = () => {
       if (!data) return null;
       const isArq = data.fornecedor.tipo === "arquiteto";
       const isTec = data.fornecedor.tipo === "tecnico";
