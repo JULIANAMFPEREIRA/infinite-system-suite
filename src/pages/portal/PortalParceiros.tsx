@@ -1015,6 +1015,7 @@ const PortalParceiros = () => {
       );
     };
 
+  const renderProjectListInner = () => {
     if (data.fornecedor.tipo === "tecnico") {
       const totalContratado = (data.ptecnico ?? []).reduce((acc: number, p: any) => acc + Number(p.valor_combinado), 0);
       const totalRecebido = (data.lancamentos ?? []).reduce((acc: number, l: any) => acc + Number(l.valor), 0);
