@@ -1282,23 +1282,24 @@ const PortalParceiros = () => {
         </div>
       )}
 
+      {data.fornecedor.tipo === "arquiteto" && (() => {
+        const allProjs = (data?.projetos ?? []) as any[];
+        const emAndamento = allProjs.filter((p: any) => p.status !== "concluido" && p.status !== "cancelado");
+        const concluidos = allProjs.filter((p: any) => p.status === "concluido");
+        return (
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-border">
+            <h2 className="text-sm font-bold">Meus Projetos</h2>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {data.fornecedor.tipo === "arquiteto" && (data.leads?.length ?? 0) > 0 && (
         <div className="space-y-4">
-          {(() => {
-            const allProjs = (data?.projetos ?? []) as any[];
-            const emAndamento = allProjs.filter((p: any) => p.status !== "concluido" && p.status !== "cancelado");
-            const concluidos = allProjs.filter((p: any) => p.status === "concluido");
-            return (
-              <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-border">
-                <h2 className="text-sm font-bold">Meus Projetos</h2>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
-                </div>
-              </div>
-            );
-          })()}
           <div className="flex flex-col gap-0.5">
             <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
