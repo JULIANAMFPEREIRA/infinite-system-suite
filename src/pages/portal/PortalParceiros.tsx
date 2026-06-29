@@ -1375,7 +1375,36 @@ const PortalParceiros = () => {
               </div>
             );
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <>
+              {/* Mobile: compact badges */}
+              <div className="md:hidden space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {columns.map(col => (
+                    <button
+                      key={col.key}
+                      onClick={() => setExpandedKanbanCol(v => v === col.key ? null : col.key)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${col.countBg} ${expandedKanbanCol === col.key ? "ring-2 ring-primary" : ""}`}
+                    >
+                      {col.label}: {col.count}
+                    </button>
+                  ))}
+                </div>
+                {expandedKanbanCol && (() => {
+                  const col = columns.find(c => c.key === expandedKanbanCol);
+                  if (!col) return null;
+                  return (
+                    <div className={`rounded-lg border border-slate-200 border-t-4 ${col.topBorder} ${col.bg} p-2 flex flex-col gap-2`}>
+                      {col.count === 0 && (
+                        <p className="text-[11px] text-muted-foreground italic px-1 py-2 text-center">Nenhum</p>
+                      )}
+                      {col.items.map((lead: any) => renderCard(`l-${lead.id}`, lead.nome, undefined, lead.origem))}
+                      {col.extra?.map((p: any) => renderCard(`p-${p.id}`, p.nome, p.clientes?.nome))}
+                    </div>
+                  );
+                })()}
+              </div>
+              {/* Desktop: kanban grid */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {columns.map(col => (
                   <div
                     key={col.key}
@@ -1399,6 +1428,7 @@ const PortalParceiros = () => {
                   </div>
                 ))}
               </div>
+              </>
             );
           })()}
         </div>
