@@ -1656,8 +1656,7 @@ const PortalParceiros = () => {
               </button>
             </div>
             <div className="p-4">
-              {(renderProjectList as any) /* noop */ }
-              <RelatorioModalContent />
+              {renderRelatorioSection()}
             </div>
           </div>
         </div>
