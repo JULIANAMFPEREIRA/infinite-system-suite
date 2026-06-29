@@ -1576,13 +1576,22 @@ const PortalParceiros = () => {
             {data.fornecedor.tipo === "arquiteto" ? "Arquiteto Parceiro" : data.fornecedor.tipo === "tecnico" ? "Técnico" : "Parceiro"}
           </span>
           {data.fornecedor.tipo !== "tecnico" && <NotificacoesBell parceiroId={data.fornecedor.id} />}
+          {data.fornecedor.tipo === "arquiteto" && (
+            <button
+              onClick={() => setShowRelatorio(true)}
+              title="Relatórios"
+              className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <BarChart3 size={16} />
+            </button>
+          )}
           <button onClick={handleLogout} className="text-slate-400 hover:text-white text-[11px] sm:text-xs flex items-center gap-1">
             <LogOut size={13} /> Sair
           </button>
         </div>
       </div>
-      <div className="w-full px-3 sm:px-6 lg:px-8 pb-3 hidden sm:block">
-        <p className="text-[11px] text-slate-500 italic">
+      <div className="w-full px-3 sm:px-6 lg:px-8 pb-3">
+        <p className="text-[10px] sm:text-[11px] text-slate-500 italic">
           "Construindo juntos, crescendo juntos."
         </p>
       </div>
