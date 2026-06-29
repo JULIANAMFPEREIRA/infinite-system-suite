@@ -947,6 +947,7 @@ const PortalParceiros = () => {
       return (
         <div className="space-y-6 animate-fade-in">
           <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
+          {renderRelatorioSection()}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
@@ -1147,6 +1148,7 @@ const PortalParceiros = () => {
 
     return (
       <div className="space-y-6 animate-fade-in">
+        {renderRelatorioSection()}
         {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = (data.parcelasRT ?? [])
           .reduce((s: number, p: any) => s + Number(p.valor), 0);
