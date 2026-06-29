@@ -7,7 +7,7 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass, Target, FileText, Upload
+  CheckCircle2, Hourglass, Target, FileText, Upload, BarChart3, X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
@@ -51,6 +51,8 @@ const PortalParceiros = () => {
   const [relMes, setRelMes] = useState<string>("todos");
   const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
   const [relStatus, setRelStatus] = useState<string>("todos");
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [expandedKanbanCol, setExpandedKanbanCol] = useState<string | null>(null);
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
