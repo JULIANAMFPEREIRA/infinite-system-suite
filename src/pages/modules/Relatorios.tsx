@@ -501,6 +501,10 @@ const Relatorios = () => {
                 <option value="todos">Todos os anos</option>
                 {ANOS.map((a) => <option key={a} value={String(a)}>{a}</option>)}
               </select>
+              <select className={selectCls} value={rCliente} onChange={(e) => setRCliente(e.target.value)}>
+                <option value="todos">Todos os clientes</option>
+                {clientesReceber.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+              </select>
             </div>
 
             <div className="border border-border rounded overflow-hidden">
