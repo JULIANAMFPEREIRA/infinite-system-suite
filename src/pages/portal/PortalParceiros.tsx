@@ -1493,15 +1493,6 @@ const PortalParceiros = () => {
         );
         return (
           <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold">Meus Projetos</h2>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">Total: {allProjs.length}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/15 text-primary">Em andamento: {emAndamento.length}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-success/15 text-success">Concluídos: {concluidos.length}</span>
-              </div>
-            </div>
-
             {allProjs.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-6">Nenhum projeto vinculado.</p>
             )}
