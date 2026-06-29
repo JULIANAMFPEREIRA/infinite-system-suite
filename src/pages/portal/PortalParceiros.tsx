@@ -1221,7 +1221,7 @@ const PortalParceiros = () => {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {renderRelatorioSection()}
+        {data.fornecedor.tipo !== "arquiteto" && renderRelatorioSection()}
         {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = (data.parcelasRT ?? [])
           .reduce((s: number, p: any) => s + Number(p.valor), 0);
