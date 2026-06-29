@@ -1636,6 +1636,28 @@ const PortalParceiros = () => {
         }
       </main>
       {footer}
+      {showRelatorio && data.fornecedor.tipo === "arquiteto" && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto">
+          <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-5xl my-4">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-background z-10">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <BarChart3 size={16} className="text-primary" /> Relatórios
+              </h2>
+              <button
+                onClick={() => setShowRelatorio(false)}
+                className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground"
+                title="Fechar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4">
+              {(renderProjectList as any) /* noop */ }
+              <RelatorioModalContent />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
