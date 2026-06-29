@@ -16,6 +16,8 @@ import TecnicoWeeklyAgenda from "@/components/parceiros/TecnicoWeeklyAgenda";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -46,6 +48,9 @@ const PortalParceiros = () => {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [novaNota, setNovaNota] = useState("");
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [relMes, setRelMes] = useState<string>("todos");
+  const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -766,6 +771,174 @@ const PortalParceiros = () => {
   };
 
   const renderProjectList = () => {
+    // ============ Relatórios (arquiteto + tecnico) ============
+    const MESES_REL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const ANOS_REL = [2024, 2025, 2026];
+    const matchMesAnoRel = (dateStr: string | null | undefined) => {
+      if (!dateStr) return relMes === "todos" && relAno === "todos";
+      const d = new Date(dateStr);
+      const okMes = relMes === "todos" || d.getMonth() + 1 === Number(relMes);
+      const okAno = relAno === "todos" || d.getFullYear() === Number(relAno);
+      return okMes && okAno;
+    };
+
+    const renderRelatorioSection = () => {
+      if (!data) return null;
+      const isArq = data.fornecedor.tipo === "arquiteto";
+      const isTec = data.fornecedor.tipo === "tecnico";
+      if (!isArq && !isTec) return null;
+
+      let rows: any[] = [];
+      let total = 0;
+      let titulo = "";
+      let pdfHeader = "";
+
+      if (isArq) {
+        const parcRT = (data.parcelasRT ?? []) as any[];
+        rows = parcRT.filter((p: any) => matchMesAnoRel(p.data_vencimento));
+        total = rows.reduce((s: number, p: any) => s + (Number(p.valor) || 0), 0);
+        titulo = "Relatório de RT";
+        pdfHeader = `INFINIT NETWORK — Relatório RT — ${data.fornecedor.nome ?? ""}`;
+      } else {
+        const lancs = (data.lancamentos ?? []) as any[];
+        rows = lancs.filter((l: any) => matchMesAnoRel(l.data_pagamento));
+        total = rows.reduce((s: number, l: any) => s + (Number(l.valor) || 0), 0);
+        titulo = "Relatório de Pagamentos";
+        pdfHeader = `INFINIT NETWORK — Relatório de Pagamentos — ${data.fornecedor.nome ?? ""}`;
+      }
+
+      const periodoLabel = `${relMes === "todos" ? "Todos os meses" : MESES_REL[Number(relMes) - 1]} / ${relAno === "todos" ? "Todos os anos" : relAno}`;
+
+      const exportRelPDF = () => {
+        const doc = new jsPDF();
+        doc.setFontSize(14);
+        doc.text(pdfHeader, 14, 18);
+        doc.setFontSize(10);
+        doc.text(`Período: ${periodoLabel}`, 14, 26);
+        doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 14, 32);
+
+        if (isArq) {
+          autoTable(doc, {
+            startY: 40,
+            head: [["Projeto", "Descrição", "Vencimento", "Pagamento", "Status", "Valor"]],
+            body: rows.map((p: any) => [
+              p.projetos?.nome ?? "—",
+              p.descricao ?? "—",
+              p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString("pt-BR") : "—",
+              p.data_pagamento ? new Date(p.data_pagamento).toLocaleDateString("pt-BR") : "—",
+              (p.status ?? "").toUpperCase(),
+              fmt(Number(p.valor) || 0),
+            ]),
+            foot: [["", "", "", "", "TOTAL", fmt(total)]],
+          });
+        } else {
+          autoTable(doc, {
+            startY: 40,
+            head: [["Data", "Projeto", "Cliente", "Observação", "Valor"]],
+            body: rows.map((l: any) => [
+              l.data_pagamento ? new Date(l.data_pagamento).toLocaleDateString("pt-BR") : "—",
+              l.projetos?.nome ?? "—",
+              l.projetos?.clientes?.nome ?? "—",
+              l.observacao ?? "—",
+              fmt(Number(l.valor) || 0),
+            ]),
+            foot: [["", "", "", "TOTAL", fmt(total)]],
+          });
+        }
+        doc.save(`relatorio-${isArq ? "rt" : "pagamentos"}-${data.fornecedor.nome ?? "parceiro"}.pdf`);
+      };
+
+      const selectCls = "h-7 px-2 rounded border border-border bg-background text-xs";
+
+      return (
+        <div className="bg-card border border-border rounded-2xl shadow-sm">
+          <button
+            onClick={() => setShowRelatorio(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3"
+          >
+            <span className="flex items-center gap-2 text-sm font-bold">
+              <FileText size={16} className="text-primary" /> {titulo}
+            </span>
+            <ChevronDown size={16} className={`transition-transform ${showRelatorio ? "rotate-180" : ""}`} />
+          </button>
+          {showRelatorio && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <select className={selectCls} value={relMes} onChange={(e) => setRelMes(e.target.value)}>
+                  <option value="todos">Todos os meses</option>
+                  {MESES_REL.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                </select>
+                <select className={selectCls} value={relAno} onChange={(e) => setRelAno(e.target.value)}>
+                  <option value="todos">Todos os anos</option>
+                  {ANOS_REL.map(a => <option key={a} value={String(a)}>{a}</option>)}
+                </select>
+                <div className="flex-1" />
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Total: </span>
+                  <span className="font-bold text-success">{fmt(total)}</span>
+                </div>
+                <button
+                  onClick={exportRelPDF}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105"
+                >
+                  <FileText size={13} /> Exportar PDF
+                </button>
+              </div>
+
+              <div className="border border-border rounded overflow-hidden overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50">
+                    {isArq ? (
+                      <tr>
+                        <th className="text-left px-2.5 py-2 font-semibold">Projeto</th>
+                        <th className="text-left px-2.5 py-2 font-semibold">Vencimento</th>
+                        <th className="text-left px-2.5 py-2 font-semibold">Pagamento</th>
+                        <th className="text-left px-2.5 py-2 font-semibold">Status</th>
+                        <th className="text-right px-2.5 py-2 font-semibold">Valor</th>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <th className="text-left px-2.5 py-2 font-semibold">Data</th>
+                        <th className="text-left px-2.5 py-2 font-semibold">Projeto</th>
+                        <th className="text-left px-2.5 py-2 font-semibold">Observação</th>
+                        <th className="text-right px-2.5 py-2 font-semibold">Valor</th>
+                      </tr>
+                    )}
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 && (
+                      <tr><td colSpan={isArq ? 5 : 4} className="text-center py-4 text-muted-foreground">Nenhum registro no período.</td></tr>
+                    )}
+                    {isArq && rows.map((p: any) => (
+                      <tr key={p.id} className="border-t border-border hover:bg-secondary/20">
+                        <td className="px-2.5 py-1.5">{p.projetos?.nome ?? "—"}</td>
+                        <td className="px-2.5 py-1.5">{p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2.5 py-1.5">{p.data_pagamento ? new Date(p.data_pagamento).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2.5 py-1.5">
+                          <span className={p.status === "pago" ? "text-success font-semibold" : "text-warning font-semibold"}>
+                            {(p.status ?? "").toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-2.5 py-1.5 text-right font-medium">{fmt(Number(p.valor) || 0)}</td>
+                      </tr>
+                    ))}
+                    {!isArq && rows.map((l: any) => (
+                      <tr key={l.id} className="border-t border-border hover:bg-secondary/20">
+                        <td className="px-2.5 py-1.5">{l.data_pagamento ? new Date(l.data_pagamento).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2.5 py-1.5">{l.projetos?.nome ?? "—"}</td>
+                        <td className="px-2.5 py-1.5 text-muted-foreground italic">{l.observacao || "—"}</td>
+                        <td className="px-2.5 py-1.5 text-right font-bold text-success">{fmt(Number(l.valor) || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
     if (data.fornecedor.tipo === "tecnico") {
       const totalContratado = (data.ptecnico ?? []).reduce((acc: number, p: any) => acc + Number(p.valor_combinado), 0);
       const totalRecebido = (data.lancamentos ?? []).reduce((acc: number, l: any) => acc + Number(l.valor), 0);
@@ -774,6 +947,7 @@ const PortalParceiros = () => {
       return (
         <div className="space-y-6 animate-fade-in">
           <TecnicoWeeklyAgenda fornecedorId={data.fornecedor.id} />
+          {renderRelatorioSection()}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
@@ -974,6 +1148,7 @@ const PortalParceiros = () => {
 
     return (
       <div className="space-y-6 animate-fade-in">
+        {renderRelatorioSection()}
         {data.fornecedor.tipo === "arquiteto" ? (() => {
         const rtTotal = (data.parcelasRT ?? [])
           .reduce((s: number, p: any) => s + Number(p.valor), 0);

@@ -9,7 +9,7 @@ import autoTable from "jspdf-autotable";
 const fmtN = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt = (v: number) => `R$ ${fmtN(v)}`;
 
-type TabKey = "projetos" | "receber" | "pagar" | "fluxo";
+type TabKey = "resumo" | "projetos" | "receber" | "pagar" | "fluxo";
 
 const STATUS_OPTS = ["todos", "pendente", "pago", "vencido"] as const;
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -38,12 +38,16 @@ const Relatorios = () => {
   const { data: receber, isLoading: lr } = useFinanceiroReceber();
   const { data: pagar, isLoading: lpg } = useFinanceiroPagar();
 
-  const [tab, setTab] = useState<TabKey>("projetos");
+  const [tab, setTab] = useState<TabKey>("resumo");
+
+  // Filtros Resumo
+  const [resAno, setResAno] = useState<string>(String(new Date().getFullYear()));
 
   // Filtros A Receber
   const [rStatus, setRStatus] = useState<string>("todos");
   const [rMes, setRMes] = useState<string>("todos");
   const [rAno, setRAno] = useState<string>("todos");
+  const [rCliente, setRCliente] = useState<string>("todos");
 
   // Filtros A Pagar
   const [pStatus, setPStatus] = useState<string>("todos");
@@ -56,12 +60,59 @@ const Relatorios = () => {
   const totalReceita = receber?.reduce((a, r) => a + (r.valor ?? 0), 0) ?? 0;
   const totalDespesa = pagar?.reduce((a, p) => a + (p.valor ?? 0), 0) ?? 0;
 
+  // ============ Resumo Executivo ============
+  const resumo = useMemo(() => {
+    const projs = projetos ?? [];
+    const totalProjetos = projs.length;
+    const vendaTotal = projs.reduce((a: number, p: any) => a + (p.venda_total ?? 0), 0);
+    const custoTotal = projs.reduce(
+      (a: number, p: any) => a + (p.custo_real ?? p.custo_previsto ?? 0),
+      0,
+    );
+    const lucroTotal = vendaTotal - custoTotal;
+    const margem = vendaTotal > 0 ? (lucroTotal / vendaTotal) * 100 : 0;
+    return { totalProjetos, vendaTotal, custoTotal, lucroTotal, margem };
+  }, [projetos]);
+
+  const resumoMensal = useMemo(() => {
+    const anoNum = resAno === "todos" ? null : Number(resAno);
+    const rows = MESES.map((m, i) => ({ mes: m, idx: i, receitas: 0, despesas: 0 }));
+    (receber ?? []).forEach((c: any) => {
+      if (!c.data_vencimento) return;
+      const d = new Date(c.data_vencimento);
+      if (anoNum !== null && d.getFullYear() !== anoNum) return;
+      rows[d.getMonth()].receitas += c.valor ?? 0;
+    });
+    (pagar ?? []).forEach((c: any) => {
+      if (!c.data_vencimento) return;
+      const d = new Date(c.data_vencimento);
+      if (anoNum !== null && d.getFullYear() !== anoNum) return;
+      rows[d.getMonth()].despesas += c.valor ?? 0;
+    });
+    return rows;
+  }, [receber, pagar, resAno]);
+
+  const resumoMax = Math.max(1, ...resumoMensal.map(r => Math.max(r.receitas, r.despesas)));
+
+  // Lista de clientes únicos (para filtro A Receber)
+  const clientesReceber = useMemo(() => {
+    const map = new Map<string, string>();
+    (receber ?? []).forEach((c: any) => {
+      const id = c.clientes?.id ?? c.cliente_id;
+      const nome = c.clientes?.nome;
+      if (id && nome) map.set(id, nome);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [receber]);
+
   // ============ A Receber ============
   const receberFiltered = useMemo(() => {
     return (receber ?? []).filter((c: any) =>
-      matchStatus(c, rStatus) && matchMesAno(c.data_vencimento, rMes, rAno),
+      matchStatus(c, rStatus)
+      && matchMesAno(c.data_vencimento, rMes, rAno)
+      && (rCliente === "todos" || (c.clientes?.id ?? c.cliente_id) === rCliente),
     );
-  }, [receber, rStatus, rMes, rAno]);
+  }, [receber, rStatus, rMes, rAno, rCliente]);
 
   const rResumo = useMemo(() => {
     const list = receber ?? [];
@@ -156,6 +207,25 @@ const Relatorios = () => {
         head: [["#", "Projeto", "Venda", "Margem %"]],
         body: topProjetos.map((p, i) => [String(i + 1), p.nome, fmt(p.venda_total ?? 0), `${(p.margem_prevista ?? 0).toFixed(1)}%`]),
       });
+    } else if (tab === "resumo") {
+      doc.setFontSize(12);
+      doc.text(`Resumo Executivo — ${resAno === "todos" ? "Todos os anos" : resAno}`, 14, 40);
+      autoTable(doc, {
+        startY: 45,
+        head: [["Métrica", "Valor"]],
+        body: [
+          ["Total de Projetos", String(resumo.totalProjetos)],
+          ["Venda Total", fmt(resumo.vendaTotal)],
+          ["Custo Total", fmt(resumo.custoTotal)],
+          ["Lucro Total", fmt(resumo.lucroTotal)],
+          ["Margem %", `${resumo.margem.toFixed(1)}%`],
+        ],
+      });
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [["Mês", "Receitas", "Despesas", "Saldo"]],
+        body: resumoMensal.map(r => [r.mes, fmt(r.receitas), fmt(r.despesas), fmt(r.receitas - r.despesas)]),
+      });
     } else if (tab === "receber") {
       doc.text("Contas a Receber", 14, 40);
       autoTable(doc, {
@@ -215,7 +285,20 @@ const Relatorios = () => {
   };
 
   const exportCSV = () => {
-    if (tab === "projetos") {
+    if (tab === "resumo") {
+      const headers = "Métrica,Valor\n";
+      const summary = [
+        `Total de Projetos,${resumo.totalProjetos}`,
+        `Venda Total,${resumo.vendaTotal.toFixed(2)}`,
+        `Custo Total,${resumo.custoTotal.toFixed(2)}`,
+        `Lucro Total,${resumo.lucroTotal.toFixed(2)}`,
+        `Margem %,${resumo.margem.toFixed(1)}`,
+        "",
+        "Mês,Receitas,Despesas,Saldo",
+        ...resumoMensal.map(r => `${r.mes},${r.receitas.toFixed(2)},${r.despesas.toFixed(2)},${(r.receitas - r.despesas).toFixed(2)}`),
+      ].join("\n");
+      downloadCSV("relatorio-resumo.csv", headers, summary);
+    } else if (tab === "projetos") {
       const headers = "Projeto,Venda,Custo Previsto,Margem %\n";
       const rows = topProjetos.map((p) => `"${p.nome}",${p.venda_total ?? 0},${p.custo_previsto ?? 0},${(p.margem_prevista ?? 0).toFixed(1)}`).join("\n");
       downloadCSV("relatorio-projetos.csv", headers, rows);
@@ -257,11 +340,84 @@ const Relatorios = () => {
       {isLoading ? <p className="text-center py-8 text-xs text-muted-foreground">Carregando...</p> : (
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <TabsList>
+            <TabsTrigger value="resumo">Resumo Executivo</TabsTrigger>
             <TabsTrigger value="projetos">Projetos</TabsTrigger>
             <TabsTrigger value="receber">A Receber</TabsTrigger>
             <TabsTrigger value="pagar">A Pagar</TabsTrigger>
             <TabsTrigger value="fluxo">Fluxo de Caixa</TabsTrigger>
           </TabsList>
+
+          {/* ============ RESUMO EXECUTIVO ============ */}
+          <TabsContent value="resumo" className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <select className={selectCls} value={resAno} onChange={(e) => setResAno(e.target.value)}>
+                <option value="todos">Todos os anos</option>
+                {ANOS.map((a) => <option key={a} value={String(a)}>{a}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className={cardCls}>
+                <p className="text-xs text-muted-foreground">Total de Projetos</p>
+                <p className="text-2xl font-bold text-foreground">{resumo.totalProjetos}</p>
+              </div>
+              <div className={cardCls}>
+                <p className="text-xs text-muted-foreground">Valor de Venda Total</p>
+                <p className="text-2xl font-bold text-success">{fmt(resumo.vendaTotal)}</p>
+              </div>
+              <div className={cardCls}>
+                <p className="text-xs text-muted-foreground">Custo Total</p>
+                <p className="text-2xl font-bold text-destructive">{fmt(resumo.custoTotal)}</p>
+              </div>
+              <div className={cardCls}>
+                <p className="text-xs text-muted-foreground">Lucro Total</p>
+                <p className={`text-2xl font-bold ${resumo.lucroTotal >= 0 ? "text-success" : "text-destructive"}`}>{fmt(resumo.lucroTotal)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Margem: <span className={`font-semibold ${resumo.margem >= 0 ? "text-success" : "text-destructive"}`}>{resumo.margem.toFixed(1)}%</span></p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Receitas vs Despesas — {resAno === "todos" ? "Todos os anos" : resAno}</h3>
+              <div className="border border-border rounded p-3 bg-card">
+                <div className="grid grid-cols-12 gap-1 items-end h-40">
+                  {resumoMensal.map((r) => (
+                    <div key={r.idx} className="flex flex-col items-center gap-0.5">
+                      <div className="flex items-end gap-0.5 h-full w-full justify-center">
+                        <div className="w-2.5 bg-success rounded-t" style={{ height: `${(r.receitas / resumoMax) * 100}%` }} title={`Receitas: ${fmt(r.receitas)}`} />
+                        <div className="w-2.5 bg-destructive rounded-t" style={{ height: `${(r.despesas / resumoMax) * 100}%` }} title={`Despesas: ${fmt(r.despesas)}`} />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">{r.mes}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3 mt-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-success rounded-sm" /> Receitas</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-destructive rounded-sm" /> Despesas</span>
+                </div>
+              </div>
+
+              <div className="border border-border rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-secondary/60">
+                    <th className="text-left px-2.5 py-2 font-semibold border-b border-border">Mês</th>
+                    <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Receitas</th>
+                    <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Despesas</th>
+                    <th className="text-right px-2.5 py-2 font-semibold border-b border-border">Saldo</th>
+                  </tr></thead>
+                  <tbody>
+                    {resumoMensal.map((r) => (
+                      <tr key={r.idx} className="border-b border-border last:border-b-0 hover:bg-secondary/30">
+                        <td className="px-2.5 py-1.5 font-medium">{r.mes}</td>
+                        <td className="px-2.5 py-1.5 text-right text-success">{fmt(r.receitas)}</td>
+                        <td className="px-2.5 py-1.5 text-right text-destructive">{fmt(r.despesas)}</td>
+                        <td className={`px-2.5 py-1.5 text-right font-semibold ${(r.receitas - r.despesas) >= 0 ? "text-success" : "text-destructive"}`}>{fmt(r.receitas - r.despesas)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
 
           {/* ============ PROJETOS (existente) ============ */}
           <TabsContent value="projetos" className="space-y-4">
@@ -344,6 +500,10 @@ const Relatorios = () => {
               <select className={selectCls} value={rAno} onChange={(e) => setRAno(e.target.value)}>
                 <option value="todos">Todos os anos</option>
                 {ANOS.map((a) => <option key={a} value={String(a)}>{a}</option>)}
+              </select>
+              <select className={selectCls} value={rCliente} onChange={(e) => setRCliente(e.target.value)}>
+                <option value="todos">Todos os clientes</option>
+                {clientesReceber.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
               </select>
             </div>
 
