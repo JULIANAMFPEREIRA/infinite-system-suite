@@ -16,6 +16,8 @@ import TecnicoWeeklyAgenda from "@/components/parceiros/TecnicoWeeklyAgenda";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -46,6 +48,9 @@ const PortalParceiros = () => {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [novaNota, setNovaNota] = useState("");
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [relMes, setRelMes] = useState<string>("todos");
+  const [relAno, setRelAno] = useState<string>(String(new Date().getFullYear()));
   const [novaVisita, setNovaVisita] = useState({
     data: new Date().toISOString().split("T")[0],
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
