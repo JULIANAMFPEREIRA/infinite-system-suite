@@ -356,6 +356,44 @@ const Agenda = () => {
         defaultStart={defaultStart}
       />
 
+      <Dialog open={!!selectedGoogleEvent} onOpenChange={(v) => !v && setSelectedGoogleEvent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon size={14} className="text-[hsl(210,70%,50%)]" />
+              {selectedGoogleEvent?.summary || "(sem título)"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedGoogleEvent && (
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Início:</span>{" "}
+                <span className="font-medium">
+                  {fmtDate(selectedGoogleEvent._start, "dd/MM/yyyy HH:mm")}
+                </span>
+              </div>
+              {selectedGoogleEvent._end && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Fim:</span>{" "}
+                  <span className="font-medium">
+                    {fmtDate(selectedGoogleEvent._end, "dd/MM/yyyy HH:mm")}
+                  </span>
+                </div>
+              )}
+              {selectedGoogleEvent.description && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Descrição:</span>
+                  <p className="mt-1 whitespace-pre-wrap">{selectedGoogleEvent.description}</p>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground pt-2 border-t border-border">
+                Evento do Google Agenda — somente leitura.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-4 text-[11px] text-muted-foreground flex-wrap">
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-[hsl(210,70%,50%)]/30 border border-[hsl(210,70%,50%)]/60" />
