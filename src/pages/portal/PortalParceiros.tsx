@@ -7,7 +7,8 @@ import {
   LogOut, Activity, CalendarDays,
   Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   Plus, DollarSign, MessageSquare, Clock,
-  CheckCircle2, Hourglass, Target, FileText, Upload, BarChart3, X
+  CheckCircle2, Hourglass, Target, FileText, Upload, BarChart3, X,
+  Trash2, Pencil, Check
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { statusProjetoLabels, statusProjetoColors, type StatusProjeto } from "@/lib/statusConfig";
@@ -292,14 +293,27 @@ const PortalParceiros = () => {
     enabled: !!data?.fornecedor?.id,
   });
 
-  const { data: imagens } = useQuery({
+  const { data: imagens, refetch: refetchImagens } = useQuery({
     queryKey: ["portal_parc_imagens", activeProjeto?.cliente_id],
     queryFn: async () => {
       const { data } = await supabase.from("crm_arquivos")
-        .select("id, nome_arquivo, url, tipo, created_at")
+        .select("id, nome_arquivo, url, tipo, created_at, autor_tipo, projeto_id")
         .eq("cliente_id", activeProjeto!.cliente_id)
         .order("created_at", { ascending: false });
       return data?.filter(d => d.tipo === "imagem" || d.nome_arquivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ?? [];
+    },
+    enabled: !!activeProjeto?.cliente_id,
+  });
+
+  const { data: diarioEntries, refetch: refetchDiario } = useQuery({
+    queryKey: ["portal_parc_diario", activeProjeto?.cliente_id],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes")
+        .select("id, descricao, tipo, created_at, autor_tipo, usuario_id, projeto_id")
+        .eq("cliente_id", activeProjeto!.cliente_id)
+        .eq("tipo", "diario")
+        .order("created_at", { ascending: false });
+      return data ?? [];
     },
     enabled: !!activeProjeto?.cliente_id,
   });
@@ -330,6 +344,12 @@ const PortalParceiros = () => {
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const imagemInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImagem, setUploadingImagem] = useState(false);
+  const [novoDiario, setNovoDiario] = useState("");
+  const [showNovoDiario, setShowNovoDiario] = useState(false);
+  const [editingDiarioId, setEditingDiarioId] = useState<string | null>(null);
+  const [editingDiarioText, setEditingDiarioText] = useState("");
 
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -360,6 +380,88 @@ const PortalParceiros = () => {
       setUploadingDoc(false);
       if (uploadInputRef.current) uploadInputRef.current.value = "";
     }
+  };
+
+  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeProjeto || !data?.fornecedor) return;
+    if (!file.type?.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem");
+      if (imagemInputRef.current) imagemInputRef.current.value = "";
+      return;
+    }
+    setUploadingImagem(true);
+    try {
+      const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
+        cliente_id: activeProjeto.cliente_id,
+        projeto_id: selectedProjeto,
+        empresa_id: activeProjeto.empresa_id,
+        autor_tipo: data.fornecedor.tipo,
+        nome_arquivo: file.name,
+        url: pub.publicUrl,
+        tipo: "imagem",
+      } as any);
+      if (insErr) throw insErr;
+      toast.success("Imagem enviada");
+      refetchImagens();
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setUploadingImagem(false);
+      if (imagemInputRef.current) imagemInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteImagem = async (id: string) => {
+    if (!confirm("Excluir esta imagem?")) return;
+    const { error } = await supabase.from("crm_arquivos").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir imagem"); return; }
+    toast.success("Imagem excluída");
+    refetchImagens();
+  };
+
+  const handleSalvarDiario = async () => {
+    if (!novoDiario.trim() || !activeProjeto?.cliente_id || !data?.fornecedor) return;
+    const { data: { user: u } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("crm_interacoes").insert({
+      cliente_id: activeProjeto.cliente_id,
+      projeto_id: selectedProjeto,
+      empresa_id: activeProjeto.empresa_id,
+      usuario_id: u?.id,
+      autor_tipo: "tecnico",
+      tipo: "diario",
+      descricao: novoDiario.toUpperCase(),
+      visivel_portal: true,
+    } as any);
+    if (error) { toast.error("Erro ao salvar entrada"); return; }
+    setNovoDiario("");
+    setShowNovoDiario(false);
+    refetchDiario();
+    toast.success("Entrada salva");
+  };
+
+  const handleUpdateDiario = async (id: string) => {
+    if (!editingDiarioText.trim()) return;
+    const { error } = await supabase.from("crm_interacoes")
+      .update({ descricao: editingDiarioText.toUpperCase() })
+      .eq("id", id);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    setEditingDiarioId(null);
+    setEditingDiarioText("");
+    refetchDiario();
+    toast.success("Entrada atualizada");
+  };
+
+  const handleDeleteDiario = async (id: string) => {
+    if (!confirm("Excluir esta entrada?")) return;
+    const { error } = await supabase.from("crm_interacoes").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    refetchDiario();
+    toast.success("Entrada excluída");
   };
 
   const handleLogout = async () => { await signOut(); navigate("/login"); };
@@ -594,34 +696,77 @@ const PortalParceiros = () => {
           <TabsContent value="diario" className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Entradas do Diário</h3>
-              <button onClick={() => setShowNovaEntrada(!showNovaEntrada)} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium">
+              <button onClick={() => setShowNovoDiario(v => !v)} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium">
                 <Plus size={14} /> Nova Entrada
               </button>
             </div>
-            {showNovaEntrada && (
+            {showNovoDiario && (
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="date" value={novaVisita.data} onChange={e => setNovaVisita(p => ({...p, data: e.target.value}))} className="bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                  <input type="time" value={novaVisita.hora} onChange={e => setNovaVisita(p => ({...p, hora: e.target.value}))} className="bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                </div>
-                <input placeholder="Descrição / Objetivo" value={novaVisita.descricao} onChange={e => setNovaVisita(p => ({...p, descricao: e.target.value}))} className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                <textarea placeholder="Serviços Executados" value={novaVisita.servicos_executados} onChange={e => setNovaVisita(p => ({...p, servicos_executados: e.target.value}))} className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[80px]" />
-                <div className="flex justify-end gap-2 pt-2">
-                  <button onClick={() => setShowNovaEntrada(false)} className="text-xs px-3 py-1.5 rounded border border-border">Cancelar</button>
-                  <button onClick={handleSalvarVisita} className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium">Salvar</button>
+                <textarea
+                  placeholder="Descreva o andamento da obra..."
+                  value={novoDiario}
+                  onChange={e => setNovoDiario(e.target.value)}
+                  className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[100px]"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button onClick={() => { setShowNovoDiario(false); setNovoDiario(""); }} className="text-xs px-3 py-1.5 rounded border border-border">Cancelar</button>
+                  <button onClick={handleSalvarDiario} disabled={!novoDiario.trim()} className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium disabled:opacity-50">Salvar</button>
                 </div>
               </div>
             )}
             <div className="space-y-3">
-              {(visitas ?? []).map(v => (
-                <div key={v.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold">{new Date(v.data + "T00:00:00").toLocaleDateString("pt-BR")} às {v.hora}</span>
+              {(diarioEntries ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma entrada no diário ainda.</p>
+              )}
+              {(diarioEntries ?? []).map(entry => {
+                const isOwn = entry.autor_tipo === "tecnico" && entry.usuario_id === user?.id;
+                const isEditing = editingDiarioId === entry.id;
+                return (
+                  <div key={entry.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                        {new Date(entry.created_at).toLocaleString("pt-BR")}
+                        {entry.autor_tipo && ` · ${entry.autor_tipo}`}
+                      </span>
+                      {isOwn && !isEditing && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(entry.descricao ?? ""); }}
+                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+                            title="Editar"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDiario(entry.id)}
+                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-destructive"
+                            title="Excluir"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingDiarioText}
+                          onChange={e => setEditingDiarioText(e.target.value)}
+                          className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[80px]"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => { setEditingDiarioId(null); setEditingDiarioText(""); }} className="text-xs px-2 py-1 rounded border border-border">Cancelar</button>
+                          <button onClick={() => handleUpdateDiario(entry.id)} className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground font-medium flex items-center gap-1">
+                            <Check size={12} /> Salvar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-foreground whitespace-pre-wrap">{entry.descricao}</p>
+                    )}
                   </div>
-                  <p className="text-xs font-semibold">{v.descricao}</p>
-                  {v.servicos_executados && <p className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded">{v.servicos_executados}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
         )}
@@ -665,13 +810,46 @@ const PortalParceiros = () => {
         </TabsContent>
 
         <TabsContent value="imagens" className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {(imagens ?? []).map(img => (
-              <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                <img src={img.url} className="w-full h-full object-cover" />
-              </a>
-            ))}
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Imagens</h3>
+            {data.fornecedor.tipo === "tecnico" && (
+              <div>
+                <input ref={imagemInputRef} type="file" accept="image/*" hidden onChange={handleUploadImagem} />
+                <button
+                  onClick={() => imagemInputRef.current?.click()}
+                  disabled={uploadingImagem}
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium disabled:opacity-50"
+                >
+                  <Upload size={13} /> {uploadingImagem ? "Enviando..." : "Enviar imagem"}
+                </button>
+              </div>
+            )}
           </div>
+          {(imagens ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma imagem disponível.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(imagens ?? []).map(img => {
+                const canDelete = data.fornecedor.tipo === "tecnico" && img.autor_tipo === "tecnico";
+                return (
+                  <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                    <a href={img.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                      <img src={img.url} className="w-full h-full object-cover" />
+                    </a>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteImagem(img.id)}
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-background/80 backdrop-blur-sm text-destructive opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-all"
+                        title="Excluir imagem"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="anotacoes" className="space-y-4">
