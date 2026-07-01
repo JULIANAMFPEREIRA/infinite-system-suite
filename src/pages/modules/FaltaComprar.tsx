@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { calcFaltaComprar } from "@/lib/calcFaltaComprar"
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useEmpresa } from "@/hooks/useEmpresa"
@@ -49,7 +50,7 @@ const FaltaComprar = () => {
     queryFn: async () => {
       const { data: orcs } = await supabase
         .from("crm_orcamentos")
-        .select("id, nome, cliente_id, grupo_id, frete, imposto, clientes(nome)")
+        .select("id, nome, cliente_id, grupo_id, frete, imposto, simulacao_pagamento, clientes(nome)")
         .eq("empresa_id", empresaId!)
         .eq("aprovado", true)
 
@@ -79,7 +80,13 @@ const FaltaComprar = () => {
         const frete = Number(projeto.frete) || 0
         const imposto = Number(projeto.imposto) || 0
         const stats = calcFaltaComprar(itens as any, frete, imposto)
-        const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda)||0) * (Number(i.quantidade)||1), 0)
+        const totals = calcOrcamentoTotals({
+          itens: itens as any,
+          frete,
+          imposto,
+          simulacao_pagamento: (projeto as any).simulacao_pagamento ?? null,
+        })
+        const totalVenda = totals.totalVenda
 
         let recProjeto = receber.filter(r => r.projeto_id === projeto.projeto_id)
 
