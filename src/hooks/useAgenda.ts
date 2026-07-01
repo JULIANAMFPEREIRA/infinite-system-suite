@@ -128,7 +128,12 @@ export const useSaveVisita = () => {
           const isSchemaCacheError =
             (error as any).code === "PGRST205" ||
             /schema cache|Could not find the table/i.test(error.message || "");
-          if (isSchemaCacheError && fields.cliente_id) {
+          if (isSchemaCacheError) {
+            if (!fields.cliente_id) {
+              throw new Error(
+                "Não foi possível salvar a visita. Como fallback interno, é necessário selecionar um cliente. Tente novamente em instantes ou selecione um cliente."
+              );
+            }
             const descPayload = JSON.stringify({
               titulo: fields.titulo,
               descricao: fields.descricao,
