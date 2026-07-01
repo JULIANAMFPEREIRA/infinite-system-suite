@@ -360,12 +360,10 @@ const PortalParceiros = () => {
       const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
-      const { data: { user: u } } = await supabase.auth.getUser();
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: activeProjeto.cliente_id,
         projeto_id: selectedProjeto,
         empresa_id: activeProjeto.empresa_id,
-        usuario_id: u?.id,
         autor_tipo: data.fornecedor.tipo,
         nome_arquivo: file.name,
         url: pub.publicUrl,
@@ -430,7 +428,6 @@ const PortalParceiros = () => {
     const { error } = await supabase.from("crm_interacoes").insert({
       cliente_id: activeProjeto.cliente_id,
       projeto_id: selectedProjeto,
-      empresa_id: activeProjeto.empresa_id,
       usuario_id: u?.id,
       autor_tipo: "tecnico",
       tipo: "diario",
