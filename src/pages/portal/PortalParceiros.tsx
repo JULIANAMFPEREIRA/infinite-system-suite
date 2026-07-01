@@ -732,17 +732,24 @@ const PortalParceiros = () => {
               {(diarioEntries ?? []).map(entry => {
                 const isOwn = entry.autor_tipo === "tecnico" && entry.usuario_id === user?.id;
                 const isEditing = editingDiarioId === entry.id;
+                const rawDesc = entry.descricao ?? "";
+                const dateMatch = rawDesc.match(/^\[DATA:(\d{4}-\d{2}-\d{2})\]\s*/);
+                const entryDate = dateMatch ? dateMatch[1] : null;
+                const cleanDesc = dateMatch ? rawDesc.slice(dateMatch[0].length) : rawDesc;
+                const dataLabel = entryDate
+                  ? new Date(entryDate + "T00:00:00").toLocaleDateString("pt-BR")
+                  : new Date(entry.created_at).toLocaleDateString("pt-BR");
                 return (
                   <div key={entry.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                        {new Date(entry.created_at).toLocaleString("pt-BR")}
+                        {dataLabel}
                         {entry.autor_tipo && ` · ${entry.autor_tipo}`}
                       </span>
                       {isOwn && !isEditing && (
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(entry.descricao ?? ""); }}
+                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(cleanDesc); }}
                             className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
                             title="Editar"
                           >
@@ -773,7 +780,7 @@ const PortalParceiros = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-foreground whitespace-pre-wrap">{entry.descricao}</p>
+                      <p className="text-xs text-foreground whitespace-pre-wrap">{cleanDesc}</p>
                     )}
                   </div>
                 );
