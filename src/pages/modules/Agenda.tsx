@@ -12,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { layoutOverlaps } from "@/lib/agendaLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format as fmtDate } from "date-fns";
 
 const safeDate = (val: any): Date | null => {
   const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
@@ -30,6 +32,7 @@ const Agenda = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Visita | null>(null);
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
+  const [selectedGoogleEvent, setSelectedGoogleEvent] = useState<any | null>(null);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -299,7 +302,7 @@ const Agenda = () => {
                   render: (style) => (
                     <div
                       key={`g-${ev.id}`}
-                      onClick={(e) => { e.stopPropagation(); navigate("/integracoes"); }}
+                       onClick={(e) => { e.stopPropagation(); setSelectedGoogleEvent({ ...ev, _start: start, _end: end }); }}
                       style={style}
                       className="absolute rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
                     >
