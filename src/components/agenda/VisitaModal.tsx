@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, X, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useClientesLista, useTecnicosLista, useSaveVisita, useDeleteVisita, Visita } from "@/hooks/useAgenda";
+import { useGoogleCalendarStatus, useCreateGoogleEvent } from "@/hooks/useGoogleCalendar";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -26,6 +27,8 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
   const { data: tecnicos = [] } = useTecnicosLista();
   const save = useSaveVisita();
   const del = useDeleteVisita();
+  const { data: googleStatus } = useGoogleCalendarStatus();
+  const createGoogleEvent = useCreateGoogleEvent();
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -83,6 +86,22 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         visivel_portal: visivelPortal,
         _source: initial?._source,
       });
+      // Auto-sync to Google Calendar only for admin-only visits (visivel_portal = false)
+      if (!initial && !visivelPortal && googleStatus?.connected) {
+        try {
+          const clienteNome = clientes.find((c: any) => c.id === clienteId)?.nome;
+          const descParts = [descricao.trim()].filter(Boolean);
+          if (clienteNome) descParts.push(`Cliente: ${clienteNome}`);
+          await createGoogleEvent.mutateAsync({
+            summary: titulo.trim().toUpperCase(),
+            description: descParts.join("\n") || undefined,
+            startDateTime: new Date(inicio).toISOString(),
+            endDateTime: new Date(fim).toISOString(),
+          });
+        } catch (gErr: any) {
+          toast({ title: "Visita salva, mas falhou sincronizar Google Calendar", description: gErr?.message, variant: "destructive" });
+        }
+      }
       toast({ title: initial ? "Alterações salvas" : "Visita criada" });
       onClose();
     } catch (e: any) {
@@ -180,11 +199,19 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
             <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} />
           </div>
 
-          <div className="flex items-center justify-between rounded-md border border-border bg-secondary/30 px-3 py-2">
+          <div
+            className={`flex items-center justify-between rounded-md border px-3 py-2 transition-colors ${
+              visivelPortal
+                ? "border-yellow-500/50 bg-yellow-500/10"
+                : "border-blue-500/50 bg-blue-500/10"
+            }`}
+          >
             <div className="flex items-center gap-2">
-              <Eye size={14} className="text-muted-foreground" />
+              <Eye size={14} className={visivelPortal ? "text-yellow-500" : "text-blue-500"} />
               <Label htmlFor="visivel-portal" className="text-xs cursor-pointer">
-                Visível para cliente, técnico e arquiteto
+                {visivelPortal
+                  ? "Compartilhar com cliente, técnico e arquiteto"
+                  : "Apenas administradores (eu e Nei)"}
               </Label>
             </div>
             <Switch
