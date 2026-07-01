@@ -86,6 +86,12 @@ export const useSaveVisita = () => {
       const fields = { ...rest, visivel_portal: rest.visivel_portal ?? true };
       let visitaId = id;
 
+      const isSchemaError = (err: any) =>
+        err?.code === "PGRST205" ||
+        err?.code === "PGRST204" ||
+        err?.code === "42P01" ||
+        /schema cache|Could not find the table|relation .* does not exist/i.test(err?.message ?? "");
+
       if (id && _source === "crm_interacoes") {
         const descPayload = JSON.stringify({
           titulo: fields.titulo,
@@ -104,14 +110,44 @@ export const useSaveVisita = () => {
             cliente_id: fields.cliente_id,
           } as any)
           .eq("id", id);
-        if (error) throw error;
+        if (error) {
+          console.error("[useSaveVisita] crm_interacoes update error:", error);
+          throw error;
+        }
         return id;
       } else if (id) {
         const { error } = await supabase
           .from("agenda_visitas" as any)
           .update(fields as any)
           .eq("id", id);
-        if (error) throw error;
+        if (error) {
+          console.error("[useSaveVisita] agenda_visitas update error:", error);
+          if (isSchemaError(error)) {
+            const descPayload = JSON.stringify({
+              titulo: fields.titulo,
+              descricao: fields.descricao,
+              data_inicio: fields.data_inicio,
+              data_fim: fields.data_fim,
+              status: fields.status ?? "agendada",
+              tecnico_ids,
+              visivel_portal: fields.visivel_portal,
+            });
+            const { error: fbErr } = await supabase
+              .from("crm_interacoes")
+              .update({
+                descricao: descPayload,
+                visivel_portal: fields.visivel_portal,
+                cliente_id: fields.cliente_id,
+              } as any)
+              .eq("id", id);
+            if (fbErr) {
+              console.error("[useSaveVisita] crm_interacoes fallback update error:", fbErr);
+              throw fbErr;
+            }
+            return id;
+          }
+          throw error;
+        }
       } else {
         const { data, error } = await supabase
           .from("agenda_visitas" as any)
@@ -123,17 +159,8 @@ export const useSaveVisita = () => {
           .select("id")
           .single();
         if (error) {
-          // Fallback: schema cache miss for agenda_visitas (PGRST205).
-          // Save as a crm_interacoes record of tipo='visita' as temporary workaround.
-          const isSchemaCacheError =
-            (error as any).code === "PGRST205" ||
-            /schema cache|Could not find the table/i.test(error.message || "");
-          if (isSchemaCacheError) {
-            if (!fields.cliente_id) {
-              throw new Error(
-                "Não foi possível salvar a visita. Como fallback interno, é necessário selecionar um cliente. Tente novamente em instantes ou selecione um cliente."
-              );
-            }
+          console.error("[useSaveVisita] agenda_visitas insert error:", error);
+          if (isSchemaError(error)) {
             const descPayload = JSON.stringify({
               titulo: fields.titulo,
               descricao: fields.descricao,
@@ -146,7 +173,7 @@ export const useSaveVisita = () => {
             const { data: fallback, error: fbErr } = await supabase
               .from("crm_interacoes")
               .insert({
-                cliente_id: fields.cliente_id,
+                cliente_id: fields.cliente_id ?? null,
                 tipo: "visita",
                 descricao: descPayload,
                 visivel_portal: fields.visivel_portal,
@@ -154,7 +181,10 @@ export const useSaveVisita = () => {
               } as any)
               .select("id")
               .single();
-            if (fbErr) throw fbErr;
+            if (fbErr) {
+              console.error("[useSaveVisita] crm_interacoes fallback insert error:", fbErr);
+              throw fbErr;
+            }
             return (fallback as any).id as string;
           }
           throw error;
@@ -171,10 +201,8 @@ export const useSaveVisita = () => {
           if (insErr) throw insErr;
         }
       } catch (e: any) {
-        // Ignore schema cache errors for the join table — main visit was saved.
-        const isSchemaCacheError =
-          e?.code === "PGRST205" || /schema cache|Could not find the table/i.test(e?.message || "");
-        if (!isSchemaCacheError) throw e;
+        console.error("[useSaveVisita] agenda_visita_tecnicos error:", e);
+        if (!isSchemaError(e)) throw e;
       }
 
       return visitaId!;
