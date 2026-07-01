@@ -12,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { layoutOverlaps } from "@/lib/agendaLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format as fmtDate } from "date-fns";
 
 const safeDate = (val: any): Date | null => {
   const str = typeof val === "string" ? val : val?.dateTime ?? val?.date ?? null;
@@ -30,6 +32,7 @@ const Agenda = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Visita | null>(null);
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
+  const [selectedGoogleEvent, setSelectedGoogleEvent] = useState<any | null>(null);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -299,7 +302,7 @@ const Agenda = () => {
                   render: (style) => (
                     <div
                       key={`g-${ev.id}`}
-                      onClick={(e) => { e.stopPropagation(); navigate("/integracoes"); }}
+                       onClick={(e) => { e.stopPropagation(); setSelectedGoogleEvent({ ...ev, _start: start, _end: end }); }}
                       style={style}
                       className="absolute rounded-md px-1.5 py-1 text-[10px] border cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[hsl(210,70%,50%)]/15 border-[hsl(210,70%,50%)]/60 text-foreground"
                     >
@@ -352,6 +355,44 @@ const Agenda = () => {
         initial={editing}
         defaultStart={defaultStart}
       />
+
+      <Dialog open={!!selectedGoogleEvent} onOpenChange={(v) => !v && setSelectedGoogleEvent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon size={14} className="text-[hsl(210,70%,50%)]" />
+              {selectedGoogleEvent?.summary || "(sem título)"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedGoogleEvent && (
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Início:</span>{" "}
+                <span className="font-medium">
+                  {fmtDate(selectedGoogleEvent._start, "dd/MM/yyyy HH:mm")}
+                </span>
+              </div>
+              {selectedGoogleEvent._end && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Fim:</span>{" "}
+                  <span className="font-medium">
+                    {fmtDate(selectedGoogleEvent._end, "dd/MM/yyyy HH:mm")}
+                  </span>
+                </div>
+              )}
+              {selectedGoogleEvent.description && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Descrição:</span>
+                  <p className="mt-1 whitespace-pre-wrap">{selectedGoogleEvent.description}</p>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground pt-2 border-t border-border">
+                Evento do Google Agenda — somente leitura.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center gap-4 text-[11px] text-muted-foreground flex-wrap">
         <span className="inline-flex items-center gap-1.5">
