@@ -703,6 +703,16 @@ const PortalParceiros = () => {
             </div>
             {showNovoDiario && (
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Data</label>
+                  <input
+                    type="date"
+                    value={novoDiarioData}
+                    onChange={e => setNovoDiarioData(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="bg-background border border-border rounded px-2 py-1 text-xs"
+                  />
+                </div>
                 <textarea
                   placeholder="Descreva o andamento da obra..."
                   value={novoDiario}
