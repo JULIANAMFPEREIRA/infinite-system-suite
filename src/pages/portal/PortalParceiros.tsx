@@ -344,6 +344,12 @@ const PortalParceiros = () => {
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const imagemInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImagem, setUploadingImagem] = useState(false);
+  const [novoDiario, setNovoDiario] = useState("");
+  const [showNovoDiario, setShowNovoDiario] = useState(false);
+  const [editingDiarioId, setEditingDiarioId] = useState<string | null>(null);
+  const [editingDiarioText, setEditingDiarioText] = useState("");
 
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -374,6 +380,88 @@ const PortalParceiros = () => {
       setUploadingDoc(false);
       if (uploadInputRef.current) uploadInputRef.current.value = "";
     }
+  };
+
+  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeProjeto || !data?.fornecedor) return;
+    if (!file.type?.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem");
+      if (imagemInputRef.current) imagemInputRef.current.value = "";
+      return;
+    }
+    setUploadingImagem(true);
+    try {
+      const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
+        cliente_id: activeProjeto.cliente_id,
+        projeto_id: selectedProjeto,
+        empresa_id: activeProjeto.empresa_id,
+        autor_tipo: data.fornecedor.tipo,
+        nome_arquivo: file.name,
+        url: pub.publicUrl,
+        tipo: "imagem",
+      } as any);
+      if (insErr) throw insErr;
+      toast.success("Imagem enviada");
+      refetchImagens();
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setUploadingImagem(false);
+      if (imagemInputRef.current) imagemInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteImagem = async (id: string) => {
+    if (!confirm("Excluir esta imagem?")) return;
+    const { error } = await supabase.from("crm_arquivos").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir imagem"); return; }
+    toast.success("Imagem excluída");
+    refetchImagens();
+  };
+
+  const handleSalvarDiario = async () => {
+    if (!novoDiario.trim() || !activeProjeto?.cliente_id || !data?.fornecedor) return;
+    const { data: { user: u } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("crm_interacoes").insert({
+      cliente_id: activeProjeto.cliente_id,
+      projeto_id: selectedProjeto,
+      empresa_id: activeProjeto.empresa_id,
+      usuario_id: u?.id,
+      autor_tipo: "tecnico",
+      tipo: "diario",
+      descricao: novoDiario.toUpperCase(),
+      visivel_portal: true,
+    } as any);
+    if (error) { toast.error("Erro ao salvar entrada"); return; }
+    setNovoDiario("");
+    setShowNovoDiario(false);
+    refetchDiario();
+    toast.success("Entrada salva");
+  };
+
+  const handleUpdateDiario = async (id: string) => {
+    if (!editingDiarioText.trim()) return;
+    const { error } = await supabase.from("crm_interacoes")
+      .update({ descricao: editingDiarioText.toUpperCase() })
+      .eq("id", id);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    setEditingDiarioId(null);
+    setEditingDiarioText("");
+    refetchDiario();
+    toast.success("Entrada atualizada");
+  };
+
+  const handleDeleteDiario = async (id: string) => {
+    if (!confirm("Excluir esta entrada?")) return;
+    const { error } = await supabase.from("crm_interacoes").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    refetchDiario();
+    toast.success("Entrada excluída");
   };
 
   const handleLogout = async () => { await signOut(); navigate("/login"); };
