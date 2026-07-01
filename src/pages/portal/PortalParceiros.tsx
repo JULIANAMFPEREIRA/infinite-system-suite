@@ -348,6 +348,7 @@ const PortalParceiros = () => {
   const [uploadingImagem, setUploadingImagem] = useState(false);
   const [novoDiario, setNovoDiario] = useState("");
   const [showNovoDiario, setShowNovoDiario] = useState(false);
+  const [novoDiarioData, setNovoDiarioData] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [editingDiarioId, setEditingDiarioId] = useState<string | null>(null);
   const [editingDiarioText, setEditingDiarioText] = useState("");
 
