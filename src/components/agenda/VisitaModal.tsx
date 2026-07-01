@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, X, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useClientesLista, useTecnicosLista, useSaveVisita, useDeleteVisita, Visita } from "@/hooks/useAgenda";
-import { useGoogleCalendarStatus, useCreateGoogleEvent } from "@/hooks/useGoogleCalendar";
+import { useGoogleCalendarStatus, useCreateGoogleEvent, useUpdateGoogleEvent } from "@/hooks/useGoogleCalendar";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -29,6 +29,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
   const del = useDeleteVisita();
   const { data: googleStatus } = useGoogleCalendarStatus();
   const createGoogleEvent = useCreateGoogleEvent();
+  const updateGoogleEvent = useUpdateGoogleEvent();
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -86,23 +87,63 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         visivel_portal: visivelPortal,
         _source: initial?._source,
       });
-      // Auto-sync to Google Calendar only for admin-only visits (visivel_portal = false)
-      if (!initial && !visivelPortal && googleStatus?.connected) {
+      // Auto-sync to Google Calendar (all visits)
+      const isNew = !initial;
+      const existingGoogleEventId = (initial as any)?.google_event_id ?? null;
+      console.log(
+        "Google sync attempt - connected:",
+        googleStatus?.connected,
+        "isNew:",
+        isNew,
+        "visivelPortal:",
+        visivelPortal,
+        "existingGoogleEventId:",
+        existingGoogleEventId
+      );
+      let googleSynced = false;
+      let googleError: string | null = null;
+      if (googleStatus?.connected) {
         try {
           const clienteNome = clientes.find((c: any) => c.id === clienteId)?.nome;
           const descParts = [descricao.trim()].filter(Boolean);
           if (clienteNome) descParts.push(`Cliente: ${clienteNome}`);
-          await createGoogleEvent.mutateAsync({
-            summary: titulo.trim().toUpperCase(),
-            description: descParts.join("\n") || undefined,
-            startDateTime: new Date(inicio).toISOString(),
-            endDateTime: new Date(fim).toISOString(),
-          });
+          const summary = titulo.trim().toUpperCase();
+          const description = descParts.join("\n") || undefined;
+          const startDateTime = new Date(inicio).toISOString();
+          const endDateTime = new Date(fim).toISOString();
+          console.log("Google event data:", { summary, description, startDateTime, endDateTime });
+          if (!isNew && existingGoogleEventId) {
+            await updateGoogleEvent.mutateAsync({
+              eventId: existingGoogleEventId,
+              summary,
+              description,
+              startDateTime,
+              endDateTime,
+            });
+          } else {
+            await createGoogleEvent.mutateAsync({
+              summary,
+              description,
+              startDateTime,
+              endDateTime,
+            });
+          }
+          googleSynced = true;
         } catch (gErr: any) {
-          toast({ title: "Visita salva, mas falhou sincronizar Google Calendar", description: gErr?.message, variant: "destructive" });
+          console.error("[VisitaModal] Google Calendar sync error:", gErr);
+          googleError = gErr?.message ?? "erro desconhecido";
         }
       }
-      toast({ title: initial ? "Alterações salvas" : "Visita criada" });
+      if (googleSynced) {
+        toast({ title: "Visita salva e sincronizada com Google Calendar ✓" });
+      } else if (googleError) {
+        toast({
+          title: `Visita salva, mas erro ao sincronizar Google: ${googleError}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: initial ? "Alterações salvas" : "Visita criada" });
+      }
       onClose();
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
