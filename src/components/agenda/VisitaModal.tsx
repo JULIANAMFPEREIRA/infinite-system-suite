@@ -114,6 +114,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
           const endDateTime = new Date(fim).toISOString();
           console.log("Google event data:", { summary, description, startDateTime, endDateTime });
           if (!isNew && existingGoogleEventId) {
+            console.log("[VisitaModal] BEFORE updateGoogleEvent.mutateAsync", { eventId: existingGoogleEventId });
             await updateGoogleEvent.mutateAsync({
               eventId: existingGoogleEventId,
               summary,
@@ -121,13 +122,16 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
               startDateTime,
               endDateTime,
             });
+            console.log("[VisitaModal] AFTER updateGoogleEvent.mutateAsync - success");
           } else {
+            console.log("[VisitaModal] BEFORE createGoogleEvent.mutateAsync", { summary, startDateTime, endDateTime });
             await createGoogleEvent.mutateAsync({
               summary,
               description,
               startDateTime,
               endDateTime,
             });
+            console.log("[VisitaModal] AFTER createGoogleEvent.mutateAsync - success");
           }
           googleSynced = true;
         } catch (gErr: any) {
