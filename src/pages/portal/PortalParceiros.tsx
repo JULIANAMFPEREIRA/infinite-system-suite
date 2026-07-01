@@ -426,18 +426,20 @@ const PortalParceiros = () => {
   const handleSalvarDiario = async () => {
     if (!novoDiario.trim() || !activeProjeto?.cliente_id || !data?.fornecedor) return;
     const { data: { user: u } } = await supabase.auth.getUser();
+    const dataStr = novoDiarioData || new Date().toISOString().slice(0, 10);
     const diarioInsert = {
       cliente_id: activeProjeto.cliente_id,
       projeto_id: selectedProjeto,
       usuario_id: u?.id,
       autor_tipo: "tecnico",
       tipo: "diario",
-      descricao: novoDiario.toUpperCase(),
+      descricao: `[DATA:${dataStr}] ${novoDiario.toUpperCase()}`,
       visivel_portal: true,
     } as any;
     const { error } = await supabase.from("crm_interacoes").insert(diarioInsert);
     if (error) { console.error("Erro ao salvar diário", JSON.stringify(error), JSON.stringify(diarioInsert)); toast.error("Erro ao salvar entrada"); return; }
     setNovoDiario("");
+    setNovoDiarioData(new Date().toISOString().slice(0, 10));
     setShowNovoDiario(false);
     refetchDiario();
     toast.success("Entrada salva");
