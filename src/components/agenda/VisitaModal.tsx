@@ -88,9 +88,15 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         visivel_portal: visivelPortal,
         _source: initial?._source,
       });
-      // Auto-sync to Google Calendar (all visits)
+      // Auto-sync to Google Calendar — ONLY for admin-internal events (visivel_portal = false).
+      // Events shared with técnico/cliente/arquiteto (amarelo, visivel_portal = true) must NEVER
+      // be pushed to the personal Google Calendar.
       const isNew = !initial;
       const existingGoogleEventId = (initial as any)?.google_event_id ?? null;
+      const shouldSyncGoogle =
+        googleStatus?.connected &&
+        visivelPortal === false &&
+        (isNew || (!isNew && !!existingGoogleEventId));
       console.log(
         "Google sync attempt - connected:",
         googleStatus?.connected,
@@ -99,11 +105,13 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
         "visivelPortal:",
         visivelPortal,
         "existingGoogleEventId:",
-        existingGoogleEventId
+        existingGoogleEventId,
+        "shouldSyncGoogle:",
+        shouldSyncGoogle
       );
       let googleSynced = false;
       let googleError: string | null = null;
-      if (googleStatus?.connected) {
+      if (shouldSyncGoogle) {
         try {
           const clienteNome = clientes.find((c: any) => c.id === clienteId)?.nome;
           const descParts = [descricao.trim()].filter(Boolean);
@@ -113,7 +121,8 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
           const startDateTime = new Date(inicio).toISOString();
           const endDateTime = new Date(fim).toISOString();
           console.log("Google event data:", { summary, description, startDateTime, endDateTime });
-          if (!isNew && existingGoogleEventId) {
+          if (!isNew) {
+            // Edit path — only reached when a google_event_id already exists.
             console.log("[VisitaModal] BEFORE updateGoogleEvent.mutateAsync", { eventId: existingGoogleEventId });
             await updateGoogleEvent.mutateAsync({
               eventId: existingGoogleEventId,
@@ -124,6 +133,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
             });
             console.log("[VisitaModal] AFTER updateGoogleEvent.mutateAsync - success");
           } else {
+            // New event path — never runs for edits, so we can't accidentally duplicate.
             console.log("[VisitaModal] BEFORE createGoogleEvent.mutateAsync", { summary, startDateTime, endDateTime });
             await createGoogleEvent.mutateAsync({
               summary,
