@@ -357,9 +357,9 @@ const PortalParceiros = () => {
     setUploadingDoc(true);
     try {
       const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
-      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file);
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: activeProjeto.cliente_id,
         projeto_id: selectedProjeto,
@@ -391,9 +391,9 @@ const PortalParceiros = () => {
     setUploadingImagem(true);
     try {
       const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
-      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
+      const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file);
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: activeProjeto.cliente_id,
         projeto_id: selectedProjeto,
