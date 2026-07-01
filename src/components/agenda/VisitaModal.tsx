@@ -42,6 +42,7 @@ const VisitaModal = ({ open, onClose, initial, defaultStart }: Props) => {
 
   useEffect(() => {
     if (!open) return;
+    console.log("[VisitaModal] opened - googleStatus:", googleStatus, "connected:", googleStatus?.connected);
     if (initial) {
       setTitulo(initial.titulo);
       setDescricao(initial.descricao ?? "");
