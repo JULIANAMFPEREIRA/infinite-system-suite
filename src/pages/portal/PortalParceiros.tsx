@@ -435,7 +435,7 @@ const PortalParceiros = () => {
       visivel_portal: true,
     } as any;
     const { error } = await supabase.from("crm_interacoes").insert(diarioInsert);
-    if (error) { console.error("Erro ao salvar diário", { error, diarioInsert }); toast.error("Erro ao salvar entrada"); return; }
+    if (error) { console.error("Erro ao salvar diário", JSON.stringify(error), JSON.stringify(diarioInsert)); toast.error("Erro ao salvar entrada"); return; }
     setNovoDiario("");
     setShowNovoDiario(false);
     refetchDiario();
