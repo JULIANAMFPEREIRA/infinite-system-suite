@@ -17,7 +17,7 @@ const FaltaComprar = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("financeiro_receber")
-        .select("valor, valor_recebido, status, projeto_id, data_vencimento")
+        .select("valor, valor_recebido, status, projeto_id, cliente_id, data_vencimento")
         .eq("empresa_id", empresaId!)
         .eq("deletado", false)
       return data ?? []
@@ -49,7 +49,7 @@ const FaltaComprar = () => {
     queryFn: async () => {
       const { data: orcs } = await supabase
         .from("crm_orcamentos")
-        .select("id, nome, cliente_id, frete, imposto, clientes(nome)")
+        .select("id, nome, cliente_id, grupo_id, frete, imposto, clientes(nome)")
         .eq("empresa_id", empresaId!)
         .eq("aprovado", true)
 
@@ -81,7 +81,12 @@ const FaltaComprar = () => {
         const stats = calcFaltaComprar(itens as any, frete, imposto)
         const totalVenda = itens.reduce((s, i) => s + (Number(i.preco_venda)||0) * (Number(i.quantidade)||1), 0)
 
-        const recProjeto = receber.filter(r => r.projeto_id === projeto.projeto_id)
+        let recProjeto = receber.filter(r => r.projeto_id === projeto.projeto_id)
+
+        // Fallback for grouped orçamentos: parcelas may be linked at cliente level
+        if (recProjeto.length === 0 && projeto.grupo_id) {
+          recProjeto = receber.filter(r => r.cliente_id === projeto.cliente_id)
+        }
 
         const recebidoProjeto = recProjeto.reduce((s, r) => s + (Number(r.valor_recebido)||0), 0)
 
