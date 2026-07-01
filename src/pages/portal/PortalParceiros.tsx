@@ -293,14 +293,27 @@ const PortalParceiros = () => {
     enabled: !!data?.fornecedor?.id,
   });
 
-  const { data: imagens } = useQuery({
+  const { data: imagens, refetch: refetchImagens } = useQuery({
     queryKey: ["portal_parc_imagens", activeProjeto?.cliente_id],
     queryFn: async () => {
       const { data } = await supabase.from("crm_arquivos")
-        .select("id, nome_arquivo, url, tipo, created_at")
+        .select("id, nome_arquivo, url, tipo, created_at, autor_tipo, projeto_id")
         .eq("cliente_id", activeProjeto!.cliente_id)
         .order("created_at", { ascending: false });
       return data?.filter(d => d.tipo === "imagem" || d.nome_arquivo?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ?? [];
+    },
+    enabled: !!activeProjeto?.cliente_id,
+  });
+
+  const { data: diarioEntries, refetch: refetchDiario } = useQuery({
+    queryKey: ["portal_parc_diario", activeProjeto?.cliente_id],
+    queryFn: async () => {
+      const { data } = await supabase.from("crm_interacoes")
+        .select("id, descricao, tipo, created_at, autor_tipo, usuario_id, projeto_id")
+        .eq("cliente_id", activeProjeto!.cliente_id)
+        .eq("tipo", "diario")
+        .order("created_at", { ascending: false });
+      return data ?? [];
     },
     enabled: !!activeProjeto?.cliente_id,
   });
