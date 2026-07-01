@@ -348,6 +348,7 @@ const PortalParceiros = () => {
   const [uploadingImagem, setUploadingImagem] = useState(false);
   const [novoDiario, setNovoDiario] = useState("");
   const [showNovoDiario, setShowNovoDiario] = useState(false);
+  const [novoDiarioData, setNovoDiarioData] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [editingDiarioId, setEditingDiarioId] = useState<string | null>(null);
   const [editingDiarioText, setEditingDiarioText] = useState("");
 
@@ -425,18 +426,20 @@ const PortalParceiros = () => {
   const handleSalvarDiario = async () => {
     if (!novoDiario.trim() || !activeProjeto?.cliente_id || !data?.fornecedor) return;
     const { data: { user: u } } = await supabase.auth.getUser();
+    const dataStr = novoDiarioData || new Date().toISOString().slice(0, 10);
     const diarioInsert = {
       cliente_id: activeProjeto.cliente_id,
       projeto_id: selectedProjeto,
       usuario_id: u?.id,
       autor_tipo: "tecnico",
       tipo: "diario",
-      descricao: novoDiario.toUpperCase(),
+      descricao: `[DATA:${dataStr}] ${novoDiario.toUpperCase()}`,
       visivel_portal: true,
     } as any;
     const { error } = await supabase.from("crm_interacoes").insert(diarioInsert);
     if (error) { console.error("Erro ao salvar diário", JSON.stringify(error), JSON.stringify(diarioInsert)); toast.error("Erro ao salvar entrada"); return; }
     setNovoDiario("");
+    setNovoDiarioData(new Date().toISOString().slice(0, 10));
     setShowNovoDiario(false);
     refetchDiario();
     toast.success("Entrada salva");
@@ -444,8 +447,11 @@ const PortalParceiros = () => {
 
   const handleUpdateDiario = async (id: string) => {
     if (!editingDiarioText.trim()) return;
+    const existing = (diarioEntries ?? []).find((e: any) => e.id === id);
+    const prefixMatch = (existing?.descricao ?? "").match(/^\[DATA:\d{4}-\d{2}-\d{2}\]\s*/);
+    const prefix = prefixMatch ? prefixMatch[0] : "";
     const { error } = await supabase.from("crm_interacoes")
-      .update({ descricao: editingDiarioText.toUpperCase() })
+      .update({ descricao: prefix + editingDiarioText.toUpperCase() })
       .eq("id", id);
     if (error) { toast.error("Erro ao atualizar"); return; }
     setEditingDiarioId(null);
@@ -700,6 +706,16 @@ const PortalParceiros = () => {
             </div>
             {showNovoDiario && (
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Data</label>
+                  <input
+                    type="date"
+                    value={novoDiarioData}
+                    onChange={e => setNovoDiarioData(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="bg-background border border-border rounded px-2 py-1 text-xs"
+                  />
+                </div>
                 <textarea
                   placeholder="Descreva o andamento da obra..."
                   value={novoDiario}
@@ -719,17 +735,24 @@ const PortalParceiros = () => {
               {(diarioEntries ?? []).map(entry => {
                 const isOwn = entry.autor_tipo === "tecnico" && entry.usuario_id === user?.id;
                 const isEditing = editingDiarioId === entry.id;
+                const rawDesc = entry.descricao ?? "";
+                const dateMatch = rawDesc.match(/^\[DATA:(\d{4}-\d{2}-\d{2})\]\s*/);
+                const entryDate = dateMatch ? dateMatch[1] : null;
+                const cleanDesc = dateMatch ? rawDesc.slice(dateMatch[0].length) : rawDesc;
+                const dataLabel = entryDate
+                  ? new Date(entryDate + "T00:00:00").toLocaleDateString("pt-BR")
+                  : new Date(entry.created_at).toLocaleDateString("pt-BR");
                 return (
                   <div key={entry.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                        {new Date(entry.created_at).toLocaleString("pt-BR")}
+                        {dataLabel}
                         {entry.autor_tipo && ` · ${entry.autor_tipo}`}
                       </span>
                       {isOwn && !isEditing && (
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(entry.descricao ?? ""); }}
+                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(cleanDesc); }}
                             className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
                             title="Editar"
                           >
@@ -760,7 +783,7 @@ const PortalParceiros = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-foreground whitespace-pre-wrap">{entry.descricao}</p>
+                      <p className="text-xs text-foreground whitespace-pre-wrap">{cleanDesc}</p>
                     )}
                   </div>
                 );
