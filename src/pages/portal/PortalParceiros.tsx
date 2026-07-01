@@ -755,14 +755,33 @@ const PortalParceiros = () => {
         {data.fornecedor.tipo === "tecnico" && (
           <TabsContent value="financeiro" className="space-y-4">
             {(() => {
-              const valorContratado = (data?.ptecnico ?? [])
-                .filter((p: any) => p.projeto_id === selectedProjeto)
-                .reduce((s: number, p: any) => s + Number(p.valor_combinado || 0), 0);
+              const ptProj = (data?.ptecnico ?? []).filter(
+                (p: any) => p.projeto_id === selectedProjeto
+              );
+              const valorContratado = ptProj.reduce(
+                (s: number, p: any) => s + Number(p.valor_combinado || 0),
+                0
+              );
+              const descricoes = ptProj
+                .map((p: any) => (p.descricao ?? "").toString().trim())
+                .filter((d: string) => d.length > 0);
               return (
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Valor Contratado neste Projeto</p>
-                  <p className="text-3xl font-black text-white tracking-tight">{fmt(valorContratado)}</p>
-                </div>
+                <>
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Valor Contratado neste Projeto</p>
+                    <p className="text-3xl font-black text-white tracking-tight">{fmt(valorContratado)}</p>
+                  </div>
+                  {descricoes.length > 0 && (
+                    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Descrição do Serviço</p>
+                      <div className="space-y-2">
+                        {descricoes.map((d: string, i: number) => (
+                          <p key={i} className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{d}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               );
             })()}
           </TabsContent>
