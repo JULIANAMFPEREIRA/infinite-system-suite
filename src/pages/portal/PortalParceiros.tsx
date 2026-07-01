@@ -447,8 +447,11 @@ const PortalParceiros = () => {
 
   const handleUpdateDiario = async (id: string) => {
     if (!editingDiarioText.trim()) return;
+    const existing = (diarioEntries ?? []).find((e: any) => e.id === id);
+    const prefixMatch = (existing?.descricao ?? "").match(/^\[DATA:\d{4}-\d{2}-\d{2}\]\s*/);
+    const prefix = prefixMatch ? prefixMatch[0] : "";
     const { error } = await supabase.from("crm_interacoes")
-      .update({ descricao: editingDiarioText.toUpperCase() })
+      .update({ descricao: prefix + editingDiarioText.toUpperCase() })
       .eq("id", id);
     if (error) { toast.error("Erro ao atualizar"); return; }
     setEditingDiarioId(null);
