@@ -696,34 +696,77 @@ const PortalParceiros = () => {
           <TabsContent value="diario" className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Entradas do Diário</h3>
-              <button onClick={() => setShowNovaEntrada(!showNovaEntrada)} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium">
+              <button onClick={() => setShowNovoDiario(v => !v)} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium">
                 <Plus size={14} /> Nova Entrada
               </button>
             </div>
-            {showNovaEntrada && (
+            {showNovoDiario && (
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="date" value={novaVisita.data} onChange={e => setNovaVisita(p => ({...p, data: e.target.value}))} className="bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                  <input type="time" value={novaVisita.hora} onChange={e => setNovaVisita(p => ({...p, hora: e.target.value}))} className="bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                </div>
-                <input placeholder="Descrição / Objetivo" value={novaVisita.descricao} onChange={e => setNovaVisita(p => ({...p, descricao: e.target.value}))} className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs" />
-                <textarea placeholder="Serviços Executados" value={novaVisita.servicos_executados} onChange={e => setNovaVisita(p => ({...p, servicos_executados: e.target.value}))} className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[80px]" />
-                <div className="flex justify-end gap-2 pt-2">
-                  <button onClick={() => setShowNovaEntrada(false)} className="text-xs px-3 py-1.5 rounded border border-border">Cancelar</button>
-                  <button onClick={handleSalvarVisita} className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium">Salvar</button>
+                <textarea
+                  placeholder="Descreva o andamento da obra..."
+                  value={novoDiario}
+                  onChange={e => setNovoDiario(e.target.value)}
+                  className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[100px]"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button onClick={() => { setShowNovoDiario(false); setNovoDiario(""); }} className="text-xs px-3 py-1.5 rounded border border-border">Cancelar</button>
+                  <button onClick={handleSalvarDiario} disabled={!novoDiario.trim()} className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium disabled:opacity-50">Salvar</button>
                 </div>
               </div>
             )}
             <div className="space-y-3">
-              {(visitas ?? []).map(v => (
-                <div key={v.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold">{new Date(v.data + "T00:00:00").toLocaleDateString("pt-BR")} às {v.hora}</span>
+              {(diarioEntries ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma entrada no diário ainda.</p>
+              )}
+              {(diarioEntries ?? []).map(entry => {
+                const isOwn = entry.autor_tipo === "tecnico" && entry.usuario_id === user?.id;
+                const isEditing = editingDiarioId === entry.id;
+                return (
+                  <div key={entry.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                        {new Date(entry.created_at).toLocaleString("pt-BR")}
+                        {entry.autor_tipo && ` · ${entry.autor_tipo}`}
+                      </span>
+                      {isOwn && !isEditing && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setEditingDiarioId(entry.id); setEditingDiarioText(entry.descricao ?? ""); }}
+                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+                            title="Editar"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDiario(entry.id)}
+                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-destructive"
+                            title="Excluir"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingDiarioText}
+                          onChange={e => setEditingDiarioText(e.target.value)}
+                          className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs min-h-[80px]"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => { setEditingDiarioId(null); setEditingDiarioText(""); }} className="text-xs px-2 py-1 rounded border border-border">Cancelar</button>
+                          <button onClick={() => handleUpdateDiario(entry.id)} className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground font-medium flex items-center gap-1">
+                            <Check size={12} /> Salvar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-foreground whitespace-pre-wrap">{entry.descricao}</p>
+                    )}
                   </div>
-                  <p className="text-xs font-semibold">{v.descricao}</p>
-                  {v.servicos_executados && <p className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded">{v.servicos_executados}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
         )}
@@ -767,13 +810,46 @@ const PortalParceiros = () => {
         </TabsContent>
 
         <TabsContent value="imagens" className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {(imagens ?? []).map(img => (
-              <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                <img src={img.url} className="w-full h-full object-cover" />
-              </a>
-            ))}
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Imagens</h3>
+            {data.fornecedor.tipo === "tecnico" && (
+              <div>
+                <input ref={imagemInputRef} type="file" accept="image/*" hidden onChange={handleUploadImagem} />
+                <button
+                  onClick={() => imagemInputRef.current?.click()}
+                  disabled={uploadingImagem}
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium disabled:opacity-50"
+                >
+                  <Upload size={13} /> {uploadingImagem ? "Enviando..." : "Enviar imagem"}
+                </button>
+              </div>
+            )}
           </div>
+          {(imagens ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma imagem disponível.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(imagens ?? []).map(img => {
+                const canDelete = data.fornecedor.tipo === "tecnico" && img.autor_tipo === "tecnico";
+                return (
+                  <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                    <a href={img.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                      <img src={img.url} className="w-full h-full object-cover" />
+                    </a>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteImagem(img.id)}
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-background/80 backdrop-blur-sm text-destructive opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-all"
+                        title="Excluir imagem"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="anotacoes" className="space-y-4">
