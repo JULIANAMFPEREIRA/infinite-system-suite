@@ -7,7 +7,7 @@ import {
   DollarSign, FolderKanban, ShoppingCart, ClipboardList, UserX,
   CalendarDays, ArrowRight, Package, ExternalLink, Plus, FileText,
   AlertTriangle, Clock, TrendingUp, Receipt, Wallet, ArrowDownRight, ArrowUpRight, Scale,
-  PiggyBank, Info, Save, StickyNote
+  PiggyBank, Info, Save, StickyNote, Landmark
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
@@ -41,6 +41,54 @@ const Dashboard = () => {
   const [anotacoes, setAnotacoes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+
+  // Saldo das Contas
+  const [saldoNubank, setSaldoNubank] = useState<string>("0");
+  const [saldoCora, setSaldoCora] = useState<string>("0");
+  const [savingSaldo, setSavingSaldo] = useState(false);
+
+  const { data: saldoContas, refetch: refetchSaldoContas } = useQuery({
+    queryKey: ["saldo_contas", empresaId],
+    queryFn: async () => {
+      if (!empresaId) return null;
+      const { data, error } = await supabase
+        .from("empresas")
+        .select("saldo_nubank, saldo_cora, saldo_atualizado_em")
+        .eq("id", empresaId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    enabled: !!empresaId,
+  });
+
+  useEffect(() => {
+    if (saldoContas) {
+      setSaldoNubank(String(saldoContas.saldo_nubank ?? 0));
+      setSaldoCora(String(saldoContas.saldo_cora ?? 0));
+    }
+  }, [saldoContas]);
+
+  const handleAtualizarSaldo = async () => {
+    if (!empresaId) return;
+    setSavingSaldo(true);
+    try {
+      const { error } = await supabase
+        .from("empresas")
+        .update({
+          saldo_nubank: Number(saldoNubank) || 0,
+          saldo_cora: Number(saldoCora) || 0,
+          saldo_atualizado_em: new Date().toISOString(),
+        } as any)
+        .eq("id", empresaId);
+      if (error) throw error;
+      await refetchSaldoContas();
+    } finally {
+      setSavingSaldo(false);
+    }
+  };
+
+  const totalSaldoContas = (Number(saldoNubank) || 0) + (Number(saldoCora) || 0);
 
   // Buscar anotações do usuário
   const { data: anotacoesData, isLoading: isLoadingAnotacoes } = useQuery({
@@ -485,6 +533,54 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 gap-4">
         <WeeklyAgendaWidget />
+      </div>
+
+      {/* Saldo das Contas */}
+      <div className="bg-card rounded-xl border border-border p-5 shadow-sm max-w-md">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+          <Landmark size={16} className="text-primary" />
+          Saldo das Contas
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🟣</span>
+            <label className="text-xs font-medium text-muted-foreground w-16">Nubank</label>
+            <input
+              type="number"
+              step="0.01"
+              value={saldoNubank}
+              onChange={(e) => setSaldoNubank(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-sm bg-secondary/30 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🟠</span>
+            <label className="text-xs font-medium text-muted-foreground w-16">Cora</label>
+            <input
+              type="number"
+              step="0.01"
+              value={saldoCora}
+              onChange={(e) => setSaldoCora(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-sm bg-secondary/30 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</span>
+            <span className="text-lg font-bold text-[hsl(152,69%,40%)]">{fmt(totalSaldoContas)}</span>
+          </div>
+          <button
+            onClick={handleAtualizarSaldo}
+            disabled={savingSaldo}
+            className="w-full mt-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {savingSaldo ? "Salvando..." : "Atualizar Saldo"}
+          </button>
+          {saldoContas?.saldo_atualizado_em && (
+            <p className="text-[11px] text-muted-foreground text-center">
+              Atualizado em {format(new Date(saldoContas.saldo_atualizado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Inadimplência detalhada */}
