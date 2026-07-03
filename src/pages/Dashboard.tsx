@@ -529,12 +529,6 @@ const Dashboard = () => {
       </div>
 
 
-      {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
-
-      <div className="grid grid-cols-1 gap-4">
-        <WeeklyAgendaWidget />
-      </div>
-
       {/* Saldo das Contas */}
       <div className="bg-card rounded-xl border border-border p-5 shadow-sm max-w-md">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -581,6 +575,11 @@ const Dashboard = () => {
             </p>
           )}
         </div>
+      </div>
+
+      {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
+      <div className="grid grid-cols-1 gap-4">
+        <WeeklyAgendaWidget />
       </div>
 
       {/* Inadimplência detalhada */}
