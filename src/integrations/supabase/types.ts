@@ -925,7 +925,10 @@ export type Database = {
           logo_url: string | null
           nome: string
           nome_fantasia: string | null
+          saldo_atualizado_em: string | null
+          saldo_cora: number
           saldo_inicial: number | null
+          saldo_nubank: number
           segmento: string | null
           telefone: string | null
         }
@@ -938,7 +941,10 @@ export type Database = {
           logo_url?: string | null
           nome: string
           nome_fantasia?: string | null
+          saldo_atualizado_em?: string | null
+          saldo_cora?: number
           saldo_inicial?: number | null
+          saldo_nubank?: number
           segmento?: string | null
           telefone?: string | null
         }
@@ -951,7 +957,10 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           nome_fantasia?: string | null
+          saldo_atualizado_em?: string | null
+          saldo_cora?: number
           saldo_inicial?: number | null
+          saldo_nubank?: number
           segmento?: string | null
           telefone?: string | null
         }

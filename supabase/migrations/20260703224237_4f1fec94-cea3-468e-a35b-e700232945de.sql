@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN IF NOT EXISTS saldo_nubank numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS saldo_cora numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS saldo_atualizado_em timestamptz;
