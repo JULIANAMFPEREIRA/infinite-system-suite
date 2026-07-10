@@ -938,6 +938,12 @@ const CRM = () => {
             if (parcelasExistentes && parcelasExistentes.length > 1) {
               console.log("[CRM] Parcelas de comissão existentes detectadas (>1). Mantendo parcelamento.");
             } else {
+              const { data: catRT } = await supabase
+                .from("categorias")
+                .select("id")
+                .eq("nome", "COMISSÃO | RT")
+                .eq("empresa_id", empresaId!)
+                .maybeSingle();
               await supabase.from("financeiro_pagar").insert({
                 empresa_id: empresaId!,
                 projeto_id: projId,
@@ -947,6 +953,8 @@ const CRM = () => {
                 valor: totalRt,
                 status: "pendente" as const,
                 origem: "comissao",
+                categoria_id: catRT?.id ?? null,
+                tipo_manual: "Comissão RT",
               } as any);
             }
           }
