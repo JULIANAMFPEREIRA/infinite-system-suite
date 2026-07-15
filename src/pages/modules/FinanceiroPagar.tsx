@@ -526,9 +526,9 @@ const FinanceiroPagar = () => {
    }, [contas, statusFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
   const hoje = new Date().toISOString().split("T")[0];
-  const totalPendente = (contas ?? []).filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
-  const totalPago = (contas ?? []).filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
-  const totalVencido = (contas ?? []).reduce((s, c) => {
+  const totalPendente = filtered.filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalVencido = filtered.reduce((s, c) => {
     if (
       c.status === "pendente" &&
       c.data_vencimento &&
