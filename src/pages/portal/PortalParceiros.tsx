@@ -1704,6 +1704,11 @@ const PortalParceiros = () => {
                 {p.endereco_obra && (
                   <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
                 )}
+                {data.fornecedor.tipo === "arquiteto" && data.projetoTotais?.[p.id] != null && (
+                  <p className="text-[11px] font-semibold text-primary mt-1">
+                    Valor do Projeto: {fmt(data.projetoTotais[p.id])}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColor[p.status] ?? "bg-secondary text-secondary-foreground"}`}>
