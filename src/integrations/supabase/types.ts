@@ -308,6 +308,9 @@ export type Database = {
       clientes: {
         Row: {
           arquiteto_id: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
           cpf_cnpj: string | null
           created_at: string
           data_aniversario: string | null
@@ -320,6 +323,8 @@ export type Database = {
           nome: string
           notas: string | null
           origem: Database["public"]["Enums"]["origem_lead"] | null
+          origem_detalhe: string | null
+          rg: string | null
           status_crm: Database["public"]["Enums"]["status_crm"] | null
           telefone: string | null
           updated_at: string
@@ -327,6 +332,9 @@ export type Database = {
         }
         Insert: {
           arquiteto_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           data_aniversario?: string | null
@@ -339,6 +347,8 @@ export type Database = {
           nome: string
           notas?: string | null
           origem?: Database["public"]["Enums"]["origem_lead"] | null
+          origem_detalhe?: string | null
+          rg?: string | null
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
@@ -346,6 +356,9 @@ export type Database = {
         }
         Update: {
           arquiteto_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           data_aniversario?: string | null
@@ -358,6 +371,8 @@ export type Database = {
           nome?: string
           notas?: string | null
           origem?: Database["public"]["Enums"]["origem_lead"] | null
+          origem_detalhe?: string | null
+          rg?: string | null
           status_crm?: Database["public"]["Enums"]["status_crm"] | null
           telefone?: string | null
           updated_at?: string
