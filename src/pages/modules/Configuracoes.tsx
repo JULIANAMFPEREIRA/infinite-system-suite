@@ -348,10 +348,16 @@ const Configuracoes = () => {
     try {
       const fileExt = file.name.split(".").pop();
       const fileName = `${empresaId}/logo_${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from("crm-files").upload(fileName, file);
+      const { error: uploadError } = await supabase.storage
+        .from("financeiro-arquivos")
+        .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("crm-files").getPublicUrl(fileName);
-      await updateEmpresaMutation.mutateAsync({ logo_url: publicUrl });
+      // Bucket is private — sign for ~10 years so logo renders in the UI.
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("financeiro-arquivos")
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365 * 10);
+      if (signErr) throw signErr;
+      await updateEmpresaMutation.mutateAsync({ logo_url: signed.signedUrl });
     } catch (err: any) {
       toast.error("Erro no upload: " + err.message);
     } finally {
@@ -373,21 +379,41 @@ const Configuracoes = () => {
      nome: "",
      nome_fantasia: "",
      cnpj: "",
-     telefone: "",
+     inscricao_municipal: "",
+     cnae: "",
+     data_abertura: "",
+     telefone1: "",
+     telefone2: "",
      email: "",
      endereco: "",
+     bairro: "",
+     cidade: "",
+     estado: "",
+     cep: "",
+     site: "",
+     instagram: "",
    });
 
    // Sync initial state once data loads
    useMemo(() => {
      if (empresa) {
        setEmpresaFormData({
-         nome: empresa.nome || "",
-         nome_fantasia: empresa.nome_fantasia || "",
-         cnpj: empresa.cnpj || "",
-         telefone: empresa.telefone || "",
+         nome: empresa.nome || "SMP CONSULTORIA TECNOLOGIA LTDA",
+         nome_fantasia: (empresa as any).nome_fantasia || "",
+         cnpj: empresa.cnpj || "60.972.432/0001-96",
+         inscricao_municipal: (empresa as any).inscricao_municipal || "",
+         cnae: (empresa as any).cnae || "47.51-2-01",
+         data_abertura: (empresa as any).data_abertura || "2025-05-23",
+         telefone1: (empresa as any).telefone1 || empresa.telefone || "(41) 99809-6112",
+         telefone2: (empresa as any).telefone2 || "(77) 99971-6415",
          email: empresa.email || "",
-         endereco: empresa.endereco || "",
+         endereco: empresa.endereco || "TRAVESSA BELO HORIZONTE, 100 SALA 03",
+         bairro: (empresa as any).bairro || "CENTRO",
+         cidade: (empresa as any).cidade || "SÃO JOSÉ DOS PINHAIS",
+         estado: (empresa as any).estado || "PR",
+         cep: (empresa as any).cep || "83005-380",
+         site: (empresa as any).site || "infinitnetwork.com.br",
+         instagram: (empresa as any).instagram || "@infinitnetwork.lem",
        });
      }
    }, [empresa]);
@@ -431,21 +457,64 @@ const Configuracoes = () => {
                  <Input value={empresaFormData.cnpj} onChange={e => setEmpresaFormData({ ...empresaFormData, cnpj: e.target.value })} />
                </div>
                <div className="space-y-1.5">
-                 <Label className="text-xs">Telefone</Label>
-                 <Input value={empresaFormData.telefone} onChange={e => setEmpresaFormData({ ...empresaFormData, telefone: e.target.value })} />
+                 <Label className="text-xs">Inscrição Municipal</Label>
+                 <Input value={empresaFormData.inscricao_municipal} onChange={e => setEmpresaFormData({ ...empresaFormData, inscricao_municipal: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Código CNAE</Label>
+                  <Input value={empresaFormData.cnae} onChange={e => setEmpresaFormData({ ...empresaFormData, cnae: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Data de Abertura <span className="text-muted-foreground">(interno)</span></Label>
+                  <Input type="date" value={empresaFormData.data_abertura} onChange={e => setEmpresaFormData({ ...empresaFormData, data_abertura: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Telefone 1</Label>
+                  <Input value={empresaFormData.telefone1} onChange={e => setEmpresaFormData({ ...empresaFormData, telefone1: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Telefone 2</Label>
+                  <Input value={empresaFormData.telefone2} onChange={e => setEmpresaFormData({ ...empresaFormData, telefone2: e.target.value })} />
                </div>
                <div className="space-y-1.5">
                  <Label className="text-xs">E-mail Corporativo</Label>
                  <Input value={empresaFormData.email} onChange={e => setEmpresaFormData({ ...empresaFormData, email: e.target.value })} />
                </div>
                <div className="space-y-1.5 md:col-span-2">
-                 <Label className="text-xs">Endereço Completo</Label>
+                 <Label className="text-xs">Endereço</Label>
                  <Input value={empresaFormData.endereco} onChange={e => setEmpresaFormData({ ...empresaFormData, endereco: e.target.value })} />
                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bairro</Label>
+                  <Input value={empresaFormData.bairro} onChange={e => setEmpresaFormData({ ...empresaFormData, bairro: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cidade</Label>
+                  <Input value={empresaFormData.cidade} onChange={e => setEmpresaFormData({ ...empresaFormData, cidade: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Estado (UF)</Label>
+                  <Input maxLength={2} value={empresaFormData.estado} onChange={e => setEmpresaFormData({ ...empresaFormData, estado: e.target.value.toUpperCase() })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">CEP</Label>
+                  <Input value={empresaFormData.cep} onChange={e => setEmpresaFormData({ ...empresaFormData, cep: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Site</Label>
+                  <Input value={empresaFormData.site} onChange={e => setEmpresaFormData({ ...empresaFormData, site: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Instagram</Label>
+                  <Input value={empresaFormData.instagram} onChange={e => setEmpresaFormData({ ...empresaFormData, instagram: e.target.value })} />
+                </div>
              </div>
           </div>
            <div className="flex justify-end">
-             <Button onClick={() => updateEmpresaMutation.mutate(empresaFormData)} disabled={updateEmpresaMutation.isPending}>
+             <Button onClick={() => updateEmpresaMutation.mutate({
+               ...empresaFormData,
+               data_abertura: empresaFormData.data_abertura || null,
+             })} disabled={updateEmpresaMutation.isPending}>
               Salvar Alterações
             </Button>
           </div>
