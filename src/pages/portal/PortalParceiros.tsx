@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -89,7 +90,7 @@ const PortalParceiros = () => {
       if (forn.tipo === "arquiteto") {
         const { data: p } = await supabase
           .from("projetos")
-          .select("id, nome, status, endereco_obra, data_inicio, data_previsao, cliente_id, empresa_id, clientes(nome)")
+          .select("id, nome, status, endereco_obra, data_inicio, data_previsao, cliente_id, empresa_id, orcamento_id, clientes(nome)")
           .eq("arquiteto_id", forn.id)
           .eq("deletado", false)
           .neq("status", "cancelado")
@@ -109,6 +110,30 @@ const PortalParceiros = () => {
             .in("id", ids)
             .eq("deletado", false);
           projetos = p ?? [];
+        }
+      }
+
+      // For arquiteto: compute total (com desconto) per project from linked orçamento
+      let projetoTotais: Record<string, number> = {};
+      if (forn.tipo === "arquiteto" && projetos.length > 0) {
+        const orcIds = [...new Set(projetos.map((p: any) => p.orcamento_id).filter(Boolean))];
+        if (orcIds.length > 0) {
+          const { data: orcs } = await supabase
+            .from("crm_orcamentos")
+            .select("id, frete, imposto, simulacao_pagamento, crm_itens(quantidade, preco_venda, preco_custo, rt_comissao)")
+            .in("id", orcIds);
+          const orcMap = new Map<string, any>((orcs ?? []).map((o: any) => [o.id, o]));
+          for (const p of projetos as any[]) {
+            const orc = p.orcamento_id ? orcMap.get(p.orcamento_id) : null;
+            if (!orc) continue;
+            const totals = calcOrcamentoTotals({
+              itens: orc.crm_itens ?? [],
+              frete: orc.frete,
+              imposto: orc.imposto,
+              simulacao_pagamento: orc.simulacao_pagamento as any,
+            });
+            projetoTotais[p.id] = totals.totalVenda;
+          }
         }
       }
 
@@ -193,7 +218,8 @@ const PortalParceiros = () => {
         ptecnico,
         lancamentos,
         previstos,
-        leads
+        leads,
+        projetoTotais,
       };
     },
     enabled: !!user?.email
