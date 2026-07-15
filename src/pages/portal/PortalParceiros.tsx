@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -89,7 +90,7 @@ const PortalParceiros = () => {
       if (forn.tipo === "arquiteto") {
         const { data: p } = await supabase
           .from("projetos")
-          .select("id, nome, status, endereco_obra, data_inicio, data_previsao, cliente_id, empresa_id, clientes(nome)")
+          .select("id, nome, status, endereco_obra, data_inicio, data_previsao, cliente_id, empresa_id, orcamento_id, clientes(nome)")
           .eq("arquiteto_id", forn.id)
           .eq("deletado", false)
           .neq("status", "cancelado")
@@ -109,6 +110,30 @@ const PortalParceiros = () => {
             .in("id", ids)
             .eq("deletado", false);
           projetos = p ?? [];
+        }
+      }
+
+      // For arquiteto: compute total (com desconto) per project from linked orçamento
+      let projetoTotais: Record<string, number> = {};
+      if (forn.tipo === "arquiteto" && projetos.length > 0) {
+        const orcIds = [...new Set(projetos.map((p: any) => p.orcamento_id).filter(Boolean))];
+        if (orcIds.length > 0) {
+          const { data: orcs } = await supabase
+            .from("crm_orcamentos")
+            .select("id, frete, imposto, simulacao_pagamento, crm_itens(quantidade, preco_venda, preco_custo, rt_comissao)")
+            .in("id", orcIds);
+          const orcMap = new Map<string, any>((orcs ?? []).map((o: any) => [o.id, o]));
+          for (const p of projetos as any[]) {
+            const orc = p.orcamento_id ? orcMap.get(p.orcamento_id) : null;
+            if (!orc) continue;
+            const totals = calcOrcamentoTotals({
+              itens: orc.crm_itens ?? [],
+              frete: orc.frete,
+              imposto: orc.imposto,
+              simulacao_pagamento: orc.simulacao_pagamento as any,
+            });
+            projetoTotais[p.id] = totals.totalVenda;
+          }
         }
       }
 
@@ -193,7 +218,8 @@ const PortalParceiros = () => {
         ptecnico,
         lancamentos,
         previstos,
-        leads
+        leads,
+        projetoTotais,
       };
     },
     enabled: !!user?.email
@@ -552,6 +578,12 @@ const PortalParceiros = () => {
               {statusLabel[activeProjeto?.status ?? ""] ?? activeProjeto?.status}
             </span>
           </div>
+          {data.fornecedor.tipo === "arquiteto" && data.projetoTotais?.[activeProjeto?.id] != null && (
+            <div className="text-xs sm:text-sm text-slate-200">
+              <span className="text-slate-400">Valor Total: </span>
+              <span className="font-bold text-white">{fmt(data.projetoTotais[activeProjeto.id])}</span>
+            </div>
+          )}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-slate-400">
               <span>Progresso da obra</span>
@@ -1671,6 +1703,11 @@ const PortalParceiros = () => {
                 )}
                 {p.endereco_obra && (
                   <p className="text-[11px] text-muted-foreground truncate">📍 {p.endereco_obra}</p>
+                )}
+                {data.fornecedor.tipo === "arquiteto" && data.projetoTotais?.[p.id] != null && (
+                  <p className="text-[11px] font-semibold text-primary mt-1">
+                    Valor do Projeto: {fmt(data.projetoTotais[p.id])}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
