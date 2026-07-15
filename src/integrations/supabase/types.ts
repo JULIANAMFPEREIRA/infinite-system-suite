@@ -935,11 +935,19 @@ export type Database = {
       }
       empresas: {
         Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnae: string | null
           cnpj: string | null
           created_at: string
+          data_abertura: string | null
           email: string | null
           endereco: string | null
+          estado: string | null
           id: string
+          inscricao_municipal: string | null
+          instagram: string | null
           logo_url: string | null
           nome: string
           nome_fantasia: string | null
@@ -948,14 +956,25 @@ export type Database = {
           saldo_inicial: number | null
           saldo_nubank: number
           segmento: string | null
+          site: string | null
           telefone: string | null
+          telefone1: string | null
+          telefone2: string | null
         }
         Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnae?: string | null
           cnpj?: string | null
           created_at?: string
+          data_abertura?: string | null
           email?: string | null
           endereco?: string | null
+          estado?: string | null
           id?: string
+          inscricao_municipal?: string | null
+          instagram?: string | null
           logo_url?: string | null
           nome: string
           nome_fantasia?: string | null
@@ -964,14 +983,25 @@ export type Database = {
           saldo_inicial?: number | null
           saldo_nubank?: number
           segmento?: string | null
+          site?: string | null
           telefone?: string | null
+          telefone1?: string | null
+          telefone2?: string | null
         }
         Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnae?: string | null
           cnpj?: string | null
           created_at?: string
+          data_abertura?: string | null
           email?: string | null
           endereco?: string | null
+          estado?: string | null
           id?: string
+          inscricao_municipal?: string | null
+          instagram?: string | null
           logo_url?: string | null
           nome?: string
           nome_fantasia?: string | null
@@ -980,7 +1010,10 @@ export type Database = {
           saldo_inicial?: number | null
           saldo_nubank?: number
           segmento?: string | null
+          site?: string | null
           telefone?: string | null
+          telefone1?: string | null
+          telefone2?: string | null
         }
         Relationships: []
       }
