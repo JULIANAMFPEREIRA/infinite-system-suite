@@ -578,6 +578,12 @@ const PortalParceiros = () => {
               {statusLabel[activeProjeto?.status ?? ""] ?? activeProjeto?.status}
             </span>
           </div>
+          {data.fornecedor.tipo === "arquiteto" && data.projetoTotais?.[activeProjeto?.id] != null && (
+            <div className="text-xs sm:text-sm text-slate-200">
+              <span className="text-slate-400">Valor Total: </span>
+              <span className="font-bold text-white">{fmt(data.projetoTotais[activeProjeto.id])}</span>
+            </div>
+          )}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-slate-400">
               <span>Progresso da obra</span>
