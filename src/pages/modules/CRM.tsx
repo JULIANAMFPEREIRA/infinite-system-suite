@@ -2187,6 +2187,7 @@ const CRM = () => {
                   bairro={(detailClient as any).bairro}
                   cidade={(detailClient as any).cidade}
                   cep={(detailClient as any).cep}
+                  estado={(detailClient as any).estado}
                   origemDetalhe={(detailClient as any).origem_detalhe}
                   onSave={async (payload: any) => {
                     const oldStatus = detailClient.status_crm;
@@ -3963,7 +3964,7 @@ const AutoCreateOrcamento = ({ orcamentos, detailClientId, empresaId, createOrca
 };
 
 /* ─── Inline Edit Form for Detail View ─── */
-const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, endereco: initEnd, enderecoObra: initObra, origem: initOrigem, statusCrm: initStatus, arquitetoId: initArqId, arquitetos, notas: initNotas, cpfCnpj: initCpf, rg: initRg, bairro: initBairro, cidade: initCidade, cep: initCep, origemDetalhe: initOrigemDet, onSave }: any) => {
+const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, endereco: initEnd, enderecoObra: initObra, origem: initOrigem, statusCrm: initStatus, arquitetoId: initArqId, arquitetos, notas: initNotas, cpfCnpj: initCpf, rg: initRg, bairro: initBairro, cidade: initCidade, cep: initCep, estado: initEstado, origemDetalhe: initOrigemDet, onSave }: any) => {
   const [nome, setNome] = useState(initNome ?? "");
   const [email, setEmail] = useState(initEmail ?? "");
   const [telefone, setTelefone] = useState(initTel ?? "");
@@ -3978,6 +3979,7 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
   const [bairro, setBairro] = useState(initBairro ?? "");
   const [cidade, setCidade] = useState(initCidade ?? "");
   const [cep, setCep] = useState(initCep ?? "");
+  const [estado, setEstado] = useState(initEstado ?? "");
   const [origemDetalhe, setOrigemDetalhe] = useState(initOrigemDet ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -4004,6 +4006,7 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
         bairro: bairro || null,
         cidade: cidade || null,
         cep: cep || null,
+        estado: estado || null,
         origem_detalhe: (origem === "indicacao" || origem === "outro") ? (origemDetalhe || null) : null,
       }));
       toast.success("Cliente atualizado com sucesso!");
@@ -4025,6 +4028,12 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">RG</label><input value={rg} onChange={e => setRg(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Bairro</label><input value={bairro} onChange={e => setBairro(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cidade</label><input value={cidade} onChange={e => setCidade(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Estado</label>
+        <select value={estado} onChange={e => setEstado(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
+          <option value="">UF</option>
+          {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => <option key={uf} value={uf}>{uf}</option>)}
+        </select>
+      </div>
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">CEP</label><input value={cep} onChange={e => setCep(formatCep(e.target.value))} placeholder="00000-000" maxLength={9} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Origem</label>
         <select value={origem} onChange={e => setOrigem(e.target.value as OrigemLead)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
