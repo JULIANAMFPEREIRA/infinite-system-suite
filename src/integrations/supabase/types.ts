@@ -2112,6 +2112,87 @@ export type Database = {
           },
         ]
       }
+      pedidos_compra: {
+        Row: {
+          condicao_pagamento: string | null
+          created_at: string
+          data_pedido: string | null
+          desconto_total: number | null
+          empresa_id: string
+          fornecedor_id: string | null
+          frete: number | null
+          id: string
+          ipi: number | null
+          itens: Json | null
+          local_entrega: string | null
+          numero: number
+          observacoes: string | null
+          prazo_entrega: string | null
+          responsavel: string | null
+          status: string
+          total: number | null
+          transportadora_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          condicao_pagamento?: string | null
+          created_at?: string
+          data_pedido?: string | null
+          desconto_total?: number | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          frete?: number | null
+          id?: string
+          ipi?: number | null
+          itens?: Json | null
+          local_entrega?: string | null
+          numero?: number
+          observacoes?: string | null
+          prazo_entrega?: string | null
+          responsavel?: string | null
+          status?: string
+          total?: number | null
+          transportadora_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          condicao_pagamento?: string | null
+          created_at?: string
+          data_pedido?: string | null
+          desconto_total?: number | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          frete?: number | null
+          id?: string
+          ipi?: number | null
+          itens?: Json | null
+          local_entrega?: string | null
+          numero?: number
+          observacoes?: string | null
+          prazo_entrega?: string | null
+          responsavel?: string | null
+          status?: string
+          total?: number | null
+          transportadora_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_compra_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_compra_transportadora_id_fkey"
+            columns: ["transportadora_id"]
+            isOneToOne: false
+            referencedRelation: "transportadoras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
