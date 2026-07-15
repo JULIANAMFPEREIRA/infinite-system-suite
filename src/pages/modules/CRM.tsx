@@ -2182,6 +2182,12 @@ const CRM = () => {
                   origem={detailClient.origem} statusCrm={detailClient.status_crm}
                   arquitetoId={detailClient.arquiteto_id} arquitetos={arquitetos ?? []}
                   notas={detailClient.notas}
+                  cpfCnpj={(detailClient as any).cpf_cnpj}
+                  rg={(detailClient as any).rg}
+                  bairro={(detailClient as any).bairro}
+                  cidade={(detailClient as any).cidade}
+                  cep={(detailClient as any).cep}
+                  origemDetalhe={(detailClient as any).origem_detalhe}
                   onSave={async (payload: any) => {
                     const oldStatus = detailClient.status_crm;
                     const { error } = await supabase.from("clientes").update(payload).eq("id", detailClient.id);
