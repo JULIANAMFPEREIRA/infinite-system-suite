@@ -1987,7 +1987,7 @@ export type Database = {
           data_pagamento: string | null
           data_vencimento: string | null
           descricao: string | null
-          empresa_id: string | null
+          empresa_id: string
           id: string
           orcamento_id: string | null
           parceiro_id: string | null
@@ -2003,7 +2003,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string | null
           descricao?: string | null
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
           orcamento_id?: string | null
           parceiro_id?: string | null
@@ -2019,7 +2019,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string | null
           descricao?: string | null
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
           orcamento_id?: string | null
           parceiro_id?: string | null
@@ -2712,6 +2712,7 @@ export type Database = {
       get_empresa_id: { Args: { _user_id: string }; Returns: string }
       get_fornecedor_id_by_email: { Args: { _email: string }; Returns: string }
       get_parceiro_fornecedor_id: { Args: never; Returns: string }
+      get_public_authorization: { Args: { _slug: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2720,6 +2721,10 @@ export type Database = {
         Returns: boolean
       }
       recalc_rt_recebido: { Args: { _pp_id: string }; Returns: undefined }
+      submit_public_authorization: {
+        Args: { _responses: Json; _slug: string }
+        Returns: undefined
+      }
     }
     Enums: {
       acao_audit: "criacao" | "edicao" | "exclusao"

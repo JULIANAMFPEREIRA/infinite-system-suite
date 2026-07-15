@@ -19,16 +19,15 @@ export default function PublicAuthorization() {
   const { data: authorization, isLoading } = useQuery({
     queryKey: ["public-authorization", slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("authorizations")
-        .select(`
-          *,
-          items:authorization_items(*)
-        `)
-        .eq("slug", slug)
-        .single();
+      const { data, error } = await (supabase.rpc as any)("get_public_authorization", {
+        _slug: slug as string,
+      });
       if (error) throw error;
-      return data;
+      if (!data) return null;
+      const auth = (data as any).authorization ?? null;
+      const items = (data as any).items ?? [];
+      if (!auth) return null;
+      return { ...auth, items };
     },
   });
 
@@ -59,31 +58,16 @@ export default function PublicAuthorization() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      // 1. Update items
-      for (const itemId of Object.keys(responses)) {
-        const { error: itemError } = await supabase
-          .from("authorization_items")
-          .update({
-            response: responses[itemId].response,
-            observation: responses[itemId].observation || null
-          })
-          .eq("id", itemId);
-        if (itemError) throw itemError;
-      }
-
-      // 2. Update authorization status
-      const { error: authError } = await supabase
-        .from("authorizations")
-        .update({
-          status: "responded",
-          responded_at: new Date().toISOString()
-        })
-        .eq("id", authorization?.id);
-      if (authError) throw authError;
-
-      // 3. Trigger email (Mocked for now as Resend requires server-side or Edge Function)
-      // We'll call an edge function here later if set up
-      console.log("Email should be sent to juliana@infinitnetwork.com.br");
+      const payload = Object.keys(responses).map((itemId) => ({
+        id: itemId,
+        response: responses[itemId].response,
+        observation: responses[itemId].observation || null,
+      }));
+      const { error } = await (supabase.rpc as any)("submit_public_authorization", {
+        _slug: slug as string,
+        _responses: payload,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Autorização enviada com sucesso!");
