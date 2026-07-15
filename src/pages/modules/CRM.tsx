@@ -2182,6 +2182,12 @@ const CRM = () => {
                   origem={detailClient.origem} statusCrm={detailClient.status_crm}
                   arquitetoId={detailClient.arquiteto_id} arquitetos={arquitetos ?? []}
                   notas={detailClient.notas}
+                  cpfCnpj={(detailClient as any).cpf_cnpj}
+                  rg={(detailClient as any).rg}
+                  bairro={(detailClient as any).bairro}
+                  cidade={(detailClient as any).cidade}
+                  cep={(detailClient as any).cep}
+                  origemDetalhe={(detailClient as any).origem_detalhe}
                   onSave={async (payload: any) => {
                     const oldStatus = detailClient.status_crm;
                     const { error } = await supabase.from("clientes").update(payload).eq("id", detailClient.id);
@@ -3957,7 +3963,7 @@ const AutoCreateOrcamento = ({ orcamentos, detailClientId, empresaId, createOrca
 };
 
 /* ─── Inline Edit Form for Detail View ─── */
-const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, endereco: initEnd, enderecoObra: initObra, origem: initOrigem, statusCrm: initStatus, arquitetoId: initArqId, arquitetos, notas: initNotas, onSave }: any) => {
+const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, endereco: initEnd, enderecoObra: initObra, origem: initOrigem, statusCrm: initStatus, arquitetoId: initArqId, arquitetos, notas: initNotas, cpfCnpj: initCpf, rg: initRg, bairro: initBairro, cidade: initCidade, cep: initCep, origemDetalhe: initOrigemDet, onSave }: any) => {
   const [nome, setNome] = useState(initNome ?? "");
   const [email, setEmail] = useState(initEmail ?? "");
   const [telefone, setTelefone] = useState(initTel ?? "");
@@ -3967,7 +3973,19 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
   const [arquitetoIdOrigem, setArquitetoIdOrigem] = useState(initArqId ?? "");
   const [statusCrm, setStatusCrm] = useState<StatusCRM>(initStatus ?? "lead");
   const [obsOrigem, setObsOrigem] = useState(initNotas ?? "");
+  const [cpfCnpj, setCpfCnpj] = useState(initCpf ?? "");
+  const [rg, setRg] = useState(initRg ?? "");
+  const [bairro, setBairro] = useState(initBairro ?? "");
+  const [cidade, setCidade] = useState(initCidade ?? "");
+  const [cep, setCep] = useState(initCep ?? "");
+  const [origemDetalhe, setOrigemDetalhe] = useState(initOrigemDet ?? "");
   const [saving, setSaving] = useState(false);
+
+  const formatCep = (v: string) => {
+    const digits = v.replace(/\D/g, "").slice(0, 8);
+    if (digits.length > 5) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    return digits;
+  };
 
   const handleSave = async () => {
     if (!nome.trim()) { toast.error("Nome é obrigatório"); return; }
@@ -3975,7 +3993,19 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
     setSaving(true);
     try {
       console.log("[CRM] ClienteForm handleSave chamado", { nome, email });
-      await onSave(sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, notas: obsOrigem || null }));
+      await onSave(sanitizePayload({
+        nome: nome.trim(), email: email || null, telefone: telefone || null,
+        endereco: endereco || null, endereco_obra: enderecoObra || null,
+        origem, status_crm: statusCrm,
+        arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null,
+        notas: obsOrigem || null,
+        cpf_cnpj: cpfCnpj || null,
+        rg: rg || null,
+        bairro: bairro || null,
+        cidade: cidade || null,
+        cep: cep || null,
+        origem_detalhe: (origem === "indicacao" || origem === "outro") ? (origemDetalhe || null) : null,
+      }));
       toast.success("Cliente atualizado com sucesso!");
     } catch (err: any) {
       console.error("[CRM] Erro ao salvar alterações:", err);
@@ -3991,11 +4021,21 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Telefone</label><input value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço</label><input value={endereco} onChange={e => setEndereco(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1 col-span-2"><label className="text-[11px] text-muted-foreground">Endereço da Obra</label><input value={enderecoObra} onChange={e => setEnderecoObra(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">CPF / CNPJ</label><input value={cpfCnpj} onChange={e => setCpfCnpj(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">RG</label><input value={rg} onChange={e => setRg(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Bairro</label><input value={bairro} onChange={e => setBairro(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Cidade</label><input value={cidade} onChange={e => setCidade(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
+      <div className="space-y-1"><label className="text-[11px] text-muted-foreground">CEP</label><input value={cep} onChange={e => setCep(formatCep(e.target.value))} placeholder="00000-000" maxLength={9} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" /></div>
       <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Origem</label>
         <select value={origem} onChange={e => setOrigem(e.target.value as OrigemLead)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
           <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="indicacao">Indicação</option><option value="arquiteto">Arquiteto</option><option value="outro">Outro</option>
         </select>
       </div>
+      {(origem === "indicacao" || origem === "outro") && (
+        <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Especificar</label>
+          <input value={origemDetalhe} onChange={e => setOrigemDetalhe(e.target.value)} placeholder={origem === "indicacao" ? "Quem indicou?" : "Detalhe da origem"} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
+        </div>
+      )}
       {origem === "arquiteto" && (
         <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
           <select value={arquitetoIdOrigem} onChange={e => setArquitetoIdOrigem(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">

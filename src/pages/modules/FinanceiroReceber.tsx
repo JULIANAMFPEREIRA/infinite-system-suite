@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, Plus, Check, Pencil, Trash2, Search } from "lucide-react";
+import { DollarSign, Plus, Check, Pencil, Trash2, Search, RotateCcw } from "lucide-react";
 import { isNotEmpty, isPositiveNumber } from "@/lib/validations";
 import { useFinanceiroReceber, useCreateContaReceber, useUpdateContaReceber } from "@/hooks/useFinanceiro";
 import { useFormasPagamento } from "@/hooks/useCategorias";
@@ -211,6 +211,22 @@ const FinanceiroReceber = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); toast.success("Parcela excluída"); },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const handleCancelarRecebimento = async (id: string) => {
+    if (!window.confirm("Deseja cancelar este recebimento? O valor recebido será zerado e o status voltará para pendente.")) return;
+    try {
+      const { error } = await supabase
+        .from("financeiro_receber")
+        .update({ status: "pendente", valor_recebido: 0, data_recebimento: null } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await supabase.from("recebimentos_parciais" as any).delete().eq("financeiro_receber_id", id);
+      await qc.invalidateQueries({ queryKey: ["financeiro_receber"] });
+      toast.success("Recebimento cancelado");
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao cancelar recebimento");
+    }
+  };
 
   // Conta vencida: pendente/parcial, com vencimento passado e saldo restante > 0
     const filtered = useMemo(() => {
@@ -484,6 +500,11 @@ const FinanceiroReceber = () => {
                           {c.status !== "pago" && c.status !== "cancelado" && (
                             <button onClick={() => openBaixa(c.id)} title="Registrar recebimento" className="p-1.5 rounded-md hover:bg-success/15 text-muted-foreground hover:text-success transition-colors">
                               <Check size={14} />
+                            </button>
+                          )}
+                          {(c.status === "pago" || c.status === "parcial") && (
+                            <button onClick={() => handleCancelarRecebimento(c.id)} title="Cancelar recebimento" className="p-1.5 rounded-md hover:bg-warning/15 text-muted-foreground hover:text-warning transition-colors">
+                              <RotateCcw size={14} />
                             </button>
                           )}
                           <button onClick={() => setDetailConta(c)} title="Ver detalhes" className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
