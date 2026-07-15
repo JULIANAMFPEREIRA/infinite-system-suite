@@ -147,12 +147,16 @@ const PedidoForm = ({ id, onClose }: { id: string | null; onClose: () => void })
 
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores_pc", empresaId],
-    queryFn: async () => (await supabase.from("fornecedores").select("id, nome").eq("deletado", false).order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("fornecedores").select("id, nome, tipo").eq("deletado", false).eq("tipo", "fornecedor").order("nome")).data ?? [],
     enabled: !!empresaId,
   });
   const { data: transportadoras } = useQuery({
     queryKey: ["transportadoras_pc", empresaId],
-    queryFn: async () => (await supabase.from("transportadoras").select("id, nome").eq("ativo", true).order("nome")).data ?? [],
+    queryFn: async () => {
+      const q = await supabase.from("transportadoras").select("id, nome, ativo").order("nome");
+      if (q.error) console.error("[PedidoCompra] transportadoras error:", q.error);
+      return (q.data ?? []).filter((t: any) => t.ativo !== false);
+    },
     enabled: !!empresaId,
   });
   const { data: produtos } = useQuery({
