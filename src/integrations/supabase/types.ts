@@ -319,6 +319,7 @@ export type Database = {
           empresa_id: string
           endereco: string | null
           endereco_obra: string | null
+          estado: string | null
           id: string
           nome: string
           notas: string | null
@@ -343,6 +344,7 @@ export type Database = {
           empresa_id: string
           endereco?: string | null
           endereco_obra?: string | null
+          estado?: string | null
           id?: string
           nome: string
           notas?: string | null
@@ -367,6 +369,7 @@ export type Database = {
           empresa_id?: string
           endereco?: string | null
           endereco_obra?: string | null
+          estado?: string | null
           id?: string
           nome?: string
           notas?: string | null
