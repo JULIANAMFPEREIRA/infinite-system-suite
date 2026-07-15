@@ -2191,6 +2191,16 @@ const CRM = () => {
                   origemDetalhe={(detailClient as any).origem_detalhe}
                   onSave={async (payload: any) => {
                     const oldStatus = detailClient.status_crm;
+                    console.log("Saving cliente payload:", {
+                      rg: payload.rg,
+                      bairro: payload.bairro,
+                      cidade: payload.cidade,
+                      estado: payload.estado,
+                      cep: payload.cep,
+                      origem_detalhe: payload.origem_detalhe,
+                      cpf_cnpj: payload.cpf_cnpj,
+                    });
+                    console.log("[CRM] Full payload to clientes.update:", payload);
                     const { error } = await supabase.from("clientes").update(payload).eq("id", detailClient.id);
                     if (error) { toast.error(error.message); return; }
                     if (payload.status_crm === "projeto" && oldStatus !== "projeto") {
