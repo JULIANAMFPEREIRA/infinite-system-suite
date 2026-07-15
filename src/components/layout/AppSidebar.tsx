@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
       { label: "Finanças Pessoais", path: "/financas-pessoais", module: "financas_pessoais" },
       { label: "Comissões (RT)", path: "/comissoes", module: "comissoes" },
       { label: "Compras", path: "/compras", module: "compras" },
+      { label: "Pedido de Compra", path: "/compras/pedido", module: "compras" },
     ]
   },
   { label: "Fornecedores/Parceiros", icon: Truck, path: "/fornecedores", module: "fornecedores" },
