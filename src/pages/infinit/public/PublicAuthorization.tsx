@@ -19,7 +19,7 @@ export default function PublicAuthorization() {
   const { data: authorization, isLoading } = useQuery({
     queryKey: ["public-authorization", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_public_authorization", {
+      const { data, error } = await (supabase.rpc as any)("get_public_authorization", {
         _slug: slug as string,
       });
       if (error) throw error;
@@ -63,7 +63,7 @@ export default function PublicAuthorization() {
         response: responses[itemId].response,
         observation: responses[itemId].observation || null,
       }));
-      const { error } = await supabase.rpc("submit_public_authorization", {
+      const { error } = await (supabase.rpc as any)("submit_public_authorization", {
         _slug: slug as string,
         _responses: payload,
       });
