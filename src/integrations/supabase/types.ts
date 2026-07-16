@@ -857,6 +857,7 @@ export type Database = {
           is_avulso: boolean
           nome: string
           simulacao_pagamento: Json | null
+          status_kanban: string | null
           tecnico_id: string | null
           tecnico_rt_valor: number | null
           tecnico_rt_vencimento: string | null
@@ -881,6 +882,7 @@ export type Database = {
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
+          status_kanban?: string | null
           tecnico_id?: string | null
           tecnico_rt_valor?: number | null
           tecnico_rt_vencimento?: string | null
@@ -905,6 +907,7 @@ export type Database = {
           is_avulso?: boolean
           nome?: string
           simulacao_pagamento?: Json | null
+          status_kanban?: string | null
           tecnico_id?: string | null
           tecnico_rt_valor?: number | null
           tecnico_rt_vencimento?: string | null
