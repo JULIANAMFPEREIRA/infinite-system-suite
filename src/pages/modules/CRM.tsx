@@ -494,7 +494,7 @@ const CRM = () => {
   const { data: allOrcamentos } = useQuery({
     queryKey: ["all_crm_orcamentos", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento").order("created_at", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento, status_kanban").order("created_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
