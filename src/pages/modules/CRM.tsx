@@ -3673,12 +3673,22 @@ const CRM = () => {
 
   const handleDrop = (e: React.DragEvent, targetStatus: StatusCRM) => {
     e.preventDefault();
-    const clientId = e.dataTransfer.getData("text/plain");
+    const payload = e.dataTransfer.getData("text/plain");
+    setDragClientId(null);
+    if (!payload) return;
+    if (payload.startsWith("orc:")) {
+      const orcId = payload.slice(4);
+      supabase.from("crm_orcamentos").update({ status_kanban: targetStatus } as any).eq("id", orcId).then(({ error }) => {
+        if (error) { toast.error(error.message); return; }
+        qc.invalidateQueries({ queryKey: ["all_crm_orcamentos", empresaId] });
+      });
+      return;
+    }
+    const clientId = payload.startsWith("cli:") ? payload.slice(4) : payload;
     const client = clientes?.find(c => c.id === clientId);
     if (client && client.status_crm !== targetStatus) {
       changeStatusInline.mutate({ id: clientId, newStatus: targetStatus, old: client });
     }
-    setDragClientId(null);
   };
 
   /* ─── LIST VIEW ─── */
