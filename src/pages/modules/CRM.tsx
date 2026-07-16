@@ -3758,11 +3758,26 @@ const CRM = () => {
           {listViewType === "kanban" && (
             <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none" style={{ height: "calc(100vh - 220px)" }}>
               {kanbanColumns.map(col => {
-                const colClients = (clientes ?? []).filter(c => c.status_crm === col.key);
+                // Build cards: one per client with 0-1 orcamentos, one per orcamento when client has 2+
+                type KanbanCard =
+                  | { kind: "client"; id: string; client: any }
+                  | { kind: "orc"; id: string; client: any; orc: any };
+                const cards: KanbanCard[] = [];
+                (clientes ?? []).forEach(c => {
+                  const orcs = getClientOrcamentos(c.id);
+                  if (orcs.length >= 2) {
+                    orcs.forEach(o => {
+                      const status = ((o as any).status_kanban ?? c.status_crm) as StatusCRM;
+                      if (status === col.key) cards.push({ kind: "orc", id: o.id, client: c, orc: o });
+                    });
+                  } else {
+                    if (c.status_crm === col.key) cards.push({ kind: "client", id: c.id, client: c });
+                  }
+                });
                 const isDragOver = dragClientId !== null;
                 const limit = getLimit(col.key);
-                const visibleClients = colClients.slice(0, limit);
-                const hiddenCount = Math.max(0, colClients.length - limit);
+                const visibleCards = cards.slice(0, limit);
+                const hiddenCount = Math.max(0, cards.length - limit);
                 return (
                   <div
                     key={col.key}
@@ -3775,27 +3790,31 @@ const CRM = () => {
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold uppercase tracking-wider ${col.color}`}>{col.label}</span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/80 ${col.color}`}>
-                          {hiddenCount > 0 ? `${limit} de ${colClients.length}` : colClients.length}
+                          {hiddenCount > 0 ? `${limit} de ${cards.length}` : cards.length}
                         </span>
                       </div>
                     </div>
 
                     {/* Cards */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 pb-2">
-                      {visibleClients.map(c => {
+                      {visibleCards.map(card => {
+                        const c = card.client;
                         const orcs = getClientOrcamentos(c.id);
                         const projs = getClientProjetos(c.id);
                         const totalVenda = getClientTotalVenda(c.id);
                         const hasApproved = orcs.some(o => o.aprovado);
+                        const dragPayload = card.kind === "orc" ? `orc:${card.id}` : `cli:${c.id}`;
+                        const cardKey = card.kind === "orc" ? `orc-${card.id}` : `cli-${c.id}`;
+                        const displayName = card.kind === "orc" ? `${c.nome} — ${card.orc.nome ?? "Orçamento"}` : c.nome;
 
                         return (
                           <div
-                            key={c.id}
+                            key={cardKey}
                             draggable
-                            onDragStart={e => handleDragStart(e, c.id)}
+                            onDragStart={e => { setDragClientId(cardKey); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragPayload); }}
                             onDragEnd={() => setDragClientId(null)}
                             onClick={() => openDetail(c)}
-                            className={`group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.01] active:scale-[0.98] ${dragClientId === c.id ? "opacity-40 scale-95" : ""}`}
+                            className={`group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.01] active:scale-[0.98] ${dragClientId === cardKey ? "opacity-40 scale-95" : ""}`}
                           >
                             {/* Drag handle */}
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity">
@@ -3803,7 +3822,7 @@ const CRM = () => {
                             </div>
 
                             {/* Client name */}
-                            <p className="text-sm font-semibold text-foreground truncate pr-4">{c.nome}</p>
+                            <p className="text-sm font-semibold text-foreground truncate pr-4">{displayName}</p>
 
                             {/* Origin & Arquiteto */}
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -3820,7 +3839,11 @@ const CRM = () => {
                                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                     <FileText size={10} />
                                     <span>{orcs.length} orç.</span>
-                                    {hasApproved && <span className="text-success font-bold">✓ Aprovado</span>}
+                                    {card.kind === "orc" && card.orc.aprovado ? (
+                                      <span className="text-success font-bold">✓ Aprovado</span>
+                                    ) : (card.kind !== "orc" && hasApproved) ? (
+                                      <span className="text-success font-bold">✓ Aprovado</span>
+                                    ) : null}
                                   </div>
                                 )}
                                 {projs.length > 0 && (
@@ -3855,13 +3878,13 @@ const CRM = () => {
                           onClick={() => setKanbanLimit(prev => ({ ...prev, [col.key]: (prev[col.key] ?? 15) + 15 }))}
                           className="w-full text-xs text-muted-foreground hover:text-primary py-2 text-center transition-colors"
                         >
-                          + Ver mais {hiddenCount} clientes
+                          + Ver mais {hiddenCount}
                         </button>
                       )}
-                      {colClients.length === 0 && (
+                      {cards.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50">
                           <Users size={20} className="mb-1" />
-                          <p className="text-[10px]">Nenhum cliente</p>
+                          <p className="text-[10px]">Nenhum item</p>
                         </div>
                       )}
                     </div>
