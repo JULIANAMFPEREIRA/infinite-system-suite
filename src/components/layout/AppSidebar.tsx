@@ -20,6 +20,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/", module: "dashboard" },
   { label: "CRM", icon: Users, path: "/crm", module: "crm" },
+  { label: "Clientes", icon: Users, path: "/clientes", module: "crm" },
   { label: "Orçamentos", icon: FileText, path: "/orcamentos", module: "crm" },
   { label: "Projetos", icon: FolderKanban, path: "/projetos", module: "projetos" },
   { label: "Cronograma", icon: Wrench, path: "/cronograma", module: "cronograma" },
