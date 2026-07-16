@@ -83,8 +83,8 @@ const Clientes = () => {
       </div>
 
       <div className="bg-card border border-border rounded overflow-hidden">
-        <table className="w-full text-[13px]">
-          <thead className="bg-secondary/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <table className="w-full text-xs">
+          <thead className="bg-secondary/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="text-left px-3 py-2 font-semibold">Nome</th>
               <th className="text-left px-3 py-2 font-semibold">Telefone</th>
@@ -109,16 +109,16 @@ const Clientes = () => {
                   onClick={() => openCliente(c.id)}
                   className="cursor-pointer hover:bg-secondary/40 transition"
                 >
-                  <td className="px-3 py-2 font-medium">{c.nome}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{c.telefone ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{c.email ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{c.cidade ?? "—"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5 text-sm font-medium">{c.nome}</td>
+                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.telefone ?? "—"}</td>
+                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.email ?? "—"}</td>
+                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.cidade ?? "—"}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${statusCrmColors[status]}`}>
                       {statusCrmLabels[status]}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{projetosCount?.[c.id] ?? 0}</td>
+                  <td className="px-3 py-1.5 text-xs text-right tabular-nums">{projetosCount?.[c.id] ?? 0}</td>
                 </tr>
               );
             })}
