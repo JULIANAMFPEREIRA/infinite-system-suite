@@ -3969,6 +3969,7 @@ const CRM = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <NovoOrcamentoModal open={showNovoOrcamentoModal} onOpenChange={setShowNovoOrcamentoModal} />
     </div>
   );
 };
