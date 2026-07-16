@@ -339,6 +339,7 @@ const CRM = () => {
   const [novoClienteObs, setNovoClienteObs] = useState("");
   const [dragClientId, setDragClientId] = useState<string | null>(null);
   const [kanbanLimit, setKanbanLimit] = useState<Record<string, number>>({});
+  const [showNovoOrcamentoModal, setShowNovoOrcamentoModal] = useState(false);
   const getLimit = (key: string) => kanbanLimit[key] ?? 15;
   const [tableSortKey, setTableSortKey] = useState<"nome" | "created_at" | "updated_at">("created_at");
   const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("desc");
