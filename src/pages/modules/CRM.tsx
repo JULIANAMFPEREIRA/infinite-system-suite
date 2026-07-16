@@ -3701,6 +3701,9 @@ const CRM = () => {
           <button onClick={() => { resetForm(); setViewMode("new"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
             <Plus size={14} /> Novo Cliente
           </button>
+          <button onClick={() => setShowNovoOrcamentoModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-secondary text-xs font-medium hover:brightness-105 transition border border-border">
+            <FileText size={14} /> Novo Orçamento
+          </button>
         </div>
       </div>
 
