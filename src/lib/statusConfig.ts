@@ -12,6 +12,7 @@ export const statusCrmLabels: Record<StatusCRM, string> = {
   proposta: "PROPOSTA ENVIADA",
   projeto: "PROJETO",
   concluido: "CONCLUÍDO",
+  arquivado: "ARQUIVADO",
 };
 
 export const statusCrmColors: Record<StatusCRM, string> = {
@@ -20,6 +21,7 @@ export const statusCrmColors: Record<StatusCRM, string> = {
   proposta: "bg-primary/15 text-primary",
   projeto: "bg-success/15 text-success",
   concluido: "bg-indigo-900 text-white",
+  arquivado: "bg-muted text-muted-foreground",
 };
 
 export const statusCrmKanban: { key: StatusCRM; label: string; color: string; borderColor: string; bgColor: string }[] = [
@@ -28,6 +30,7 @@ export const statusCrmKanban: { key: StatusCRM; label: string; color: string; bo
   { key: "proposta", label: "PROPOSTA ENVIADA", color: "text-primary", borderColor: "border-primary/30", bgColor: "bg-primary/5" },
   { key: "projeto", label: "PROJETOS", color: "text-success", borderColor: "border-success/30", bgColor: "bg-success/5" },
   { key: "concluido", label: "CONCLUÍDO", color: "text-indigo-600", borderColor: "border-indigo-300", bgColor: "bg-indigo-50" },
+  { key: "arquivado", label: "ARQUIVADO", color: "text-muted-foreground", borderColor: "border-muted-foreground/30", bgColor: "bg-muted/20" },
 ];
 
 export const statusCrmOptions: { value: StatusCRM; label: string }[] = [
@@ -36,6 +39,7 @@ export const statusCrmOptions: { value: StatusCRM; label: string }[] = [
   { value: "proposta", label: "PROPOSTA ENVIADA" },
   { value: "projeto", label: "PROJETO" },
   { value: "concluido", label: "CONCLUÍDO" },
+  { value: "arquivado", label: "ARQUIVADO" },
 ];
 
 /* ═══════════════════════════════════════════

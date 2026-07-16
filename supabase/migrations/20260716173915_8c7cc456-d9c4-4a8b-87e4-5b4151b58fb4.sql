@@ -1,0 +1,1 @@
+ALTER TYPE public.status_crm ADD VALUE IF NOT EXISTS 'arquivado';

@@ -17,6 +17,7 @@ import { isNotEmpty, validateEmail } from "@/lib/validations";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransportadoras } from "@/hooks/useTransportadoras";
+import { NovoOrcamentoModal } from "@/components/crm/NovoOrcamentoModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -338,6 +339,7 @@ const CRM = () => {
   const [novoClienteObs, setNovoClienteObs] = useState("");
   const [dragClientId, setDragClientId] = useState<string | null>(null);
   const [kanbanLimit, setKanbanLimit] = useState<Record<string, number>>({});
+  const [showNovoOrcamentoModal, setShowNovoOrcamentoModal] = useState(false);
   const getLimit = (key: string) => kanbanLimit[key] ?? 15;
   const [tableSortKey, setTableSortKey] = useState<"nome" | "created_at" | "updated_at">("created_at");
   const [tableSortDir, setTableSortDir] = useState<"asc" | "desc">("desc");
@@ -638,6 +640,7 @@ const CRM = () => {
   useEffect(() => {
     const clienteId = searchParams.get("cliente_id");
     const orcamentoId = searchParams.get("orcamento_id");
+    const newOrcamento = searchParams.get("new_orcamento");
     if (clienteId && clientes && clientes.length > 0 && viewMode === "list") {
       const cliente = clientes.find((c: any) => c.id === clienteId);
       if (cliente) {
@@ -646,6 +649,16 @@ const CRM = () => {
         if (orcamentoId) {
           setActiveOrcamentoId(orcamentoId);
           setActiveTab("itens");
+        }
+        if (newOrcamento === "1") {
+          setActiveTab("itens");
+          setTimeout(() => { createOrcamento.mutate(); }, 100);
+          // Bump status if concluido/arquivado
+          if (cliente.status_crm === "concluido" || cliente.status_crm === "arquivado") {
+            supabase.from("clientes").update({ status_crm: "projeto" }).eq("id", cliente.id).then(() => {
+              qc.invalidateQueries({ queryKey: ["clientes"] });
+            });
+          }
         }
         setSearchParams({});
       }
@@ -3688,6 +3701,9 @@ const CRM = () => {
           <button onClick={() => { resetForm(); setViewMode("new"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:brightness-105 transition">
             <Plus size={14} /> Novo Cliente
           </button>
+          <button onClick={() => setShowNovoOrcamentoModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-secondary text-xs font-medium hover:brightness-105 transition border border-border">
+            <FileText size={14} /> Novo Orçamento
+          </button>
         </div>
       </div>
 
@@ -3953,6 +3969,7 @@ const CRM = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <NovoOrcamentoModal open={showNovoOrcamentoModal} onOpenChange={setShowNovoOrcamentoModal} />
     </div>
   );
 };
