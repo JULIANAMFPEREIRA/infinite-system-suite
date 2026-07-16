@@ -638,6 +638,7 @@ const CRM = () => {
   useEffect(() => {
     const clienteId = searchParams.get("cliente_id");
     const orcamentoId = searchParams.get("orcamento_id");
+    const newOrcamento = searchParams.get("new_orcamento");
     if (clienteId && clientes && clientes.length > 0 && viewMode === "list") {
       const cliente = clientes.find((c: any) => c.id === clienteId);
       if (cliente) {
@@ -646,6 +647,16 @@ const CRM = () => {
         if (orcamentoId) {
           setActiveOrcamentoId(orcamentoId);
           setActiveTab("itens");
+        }
+        if (newOrcamento === "1") {
+          setActiveTab("itens");
+          setTimeout(() => { createOrcamento.mutate(); }, 100);
+          // Bump status if concluido/arquivado
+          if (cliente.status_crm === "concluido" || cliente.status_crm === "arquivado") {
+            supabase.from("clientes").update({ status_crm: "projeto" }).eq("id", cliente.id).then(() => {
+              qc.invalidateQueries({ queryKey: ["clientes"] });
+            });
+          }
         }
         setSearchParams({});
       }
