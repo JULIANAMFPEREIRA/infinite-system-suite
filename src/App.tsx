@@ -10,6 +10,7 @@ import AppLayout from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/modules/CRM";
+import Clientes from "./pages/modules/Clientes";
 import Projetos from "./pages/modules/Projetos";
 import Kits from "./pages/modules/Kits";
 import Cronograma from "./pages/modules/Cronograma";
@@ -99,6 +100,7 @@ const App = () => (
               <Route path="/admin/:id" element={<AuthorizationDetail />} />
               <Route path="/" element={<Dashboard />} />
               <Route path="/crm" element={<ModuleRoute module="crm"><CRM /></ModuleRoute>} />
+              <Route path="/clientes" element={<ModuleRoute module="crm"><Clientes /></ModuleRoute>} />
               <Route path="/orcamentos" element={<ModuleRoute module="crm"><Orcamentos /></ModuleRoute>} />
               <Route path="/projetos" element={<ModuleRoute module="projetos"><Projetos /></ModuleRoute>} />
               <Route path="/projetos/:id" element={<ModuleRoute module="projetos"><Projetos /></ModuleRoute>} />
