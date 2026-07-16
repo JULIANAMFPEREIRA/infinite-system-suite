@@ -17,6 +17,7 @@ import { isNotEmpty, validateEmail } from "@/lib/validations";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransportadoras } from "@/hooks/useTransportadoras";
+import { NovoOrcamentoModal } from "@/components/crm/NovoOrcamentoModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
