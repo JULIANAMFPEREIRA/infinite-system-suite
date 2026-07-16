@@ -527,7 +527,45 @@ const FinanceiroPagar = () => {
 
   const hoje = new Date().toISOString().split("T")[0];
   const totalPendente = filtered.filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
-  const totalPago = filtered.filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  // Pago KPI: when a period/date filter is active, match by data_pagamento within that period
+  // (independent of data_vencimento), so paid entries always appear in the selected period.
+  const totalPago = useMemo(() => {
+    const hasPeriodFilter = !!(periodoFilter || dataInicio || dataFim);
+    if (!hasPeriodFilter) {
+      return filtered.filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
+    }
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const inPeriod = (isoDate: string | null | undefined) => {
+      if (!isoDate) return false;
+      if (dataInicio && isoDate < dataInicio) return false;
+      if (dataFim && isoDate > dataFim) return false;
+      if (periodoFilter) {
+        const d = new Date(isoDate + "T00:00:00");
+        if (periodoFilter === "mes_atual") return d.getFullYear() === y && d.getMonth() === m;
+        if (periodoFilter === "mes_passado") {
+          const pm = m === 0 ? 11 : m - 1;
+          const py = m === 0 ? y - 1 : y;
+          return d.getFullYear() === py && d.getMonth() === pm;
+        }
+        if (periodoFilter === "ano_atual") return d.getFullYear() === y;
+      }
+      return true;
+    };
+    return (contas ?? [])
+      .filter(c => c.status === "pago")
+      .filter(c => !statusFilter || c.status === statusFilter)
+      .filter(c => !categoriaFilter || (c as any).categoria_id === categoriaFilter)
+      .filter(c => {
+        if (!buscaFilter.trim()) return true;
+        const q = buscaFilter.trim().toLowerCase();
+        return (c.descricao ?? "").toLowerCase().includes(q)
+          || ((c as any).fornecedores?.nome ?? "").toLowerCase().includes(q);
+      })
+      .filter(c => inPeriod((c as any).data_pagamento))
+      .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  }, [contas, filtered, statusFilter, categoriaFilter, buscaFilter, periodoFilter, dataInicio, dataFim]);
   const totalVencido = filtered.reduce((s, c) => {
     if (
       c.status === "pendente" &&

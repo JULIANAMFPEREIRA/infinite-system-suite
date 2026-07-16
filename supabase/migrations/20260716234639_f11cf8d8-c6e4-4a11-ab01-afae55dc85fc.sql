@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_orcamentos ADD COLUMN IF NOT EXISTS status_kanban text;
