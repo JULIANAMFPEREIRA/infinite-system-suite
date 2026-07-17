@@ -1106,10 +1106,22 @@ const CRM = () => {
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
       if (!detailClient?.id || !empresaId) return;
-      const { error } = await supabase.from("crm_orcamentos").update({ aprovado: true }).eq("id", orcId);
+      // Mark this orçamento approved AND pin its kanban column to 'projeto'
+      // so only this card moves — never the client-level fallback (which would
+      // sweep all sibling cards along with it).
+      const { error } = await supabase
+        .from("crm_orcamentos")
+        .update({ aprovado: true, status_kanban: "projeto" } as any)
+        .eq("id", orcId);
       if (error) throw error;
-      // Auto-update CRM status to "projeto" to avoid manual change and duplicity
-      if (detailClient.status_crm !== "projeto") {
+      // Only touch clientes.status_crm when the client has <2 orçamentos —
+      // otherwise the fallback status would move the other cards too.
+      const { data: orcCount } = await supabase
+        .from("crm_orcamentos")
+        .select("id", { count: "exact", head: false })
+        .eq("cliente_id", detailClient.id);
+      const total = (orcCount ?? []).length;
+      if (total < 2 && detailClient.status_crm !== "projeto") {
         await supabase.from("clientes").update({ status_crm: "projeto" }).eq("id", detailClient.id);
       }
       await syncOrcamentoToProject(orcId);
