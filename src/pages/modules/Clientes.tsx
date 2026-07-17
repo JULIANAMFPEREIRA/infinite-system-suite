@@ -109,16 +109,16 @@ const Clientes = () => {
                   onClick={() => openCliente(c.id)}
                   className="cursor-pointer hover:bg-secondary/40 transition"
                 >
-                  <td className="px-3 py-1.5 text-sm font-medium">{c.nome}</td>
-                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.telefone ?? "—"}</td>
-                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.email ?? "—"}</td>
-                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{c.cidade ?? "—"}</td>
-                  <td className="px-3 py-1.5">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${statusCrmColors[status]}`}>
+                  <td className="px-2.5 py-1.5 font-medium">{c.nome}</td>
+                  <td className="px-2.5 py-1.5">{c.telefone ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{c.email ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">{c.cidade ?? "—"}</td>
+                  <td className="px-2.5 py-1.5">
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium ${statusCrmColors[status]}`}>
                       {statusCrmLabels[status]}
                     </span>
                   </td>
-                  <td className="px-3 py-1.5 text-xs text-right tabular-nums">{projetosCount?.[c.id] ?? 0}</td>
+                  <td className="px-2.5 py-1.5 text-right tabular-nums">{projetosCount?.[c.id] ?? 0}</td>
                 </tr>
               );
             })}
