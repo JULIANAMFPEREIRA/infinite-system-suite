@@ -563,7 +563,9 @@ const FinanceiroPagar = () => {
         return (c.descricao ?? "").toLowerCase().includes(q)
           || ((c as any).fornecedores?.nome ?? "").toLowerCase().includes(q);
       })
-      .filter(c => inPeriod((c as any).data_pagamento))
+      // Match by data_pagamento when present; otherwise fall back to
+      // data_vencimento so paid entries without a payment date still count.
+      .filter(c => inPeriod((c as any).data_pagamento ?? (c as any).data_vencimento))
       .reduce((s, c) => s + (Number(c.valor) || 0), 0);
   }, [contas, filtered, statusFilter, categoriaFilter, buscaFilter, periodoFilter, dataInicio, dataFim]);
   const totalVencido = filtered.reduce((s, c) => {
