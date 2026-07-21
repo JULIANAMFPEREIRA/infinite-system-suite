@@ -3835,7 +3835,7 @@ const CRM = () => {
                         const c = card.client;
                         const orcs = getClientOrcamentos(c.id);
                         const projs = getClientProjetos(c.id);
-                        const totalVenda = getClientTotalVenda(c.id);
+                        const totalVenda = card.kind === "orc" ? getOrcamentoTotal(card.orc) : getClientTotalVenda(c.id);
                         const hasApproved = orcs.some(o => o.aprovado);
                         const dragPayload = card.kind === "orc" ? `orc:${card.id}` : `cli:${c.id}`;
                         const cardKey = card.kind === "orc" ? `orc-${card.id}` : `cli-${c.id}`;
@@ -3847,7 +3847,16 @@ const CRM = () => {
                             draggable
                             onDragStart={e => { setDragClientId(cardKey); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragPayload); }}
                             onDragEnd={() => setDragClientId(null)}
-                            onClick={() => openDetail(c)}
+                            onClick={() => {
+                              if (card.kind === "orc") {
+                                setDetailClient(c);
+                                setViewMode("detail");
+                                setActiveOrcamentoId(card.id);
+                                setActiveTab("itens");
+                              } else {
+                                openDetail(c);
+                              }
+                            }}
                             className={`group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.01] active:scale-[0.98] ${dragClientId === cardKey ? "opacity-40 scale-95" : ""}`}
                           >
                             {/* Drag handle */}
