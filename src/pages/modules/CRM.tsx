@@ -3853,6 +3853,11 @@ const CRM = () => {
                                 setViewMode("detail");
                                 setActiveOrcamentoId(card.id);
                                 setActiveTab("itens");
+                              } else if (orcs.length > 0) {
+                                setDetailClient(c);
+                                setViewMode("detail");
+                                setActiveOrcamentoId(orcs[0].id);
+                                setActiveTab("itens");
                               } else {
                                 openDetail(c);
                               }
