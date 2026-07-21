@@ -3683,6 +3683,17 @@ const CRM = () => {
     return 0;
   };
 
+  const getOrcamentoTotal = (orc: any) => {
+    const itens = (allCrmItens ?? []).filter((i: any) => i.orcamento_id === orc.id);
+    const totals = calcOrcamentoTotals({
+      itens: itens as any,
+      frete: (orc as any).frete ?? 0,
+      imposto: (orc as any).imposto ?? 0,
+      simulacao_pagamento: orc.simulacao_pagamento as any,
+    });
+    return totals.totalVenda;
+  };
+
   const handleDragStart = (e: React.DragEvent, clientId: string) => {
     setDragClientId(clientId);
     e.dataTransfer.effectAllowed = "move";
