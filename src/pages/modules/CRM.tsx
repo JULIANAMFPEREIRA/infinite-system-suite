@@ -494,9 +494,20 @@ const CRM = () => {
   const { data: allOrcamentos } = useQuery({
     queryKey: ["all_crm_orcamentos", empresaId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento, status_kanban").order("created_at", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase.from("crm_orcamentos").select("id, cliente_id, nome, aprovado, simulacao_pagamento, status_kanban, frete, imposto").order("created_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
+    },
+    enabled: !!empresaId,
+  });
+
+  // All items for kanban per-orçamento totals
+  const { data: allCrmItens } = useQuery({
+    queryKey: ["all_crm_itens_kanban", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_itens").select("orcamento_id, quantidade, preco_venda, preco_custo, rt_comissao");
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!empresaId,
   });
@@ -3672,6 +3683,17 @@ const CRM = () => {
     return 0;
   };
 
+  const getOrcamentoTotal = (orc: any) => {
+    const itens = (allCrmItens ?? []).filter((i: any) => i.orcamento_id === orc.id);
+    const totals = calcOrcamentoTotals({
+      itens: itens as any,
+      frete: (orc as any).frete ?? 0,
+      imposto: (orc as any).imposto ?? 0,
+      simulacao_pagamento: orc.simulacao_pagamento as any,
+    });
+    return totals.totalVenda;
+  };
+
   const handleDragStart = (e: React.DragEvent, clientId: string) => {
     setDragClientId(clientId);
     e.dataTransfer.effectAllowed = "move";
@@ -3813,7 +3835,7 @@ const CRM = () => {
                         const c = card.client;
                         const orcs = getClientOrcamentos(c.id);
                         const projs = getClientProjetos(c.id);
-                        const totalVenda = getClientTotalVenda(c.id);
+                        const totalVenda = card.kind === "orc" ? getOrcamentoTotal(card.orc) : getClientTotalVenda(c.id);
                         const hasApproved = orcs.some(o => o.aprovado);
                         const dragPayload = card.kind === "orc" ? `orc:${card.id}` : `cli:${c.id}`;
                         const cardKey = card.kind === "orc" ? `orc-${card.id}` : `cli-${c.id}`;
@@ -3825,7 +3847,16 @@ const CRM = () => {
                             draggable
                             onDragStart={e => { setDragClientId(cardKey); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragPayload); }}
                             onDragEnd={() => setDragClientId(null)}
-                            onClick={() => openDetail(c)}
+                            onClick={() => {
+                              if (card.kind === "orc") {
+                                setDetailClient(c);
+                                setViewMode("detail");
+                                setActiveOrcamentoId(card.id);
+                                setActiveTab("itens");
+                              } else {
+                                openDetail(c);
+                              }
+                            }}
                             className={`group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.01] active:scale-[0.98] ${dragClientId === cardKey ? "opacity-40 scale-95" : ""}`}
                           >
                             {/* Drag handle */}

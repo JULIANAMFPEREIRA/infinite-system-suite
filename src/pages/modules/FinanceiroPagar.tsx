@@ -525,14 +525,58 @@ const FinanceiroPagar = () => {
      return list;
    }, [contas, statusFilter, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
 
+   // KPI base: same as filtered but IGNORES statusFilter so cards always
+   // reflect the selected period regardless of status filter.
+   const kpiBase = useMemo(() => {
+     let list = contas ?? [];
+     if (categoriaFilter) list = list.filter(c => (c as any).categoria_id === categoriaFilter);
+     if (buscaFilter.trim()) {
+       const q = buscaFilter.trim().toLowerCase();
+       list = list.filter(c => {
+         const descMatch = (c.descricao ?? "").toLowerCase().includes(q);
+         const fornecedorMatch = ((c as any).fornecedores?.nome ?? "").toLowerCase().includes(q);
+         return descMatch || fornecedorMatch;
+       });
+     }
+     if (periodoFilter) {
+       const today = new Date();
+       const y = today.getFullYear();
+       const m = today.getMonth();
+       list = list.filter(c => {
+         if (!c.data_vencimento) return false;
+         const d = new Date(c.data_vencimento + "T00:00:00");
+         if (periodoFilter === "mes_atual") return d.getFullYear() === y && d.getMonth() === m;
+         if (periodoFilter === "mes_passado") {
+           const pm = m === 0 ? 11 : m - 1;
+           const py = m === 0 ? y - 1 : y;
+           return d.getFullYear() === py && d.getMonth() === pm;
+         }
+         if (periodoFilter === "ano_atual") return d.getFullYear() === y;
+         return true;
+       });
+     }
+     if (dataInicio) list = list.filter(c => c.data_vencimento && c.data_vencimento >= dataInicio);
+     if (dataFim) list = list.filter(c => c.data_vencimento && c.data_vencimento <= dataFim);
+     return list;
+   }, [contas, categoriaFilter, periodoFilter, buscaFilter, dataInicio, dataFim]);
+
   const hoje = new Date().toISOString().split("T")[0];
-  const totalPendente = filtered.filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const totalPendente = kpiBase.filter(c => c.status === "pendente" && (!c.data_vencimento || c.data_vencimento >= hoje)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
   // Pago KPI: when a period/date filter is active, match by data_pagamento within that period
   // (independent of data_vencimento), so paid entries always appear in the selected period.
   const totalPago = useMemo(() => {
     const hasPeriodFilter = !!(periodoFilter || dataInicio || dataFim);
     if (!hasPeriodFilter) {
-      return filtered.filter(c => c.status === "pago").reduce((s, c) => s + (Number(c.valor) || 0), 0);
+      return (contas ?? [])
+        .filter(c => c.status === "pago")
+        .filter(c => !categoriaFilter || (c as any).categoria_id === categoriaFilter)
+        .filter(c => {
+          if (!buscaFilter.trim()) return true;
+          const q = buscaFilter.trim().toLowerCase();
+          return (c.descricao ?? "").toLowerCase().includes(q)
+            || ((c as any).fornecedores?.nome ?? "").toLowerCase().includes(q);
+        })
+        .reduce((s, c) => s + (Number(c.valor) || 0), 0);
     }
     const today = new Date();
     const y = today.getFullYear();
@@ -555,7 +599,6 @@ const FinanceiroPagar = () => {
     };
     return (contas ?? [])
       .filter(c => c.status === "pago")
-      .filter(c => !statusFilter || c.status === statusFilter)
       .filter(c => !categoriaFilter || (c as any).categoria_id === categoriaFilter)
       .filter(c => {
         if (!buscaFilter.trim()) return true;
@@ -567,8 +610,8 @@ const FinanceiroPagar = () => {
       // data_vencimento so paid entries without a payment date still count.
       .filter(c => inPeriod((c as any).data_pagamento ?? (c as any).data_vencimento))
       .reduce((s, c) => s + (Number(c.valor) || 0), 0);
-  }, [contas, filtered, statusFilter, categoriaFilter, buscaFilter, periodoFilter, dataInicio, dataFim]);
-  const totalVencido = filtered.reduce((s, c) => {
+  }, [contas, categoriaFilter, buscaFilter, periodoFilter, dataInicio, dataFim]);
+  const totalVencido = kpiBase.reduce((s, c) => {
     if (
       c.status === "pendente" &&
       c.data_vencimento &&
