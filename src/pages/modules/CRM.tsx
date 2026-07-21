@@ -501,6 +501,17 @@ const CRM = () => {
     enabled: !!empresaId,
   });
 
+  // All items for kanban per-orçamento totals
+  const { data: allCrmItens } = useQuery({
+    queryKey: ["all_crm_itens_kanban", empresaId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("crm_itens").select("orcamento_id, quantidade, preco_venda, preco_custo, rt_comissao");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!empresaId,
+  });
+
   const { data: produtosCatalogo } = useQuery({
     queryKey: ["produtos_autocomplete_crm", empresaId],
     queryFn: async () => {
