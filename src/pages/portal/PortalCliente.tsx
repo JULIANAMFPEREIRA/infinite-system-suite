@@ -200,13 +200,13 @@ function DocumentosUpload({ clienteId, projetoId, onUploaded }: { clienteId: str
     if (!file) return;
     setUploading(true);
     try {
-      const path = `cliente/${clienteId}/${Date.now()}_${file.name}`;
+      const { data: { user } } = await supabase.auth.getUser();
+      // resolve empresa_id via clientes (also used as the storage folder prefix)
+      const { data: cli } = await supabase.from("clientes").select("empresa_id").eq("id", clienteId).maybeSingle();
+      const path = `${cli?.empresa_id}/${clienteId}/${Date.now()}_${file.name}`;
       const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
-      const { data: { user } } = await supabase.auth.getUser();
-      // resolve empresa_id via clientes
-      const { data: cli } = await supabase.from("clientes").select("empresa_id").eq("id", clienteId).maybeSingle();
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: clienteId,
         projeto_id: projetoId,
