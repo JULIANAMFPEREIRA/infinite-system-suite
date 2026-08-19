@@ -364,7 +364,7 @@ function DocumentosTab({ clienteId, projetoId, autorTipo, empresaId, userId }: T
   const upload = useMutation({
     mutationFn: async (file: File) => {
       const ext = file.name.split(".").pop() ?? "bin";
-      const path = `projetos/${projetoId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = `${empresaId}/${clienteId}/${projetoId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: false });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
