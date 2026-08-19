@@ -22,6 +22,7 @@ import HistoricoProjeto from "@/components/projeto/HistoricoProjeto";
 import { statusProjetoLabels, statusProjetoColors, statusProjetoOperacionais, type StatusProjeto } from "@/lib/statusConfig";
 import { useFieldVisibility } from "@/hooks/useFieldVisibility";
 import { PagamentosRTSection } from "@/components/parceiros/PagamentosRTSection";
+import { StorageImage, StorageLink } from "@/components/ui/storage-media";
 
 type TipoItem = Database["public"]["Enums"]["tipo_projeto_item"];
 
@@ -2120,9 +2121,9 @@ const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null;
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {arquivos.map(img => (
               <div key={img.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary/50 transition">
-                <a href={img.url} target="_blank" rel="noopener noreferrer">
-                  <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover" />
-                </a>
+                <StorageLink url={img.url}>
+                  <StorageImage url={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover" />
+                </StorageLink>
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-2">
                   <span className="text-[10px] text-white truncate">{img.nome_arquivo}</span>
                   <button onClick={() => { if (window.confirm("Excluir?")) handleDelete(img.id, img.url); }} className="p-1 rounded bg-black/50 hover:bg-destructive text-white"><Trash2 size={11} /></button>
@@ -2134,7 +2135,7 @@ const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null;
           <div className="space-y-1">
             {arquivos.map(doc => (
               <div key={doc.id} className="flex items-center gap-2 p-2 rounded hover:bg-secondary/40 transition text-xs">
-                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 flex-1 min-w-0">
+                <StorageLink url={doc.url} className="flex items-center gap-2 flex-1 min-w-0">
                   <FileText size={14} className="text-primary shrink-0" />
                   <span className="truncate text-foreground">{doc.nome_arquivo}</span>
                   <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{doc.tamanho ? `${(doc.tamanho / 1024).toFixed(0)} KB` : ""}</span>
