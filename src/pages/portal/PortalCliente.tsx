@@ -622,7 +622,7 @@ const PortalCliente = () => {
                           <StorageImage url={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1 truncate">{img.nome_arquivo}</p>
-                      </a>
+                      </StorageLink>
                     ))}
                   </div>
                 )}
