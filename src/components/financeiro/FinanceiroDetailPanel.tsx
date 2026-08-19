@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel } from "@/lib/financeiroUtils";
 import { Check, Pencil, Trash2, X, Calendar, DollarSign, FileText, User, Briefcase, Hash, Paperclip } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { resolveStorageUrl } from "@/lib/storageUrl";
 
 interface FinanceiroDetailPanelProps {
   open: boolean;
@@ -151,7 +152,7 @@ const FinanceiroDetailPanel = ({
                   <span className="text-xs text-foreground truncate">{conta.arquivo_nome ?? "Documento"}</span>
                 </div>
                 <button
-                  onClick={() => window.open(conta.arquivo_url, "_blank", "noopener,noreferrer")}
+                  onClick={async () => { const u = await resolveStorageUrl(conta.arquivo_url); if (u) window.open(u, "_blank", "noopener,noreferrer"); }}
                   className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20 transition-colors shrink-0"
                 >
                   Ver Documento

@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
+import { resolveStorageUrl } from "@/lib/storageUrl";
+import { StorageLink } from "@/components/ui/storage-media";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos status" },
@@ -1041,9 +1043,9 @@ const FinanceiroPagar = () => {
               {arquivoUrlAtual ? (
                 <div className="flex items-center gap-2 p-2 rounded border border-border bg-secondary/30">
                   <Paperclip size={13} className="text-primary shrink-0" />
-                  <a href={arquivoUrlAtual} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate flex-1">
+                  <StorageLink url={arquivoUrlAtual} className="text-xs text-primary hover:underline truncate flex-1">
                     {arquivoNomeAtual ?? "Documento anexado"}
-                  </a>
+                  </StorageLink>
                   <button type="button" onClick={handleRemoveFile} disabled={updateConta.isPending} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Remover">
                     <X size={13} />
                   </button>
@@ -1165,7 +1167,7 @@ const FinanceiroPagar = () => {
 
                           {/* 2. Clipe */}
                           <button
-                            onClick={() => (c as any).arquivo_url ? window.open((c as any).arquivo_url, '_blank') : openEdit(c)}
+                            onClick={async () => { const u = (c as any).arquivo_url ? await resolveStorageUrl((c as any).arquivo_url) : null; if (u) window.open(u, '_blank', 'noopener,noreferrer'); else openEdit(c); }}
                             title="Anexar documento"
                             className={`p-1.5 rounded hover:bg-secondary transition-colors ${(c as any).arquivo_url ? "text-primary" : "text-muted-foreground"}`}
                           >

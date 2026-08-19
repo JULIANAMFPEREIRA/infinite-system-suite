@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, BookOpen, FileText, MessageCircle, Send, Upload, Trash2, Pencil, Check, X, Download, CheckCircle2, Circle } from "lucide-react";
+import { StorageImage, StorageLink } from "@/components/ui/storage-media";
 
 const STORAGE_BUCKET = "crm-files";
 
@@ -423,8 +424,8 @@ function DocumentosTab({ clienteId, projetoId, autorTipo, empresaId, userId }: T
                     {d.tipo && <span className="text-[10px] text-muted-foreground">· {d.tipo}</span>}
                   </div>
                 </div>
-                <a href={d.url} target="_blank" rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground p-1" title="Baixar"><Download size={14} /></a>
+                <StorageLink url={d.url}
+                  className="text-muted-foreground hover:text-foreground p-1" title="Baixar"><Download size={14} /></StorageLink>
                 {mine && (
                   <button onClick={() => { if (confirm("Excluir arquivo?")) del.mutate(d.id); }}
                     className="text-muted-foreground hover:text-destructive p-1" title="Excluir"><Trash2 size={14} /></button>

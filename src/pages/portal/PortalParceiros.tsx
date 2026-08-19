@@ -20,6 +20,7 @@ import NotificacoesBell from "@/components/parceiros/NotificacoesBell";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
+import { StorageImage, StorageLink } from "@/components/ui/storage-media";
 
 const statusLabel = statusProjetoLabels as Record<string, string>;
 const statusColor = statusProjetoColors as Record<string, string>;
@@ -383,10 +384,10 @@ const PortalParceiros = () => {
     if (!file || !activeProjeto || !data?.fornecedor) return;
     setUploadingDoc(true);
     try {
-      const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
-      const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file);
+      const path = `${activeProjeto.empresa_id}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: activeProjeto.cliente_id,
         projeto_id: selectedProjeto,
@@ -417,10 +418,10 @@ const PortalParceiros = () => {
     }
     setUploadingImagem(true);
     try {
-      const path = `${data.fornecedor.tipo}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
-      const { error: upErr } = await supabase.storage.from("financeiro-arquivos").upload(path, file);
+      const path = `${activeProjeto.empresa_id}/${activeProjeto.cliente_id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("crm-files").upload(path, file);
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("financeiro-arquivos").getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("crm-files").getPublicUrl(path);
       const { error: insErr } = await supabase.from("crm_arquivos" as any).insert({
         cliente_id: activeProjeto.cliente_id,
         projeto_id: selectedProjeto,
@@ -886,9 +887,9 @@ const PortalParceiros = () => {
                 const canDelete = data.fornecedor.tipo === "tecnico" && img.autor_tipo === "tecnico";
                 return (
                   <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                    <a href={img.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                      <img src={img.url} className="w-full h-full object-cover" />
-                    </a>
+                    <StorageLink url={img.url} className="block w-full h-full">
+                      <StorageImage url={img.url} className="w-full h-full object-cover" />
+                    </StorageLink>
                     {canDelete && (
                       <button
                         onClick={() => handleDeleteImagem(img.id)}
@@ -939,7 +940,7 @@ const PortalParceiros = () => {
           ) : (
             <div className="space-y-2">
               {(documentos ?? []).map(d => (
-                <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
+                <StorageLink key={d.id} url={d.url}
                   className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
                   <FileText size={16} className="text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -950,7 +951,7 @@ const PortalParceiros = () => {
                     </p>
                   </div>
                   <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                </a>
+                </StorageLink>
               ))}
             </div>
           )}
