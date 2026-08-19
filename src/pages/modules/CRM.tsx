@@ -837,19 +837,10 @@ const CRM = () => {
     }
 
      // ── Sync financeiro_receber ──
-     // If this orçamento was approved as part of a group, skip — joint parcelas
+     // If THIS orçamento was approved as part of a group, skip — joint parcelas
      // are managed by AprovarConjuntoModal and must not be overwritten here.
-     // Also check if ANY orçamento for this project has a grupo_id (extra safety).
-     const { data: orcamentosGrupo } = await supabase
-       .from("crm_orcamentos")
-       .select("grupo_id")
-       .eq("cliente_id", detailClient.id)
-       .eq("aprovado", true)
-       .not("grupo_id", "is", null)
-       .limit(1);
-     const projetoTemGrupo = !!(orcamentosGrupo && orcamentosGrupo.length > 0);
-     if ((orcData as any)?.grupo_id || projetoTemGrupo) {
-       console.log("[CRM] Projeto com grupo_id detectado — pulando sync de financeiro_receber");
+     if ((orcData as any)?.grupo_id) {
+       console.log("[CRM] Orçamento com grupo_id — pulando financeiro (gerenciado pelo AprovarConjuntoModal)");
        // skip financeiro sync for grouped orçamentos
      } else {
      const { data: parcelasExistentes } = await supabase
