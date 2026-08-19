@@ -2139,7 +2139,7 @@ const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null;
                   <FileText size={14} className="text-primary shrink-0" />
                   <span className="truncate text-foreground">{doc.nome_arquivo}</span>
                   <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{doc.tamanho ? `${(doc.tamanho / 1024).toFixed(0)} KB` : ""}</span>
-                </a>
+                </StorageLink>
                 <button onClick={() => { if (window.confirm("Excluir?")) handleDelete(doc.id, doc.url); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive shrink-0"><Trash2 size={12} /></button>
               </div>
             ))}
