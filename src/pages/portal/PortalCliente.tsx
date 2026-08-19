@@ -655,7 +655,7 @@ const PortalCliente = () => {
                           </p>
                         </div>
                         <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                      </a>
+                      </StorageLink>
                     ))}
                   </div>
                 )}
