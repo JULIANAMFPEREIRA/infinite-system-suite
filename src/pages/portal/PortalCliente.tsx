@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { StorageImage, StorageLink } from "@/components/ui/storage-media";
 
 type AnotTipo = "geral" | "pendencia" | "diario" | "comunicacao";
 const tipoLabels: Record<AnotTipo, string> = {
@@ -616,9 +617,9 @@ const PortalCliente = () => {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {imagens.map(img => (
-                      <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="group">
+                      <StorageLink key={img.id} url={img.url} className="group">
                         <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                          <img src={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <StorageImage url={img.url} alt={img.nome_arquivo} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1 truncate">{img.nome_arquivo}</p>
                       </a>
@@ -644,7 +645,7 @@ const PortalCliente = () => {
                 ) : (
                   <div className="space-y-2">
                     {docs.map(d => (
-                      <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
+                      <StorageLink key={d.id} url={d.url}
                         className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:border-primary/40 transition-colors">
                         <FileText size={16} className="text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
