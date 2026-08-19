@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 
 import { fmtBRL, fmtDate, statusBadgeClass, statusLabel, rowHighlightClass } from "@/lib/financeiroUtils";
 import FinanceiroDetailPanel from "@/components/financeiro/FinanceiroDetailPanel";
+import { resolveStorageUrl } from "@/lib/storageUrl";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos status" },
@@ -1165,7 +1166,7 @@ const FinanceiroPagar = () => {
 
                           {/* 2. Clipe */}
                           <button
-                            onClick={() => (c as any).arquivo_url ? window.open((c as any).arquivo_url, '_blank') : openEdit(c)}
+                            onClick={async () => { const u = (c as any).arquivo_url ? await resolveStorageUrl((c as any).arquivo_url) : null; if (u) window.open(u, '_blank', 'noopener,noreferrer'); else openEdit(c); }}
                             title="Anexar documento"
                             className={`p-1.5 rounded hover:bg-secondary transition-colors ${(c as any).arquivo_url ? "text-primary" : "text-muted-foreground"}`}
                           >
