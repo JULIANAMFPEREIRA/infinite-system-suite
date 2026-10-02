@@ -459,6 +459,8 @@ const CRM = () => {
   const [activeAmbienteTab, setActiveAmbienteTab] = useState<string>("todos");
   const [addingAmbiente, setAddingAmbiente] = useState(false);
   const [novoAmbienteNome, setNovoAmbienteNome] = useState("");
+  const [distItem, setDistItem] = useState<any | null>(null);
+  const [distValues, setDistValues] = useState<Record<string, number>>({});
   useEffect(() => { setActiveAmbienteTab("todos"); setAddingAmbiente(false); }, [activeOrcamentoId]);
   const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
   const [orcNomeInput, setOrcNomeInput] = useState("");
@@ -2709,7 +2711,12 @@ const CRM = () => {
                 };
                 const delAmb = async (id: string) => {
                   if (!confirm("Remover este ambiente? Os itens não serão excluídos.")) return;
-                  if (await saveAmbs(ambs.filter(a => a.id !== id))) { if (activeAmbienteTab === id) setActiveAmbienteTab("todos"); }
+                  if (await saveAmbs(ambs.filter(a => a.id !== id))) {
+                    if (activeAmbienteTab === id) setActiveAmbienteTab("todos");
+                    const afetados = (crmItens ?? []).filter((it: any) => Array.isArray(it.distribuicao_ambientes) && it.distribuicao_ambientes.some((d: any) => d.ambiente_id === id));
+                    await Promise.all(afetados.map((it: any) => supabase.from("crm_itens").update({ distribuicao_ambientes: it.distribuicao_ambientes.filter((d: any) => d.ambiente_id !== id) } as any).eq("id", it.id)));
+                    if (afetados.length) qc.invalidateQueries({ queryKey: ["crm_itens"] });
+                  }
                 };
                 const tabCls = (on: boolean) => `flex items-center gap-1 h-7 px-3 rounded-md text-[11px] font-medium border transition whitespace-nowrap ${on ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40"}`;
                 return (
@@ -2734,11 +2741,90 @@ const CRM = () => {
                 );
               })()}
 
-              {activeAmbienteTab !== "todos" && (
-                <div className="rounded-lg border border-dashed border-border bg-card/50 py-10 text-center text-xs text-muted-foreground">
-                  Distribuição de itens por ambiente — em breve
-                </div>
-              )}
+              {activeAmbienteTab !== "todos" && (() => {
+                const rows = (crmItens ?? []).map((it: any) => {
+                  const d = (Array.isArray(it.distribuicao_ambientes) ? it.distribuicao_ambientes : []).find((x: any) => x.ambiente_id === activeAmbienteTab);
+                  return { it, qtd: Number(d?.quantidade ?? 0) };
+                }).filter(r => r.qtd > 0);
+                const subtotal = rows.reduce((s, r) => s + r.qtd * Number(r.it.preco_venda ?? 0), 0);
+                const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                if (rows.length === 0) return (
+                  <div className="rounded-lg border border-dashed border-border bg-card/50 py-10 text-center text-xs text-muted-foreground">
+                    Nenhum item distribuído para este ambiente. Use o botão "Distribuir" na aba Todos.
+                  </div>
+                );
+                return (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <table className="w-full text-[13px]">
+                      <thead className="bg-secondary/40">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                          <th className="text-center px-3 py-2 font-semibold w-20">Qtd</th>
+                          <th className="text-right px-3 py-2 font-semibold w-32">Venda unit</th>
+                          <th className="text-right px-3 py-2 font-semibold w-32">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(({ it, qtd }) => (
+                          <tr key={it.id} className="border-t border-border">
+                            <td className="px-3 py-2">{it.descricao}</td>
+                            <td className="px-3 py-2 text-center">{qtd}</td>
+                            <td className="px-3 py-2 text-right">{fmt(Number(it.preco_venda ?? 0))}</td>
+                            <td className="px-3 py-2 text-right font-medium">{fmt(qtd * Number(it.preco_venda ?? 0))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-border bg-secondary/20">
+                          <td colSpan={3} className="px-3 py-2 text-right font-semibold">Subtotal do ambiente</td>
+                          <td className="px-3 py-2 text-right font-bold text-primary">{fmt(subtotal)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              <Dialog open={!!distItem} onOpenChange={o => { if (!o) setDistItem(null); }}>
+                <DialogContent className="max-w-md">
+                  {distItem && (() => {
+                    const ambs: any[] = Array.isArray((activeOrc as any)?.ambientes) ? [...(activeOrc as any).ambientes].sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0)) : [];
+                    const total = Number(distItem.quantidade ?? 0);
+                    const soma = ambs.reduce((s, a) => s + (Number(distValues[a.id]) || 0), 0);
+                    const over = soma > total;
+                    const exact = soma === total;
+                    const save = async () => {
+                      const arr = ambs.map(a => ({ ambiente_id: a.id, quantidade: Number(distValues[a.id]) || 0 })).filter(d => d.quantidade > 0);
+                      const { error } = await supabase.from("crm_itens").update({ distribuicao_ambientes: arr } as any).eq("id", distItem.id);
+                      if (error) { toast.error("Erro ao salvar distribuição"); return; }
+                      toast.success("Distribuição salva");
+                      qc.invalidateQueries({ queryKey: ["crm_itens"] });
+                      setDistItem(null);
+                    };
+                    return (
+                      <>
+                        <DialogHeader><DialogTitle className="text-sm">Distribuir {distItem.descricao} — Qtd total: {total}</DialogTitle></DialogHeader>
+                        <div className="space-y-2">
+                          {ambs.map(a => (
+                            <div key={a.id} className="flex items-center justify-between gap-3">
+                              <span className="text-xs font-medium">{a.nome}</span>
+                              <input type="number" min={0} value={distValues[a.id] ?? 0} onChange={e => setDistValues(v => ({ ...v, [a.id]: Math.max(0, Number(e.target.value) || 0) }))} className="h-8 w-24 px-2 text-xs text-right bg-background border border-border rounded" />
+                            </div>
+                          ))}
+                        </div>
+                        <div className={`text-xs font-semibold ${over ? "text-destructive" : exact ? "text-success" : "text-warning"}`}>
+                          Distribuído: {soma} de {total}
+                          {!over && !exact && <span className="block font-normal text-muted-foreground">Atenção: distribuição parcial ({total - soma} sem ambiente).</span>}
+                        </div>
+                        <DialogFooter>
+                          <button onClick={() => setDistItem(null)} className="h-8 px-3 rounded bg-secondary text-xs">Cancelar</button>
+                          <button onClick={save} disabled={over} className="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50">Salvar</button>
+                        </DialogFooter>
+                      </>
+                    );
+                  })()}
+                </DialogContent>
+              </Dialog>
 
               {activeAmbienteTab === "todos" && (() => {
                 const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico" && (i as any).tipo !== "adicional");
@@ -2937,6 +3023,14 @@ const CRM = () => {
                                 <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
                                     <button onClick={() => { setEditItemId(item.id); setItemDesc(item.descricao); setItemQtd(Number(item.quantidade)); setItemCusto(Number(item.preco_custo)); setItemVenda(Number(item.preco_venda)); setItemRt(Number((item as any).rt_comissao ?? 0)); setItemRtTipo(((item as any).rt_tipo ?? "valor") as "valor" | "percentual"); setItemRtPercentual(Number((item as any).rt_percentual ?? 0)); setItemTipo((item as any).tipo ?? "produto"); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Editar no formulário"><Pencil size={12} /></button>
+                                    <button onClick={() => {
+                                      const ambs: any[] = Array.isArray((activeOrc as any)?.ambientes) ? (activeOrc as any).ambientes : [];
+                                      if (ambs.length === 0) { toast.info("Crie um ambiente primeiro (+ Ambiente)."); return; }
+                                      const dist: any[] = Array.isArray(item.distribuicao_ambientes) ? item.distribuicao_ambientes : [];
+                                      const vals: Record<string, number> = {};
+                                      ambs.forEach(a => { vals[a.id] = Number(dist.find(d => d.ambiente_id === a.id)?.quantidade ?? 0); });
+                                      setDistValues(vals); setDistItem(item);
+                                    }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-primary" title="Distribuir por ambiente"><LayoutGrid size={12} /></button>
                                     <button onClick={() => { if (window.confirm("Excluir item?")) deleteCrmItem.mutate(item.id); }} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                                   </div>
                                 </td>
