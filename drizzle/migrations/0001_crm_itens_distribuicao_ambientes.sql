@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_itens ADD COLUMN IF NOT EXISTS distribuicao_ambientes jsonb DEFAULT '[]'::jsonb;

@@ -8,6 +8,13 @@
       "when": 1790973846556,
       "tag": "0000_crm_orcamentos_ambientes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790974789025,
+      "tag": "0001_crm_itens_distribuicao_ambientes",
+      "breakpoints": true
     }
   ]
 }
