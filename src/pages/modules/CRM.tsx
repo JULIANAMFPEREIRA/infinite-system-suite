@@ -456,6 +456,10 @@ const CRM = () => {
   // Active tab & orcamento
   const [activeTab, setActiveTab] = useState("dados");
   const [activeOrcamentoId, setActiveOrcamentoId] = useState<string | null>(null);
+  const [activeAmbienteTab, setActiveAmbienteTab] = useState<string>("todos");
+  const [addingAmbiente, setAddingAmbiente] = useState(false);
+  const [novoAmbienteNome, setNovoAmbienteNome] = useState("");
+  useEffect(() => { setActiveAmbienteTab("todos"); setAddingAmbiente(false); }, [activeOrcamentoId]);
   const [editingOrcNome, setEditingOrcNome] = useState<string | null>(null);
   const [orcNomeInput, setOrcNomeInput] = useState("");
   const [showConjuntoModal, setShowConjuntoModal] = useState(false);
@@ -2689,7 +2693,54 @@ const CRM = () => {
               {/* ═══════════════════════════════════════════════════════ */}
               {/* PRODUTOS                                               */}
               {/* ═══════════════════════════════════════════════════════ */}
-              {(() => {
+              {activeOrcamentoId && (() => {
+                const ambs: { id: string; nome: string; ordem: number }[] = Array.isArray((activeOrc as any)?.ambientes) ? [...(activeOrc as any).ambientes].sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0)) : [];
+                const saveAmbs = async (next: any[]) => {
+                  const { error } = await supabase.from("crm_orcamentos").update({ ambientes: next } as any).eq("id", activeOrcamentoId);
+                  if (error) { toast.error("Erro ao salvar ambientes"); return false; }
+                  await refetchOrcamentos();
+                  return true;
+                };
+                const addAmb = async () => {
+                  const nome = novoAmbienteNome.trim().toUpperCase();
+                  if (!nome) return;
+                  const novo = { id: crypto.randomUUID(), nome, ordem: ambs.length ? Math.max(...ambs.map(a => a.ordem ?? 0)) + 1 : 1 };
+                  if (await saveAmbs([...ambs, novo])) { setNovoAmbienteNome(""); setAddingAmbiente(false); setActiveAmbienteTab(novo.id); }
+                };
+                const delAmb = async (id: string) => {
+                  if (!confirm("Remover este ambiente? Os itens não serão excluídos.")) return;
+                  if (await saveAmbs(ambs.filter(a => a.id !== id))) { if (activeAmbienteTab === id) setActiveAmbienteTab("todos"); }
+                };
+                const tabCls = (on: boolean) => `flex items-center gap-1 h-7 px-3 rounded-md text-[11px] font-medium border transition whitespace-nowrap ${on ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40"}`;
+                return (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    <button onClick={() => setActiveAmbienteTab("todos")} className={tabCls(activeAmbienteTab === "todos")}>Todos</button>
+                    {ambs.map(a => (
+                      <div key={a.id} onClick={() => setActiveAmbienteTab(a.id)} className={`${tabCls(activeAmbienteTab === a.id)} cursor-pointer`}>
+                        <span>{a.nome}</span>
+                        <button onClick={e => { e.stopPropagation(); delAmb(a.id); }} className="ml-0.5 opacity-70 hover:opacity-100" title="Remover ambiente"><X size={11} /></button>
+                      </div>
+                    ))}
+                    {addingAmbiente ? (
+                      <div className="flex items-center gap-1">
+                        <input autoFocus value={novoAmbienteNome} onChange={e => setNovoAmbienteNome(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addAmb(); if (e.key === "Escape") { setAddingAmbiente(false); setNovoAmbienteNome(""); } }} placeholder="Nome do ambiente" className="h-7 px-2 text-xs bg-background border border-primary rounded w-36" />
+                        <button onClick={addAmb} className="text-primary"><Check size={13} /></button>
+                        <button onClick={() => { setAddingAmbiente(false); setNovoAmbienteNome(""); }} className="text-muted-foreground"><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setAddingAmbiente(true)} className="flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-medium border border-dashed border-primary/40 text-primary hover:bg-primary/5 whitespace-nowrap"><Plus size={11} /> Ambiente</button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {activeAmbienteTab !== "todos" && (
+                <div className="rounded-lg border border-dashed border-border bg-card/50 py-10 text-center text-xs text-muted-foreground">
+                  Distribuição de itens por ambiente — em breve
+                </div>
+              )}
+
+              {activeAmbienteTab === "todos" && (() => {
                 const produtos = (crmItens ?? []).filter(i => (i as any).tipo !== "servico" && (i as any).tipo !== "adicional");
                 const servicos = (crmItens ?? []).filter(i => (i as any).tipo === "servico");
                 const adicionais = (crmItens ?? []).filter(i => (i as any).tipo === "adicional");
@@ -2936,7 +2987,7 @@ const CRM = () => {
                 );
               })()}
 
-              {(!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
+              {activeAmbienteTab === "todos" && (!crmItens || crmItens.length === 0) && <p className="text-muted-foreground text-xs text-center py-6">Nenhum item adicionado{activeOrcamentoId ? " neste orçamento" : ""}.</p>}
 
               {/* ═══════════════════════════════════════════════════════ */}
               {/* FRETES DO PROJETO (lista leve, múltiplos, sem status) */}
