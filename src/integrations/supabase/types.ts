@@ -838,6 +838,7 @@ export type Database = {
       }
       crm_orcamentos: {
         Row: {
+          ambientes: Json | null
           aprovado: boolean
           cliente_id: string | null
           cliente_nome_avulso: string | null
@@ -863,6 +864,7 @@ export type Database = {
           tecnico_rt_vencimento: string | null
         }
         Insert: {
+          ambientes?: Json | null
           aprovado?: boolean
           cliente_id?: string | null
           cliente_nome_avulso?: string | null
@@ -888,6 +890,7 @@ export type Database = {
           tecnico_rt_vencimento?: string | null
         }
         Update: {
+          ambientes?: Json | null
           aprovado?: boolean
           cliente_id?: string | null
           cliente_nome_avulso?: string | null

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790973846556,
+      "tag": "0000_crm_orcamentos_ambientes",
+      "breakpoints": true
+    }
+  ]
+}
