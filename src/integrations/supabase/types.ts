@@ -755,6 +755,7 @@ export type Database = {
           cliente_id: string
           created_at: string
           descricao: string
+          distribuicao_ambientes: Json | null
           empresa_id: string
           id: string
           orcamento_id: string | null
@@ -773,6 +774,7 @@ export type Database = {
           cliente_id: string
           created_at?: string
           descricao: string
+          distribuicao_ambientes?: Json | null
           empresa_id: string
           id?: string
           orcamento_id?: string | null
@@ -791,6 +793,7 @@ export type Database = {
           cliente_id?: string
           created_at?: string
           descricao?: string
+          distribuicao_ambientes?: Json | null
           empresa_id?: string
           id?: string
           orcamento_id?: string | null
