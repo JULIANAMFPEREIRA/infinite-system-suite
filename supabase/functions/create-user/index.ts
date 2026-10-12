@@ -146,6 +146,8 @@ Deno.serve(async (req) => {
     // If the user is a partner, ensure a fornecedor entry with subtipo
     if (role === "parceiro") {
       const subtipo = String(body?.subtipo_parceiro ?? "arquiteto").trim().toLowerCase();
+      // tipo follows the subtipo: tecnico stays tecnico, everything else = arquiteto
+      const fornecedorTipo = subtipo === "tecnico" ? "tecnico" : "arquiteto";
       const { data: existingForn } = await supabaseAdmin
         .from("fornecedores")
         .select("id")
@@ -157,14 +159,14 @@ Deno.serve(async (req) => {
           empresa_id: callerProfile.empresa_id,
           nome: full_name.toUpperCase(),
           email,
-          tipo: "arquiteto",
+          tipo: fornecedorTipo,
           subtipo_parceiro: subtipo,
           ativo: true,
         });
         if (fornErr) console.error("parceiro fornecedor insert", fornErr);
       } else {
         await supabaseAdmin.from("fornecedores")
-          .update({ subtipo_parceiro: subtipo, ativo: true })
+          .update({ tipo: fornecedorTipo, subtipo_parceiro: subtipo, ativo: true })
           .eq("id", existingForn.id);
       }
     }
