@@ -1553,7 +1553,7 @@ const PortalParceiros = () => {
         );
       })()}
 
-      {data.fornecedor.tipo === "arquiteto" && (data.leads?.length ?? 0) > 0 && (
+      {data.fornecedor.tipo === "arquiteto" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-0.5">
             <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
