@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { statusParcela, resumoFinanceiroCliente, rotuloSituacao } from "@/lib/statusParcela";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -379,7 +380,7 @@ const PortalCliente = () => {
     queryKey: ["portal_financeiro", clienteData?.cliente?.id],
     queryFn: async () => {
       const { data } = await supabase.from("financeiro_receber")
-        .select("id, descricao, valor, data_vencimento, data_recebimento, status, parcela")
+        .select("id, descricao, valor, valor_recebido, data_vencimento, data_recebimento, status, parcela")
         .eq("cliente_id", clienteData!.cliente.id)
         .eq("deletado", false)
         .order("data_vencimento", { ascending: true });
@@ -721,46 +722,71 @@ const PortalCliente = () => {
                 <p className="text-xs text-muted-foreground py-6 text-center">Em breve</p>
               </TabsContent>
 
-              {/* Financeiro */}
+              {/* Financeiro (somente o do próprio cliente: o que pagou, parcelamento, vencido) */}
               <TabsContent value="financeiro" className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
                 {!financeiro?.length ? (
                   <p className="text-xs text-muted-foreground py-6 text-center">Nenhum lançamento financeiro.</p>
-                ) : (
-                  <div className="border border-border rounded-lg overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-secondary/50">
-                        <tr>
-                          <th className="text-left px-3 py-2 font-semibold">Descrição</th>
-                          <th className="text-left px-3 py-2 font-semibold">Vencimento</th>
-                          <th className="text-right px-3 py-2 font-semibold">Valor</th>
-                          <th className="text-center px-3 py-2 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {financeiro.map((f: any) => (
-                          <tr key={f.id} className="border-t border-border">
-                            <td className="px-3 py-2">
-                              {f.descricao ?? "Lançamento"}
-                              {f.parcela && <span className="text-[10px] text-muted-foreground ml-1">({f.parcela})</span>}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground">{f.data_vencimento ? new Date(f.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
-                            <td className="px-3 py-2 text-right font-medium">
-                              {Number(f.valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                                f.status === "pago" || f.status === "recebido" ? "bg-success/15 text-success" :
-                                f.status === "atrasado" ? "bg-destructive/15 text-destructive" :
-                                "bg-warning/15 text-warning"
-                              }`}>{f.status ?? "pendente"}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                ) : (() => {
+                  const hoje = new Date().toLocaleDateString("sv-SE");
+                  const resumo = resumoFinanceiroCliente(financeiro as any[], hoje);
+                  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                  const fmt = (d?: string | null) => (d ? new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR") : "—");
+                  const cor: Record<string, string> = {
+                    pago: "bg-success/15 text-success",
+                    parcial: "bg-warning/15 text-warning",
+                    vencido: "bg-destructive/15 text-destructive",
+                    a_vencer: "bg-secondary text-muted-foreground",
+                    cancelado: "bg-muted text-muted-foreground",
+                  };
+                  return (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="border border-border rounded-lg p-3 bg-card">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Já pago</p>
+                          <p className="text-sm font-bold text-success">{brl(resumo.pago)}</p>
+                        </div>
+                        <div className="border border-border rounded-lg p-3 bg-card">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Vencido</p>
+                          <p className={`text-sm font-bold ${resumo.vencido > 0 ? "text-destructive" : "text-foreground"}`}>{brl(resumo.vencido)}</p>
+                        </div>
+                        <div className="border border-border rounded-lg p-3 bg-card">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">A vencer</p>
+                          <p className="text-sm font-bold text-foreground">{brl(resumo.aVencer)}</p>
+                        </div>
+                      </div>
+                      <div className="border border-border rounded-lg overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-secondary/50">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-semibold">Parcela</th>
+                              <th className="text-left px-3 py-2 font-semibold">Vencimento</th>
+                              <th className="text-right px-3 py-2 font-semibold">Valor</th>
+                              <th className="text-left px-3 py-2 font-semibold">Pago em</th>
+                              <th className="text-center px-3 py-2 font-semibold">Situação</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {financeiro.map((f: any) => {
+                              const sit = statusParcela(f, hoje);
+                              return (
+                                <tr key={f.id} className="border-t border-border">
+                                  <td className="px-3 py-2">{f.descricao ?? "Lançamento"}</td>
+                                  <td className="px-3 py-2 text-muted-foreground">{fmt(f.data_vencimento)}</td>
+                                  <td className="px-3 py-2 text-right font-medium">{brl(Number(f.valor ?? 0))}</td>
+                                  <td className="px-3 py-2 text-muted-foreground">{sit === "pago" || sit === "parcial" ? fmt(f.data_recebimento) : "—"}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${cor[sit]}`}>{rotuloSituacao[sit]}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()}
               </TabsContent>
             </Tabs>
           </>
