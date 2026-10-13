@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "./useEmpresa";
 
@@ -22,11 +23,16 @@ export const useVisitasTecnicas = (projetoId: string | null) => {
 // Helper to sync with Google Calendar (fire-and-forget, no errors block main flow)
 const syncToGoogleCalendar = async (action: "create" | "update" | "delete", visita: any) => {
   try {
-    await supabase.functions.invoke("google-calendar-sync", {
+    // invoke() NÃO lança erro quando a função falha: o erro vem no campo "error".
+    const { error } = await supabase.functions.invoke("google-calendar-sync", {
       body: { action, visita },
     });
-  } catch {
-    // Silently fail - Google Calendar sync is non-blocking
+    if (error) {
+      Sentry.captureException(error, { tags: { modulo: "google-calendar-sync", acao: action } });
+    }
+  } catch (e) {
+    // Não bloqueia o fluxo principal, mas agora o erro é registrado (antes falhava em silêncio).
+    Sentry.captureException(e, { tags: { modulo: "google-calendar-sync", acao: action } });
   }
 };
 
