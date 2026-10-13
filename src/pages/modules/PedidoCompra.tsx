@@ -195,7 +195,7 @@ const PedidoForm = ({ id, onClose }: { id: string | null; onClose: () => void })
   });
   const { data: produtos } = useQuery({
     queryKey: ["produtos_pc", empresaId],
-    queryFn: async () => (await supabase.from("produtos").select("id, codigo, nome, preco_custo").eq("deletado", false).order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("produtos").select("id, nome, preco_custo").eq("deletado", false).order("nome")).data ?? [],
     enabled: !!empresaId,
   });
 
@@ -270,7 +270,7 @@ const PedidoForm = ({ id, onClose }: { id: string | null; onClose: () => void })
   const pickProduto = (idx: number, prodId: string) => {
     const p: any = (produtos ?? []).find((x: any) => x.id === prodId);
     if (!p) return;
-    updateItem(idx, { codigo: p.codigo || "", descricao: p.nome, valor_unit: Number(p.preco_custo || 0), produto_id: p.id });
+    updateItem(idx, { descricao: p.nome, valor_unit: Number(p.preco_custo || 0), produto_id: p.id });
   };
 
   const adicionarDoPreProjeto = (novos: PedidoItem[]) => {
