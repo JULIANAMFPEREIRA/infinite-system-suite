@@ -1,4 +1,7 @@
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
+import { planParcelasReceber } from "@/lib/parcelasReceber";
+import { planComissaoRT } from "@/lib/comissaoRT";
+import { alinharSimulacaoComRecebidas } from "@/lib/simulacaoParcelas";
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -759,7 +762,7 @@ const CRM = () => {
   // ─── Reusable sync function (guarded against concurrent calls) ───
   const syncingRef = useRef(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
+  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean }) => {
     if (!detailClient?.id || !empresaId) return;
 
     const { data: orcData } = await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single();
@@ -847,29 +850,18 @@ const CRM = () => {
      // ── Sync financeiro_receber ──
      // If THIS orçamento was approved as part of a group, skip — joint parcelas
      // are managed by AprovarConjuntoModal and must not be overwritten here.
-     if ((orcData as any)?.grupo_id) {
+     if (opts?.skipReceber) {
+       console.log("[CRM] Edição de item — financeiro a receber não é reconstruído");
+     } else if ((orcData as any)?.grupo_id) {
        console.log("[CRM] Orçamento com grupo_id — pulando financeiro (gerenciado pelo AprovarConjuntoModal)");
        // skip financeiro sync for grouped orçamentos
      } else {
      const { data: parcelasExistentes } = await supabase
        .from("financeiro_receber")
        .select("id, parcela, status, valor_recebido")
-       .eq("projeto_id", projId);
- 
-     const idsPendentes = (parcelasExistentes ?? [])
-       .filter(p => p.status === "pendente" || p.status === null)
-       .map(p => p.id);
- 
-     if (idsPendentes.length > 0) {
-       await supabase
-         .from("financeiro_receber")
-         .delete()
-         .in("id", idsPendentes);
-     }
- 
-     const parcelasPagas = (parcelasExistentes ?? [])
-       .filter(p => p.status === "pago" || p.status === "parcial");
- 
+       .eq("projeto_id", projId)
+       .eq("deletado", false);
+
      const fullParcelas: { valor: number; data: string | null }[] = [];
      if (simEntradaValor > 0) {
        fullParcelas.push({ valor: simEntradaValor, data: simEntradaData ? parseDate(simEntradaData) : null });
@@ -877,32 +869,29 @@ const CRM = () => {
      simParcelas.forEach((p: any) => {
        fullParcelas.push({ valor: Number(p.valor) || 0, data: p.data ? parseDate(p.data) : null });
      });
- 
+
+     // Regra: nunca toca em parcela paga/parcial; a parcela da posição n sempre recebe o número n.
+     const plano = planParcelasReceber(parcelasExistentes ?? [], fullParcelas);
+
+     if (plano.idsApagar.length > 0) {
+       await supabase.from("financeiro_receber").delete().in("id", plano.idsApagar);
+     }
+
      if (fullParcelas.length > 0) {
-       const totalP = fullParcelas.length;
-       const numerosJaPagos = new Set(parcelasPagas.map(p => p.parcela));
- 
-       const inserts = fullParcelas
-         .filter((_, i) => !numerosJaPagos.has(i + 1))
-         .map((p, i) => {
-           let numero = i + 1;
-           while (numerosJaPagos.has(numero)) numero++;
-           return {
-             empresa_id: empresaId,
-             projeto_id: projId,
-             cliente_id: detailClient.id,
-             descricao: `Parcela ${numero}/${totalP} — ${detailClient.nome}`,
-             valor: p.valor,
-             parcela: numero,
-             data_vencimento: p.data,
-             status: "pendente" as const,
-           };
-         });
- 
+       const inserts = plano.inserts.map(p => ({
+         empresa_id: empresaId,
+         projeto_id: projId,
+         cliente_id: detailClient.id,
+         descricao: `Parcela ${p.parcela}/${plano.total} — ${detailClient.nome}`,
+         valor: p.valor,
+         parcela: p.parcela,
+         data_vencimento: p.data,
+         status: "pendente" as const,
+       }));
        if (inserts.length > 0) {
          await supabase.from("financeiro_receber").insert(inserts);
        }
-     } else if (totalVenda > 0 && parcelasPagas.length === 0) {
+     } else if (totalVenda > 0 && !(parcelasExistentes ?? []).some(p => p.status !== "pendente" && p.status !== null)) {
        await supabase.from("financeiro_receber").insert({
          empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
          descricao: `Conta a receber — ${detailClient.nome}`,
@@ -925,103 +914,128 @@ const CRM = () => {
     }
 
     if (!paidComissao) {
-      await supabase.from("comissoes").delete().eq("projeto_id", projId).eq("status", "pendente");
-      await supabase.from("financeiro_pagar").delete().eq("projeto_id", projId).not("comissao_id", "is", null).eq("status", "pendente");
       const arquitetoId = detailClient.arquiteto_id;
-      if (arquitetoId && insertedItens.length > 0) {
-        const totalRt = insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0);
-        if (totalRt > 0) {
-          const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
-          await supabase.from("comissoes").insert({
+      const totalRt = arquitetoId
+        ? insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0)
+        : 0;
+      const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
+
+      // Regra: atualizar a comissão no lugar (mesmo id), nunca apagar o que já foi pago
+      // e preservar parcelamento manual. Ver src/lib/comissaoRT.ts.
+      const { data: comissoesProj } = await supabase
+        .from("comissoes")
+        .select("id, status, valor, fornecedor_id, created_at")
+        .eq("projeto_id", projId)
+        .eq("deletado", false)
+        .order("created_at", { ascending: true });
+      const comissoesLista = comissoesProj ?? [];
+      const comIds = comissoesLista.map(c => c.id);
+      const { data: parcelasProj } = comIds.length
+        ? await supabase
+            .from("financeiro_pagar")
+            .select("id, valor, status, comissao_id")
+            .in("comissao_id", comIds)
+            .eq("deletado", false)
+        : { data: [] as { id: string; valor: number | null; status: string | null; comissao_id: string | null }[] };
+      const parcelasDe = (cid: string) => (parcelasProj ?? []).filter(p => p.comissao_id === cid);
+
+      // Principal = comissão do arquiteto atual que já tem mais parcelas (empate: a mais antiga)
+      let principalId: string | null = null;
+      if (arquitetoId && totalRt > 0) {
+        let melhor = -1;
+        for (const c of comissoesLista) {
+          if (c.fornecedor_id !== arquitetoId) continue;
+          const n = parcelasDe(c.id).length;
+          if (n > melhor) { melhor = n; principalId = c.id; }
+        }
+      }
+
+      const { data: catRT } = await supabase
+        .from("categorias")
+        .select("id")
+        .eq("nome", "COMISSÃO | RT")
+        .eq("empresa_id", empresaId!)
+        .maybeSingle();
+      const inserirParcelaRT = async (comissaoId: string) => {
+        await supabase.from("financeiro_pagar").insert({
+          empresa_id: empresaId!,
+          projeto_id: projId,
+          fornecedor_id: arquitetoId,
+          comissao_id: comissaoId,
+          descricao: `Comissão RT — ${detailClient.nome}`,
+          valor: totalRt,
+          status: "pendente" as const,
+          origem: "comissao",
+          categoria_id: catRT?.id ?? null,
+          tipo_manual: "Comissão RT",
+        } as any);
+      };
+
+      for (const c of comissoesLista) {
+        const principal = c.id === principalId;
+        const plano = planComissaoRT({
+          comissao: { id: c.id, status: c.status, valor: c.valor },
+          parcelas: parcelasDe(c.id).map(p => ({ id: p.id, valor: p.valor, status: p.status })),
+          totalRt: principal ? totalRt : 0,
+          temArquiteto: principal,
+        });
+        if (plano.acao === "remover") {
+          if (plano.parcelaIds.length > 0) await supabase.from("financeiro_pagar").delete().in("id", plano.parcelaIds);
+          await supabase.from("comissoes").delete().eq("id", plano.comissaoId);
+        } else if (plano.acao === "atualizar") {
+          await supabase.from("comissoes").update({ valor: plano.valor, percentual: percentualMedio }).eq("id", plano.comissaoId);
+          if (plano.parcelaUnicaId) {
+            await supabase.from("financeiro_pagar").update({ valor: plano.valor }).eq("id", plano.parcelaUnicaId);
+          } else if (plano.criarParcela) {
+            await inserirParcelaRT(plano.comissaoId);
+          }
+          if (plano.aviso) toast.warning(plano.aviso);
+        } else if (plano.acao === "manter" && plano.aviso) {
+          toast.warning(plano.aviso);
+        }
+      }
+
+      if (arquitetoId && totalRt > 0 && !principalId) {
+        const { data: novaCom, error: novaErr } = await supabase
+          .from("comissoes")
+          .insert({
             empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
             valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
+          })
+          .select("id")
+          .single();
+        if (novaErr) console.error("[CRM] Erro ao criar comissão RT:", novaErr);
+        if (novaCom?.id) await inserirParcelaRT(novaCom.id);
+      }
+
+      // ── Auto-vincular arquiteto em projeto_parceiros ──
+      if (arquitetoId && totalRt > 0 && projId && empresaId) {
+        const { data: existing } = await supabase
+          .from("projeto_parceiros")
+          .select("id")
+          .eq("projeto_id", projId)
+          .eq("parceiro_id", arquitetoId)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("projeto_parceiros").insert({
+            empresa_id: empresaId,
+            projeto_id: projId,
+            parceiro_id: arquitetoId,
+            rt_tipo: "fixo",
+            rt_base: "rt_itens",
+            rt_percentual: percentualMedio,
+            rt_valor: totalRt,
+            rt_total: totalRt,
+            rt_recebido: 0,
           });
-
-          // Buscar a comissão recém inserida
-          const { data: comissaoNova } = await supabase
-            .from("comissoes")
-            .select("id")
-            .eq("projeto_id", projId)
-            .eq("fornecedor_id", arquitetoId)
-            .eq("status", "pendente")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          // Criar lançamento em financeiro_pagar
-          if (comissaoNova?.id) {
-            // Verificar se já existem parcelas vinculadas para não perder o parcelamento manual
-            const { data: parcelasExistentes } = await supabase
-              .from("financeiro_pagar")
-              .select("id")
-              .eq("comissao_id", comissaoNova.id)
-              .eq("empresa_id", empresaId!);
-
-            // Se já existem parcelas (length > 1), NÃO recriar — manter as parcelas existentes
-            if (parcelasExistentes && parcelasExistentes.length > 1) {
-              console.log("[CRM] Parcelas de comissão existentes detectadas (>1). Mantendo parcelamento.");
-            } else {
-              const { data: catRT } = await supabase
-                .from("categorias")
-                .select("id")
-                .eq("nome", "COMISSÃO | RT")
-                .eq("empresa_id", empresaId!)
-                .maybeSingle();
-              await supabase.from("financeiro_pagar").insert({
-                empresa_id: empresaId!,
-                projeto_id: projId,
-                fornecedor_id: arquitetoId,
-                comissao_id: comissaoNova.id,
-                descricao: `Comissão RT — ${detailClient.nome}`,
-                valor: totalRt,
-                status: "pendente" as const,
-                origem: "comissao",
-                categoria_id: catRT?.id ?? null,
-                tipo_manual: "Comissão RT",
-              } as any);
-            }
-          }
-
-          // ── Auto-vincular arquiteto em projeto_parceiros ──
-          if (arquitetoId && totalRt > 0 && projId && empresaId) {
-            // Verificar se já existe vínculo antes de inserir
-            const { data: existing } = await supabase
-              .from("projeto_parceiros")
-              .select("id")
-              .eq("projeto_id", projId)
-              .eq("parceiro_id", arquitetoId)
-              .maybeSingle();
-
-            if (!existing) {
-              await supabase
-                .from("projeto_parceiros")
-                .insert({
-                  empresa_id: empresaId,
-                  projeto_id: projId,
-                  parceiro_id: arquitetoId,
-                  rt_tipo: "fixo",
-                  rt_base: "rt_itens",
-                  rt_percentual: percentualMedio,
-                  rt_valor: totalRt,
-                  rt_total: totalRt,
-                  rt_recebido: 0,
-                });
-            } else {
-              // Atualizar RT total se já existir
-              await supabase
-                .from("projeto_parceiros")
-                .update({
-                  rt_valor: totalRt,
-                  rt_total: totalRt,
-                })
-                .eq("id", existing.id);
-            }
-          }
-
-          qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
-          qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
-          qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
+        } else {
+          await supabase.from("projeto_parceiros").update({ rt_valor: totalRt, rt_total: totalRt }).eq("id", existing.id);
         }
+
+        qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
+        qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
+        qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
       }
     }
 
@@ -1103,7 +1117,7 @@ const CRM = () => {
     }
   }, [detailClient, empresaId, clientes, createProjeto]);
 
-  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean }) => {
+  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean }) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
     try {
@@ -1296,7 +1310,33 @@ const CRM = () => {
   // Save orcamento simulation + frete/imposto
   const saveOrcamentoSimulacao = async (simData: any) => {
     if (!activeOrcamentoId) return;
-    const simWithFretes = { ...(simData ?? {}), fretes_extras: fretesExtras };
+    // Parcelas já recebidas são a fonte de verdade: a simulação gravada nunca as contradiz.
+    let simAlinhada: any = simData ?? {};
+    try {
+      if (!(activeOrc as any)?.grupo_id) {
+        const { data: projsOrc } = await supabase
+          .from("projetos").select("id").eq("orcamento_id", activeOrcamentoId).eq("deletado", false);
+        const projIdsOrc = (projsOrc ?? []).map(pj => pj.id);
+        if (projIdsOrc.length > 0) {
+          const { data: recebidas } = await supabase
+            .from("financeiro_receber")
+            .select("parcela, valor, data_vencimento, status, valor_recebido")
+            .in("projeto_id", projIdsOrc)
+            .eq("deletado", false);
+          const travadas = (recebidas ?? []).filter(
+            r => r.status === "pago" || r.status === "parcial" || Number(r.valor_recebido) > 0,
+          );
+          simAlinhada = alinharSimulacaoComRecebidas(simAlinhada, travadas);
+          if (travadas.length > 0 && Array.isArray(simAlinhada.parcelas) && simAlinhada.parcelas.length > 0) {
+            setEditingParcelas(simAlinhada.parcelas);
+            if (simAlinhada.entradaData) setSimEntradaData(simAlinhada.entradaData);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[CRM] Falha ao alinhar simulação com parcelas recebidas:", e);
+    }
+    const simWithFretes = { ...simAlinhada, fretes_extras: fretesExtras };
     await supabase.from("crm_orcamentos").update({
       simulacao_pagamento: simWithFretes,
       frete: orcFrete,
@@ -1585,7 +1625,7 @@ const CRM = () => {
       // Auto-sync if orcamento is approved
       if (activeOrcamentoId) {
         const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
       }
     },
     onError: (err: any) => toast.error(err.message),
@@ -1635,7 +1675,7 @@ const CRM = () => {
       refetchCrmItens();
       if (activeOrcamentoId) {
         const orc = orcamentos?.find((o: any) => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
       }
     } catch (err: any) {
       toast.error("Erro ao salvar: " + err.message);
@@ -1670,7 +1710,7 @@ const CRM = () => {
       refetchCrmItens(); toast.success("Item excluído");
       if (activeOrcamentoId) {
         const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
       }
     },
   });
@@ -1899,13 +1939,28 @@ const CRM = () => {
     const totalFinal = entrada + totalComJuros;
     const hoje = new Date();
     const parcelas: { numero: number; valor: number; data: string }[] = [];
+    // Reaproveita as datas já salvas (se o intervalo não mudou) em vez de recontar a partir de hoje.
+    const simSalva = ((activeOrc as any)?.simulacao_pagamento as any) ?? {};
+    const salvas: { data?: string }[] =
+      Array.isArray(simSalva.parcelas) && Number(simSalva.intervalo) === Number(simIntervalo) ? simSalva.parcelas : [];
+    const parseBr = (t: string) => { const [dd, mm, yy] = t.split("/").map(Number); return new Date(yy, mm - 1, dd); };
+    const ultimaSalva = salvas.length > 0 ? salvas[salvas.length - 1]?.data : undefined;
     for (let i = 0; i < simParcelas; i++) {
-      const d = new Date(hoje);
-      d.setDate(d.getDate() + (i + 1) * simIntervalo);
-      parcelas.push({ numero: i + 1, valor: valorParcela, data: d.toLocaleDateString("pt-BR") });
+      let data: string | undefined = salvas[i]?.data;
+      if (!data && ultimaSalva) {
+        const d = parseBr(ultimaSalva);
+        d.setDate(d.getDate() + (i - (salvas.length - 1)) * simIntervalo);
+        data = d.toLocaleDateString("pt-BR");
+      }
+      if (!data) {
+        const d = new Date(hoje);
+        d.setDate(d.getDate() + (i + 1) * simIntervalo);
+        data = d.toLocaleDateString("pt-BR");
+      }
+      parcelas.push({ numero: i + 1, valor: valorParcela, data });
     }
     return { total, totalFinal, entrada, restante, valorParcela, parcelas };
-  }, [totalCrmVendaComDesconto, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros]);
+  }, [totalCrmVendaComDesconto, simCondicao, simEntrada, simParcelas, simIntervalo, simJuros, activeOrc]);
 
   const parcelasParaExibir = editingParcelas ?? simulacao.parcelas;
 
