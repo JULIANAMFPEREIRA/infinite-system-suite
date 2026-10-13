@@ -262,11 +262,11 @@ const PortalCliente = () => {
     queryFn: async () => {
       let cliente: { id: string; nome: string } | null = null;
       if (user?.id) {
-        const { data } = await supabase.from("clientes").select("id, nome").eq("user_id", user.id).maybeSingle();
+        const { data } = await supabase.from("clientes").select("id, nome").eq("user_id", user.id).eq("deletado", false).maybeSingle();
         cliente = data ?? null;
       }
       if (!cliente && user?.email) {
-        const { data } = await supabase.from("clientes").select("id, nome").eq("email", user.email).maybeSingle();
+        const { data } = await supabase.from("clientes").select("id, nome").eq("email", user.email).eq("deletado", false).maybeSingle();
         cliente = data ?? null;
       }
       if (!cliente) return null;
@@ -330,6 +330,7 @@ const PortalCliente = () => {
       const { data } = await supabase.from("necessidades_compra")
         .select("id, descricao, quantidade, status")
         .eq("projeto_id", active!)
+        .filter("deletado", "eq", false) // tipos gerados estao desatualizados: a coluna existe no banco
         .order("created_at", { ascending: false });
       return data ?? [];
     },
