@@ -1,6 +1,7 @@
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 import { planParcelasReceber } from "@/lib/parcelasReceber";
 import { planComissaoRT } from "@/lib/comissaoRT";
+import { arquitetoEfetivo, mesmoId, projetosParaAtualizarArquiteto } from "@/lib/arquitetoProjeto";
 import { alinharSimulacaoComRecebidas } from "@/lib/simulacaoParcelas";
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
@@ -762,7 +763,7 @@ const CRM = () => {
   // ─── Reusable sync function (guarded against concurrent calls) ───
   const syncingRef = useRef(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean }) => {
+  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null }) => {
     if (!detailClient?.id || !empresaId) return;
 
     const { data: orcData } = await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single();
@@ -914,7 +915,13 @@ const CRM = () => {
     }
 
     if (!paidComissao) {
-      const arquitetoId = detailClient.arquiteto_id;
+      // Arquiteto por projeto: vale o do projeto; o do cliente é só o padrão.
+      const arqCliente = opts && "clienteArquitetoId" in opts ? (opts.clienteArquitetoId ?? null) : detailClient.arquiteto_id;
+      const { data: projArq } = await supabase.from("projetos").select("arquiteto_id").eq("id", projId).maybeSingle();
+      const arquitetoId = arquitetoEfetivo(projArq?.arquiteto_id, arqCliente);
+      if (arquitetoId && !projArq?.arquiteto_id) {
+        await supabase.from("projetos").update({ arquiteto_id: arquitetoId }).eq("id", projId);
+      }
       const totalRt = arquitetoId
         ? insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0)
         : 0;
@@ -1117,7 +1124,7 @@ const CRM = () => {
     }
   }, [detailClient, empresaId, clientes, createProjeto]);
 
-  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean }) => {
+  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null }) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
     try {
@@ -1474,7 +1481,7 @@ const CRM = () => {
       if (!empresaId) { toast.error("Empresa não identificada. Faça login novamente."); throw new Error("empresaId ausente"); }
       if (!nome.trim()) { toast.error("Nome é obrigatório"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); throw new Error("E-mail inválido"); }
-      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null, empresa_id: empresaId, notas: novoClienteObs || null });
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: "lead" as StatusCRM, arquiteto_id: arquitetoIdOrigem || null, empresa_id: empresaId, notas: novoClienteObs || null });
       console.log("[CRM] payload:", payload);
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       if (error) { console.error("[CRM] Erro ao salvar cliente:", error); throw error; }
@@ -1497,7 +1504,7 @@ const CRM = () => {
       if (!empresaId) { toast.error("Empresa não identificada. Faça login novamente."); throw new Error("empresaId ausente"); }
       if (!nome.trim()) { toast.error("Nome é obrigatório"); throw new Error("Nome é obrigatório"); }
       if (email && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { toast.error("E-mail inválido. Verifique o formato (ex: nome@email.com)"); throw new Error("E-mail inválido"); }
-      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null });
+      const payload: any = sanitizePayload({ nome: nome.trim(), email: email || null, telefone: telefone || null, endereco: endereco || null, endereco_obra: enderecoObra || null, origem, status_crm: statusCrm, arquiteto_id: arquitetoIdOrigem || null });
       if (editId) {
         const oldCliente = clientes?.find(c => c.id === editId);
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
@@ -2186,8 +2193,8 @@ const CRM = () => {
                     <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="indicacao">Indicação</option><option value="arquiteto">Arquiteto</option><option value="outro">Outro</option>
                   </select>
                 </div>
-                {origem === "arquiteto" && (
-                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+                {(
+                  <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto (gera a RT)</label>
                     <select value={arquitetoIdOrigem} onChange={e => setArquitetoIdOrigem(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                       <option value="">Selecione...</option>
                       {(arquitetos ?? []).map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -2292,13 +2299,31 @@ const CRM = () => {
                     });
                     console.log("[CRM] Full payload to clientes.update:", payload);
                     const { error } = await supabase.from("clientes").update(payload).eq("id", detailClient.id);
-                    if (error) { toast.error(error.message); return; }
+                    if (error) throw error;
                     if (payload.status_crm === "projeto" && oldStatus !== "projeto") {
                       await autoCreateProject(detailClient.id, payload.nome, payload.endereco_obra, payload.endereco, payload.arquiteto_id, payload.notas || detailClient.notas);
                     }
+                    // Arquiteto por projeto: acompanha nos projetos do cliente e recalcula a RT
+                    const novoArq: string | null = payload.arquiteto_id ?? null;
+                    const antigoArq: string | null = detailClient.arquiteto_id ?? null;
+                    if (!mesmoId(novoArq, antigoArq)) {
+                      const { data: projsCli } = await supabase
+                        .from("projetos").select("id, arquiteto_id").eq("cliente_id", detailClient.id).eq("deletado", false);
+                      const idsProj = projetosParaAtualizarArquiteto(projsCli ?? [], antigoArq, novoArq);
+                      if (idsProj.length > 0) {
+                        await supabase.from("projetos").update({ arquiteto_id: novoArq }).in("id", idsProj);
+                      }
+                      const { data: orcsAprov } = await supabase
+                        .from("crm_orcamentos").select("id").eq("cliente_id", detailClient.id).eq("aprovado", true);
+                      for (const o of orcsAprov ?? []) {
+                        await syncOrcamentoToProject(o.id, { showToast: false, skipReceber: true, clienteArquitetoId: novoArq });
+                      }
+                      qc.invalidateQueries({ queryKey: ["comissoes"] });
+                      qc.invalidateQueries({ queryKey: ["financeiro_pagar"] });
+                      qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
+                    }
                     qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["projetos"] });
                     setDetailClient({ ...detailClient, ...payload });
-                    toast.success("Cliente atualizado!");
                   }}
                 />
               </div>
@@ -3958,8 +3983,8 @@ const CRM = () => {
                 <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="indicacao">Indicação</option><option value="arquiteto">Arquiteto</option><option value="outro">Outro</option>
               </select>
             </div>
-            {origem === "arquiteto" && (
-              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+            {(
+              <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto (gera a RT)</label>
                 <select value={arquitetoIdOrigem} onChange={e => setArquitetoIdOrigem(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
                   <option value="">Selecione...</option>
                   {(arquitetos ?? []).map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -4300,7 +4325,7 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
         nome: nome.trim(), email: email || null, telefone: telefone || null,
         endereco: endereco || null, endereco_obra: enderecoObra || null,
         origem, status_crm: statusCrm,
-        arquiteto_id: (origem === "arquiteto" && arquitetoIdOrigem) ? arquitetoIdOrigem : null,
+        arquiteto_id: arquitetoIdOrigem || null,
         notas: obsOrigem || null,
         cpf_cnpj: cpfCnpj || null,
         rg: rg || null,
@@ -4346,8 +4371,8 @@ const ClienteForm = ({ nome: initNome, email: initEmail, telefone: initTel, ende
           <input value={origemDetalhe} onChange={e => setOrigemDetalhe(e.target.value)} placeholder={origem === "indicacao" ? "Quem indicou?" : "Detalhe da origem"} className="w-full h-8 px-2 text-xs bg-background border border-border rounded" />
         </div>
       )}
-      {origem === "arquiteto" && (
-        <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto</label>
+      {(
+        <div className="space-y-1"><label className="text-[11px] text-muted-foreground">Arquiteto (gera a RT)</label>
           <select value={arquitetoIdOrigem} onChange={e => setArquitetoIdOrigem(e.target.value)} className="w-full h-8 px-2 text-xs bg-background border border-border rounded">
             <option value="">Selecione...</option>
             {(arquitetos ?? []).map((a: any) => <option key={a.id} value={a.id}>{a.nome}</option>)}
