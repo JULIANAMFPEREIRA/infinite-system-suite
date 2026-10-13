@@ -1,3 +1,4 @@
+import { excluirArquivoCrm } from "@/lib/arquivosCrm";
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
 import { planParcelasReceber } from "@/lib/parcelasReceber";
 import { planComissaoRT } from "@/lib/comissaoRT";
@@ -1747,8 +1748,7 @@ const CRM = () => {
 
   const deleteArquivo = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("crm_arquivos").delete().eq("id", id);
-      if (error) throw error;
+      await excluirArquivoCrm(id);
     },
     onSuccess: () => { refetchArquivos(); toast.success("Arquivo removido"); },
   });
