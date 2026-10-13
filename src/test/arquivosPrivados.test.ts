@@ -27,6 +27,12 @@ describe("Arquivos privados: telas usam link temporário", () => {
     expect(achados).toEqual([]);
   });
 
+  it("excluir arquivo sempre passa por excluirArquivoCrm (apaga registro e arquivo da pasta)", () => {
+    const direto = /from\(\s*"crm_arquivos"[^)]*\)(\s*as any\))?\s*\.delete\(/;
+    const achados = telas.filter(p => direto.test(readFileSync(p, "utf8"))).map(p => p.slice(raiz.length + 1));
+    expect(achados).toEqual([]);
+  });
+
   it("os envios usam pastas que existem (crm-files ou financeiro-arquivos)", () => {
     const usadas = new Set<string>();
     for (const p of telas) {
