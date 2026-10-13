@@ -35,7 +35,7 @@ import { useVisitasTecnicas, useCreateVisita, useUpdateVisita } from "@/hooks/us
 import { useFormasPagamento } from "@/hooks/useCategorias";
 import AprovarConjuntoModal from "@/components/crm/AprovarConjuntoModal";
 import { resolveStorageUrl } from "@/lib/storageUrl";
-import { StorageImage, StorageLink } from "@/components/ui/storage-media";
+import { StorageFrame, StorageImage, StorageLink } from "@/components/ui/storage-media";
 
 type OrigemLead = Database["public"]["Enums"]["origem_lead"];
 
@@ -3868,7 +3868,7 @@ const CRM = () => {
                 </div>
                 <div className="flex-1 overflow-auto bg-muted/30">
                   {previewDoc.nome.toLowerCase().endsWith(".pdf") ? (
-                    <iframe src={previewDoc.url} className="w-full h-[80vh] border-none" title={previewDoc.nome} />
+                    <StorageFrame url={previewDoc.url} className="w-full h-[80vh] border-none" title={previewDoc.nome} />
                   ) : (
                     <div className="flex items-center justify-center p-8">
                       <StorageImage url={previewDoc.url} alt={previewDoc.nome} className="max-w-full max-h-[75vh] object-contain" />
