@@ -21,7 +21,15 @@ export function StorageImage({ url, ...rest }: ImgProps) {
   return <img src={signed} {...rest} />;
 }
 
-type LinkProps = Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { url?: string | null };
+type FrameProps = Omit<React.IframeHTMLAttributes<HTMLIFrameElement>, "src"> & { url?: string | null };
+
+export function StorageFrame({ url, ...rest }: FrameProps) {
+  const signed = useSignedUrl(url);
+  if (!signed) return <div className={rest.className} aria-hidden />;
+  return <iframe src={signed} {...rest} />;
+}
+
+type LinkProps =Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { url?: string | null };
 
 export function StorageLink({ url, children, ...rest }: LinkProps) {
   const signed = useSignedUrl(url);
