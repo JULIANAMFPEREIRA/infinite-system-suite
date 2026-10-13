@@ -72,6 +72,7 @@ const PortalParceiros = () => {
         .from("fornecedores")
         .select("id, nome, subtipo_parceiro, tipo")
         .eq("email", user!.email!)
+        .eq("deletado", false)
         .maybeSingle();
 
       if (!forn) return { fornecedor: null, projetos: [], parcelas: [], comissoes: [], parcelasRT: [], ptecnico: [], lancamentos: [], leads: [] };
@@ -178,6 +179,7 @@ const PortalParceiros = () => {
             `)
             .eq("origem", "comissao")
             .in("comissao_id", comissaoIds)
+            .eq("deletado", false)
             .order("data_vencimento");
           parcelasRT = parc ?? [];
         }
