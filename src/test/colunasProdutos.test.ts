@@ -10,6 +10,9 @@ import { join, resolve } from "node:path";
 const COLUNAS_PRODUTOS = [
   "id", "empresa_id", "nome", "descricao", "preco_custo", "preco_venda", "estoque_atual", "estoque_minimo",
   "unidade", "categoria_id", "cor", "deletado", "created_at", "updated_at",
+  // campos do catálogo do fornecedor (migration 20261013150000)
+  "fornecedor_id", "codigo_fornecedor", "marca", "ncm", "ipi_percentual", "preco_lista", "tipo_preco_lista",
+  "fator_custo", "custo_ultimo_pedido", "custo_atualizado_em",
 ];
 
 function arquivos(dir: string): string[] {
