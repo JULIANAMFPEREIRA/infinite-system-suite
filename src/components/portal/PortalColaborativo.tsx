@@ -1,3 +1,4 @@
+import { excluirArquivoCrm } from "@/lib/arquivosCrm";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -381,8 +382,7 @@ function DocumentosTab({ clienteId, projetoId, autorTipo, empresaId, userId }: T
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from("crm_arquivos" as any) as any).delete().eq("id", id);
-      if (error) throw error;
+      await excluirArquivoCrm(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["portal_colab_docs", projetoId] }),
   });

@@ -1,3 +1,4 @@
+import { excluirArquivoCrm } from "@/lib/arquivosCrm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { differenceInDays } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
@@ -2090,10 +2091,7 @@ const ProjetoArquivosSection = ({ clienteId, tipo }: { clienteId: string | null;
 
   const handleDelete = async (id: string, url: string) => {
     try {
-      // Extract path from URL for storage deletion
-      const pathMatch = url.match(/crm-files\/(.+)$/);
-      if (pathMatch) await supabase.storage.from("crm-files").remove([pathMatch[1]]);
-      await supabase.from("crm_arquivos").delete().eq("id", id);
+      await excluirArquivoCrm(id);
       qc.invalidateQueries({ queryKey: ["crm_arquivos", clienteId, tipo] });
       toast.success("Arquivo excluído");
     } catch (err: any) { toast.error(err.message); }

@@ -1,3 +1,4 @@
+import { excluirArquivoCrm } from "@/lib/arquivosCrm";
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -446,8 +447,7 @@ const PortalParceiros = () => {
 
   const handleDeleteImagem = async (id: string) => {
     if (!confirm("Excluir esta imagem?")) return;
-    const { error } = await supabase.from("crm_arquivos").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir imagem"); return; }
+    try { await excluirArquivoCrm(id); } catch { toast.error("Erro ao excluir imagem"); return; }
     toast.success("Imagem excluída");
     refetchImagens();
   };
