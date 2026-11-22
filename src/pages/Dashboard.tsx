@@ -600,7 +600,7 @@ const Dashboard = () => {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <span className="text-lg">🟣</span>
-            <label className="text-xs font-medium text-muted-foreground w-16">Nubank</label>
+            <label className="text-xs font-medium text-muted-foreground w-20">Nubank</label>
             <input
               type="number"
               step="0.01"
@@ -611,7 +611,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-lg">🟠</span>
-            <label className="text-xs font-medium text-muted-foreground w-16">Cora</label>
+            <label className="text-xs font-medium text-muted-foreground w-20">Cora</label>
             <input
               type="number"
               step="0.01"
