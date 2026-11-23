@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, Fragment, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcFaltaComprar } from "@/lib/calcFaltaComprar";
+import { totalContas, calcSaldoReal } from "@/lib/saldoReal";
 import { debounce } from "lodash";
 
 import {
@@ -27,7 +28,7 @@ import { useEmpresa } from "@/hooks/useEmpresa";
 import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const fmt = (v: number) => `R$ ${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -45,6 +46,8 @@ const Dashboard = () => {
   // Saldo das Contas
   const [saldoNubank, setSaldoNubank] = useState<string>("0");
   const [saldoCora, setSaldoCora] = useState<string>("0");
+  const [saldoBradescoPf, setSaldoBradescoPf] = useState<string>("0");
+  const [saldoBradescoPj, setSaldoBradescoPj] = useState<string>("0");
   const [savingSaldo, setSavingSaldo] = useState(false);
 
   const { data: saldoContas, refetch: refetchSaldoContas } = useQuery({
@@ -61,6 +64,34 @@ const Dashboard = () => {
     },
     enabled: !!empresaId,
   });
+
+  // Colunas novas (Bradesco): consulta separada e tolerante a erro (a migration pode ainda não ter sido aplicada)
+  const { data: saldoBradesco, refetch: refetchSaldoBradesco } = useQuery({
+    queryKey: ["saldo_contas_bradesco", empresaId],
+    queryFn: async () => {
+      if (!empresaId) return null;
+      try {
+        const { data, error } = await supabase
+          .from("empresas")
+          .select("saldo_bradesco_pf, saldo_bradesco_pj" as any)
+          .eq("id", empresaId)
+          .maybeSingle();
+        if (error) return null;
+        return (data as any) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!empresaId,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (saldoBradesco) {
+      setSaldoBradescoPf(String(saldoBradesco.saldo_bradesco_pf ?? 0));
+      setSaldoBradescoPj(String(saldoBradesco.saldo_bradesco_pj ?? 0));
+    }
+  }, [saldoBradesco]);
 
   useEffect(() => {
     if (saldoContas) {
@@ -82,13 +113,32 @@ const Dashboard = () => {
         } as any)
         .eq("id", empresaId);
       if (error) throw error;
+      // Bradesco em update separado: se as colunas ainda não existem, não atrapalha Nubank/Cora
+      try {
+        await supabase
+          .from("empresas")
+          .update({
+            saldo_bradesco_pf: Number(saldoBradescoPf) || 0,
+            saldo_bradesco_pj: Number(saldoBradescoPj) || 0,
+          } as any)
+          .eq("id", empresaId);
+      } catch {
+        /* ignora */
+      }
       await refetchSaldoContas();
+      await refetchSaldoBradesco();
     } finally {
       setSavingSaldo(false);
     }
   };
 
-  const totalSaldoContas = (Number(saldoNubank) || 0) + (Number(saldoCora) || 0);
+  const totalSaldoContas = totalContas({
+    nubank: saldoNubank,
+    cora: saldoCora,
+    bradescoPf: saldoBradescoPf,
+    bradescoPj: saldoBradescoPj,
+  });
+
 
   // Buscar anotações do usuário
   const { data: anotacoesData, isLoading: isLoadingAnotacoes } = useQuery({
@@ -377,6 +427,17 @@ const Dashboard = () => {
    refetchOnWindowFocus: true,
  });
 
+  // Saldo real: mesmos números exibidos nos cards A Receber, Inadimplente e Falta Comprar
+  const saldoRealAReceber = stats?.totalAReceber ?? 0;
+  const saldoRealInadimplente = stats?.inadimplentesValorTotal ?? 0;
+  const saldoRealFaltaComprar = stats?.itensComprarValorTotal ?? 0;
+  const saldoReal = calcSaldoReal({
+    saldoContas: totalSaldoContas,
+    aReceber: saldoRealAReceber,
+    inadimplente: saldoRealInadimplente,
+    faltaComprar: saldoRealFaltaComprar,
+  });
+
 
   // Realtime: refetch dashboard whenever financial/operational data changes
   useEffect(() => {
@@ -529,8 +590,9 @@ const Dashboard = () => {
       </div>
 
 
-      {/* Saldo das Contas */}
-      <div className="bg-card rounded-xl border border-border p-5 shadow-sm max-w-md">
+      {/* Saldo das Contas + Saldo real */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+      <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
           <Landmark size={16} className="text-primary" />
           Saldo das Contas
@@ -538,7 +600,7 @@ const Dashboard = () => {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <span className="text-lg">🟣</span>
-            <label className="text-xs font-medium text-muted-foreground w-16">Nubank</label>
+            <label className="text-xs font-medium text-muted-foreground w-20">Nubank</label>
             <input
               type="number"
               step="0.01"
@@ -549,12 +611,34 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-lg">🟠</span>
-            <label className="text-xs font-medium text-muted-foreground w-16">Cora</label>
+            <label className="text-xs font-medium text-muted-foreground w-20">Cora</label>
             <input
               type="number"
               step="0.01"
               value={saldoCora}
               onChange={(e) => setSaldoCora(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-sm bg-secondary/30 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🔴</span>
+            <label className="text-xs font-medium text-muted-foreground w-20">Bradesco PF</label>
+            <input
+              type="number"
+              step="0.01"
+              value={saldoBradescoPf}
+              onChange={(e) => setSaldoBradescoPf(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-sm bg-secondary/30 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🔴</span>
+            <label className="text-xs font-medium text-muted-foreground w-20">Bradesco PJ</label>
+            <input
+              type="number"
+              step="0.01"
+              value={saldoBradescoPj}
+              onChange={(e) => setSaldoBradescoPj(e.target.value)}
               className="flex-1 px-3 py-1.5 text-sm bg-secondary/30 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -575,6 +659,40 @@ const Dashboard = () => {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Saldo real */}
+      <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+          <Scale size={16} className="text-primary" />
+          Saldo real
+        </h3>
+        <div className={`text-3xl font-bold ${saldoReal >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>
+          {fmt(saldoReal)}
+        </div>
+        <div className="space-y-2 mt-4 pt-3 border-t border-border">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Saldo nas contas</span>
+              <span className="font-semibold">{fmt(totalSaldoContas)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">+ A receber</span>
+              <span className="font-semibold">{fmt(saldoRealAReceber)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">+ Inadimplente</span>
+              <span className="font-semibold">{fmt(saldoRealInadimplente)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">− Falta comprar</span>
+              <span className="font-semibold">{fmt(saldoRealFaltaComprar)}</span>
+            </div>
+          <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+            <span className="font-bold uppercase tracking-wider text-xs text-muted-foreground">= Saldo real</span>
+            <span className={`font-bold ${saldoReal >= 0 ? "text-[hsl(152,69%,40%)]" : "text-destructive"}`}>{fmt(saldoReal)}</span>
+          </div>
+        </div>
+      </div>
       </div>
 
       {/* 3. CONTEÚDO PRINCIPAL – Agenda Interativa ocupando largura total */}
