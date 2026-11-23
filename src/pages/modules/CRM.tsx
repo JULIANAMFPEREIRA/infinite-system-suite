@@ -1,8 +1,8 @@
 import { excluirArquivoCrm } from "@/lib/arquivosCrm";
 import { calcOrcamentoTotals } from "@/lib/orcamentoCalc";
-import { planParcelasReceber } from "@/lib/parcelasReceber";
-import { planComissaoRT } from "@/lib/comissaoRT";
-import { arquitetoEfetivo, mesmoId, projetosParaAtualizarArquiteto } from "@/lib/arquitetoProjeto";
+import { planejarAprovacao } from "@/lib/planoAprovacao";
+import { logAtividade } from "@/hooks/useAuditLog";
+import { mesmoId, projetosParaAtualizarArquiteto } from "@/lib/arquitetoProjeto";
 import { alinharSimulacaoComRecebidas } from "@/lib/simulacaoParcelas";
 import { sanitizePayload } from "@/lib/sanitize";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
@@ -762,401 +762,167 @@ const CRM = () => {
     onError: (err: any) => toast.error(err.message),
   });
   // ─── Reusable sync function (guarded against concurrent calls) ───
-  const syncingRef = useRef(false);
+  // Leitura -> plano (src/lib/planoAprovacao.ts) -> UMA chamada ao banco (transação única).
+  const syncingRef = useRef<Promise<void> | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null }) => {
+  const _syncOrcamentoToProjectInner = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null; marcarAprovado?: boolean; aguardar?: boolean }) => {
     if (!detailClient?.id || !empresaId) return;
+    const marcarAprovado = !!opts?.marcarAprovado;
+    const falhou = (msg: string) => new Error(
+      `${marcarAprovado ? "Não foi possível aprovar" : "Não foi possível sincronizar o projeto"}: nada foi gravado. ${msg}`,
+    );
+    const ler = (res: { data: any; error: any }, o: string): any => {
+      if (res.error) throw falhou(`Falha ao ler ${o}: ${res.error.message ?? res.error}`);
+      return res.data;
+    };
 
-    const { data: orcData } = await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single();
-    if (!orcData?.aprovado) return; // Only sync approved
+    // ── 1. LEITURA ──
+    const orcData = ler(await supabase.from("crm_orcamentos").select("*").eq("id", orcId).single(), "o orçamento");
+    if (!orcData) return;
+    if (!orcData.aprovado && !marcarAprovado) return; // Only sync approved
 
-    const { data: approvedItems } = await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId);
-    const items = approvedItems ?? [];
-
-    const totals = calcOrcamentoTotals({
-      itens: items,
-      frete: orcData.frete,
-      imposto: orcData.imposto,
-      simulacao_pagamento: orcData.simulacao_pagamento as any,
-    });
-    const totalVenda = totals.totalVenda;
-    const totalCusto = totals.totalCusto;
-    const margem = totals.margem;
-
-    const sim = (orcData.simulacao_pagamento as any) ?? {};
-    const simParcelas = sim.parcelas ?? [];
-    const simFormaPgto = sim.formaPagamento ?? "";
-    const simEntradaValor = Number(sim.entrada) || 0;
-    const simEntradaData = sim.entradaData ?? null;
-    const frete = totals.frete;
-    const imposto = totals.imposto;
+    const approvedItems = ler(await supabase.from("crm_itens").select("*").eq("orcamento_id", orcId), "os itens do orçamento");
 
     const cliente = clientes?.find(c => c.id === detailClient.id);
     const origemLabel = cliente?.origem ? origemLabels[cliente.origem as OrigemLead] : "";
-    const descParts = [`Projeto criado a partir do CRM — ${orcData.nome ?? "Orçamento"}`];
-    if (origemLabel) descParts.push(`Origem: ${origemLabel}`);
-    if (cliente?.notas) descParts.push(`Obs: ${cliente.notas}`);
 
-    const parseDate = (d: string) => { if (d.includes("/")) { const [dd, mm, yyyy] = d.split("/"); return `${yyyy}-${mm}-${dd}`; } return d; };
+    const existingProjects = ler(await supabase.from("projetos").select("id, arquiteto_id").eq("orcamento_id", orcId), "o projeto");
+    const projetoExistente = existingProjects && existingProjects.length > 0
+      ? { id: existingProjects[0].id as string, arquiteto_id: existingProjects[0].arquiteto_id as string | null }
+      : null;
 
-    // Check if project already exists for this orcamento
-    const { data: existingProjects } = await supabase.from("projetos").select("id").eq("orcamento_id", orcId);
+    let parcelasReceberExistentes: any[] = [];
+    let temComissaoPaga = false;
+    let comissoesLista: any[] = [];
+    let parcelasComissao: any[] = [];
+    let projetosParceiros: any[] = [];
+    let contasPagarExtras: any[] = [];
 
-    let projId: string;
-
-    if (existingProjects && existingProjects.length > 0) {
-      projId = existingProjects[0].id;
-      await supabase.from("projetos").update({
-        venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
-        numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
-        forma_pagamento: simFormaPgto || null,
-        descricao: descParts.join(" | "),
-        status: "infraestrutura",
-        observacoes_pagamento: `Sincronizado em ${new Date().toLocaleString("pt-BR")}`,
-      }).eq("id", projId);
-    } else {
-      const hoje = new Date().toISOString().split("T")[0];
-      const newProjeto = await createProjeto.mutateAsync({
-        nome: `${detailClient.nome} — ${orcData.nome ?? ""}`.trim(),
-        descricao: descParts.join(" | "),
-        cliente_id: detailClient.id, endereco_obra: detailClient.endereco_obra || detailClient.endereco || null,
-        arquiteto_id: detailClient.arquiteto_id || null, status: "infraestrutura",
-        venda_total: totalVenda, custo_previsto: totalCusto, margem_prevista: margem,
-        numero_parcelas: simParcelas.length > 0 ? simParcelas.length : 1,
-        forma_pagamento: simFormaPgto || null,
-        observacoes_pagamento: `Criado em ${new Date().toLocaleString("pt-BR")}`,
-        orcamento_id: orcId,
-        data_inicio: hoje,
-      } as any);
-      projId = newProjeto.id;
-    }
-
-    // ── Sync itens (delete + bulk insert to avoid duplication) ──
-    await supabase.from("projeto_itens").delete().eq("projeto_id", projId);
-    let insertedItens: any[] = [];
-    if (items.length > 0) {
-      const itemInserts = items.map(item => ({
-        projeto_id: projId, descricao: item.descricao,
-        quantidade: Number(item.quantidade) || 1,
-        preco_custo: Number(item.preco_custo) || 0,
-        preco_venda: Number(item.preco_venda) || 0,
-        tipo: (["produto", "servico", "adicional"].includes((item as any).tipo) ? (item as any).tipo : "produto") as "produto" | "servico" | "adicional",
-        produto_id: item.produto_id || null,
-        rt_percentual: Number((item as any).rt_comissao) || 0,
-      }));
-      const { data: insertedData, error: itemsError } = await supabase.from("projeto_itens").insert(itemInserts).select();
-      if (itemsError) console.error("[CRM] Erro ao inserir itens do projeto:", itemsError);
-      insertedItens = insertedData ?? [];
-    }
-
-     // ── Sync financeiro_receber ──
-     // If THIS orçamento was approved as part of a group, skip — joint parcelas
-     // are managed by AprovarConjuntoModal and must not be overwritten here.
-     if (opts?.skipReceber) {
-       console.log("[CRM] Edição de item — financeiro a receber não é reconstruído");
-     } else if ((orcData as any)?.grupo_id) {
-       console.log("[CRM] Orçamento com grupo_id — pulando financeiro (gerenciado pelo AprovarConjuntoModal)");
-       // skip financeiro sync for grouped orçamentos
-     } else {
-     const { data: parcelasExistentes } = await supabase
-       .from("financeiro_receber")
-       .select("id, parcela, status, valor_recebido")
-       .eq("projeto_id", projId)
-       .eq("deletado", false);
-
-     const fullParcelas: { valor: number; data: string | null }[] = [];
-     if (simEntradaValor > 0) {
-       fullParcelas.push({ valor: simEntradaValor, data: simEntradaData ? parseDate(simEntradaData) : null });
-     }
-     simParcelas.forEach((p: any) => {
-       fullParcelas.push({ valor: Number(p.valor) || 0, data: p.data ? parseDate(p.data) : null });
-     });
-
-     // Regra: nunca toca em parcela paga/parcial; a parcela da posição n sempre recebe o número n.
-     const plano = planParcelasReceber(parcelasExistentes ?? [], fullParcelas);
-
-     if (plano.idsApagar.length > 0) {
-       await supabase.from("financeiro_receber").delete().in("id", plano.idsApagar);
-     }
-
-     if (fullParcelas.length > 0) {
-       const inserts = plano.inserts.map(p => ({
-         empresa_id: empresaId,
-         projeto_id: projId,
-         cliente_id: detailClient.id,
-         descricao: `Parcela ${p.parcela}/${plano.total} — ${detailClient.nome}`,
-         valor: p.valor,
-         parcela: p.parcela,
-         data_vencimento: p.data,
-         status: "pendente" as const,
-       }));
-       if (inserts.length > 0) {
-         await supabase.from("financeiro_receber").insert(inserts);
-       }
-     } else if (totalVenda > 0 && !(parcelasExistentes ?? []).some(p => p.status !== "pendente" && p.status !== null)) {
-       await supabase.from("financeiro_receber").insert({
-         empresa_id: empresaId, projeto_id: projId, cliente_id: detailClient.id,
-         descricao: `Conta a receber — ${detailClient.nome}`,
-         valor: totalVenda, parcela: 1, status: "pendente" as const,
-       });
-     }
-     }
-
-    // ── Sync comissões (RT) — single consolidated entry ──
-    const { data: paidComissao } = await supabase
-      .from("comissoes")
-      .select("id")
-      .eq("projeto_id", projId)
-      .eq("status", "pago")
-      .limit(1)
-      .maybeSingle();
-
-    if (paidComissao) {
-      console.log("[CRM] Comissão já paga para este projeto — pulando sync de RT");
-    }
-
-    if (!paidComissao) {
-      // Arquiteto por projeto: vale o do projeto; o do cliente é só o padrão.
-      const arqCliente = opts && "clienteArquitetoId" in opts ? (opts.clienteArquitetoId ?? null) : detailClient.arquiteto_id;
-      const { data: projArq } = await supabase.from("projetos").select("arquiteto_id").eq("id", projId).maybeSingle();
-      const arquitetoId = arquitetoEfetivo(projArq?.arquiteto_id, arqCliente);
-      if (arquitetoId && !projArq?.arquiteto_id) {
-        await supabase.from("projetos").update({ arquiteto_id: arquitetoId }).eq("id", projId);
+    if (projetoExistente) {
+      const projId = projetoExistente.id;
+      if (!opts?.skipReceber && !(orcData as any)?.grupo_id) {
+        parcelasReceberExistentes = ler(await supabase
+          .from("financeiro_receber")
+          .select("id, parcela, status, valor_recebido")
+          .eq("projeto_id", projId)
+          .eq("deletado", false), "as parcelas a receber") ?? [];
       }
-      const totalRt = arquitetoId
-        ? insertedItens.reduce((sum: number, pi: any) => sum + (Number(pi.rt_percentual) || 0), 0)
-        : 0;
-      const percentualMedio = totalVenda > 0 ? (totalRt / totalVenda) * 100 : 0;
-
-      // Regra: atualizar a comissão no lugar (mesmo id), nunca apagar o que já foi pago
-      // e preservar parcelamento manual. Ver src/lib/comissaoRT.ts.
-      const { data: comissoesProj } = await supabase
-        .from("comissoes")
-        .select("id, status, valor, fornecedor_id, created_at")
-        .eq("projeto_id", projId)
-        .eq("deletado", false)
-        .order("created_at", { ascending: true });
-      const comissoesLista = comissoesProj ?? [];
-      const comIds = comissoesLista.map(c => c.id);
-      const { data: parcelasProj } = comIds.length
-        ? await supabase
+      const paid = ler(await supabase
+        .from("comissoes").select("id").eq("projeto_id", projId).eq("status", "pago").limit(1).maybeSingle(), "as comissões pagas");
+      temComissaoPaga = !!paid;
+      if (!temComissaoPaga) {
+        comissoesLista = ler(await supabase
+          .from("comissoes")
+          .select("id, status, valor, fornecedor_id, created_at")
+          .eq("projeto_id", projId)
+          .eq("deletado", false)
+          .order("created_at", { ascending: true }), "as comissões") ?? [];
+        const comIds = comissoesLista.map(c => c.id);
+        if (comIds.length) {
+          parcelasComissao = ler(await supabase
             .from("financeiro_pagar")
             .select("id, valor, status, comissao_id")
             .in("comissao_id", comIds)
-            .eq("deletado", false)
-        : { data: [] as { id: string; valor: number | null; status: string | null; comissao_id: string | null }[] };
-      const parcelasDe = (cid: string) => (parcelasProj ?? []).filter(p => p.comissao_id === cid);
-
-      // Principal = comissão do arquiteto atual que já tem mais parcelas (empate: a mais antiga)
-      let principalId: string | null = null;
-      if (arquitetoId && totalRt > 0) {
-        let melhor = -1;
-        for (const c of comissoesLista) {
-          if (c.fornecedor_id !== arquitetoId) continue;
-          const n = parcelasDe(c.id).length;
-          if (n > melhor) { melhor = n; principalId = c.id; }
+            .eq("deletado", false), "as parcelas de comissão") ?? [];
         }
+        projetosParceiros = ler(await supabase
+          .from("projeto_parceiros").select("id, parceiro_id").eq("projeto_id", projId), "os parceiros do projeto") ?? [];
       }
-
-      const { data: catRT } = await supabase
-        .from("categorias")
-        .select("id")
-        .eq("nome", "COMISSÃO | RT")
-        .eq("empresa_id", empresaId!)
-        .maybeSingle();
-      const inserirParcelaRT = async (comissaoId: string) => {
-        await supabase.from("financeiro_pagar").insert({
-          empresa_id: empresaId!,
-          projeto_id: projId,
-          fornecedor_id: arquitetoId,
-          comissao_id: comissaoId,
-          descricao: `Comissão RT — ${detailClient.nome}`,
-          valor: totalRt,
-          status: "pendente" as const,
-          origem: "comissao",
-          categoria_id: catRT?.id ?? null,
-          tipo_manual: "Comissão RT",
-        } as any);
-      };
-
-      for (const c of comissoesLista) {
-        const principal = c.id === principalId;
-        const plano = planComissaoRT({
-          comissao: { id: c.id, status: c.status, valor: c.valor },
-          parcelas: parcelasDe(c.id).map(p => ({ id: p.id, valor: p.valor, status: p.status })),
-          totalRt: principal ? totalRt : 0,
-          temArquiteto: principal,
-        });
-        if (plano.acao === "remover") {
-          if (plano.parcelaIds.length > 0) await supabase.from("financeiro_pagar").delete().in("id", plano.parcelaIds);
-          await supabase.from("comissoes").delete().eq("id", plano.comissaoId);
-        } else if (plano.acao === "atualizar") {
-          await supabase.from("comissoes").update({ valor: plano.valor, percentual: percentualMedio }).eq("id", plano.comissaoId);
-          if (plano.parcelaUnicaId) {
-            await supabase.from("financeiro_pagar").update({ valor: plano.valor }).eq("id", plano.parcelaUnicaId);
-          } else if (plano.criarParcela) {
-            await inserirParcelaRT(plano.comissaoId);
-          }
-          if (plano.aviso) toast.warning(plano.aviso);
-        } else if (plano.acao === "manter" && plano.aviso) {
-          toast.warning(plano.aviso);
-        }
-      }
-
-      if (arquitetoId && totalRt > 0 && !principalId) {
-        const { data: novaCom, error: novaErr } = await supabase
-          .from("comissoes")
-          .insert({
-            empresa_id: empresaId!, projeto_id: projId, fornecedor_id: arquitetoId,
-            valor: totalRt, percentual: percentualMedio, status: "pendente" as const,
-          })
-          .select("id")
-          .single();
-        if (novaErr) console.error("[CRM] Erro ao criar comissão RT:", novaErr);
-        if (novaCom?.id) await inserirParcelaRT(novaCom.id);
-      }
-
-      // ── Auto-vincular arquiteto em projeto_parceiros ──
-      if (arquitetoId && totalRt > 0 && projId && empresaId) {
-        const { data: existing } = await supabase
-          .from("projeto_parceiros")
-          .select("id")
-          .eq("projeto_id", projId)
-          .eq("parceiro_id", arquitetoId)
-          .maybeSingle();
-
-        if (!existing) {
-          await supabase.from("projeto_parceiros").insert({
-            empresa_id: empresaId,
-            projeto_id: projId,
-            parceiro_id: arquitetoId,
-            rt_tipo: "fixo",
-            rt_base: "rt_itens",
-            rt_percentual: percentualMedio,
-            rt_valor: totalRt,
-            rt_total: totalRt,
-            rt_recebido: 0,
-          });
-        } else {
-          await supabase.from("projeto_parceiros").update({ rt_valor: totalRt, rt_total: totalRt }).eq("id", existing.id);
-        }
-
-        qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
-        qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
-        qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
-      }
+      contasPagarExtras = ler(await supabase
+        .from("financeiro_pagar")
+        .select("id, status")
+        .eq("projeto_id", projId)
+        .is("comissao_id", null)
+        .is("fornecedor_id", null), "as contas a pagar") ?? [];
     }
 
-    // ── Sync compras directly (skip necessidades_compra intermediate step) ──
-    // Delete only pending compras to avoid duplicates; keep compras already in progress
-    await supabase.from("compras").delete().eq("projeto_id", projId).eq("status", "pendente");
-    if (insertedItens.length > 0) {
-      const compraInserts = insertedItens
-        .filter((pi: any) => pi.tipo === "produto")
-        .map((pi: any) => ({
-          empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
-          produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
-          quantidade: Number(pi.quantidade) || 1, status: "pendente" as const,
-          valor_unitario: Number(pi.preco_custo) || 0,
-          valor_total: (Number(pi.preco_custo) || 0) * (Number(pi.quantidade) || 1),
-        }));
-      if (compraInserts.length > 0) {
-        await supabase.from("compras").insert(compraInserts);
-      }
-    }
-    // Also sync necessidades_compra for backward compatibility (only products)
-    await supabase.from("necessidades_compra" as any).delete().eq("projeto_id", projId).eq("status", "pendente");
-    if (insertedItens.length > 0) {
-      const necInserts = insertedItens
-        .filter((pi: any) => pi.tipo === "produto")
-        .map((pi: any) => ({
-          empresa_id: empresaId!, projeto_id: projId, projeto_item_id: pi.id,
-          produto_id: pi.produto_id || null, descricao: pi.descricao ?? "",
-          quantidade: Number(pi.quantidade) || 1, status: "pendente",
-        }));
-      if (necInserts.length > 0) {
-        await supabase.from("necessidades_compra" as any).insert(necInserts);
-      }
+    let categoriaRtId: string | null = null;
+    if (!temComissaoPaga) {
+      const catRT = ler(await supabase
+        .from("categorias").select("id").eq("nome", "COMISSÃO | RT").eq("empresa_id", empresaId).maybeSingle(), "a categoria da RT");
+      categoriaRtId = catRT?.id ?? null;
     }
 
-     // ── Sync frete e imposto como contas a pagar ──
-     const { data: contasPagarExist } = await supabase
-       .from("financeiro_pagar")
-       .select("id, status")
-       .eq("projeto_id", projId)
-       .is("comissao_id", null)
-       .is("fornecedor_id", null);
- 
-     const idsPagarPendentes = (contasPagarExist ?? [])
-       .filter(p => p.status === "pendente")
-       .map(p => p.id);
- 
-     if (idsPagarPendentes.length > 0) {
-       await supabase
-         .from("financeiro_pagar")
-         .delete()
-         .in("id", idsPagarPendentes);
-     }
-    const contasPagarExtras: any[] = [];
-    if (frete > 0) {
-      contasPagarExtras.push({
-        empresa_id: empresaId!, projeto_id: projId,
-        descricao: `Frete — ${detailClient.nome}`,
-        valor: frete, status: "pendente" as const,
-        data_vencimento: (orcData as any).frete_vencimento || null,
-      });
+    let totalOrcamentosCliente = 0;
+    if (marcarAprovado) {
+      const orcCount = ler(await supabase.from("crm_orcamentos").select("id").eq("cliente_id", detailClient.id), "os orçamentos do cliente");
+      totalOrcamentosCliente = (orcCount ?? []).length;
     }
-    if (imposto > 0) {
-      contasPagarExtras.push({
-        empresa_id: empresaId!, projeto_id: projId,
-        descricao: `Imposto — ${detailClient.nome}`,
-        valor: imposto, status: "pendente" as const,
-        data_vencimento: (orcData as any).imposto_vencimento || null,
-      });
+
+    // ── 2. PLANO (regras de negócio testadas em src/lib) ──
+    const { plano, avisos, projetoExistia } = planejarAprovacao({
+      empresaId,
+      orcamento: orcData as any,
+      itens: (approvedItems ?? []) as any,
+      cliente: {
+        id: detailClient.id, nome: detailClient.nome,
+        endereco_obra: detailClient.endereco_obra, endereco: detailClient.endereco,
+        arquiteto_id: detailClient.arquiteto_id, status_crm: detailClient.status_crm,
+        notas: cliente?.notas ?? null,
+      },
+      origemLabel,
+      projetoExistente,
+      parcelasReceberExistentes,
+      temComissaoPaga,
+      comissoes: comissoesLista,
+      parcelasComissao,
+      categoriaRtId,
+      projetosParceirosExistentes: projetosParceiros,
+      contasPagarExtrasExistentes: contasPagarExtras,
+      totalOrcamentosCliente,
+      opts: opts && "clienteArquitetoId" in opts
+        ? { skipReceber: opts.skipReceber, clienteArquitetoId: opts.clienteArquitetoId }
+        : { skipReceber: opts?.skipReceber },
+      marcarAprovado,
+      hoje: new Date().toISOString().split("T")[0],
+      agoraLabel: new Date().toLocaleString("pt-BR"),
+    });
+
+    // ── 3. GRAVAÇÃO: tudo ou nada (uma transação no banco) ──
+    const { error: rpcError } = await (supabase as any).rpc("aplicar_plano_aprovacao", { plano });
+    if (rpcError) throw falhou(rpcError.message ?? String(rpcError));
+
+    if (!projetoExistia) {
+      // Mesmo registro de auditoria que o hook de criar projeto gravava (não bloqueia a aprovação).
+      Promise.resolve(logAtividade("projetos", "criacao", plano.projeto.id, empresaId, null, plano.projeto.campos)).catch(() => {});
     }
-    if (contasPagarExtras.length > 0) {
-      await supabase.from("financeiro_pagar").insert(contasPagarExtras);
+    avisos.forEach(a => toast.warning(a));
+    qc.invalidateQueries({ queryKey: ["projetos"] });
+    if (plano.projeto_parceiros) {
+      qc.invalidateQueries({ queryKey: ["projeto_parceiros"] });
+      qc.invalidateQueries({ queryKey: ["portal_parceiro_full"] });
+      qc.invalidateQueries({ queryKey: ["portal_arquiteto_full"] });
     }
 
     if (opts?.showToast !== false) {
-      toast.success(existingProjects && existingProjects.length > 0
+      toast.success(projetoExistia
         ? "Projeto atualizado com dados do orçamento!"
         : "Projeto criado a partir do orçamento aprovado!");
     }
-  }, [detailClient, empresaId, clientes, createProjeto]);
+  }, [detailClient, empresaId, clientes, qc]);
 
-  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null }) => {
-    if (syncingRef.current) return;
-    syncingRef.current = true;
+  const syncOrcamentoToProject = useCallback(async (orcId: string, opts?: { showToast?: boolean; skipReceber?: boolean; clienteArquitetoId?: string | null; marcarAprovado?: boolean; aguardar?: boolean }) => {
+    // Outra sincronização em andamento: quem só atualiza (edição de item etc.) segue como antes e sai;
+    // quem está APROVANDO espera a vez — nunca marca aprovado sem criar o projeto.
+    while (syncingRef.current) {
+      if (!opts?.aguardar && !opts?.marcarAprovado) return;
+      await syncingRef.current.catch(() => {});
+    }
+    const emAndamento = _syncOrcamentoToProjectInner(orcId, opts);
+    syncingRef.current = emAndamento;
     try {
-      await _syncOrcamentoToProjectInner(orcId, opts);
+      await emAndamento;
     } finally {
-      syncingRef.current = false;
+      if (syncingRef.current === emAndamento) syncingRef.current = null;
     }
   }, [_syncOrcamentoToProjectInner]);
 
   const approveOrcamento = useMutation({
     mutationFn: async (orcId: string) => {
       if (!detailClient?.id || !empresaId) return;
-      // Mark this orçamento approved AND pin its kanban column to 'projeto'
-      // so only this card moves — never the client-level fallback (which would
-      // sweep all sibling cards along with it).
-      const { error } = await supabase
-        .from("crm_orcamentos")
-        .update({ aprovado: true, status_kanban: "projeto" } as any)
-        .eq("id", orcId);
-      if (error) throw error;
-      // Only touch clientes.status_crm when the client has <2 orçamentos —
-      // otherwise the fallback status would move the other cards too.
-      const { data: orcCount } = await supabase
-        .from("crm_orcamentos")
-        .select("id", { count: "exact", head: false })
-        .eq("cliente_id", detailClient.id);
-      const total = (orcCount ?? []).length;
-      if (total < 2 && detailClient.status_crm !== "projeto") {
-        await supabase.from("clientes").update({ status_crm: "projeto" }).eq("id", detailClient.id);
-      }
-      await syncOrcamentoToProject(orcId);
+      // A aprovação (aprovado=true + coluna 'projeto' do kanban + status do cliente) agora faz parte
+      // do mesmo plano gravado no banco: ou aprova e cria tudo, ou não grava nada.
+      await syncOrcamentoToProject(orcId, { marcarAprovado: true, aguardar: true });
     },
     onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["compras"] }); },
     onError: (err: any) => toast.error(err.message),
