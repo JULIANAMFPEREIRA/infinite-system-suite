@@ -912,6 +912,11 @@ const CRM = () => {
     syncingRef.current = emAndamento;
     try {
       await emAndamento;
+    } catch (e: any) {
+      // Avisa sempre (muitos chamadores não tratam o erro) e marca como já avisado.
+      toast.error(e?.message ?? "Falha ao atualizar o projeto.");
+      if (e && typeof e === "object") e.avisado = true;
+      throw e;
     } finally {
       if (syncingRef.current === emAndamento) syncingRef.current = null;
     }
@@ -925,14 +930,14 @@ const CRM = () => {
       await syncOrcamentoToProject(orcId, { marcarAprovado: true, aguardar: true });
     },
     onSuccess: () => { refetchOrcamentos(); qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); qc.invalidateQueries({ queryKey: ["clientes"] }); qc.invalidateQueries({ queryKey: ["compras"] }); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => { if (!err?.avisado) toast.error(err.message); },
   });
 
   // Manual sync button
   const manualSync = useMutation({
     mutationFn: async (orcId: string) => { await syncOrcamentoToProject(orcId); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["projetos"] }); qc.invalidateQueries({ queryKey: ["cliente_projetos"] }); qc.invalidateQueries({ queryKey: ["comissoes"] }); qc.invalidateQueries({ queryKey: ["financeiro_receber"] }); qc.invalidateQueries({ queryKey: ["projeto_itens"] }); qc.invalidateQueries({ queryKey: ["necessidades_compra"] }); qc.invalidateQueries({ queryKey: ["financeiro_pagar"] }); qc.invalidateQueries({ queryKey: ["compras"] }); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => { if (!err?.avisado) toast.error(err.message); },
   });
 
   // Unapprove orcamento (cancel linked project)
@@ -1399,7 +1404,7 @@ const CRM = () => {
       // Auto-sync if orcamento is approved
       if (activeOrcamentoId) {
         const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true }).catch(() => {}); // o erro já é avisado por syncOrcamentoToProject
       }
     },
     onError: (err: any) => toast.error(err.message),
@@ -1449,7 +1454,7 @@ const CRM = () => {
       refetchCrmItens();
       if (activeOrcamentoId) {
         const orc = orcamentos?.find((o: any) => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true }).catch(() => {}); // o erro já é avisado por syncOrcamentoToProject
       }
     } catch (err: any) {
       toast.error("Erro ao salvar: " + err.message);
@@ -1484,7 +1489,7 @@ const CRM = () => {
       refetchCrmItens(); toast.success("Item excluído");
       if (activeOrcamentoId) {
         const orc = orcamentos?.find(o => o.id === activeOrcamentoId);
-        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true });
+        if (orc?.aprovado) syncOrcamentoToProject(activeOrcamentoId, { showToast: false, skipReceber: true }).catch(() => {}); // o erro já é avisado por syncOrcamentoToProject
       }
     },
   });
