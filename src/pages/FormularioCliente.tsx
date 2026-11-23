@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2, AlertTriangle, Building2, User, Phone, Copy, Check } from "lucide-react";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
+const SUPABASE_KEY = SUPABASE_PUBLISHABLE_KEY;
 
 // ── Masks ──────────────────────────────────────────────
 const maskCPF = (v: string) =>
